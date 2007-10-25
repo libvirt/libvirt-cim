@@ -1,0 +1,3 @@
+# Copyright IBM Corp. 2007
+Xen_ElementAllocatedFromPool root/ibmsd Xen_ElementAllocatedFromPoolProvider Virt_ElementAllocatedFromPool association
+KVM_ElementAllocatedFromPool root/ibmsd KVM_ElementAllocatedFromPoolProvider Virt_ElementAllocatedFromPool association

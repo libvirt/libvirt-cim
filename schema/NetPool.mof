@@ -1,0 +1,8 @@
+// Copyright IBM Corp. 2007
+class Xen_NetworkPool : CIM_ResourcePool
+{
+};
+class KVM_NetworkPool : CIM_ResourcePool
+{
+};
+

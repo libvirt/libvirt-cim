@@ -1,0 +1,16 @@
+// Copyright IBM Corp. 2007
+[Association,
+ Description (
+   "Associates a host system to its resource pools"
+)]
+class Xen_HostedResourcePool : CIM_HostedResourcePool
+{
+};
+
+[Association,
+ Description (
+    "Associates a host system to its resource pools"
+)]
+class KVM_HostedResourcePool : CIM_HostedResourcePool
+{
+};

@@ -1,0 +1,9 @@
+// Copyright IBM Corp. 2007
+class Xen_SettingsDefineCapabilities : CIM_SettingsDefineCapabilities
+{
+};
+
+class KVM_SettingsDefineCapabilities : CIM_SettingsDefineCapabilities
+{
+};
+

@@ -1,0 +1,18 @@
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// Xen_ProcessorPool
+// ==================================================================
+class Xen_ProcessorPool : CIM_ResourcePool
+{
+};
+
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// KVM_ProcessorPool
+// ==================================================================
+class KVM_ProcessorPool : CIM_ResourcePool
+{
+};
+

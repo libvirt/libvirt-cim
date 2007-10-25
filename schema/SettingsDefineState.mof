@@ -1,0 +1,6 @@
+// Copyright IBM Corp. 2007
+class Xen_SettingsDefineState : CIM_SettingsDefineState {
+};
+
+class KVM_SettingsDefineState : CIM_SettingsDefineState {
+};

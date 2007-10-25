@@ -1,0 +1,7 @@
+// Copyright IBM Corp. 2007
+class Xen_ResourcePoolConfigurationCapabilities : CIM_ResourcePoolConfigurationCapabilities {
+
+};
+
+class KVM_ResourcePoolConfigurationCapabilities : CIM_ResourcePoolConfigurationCapabilities {
+};

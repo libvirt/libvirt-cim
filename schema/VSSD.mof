@@ -1,0 +1,16 @@
+// Copyright IBM Corp. 2007
+[Description (
+	"A class derived from CIM_VirtualSystemSettingData to represent "
+	"the config of Xen virtual machines/domains running on the system.")]
+class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
+{
+  string Bootloader;
+  string BootloaderArgs;
+};
+
+[Description (
+	"A class derived from CIM_VirtualSystemSettingData to represent "
+	"the config of KVM virtual machines/domains running on the system.")]
+class KVM_VirtualSystemSettingData : CIM_VirtualSystemSettingData
+{
+};

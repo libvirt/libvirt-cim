@@ -1,0 +1,24 @@
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// Xen_Processor
+// ==================================================================
+[Description (
+	"A class derived from CIM_Processor to represent "
+	"the Xen virtual processors.")]
+class Xen_Processor : CIM_Processor
+{
+};
+
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// KVM_Processor
+// ==================================================================
+[Description (
+	"A class derived from CIM_Processor to represent "
+	"the KVM virtual processors.")]
+class KVM_Processor : CIM_Processor
+{
+};
+

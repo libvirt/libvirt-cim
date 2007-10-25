@@ -1,0 +1,3 @@
+# Copyright IBM Corp. 2007
+Xen_ResourceAllocationFromPool root/ibmsd Xen_ResourceAllocationFromPoolProvider Virt_ResourceAllocationFromPool association
+KVM_ResourceAllocationFromPool root/ibmsd KVM_ResourceAllocationFromPoolProvider Virt_ResourceAllocationFromPool association

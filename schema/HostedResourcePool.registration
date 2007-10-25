@@ -1,0 +1,3 @@
+# Copyright IBM Corp. 2007
+Xen_HostedResourcePool root/ibmsd Virt_HostedResourcePoolProvider Virt_HostedResourcePool association
+KVM_HostedResourcePool root/ibmsd Virt_HostedResourcePoolProvider Virt_HostedResourcePool association

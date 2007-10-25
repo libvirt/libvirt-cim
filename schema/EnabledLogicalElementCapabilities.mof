@@ -1,0 +1,24 @@
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// Xen_EnabledLogicalElementCapabilities
+// ==================================================================
+[Description (
+	"A class derived from CIM_Capabilities to represent "
+	"the changes that can be made to a started Xen virtual system")]
+class Xen_EnabledLogicalElementCapabilities : CIM_EnabledLogicalElementCapabilities
+{
+};
+
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// KVM_EnabledLogicalElementCapabilities
+// ==================================================================
+[Description (
+	"A class derived from CIM_Capabilities to represent "
+	"the changes that can be made to a started KVM virtual system")]
+class KVM_EnabledLogicalElementCapabilities : CIM_EnabledLogicalElementCapabilities
+{
+};
+

@@ -1,0 +1,35 @@
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// Xen_ComputerSystem
+// ==================================================================
+[Description (
+	"A class derived from CIM_ComputerSystem to represent "
+	"the Xen virtual machines/domains running on the system.")]
+class Xen_ComputerSystem : CIM_ComputerSystem
+{
+   [Description("UUID assigned to this DomU.")]
+   string UUID;
+
+   [Description("Change domain state")]
+   uint32 RequestStateChange(
+     uint16 RequestedState,
+     datetime TimeoutPeriod
+   );
+   
+};
+
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// KVM_ComputerSystem
+// ==================================================================
+[Description (
+	"A class derived from CIM_ComputerSystem to represent "
+	"the KVM virtual machines running on the system.")]
+class KVM_ComputerSystem : CIM_ComputerSystem
+{
+   [Description("UUID assigned to this virtual machine.")]
+   string UUID;
+};
+

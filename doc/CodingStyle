@@ -1,0 +1,6 @@
+- Eight-space indents
+- No single-line if statements
+- Keywords and parens separated by one space (i.e. "if (" not "if(")
+- 80-char width limit
+- Identifier style: use_underbars_and_lowercase
+- Macro style: ALL_UPPERCASE

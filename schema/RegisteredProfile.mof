@@ -1,0 +1,22 @@
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// Xen_RegisteredProfile
+// ==================================================================
+[Description (
+	"A class derived from CIM_RegisteredProfile to represent "
+	"an advertised conformant profile.")]
+class Xen_RegisteredProfile : CIM_RegisteredProfile
+{
+};
+
+// ==================================================================
+// KVM_RegisteredProfile
+// ==================================================================
+[Description (
+	"A class derived from CIM_RegisteredProfile to represent "
+	"an advertised conformant profile.")]
+class KVM_RegisteredProfile : CIM_RegisteredProfile
+{
+};
+

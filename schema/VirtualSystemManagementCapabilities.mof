@@ -1,0 +1,24 @@
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// Xen_VirtualSystemManagementCapabilities
+// ==================================================================
+[Description (
+	"A class derived from CIM_Capabilities to represent "
+	"the management capabilities of a Xen virtual system")]
+class Xen_VirtualSystemManagementCapabilities : CIM_VirtualSystemManagementCapabilities
+{
+};
+
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// KVM_VirtualSystemManagementCapabilities
+// ==================================================================
+[Description (
+	"A class derived from CIM_Capabilities to represent "
+	"the management capabilities of a KVM virtual system.")]
+class KVM_VirtualSystemManagementCapabilities : CIM_VirtualSystemManagementCapabilities
+{
+};
+

@@ -1,0 +1,19 @@
+// Copyright IBM Corp. 2007
+// ==================================================================
+//  Xen_HostedDependency
+// ==================================================================
+   [Association, Version ( "2.8.0" ),
+       UMLPackagePath ( "CIM::Core::CoreElements" ), Description (
+       "HostedDependency defines a ManagedElement in the context of "
+       "another ManagedElement in which it resides.")]
+class Xen_HostedDependency : CIM_HostedDependency {
+};
+// ==================================================================
+//  KVM_HostedDependency
+// ==================================================================
+   [Association, Version ( "2.8.0" ),
+       UMLPackagePath ( "CIM::Core::CoreElements" ), Description (
+       "HostedDependency defines a ManagedElement in the context of "
+       "another ManagedElement in which it resides.")]
+class KVM_HostedDependency : CIM_HostedDependency {
+};

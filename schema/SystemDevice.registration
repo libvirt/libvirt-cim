@@ -1,0 +1,3 @@
+# Copyright IBM Corp. 2007
+Xen_SystemDevice root/ibmsd Xen_SystemDeviceProvider Virt_SystemDevice association
+KVM_SystemDevice root/ibmsd KVM_SystemDeviceProvider Virt_SystemDevice association

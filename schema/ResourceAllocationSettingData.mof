@@ -1,0 +1,62 @@
+// Copyright IBM Corp. 2007
+class Xen_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData {
+
+      [Key,
+	Description ("The type of allocated resource"),
+	Override ("ResourceType")]
+      uint16 ResourceType;
+
+};
+
+class KVM_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData {
+
+      [Key,
+	Description ("The type of allocated resource"),
+	Override ("ResourceType")]
+      uint16 ResourceType;
+
+};
+
+[Description ("Xen virtual disk configuration")]
+class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData{
+
+      [Description ("Device as seen by the guest")]
+      string VirtualDevice;
+
+};
+
+[Description ("KVM virtual disk configuration")]
+class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData{
+
+      [Description ("Device as seen by the guest")]
+      string VirtualDevice;
+
+};
+
+[Description ("Xen virtual network configuration")]
+class Xen_NetResourceAllocationSettingData : Xen_ResourceAllocationSettingData {
+
+      [Description ("Interface type")]
+      string NetworkType;
+
+};
+
+[Description ("KVM virtual network configuration")]
+class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData {
+
+      [Description ("Interface type")]
+      string NetworkType;
+
+};
+
+[Description ("Xen virtual processor")]
+class Xen_ProcResourceAllocationSettingData : Xen_ResourceAllocationSettingData {};
+
+[Description ("KVM virtual processor")]
+class KVM_ProcResourceAllocationSettingData : KVM_ResourceAllocationSettingData {};
+
+[Description ("Xen virtual memory")]
+class Xen_MemResourceAllocationSettingData : Xen_ResourceAllocationSettingData {};
+
+[Description ("KVM virtual memory")]
+class KVM_MemResourceAllocationSettingData : KVM_ResourceAllocationSettingData {};

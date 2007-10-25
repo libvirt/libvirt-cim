@@ -10,3 +10,27 @@ tests/*.err
 
 syntax: regexp
 .*\#.*\#$
+Makefile$
+Makefile\.in$
+^aclocal\.m4$
+autom4te\.cache/.*
+config\.guess$
+config\.h$
+config\.log$
+config\.status$
+config\.sub$
+^configure$
+^install-sh$
+^ltmain.sh$
+^missing$
+\.libs/.*
+\.la$
+\.lo$
+\.o$
+^stamp-h1$
+^libtool$
+.*\~$
+.*\.loT$
+^acinclude.m4.orig$
+^config.h.in$
+libcmpiutil/doc/html/.*%   

@@ -1,0 +1,25 @@
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// Xen_Memory
+// ==================================================================
+
+[Description (
+        "A class derived from CIM_Memory to represent "
+        "the Xen virtual memory.")]
+class Xen_Memory : CIM_Memory
+{
+};
+
+// Copyright 2007 IBM. All rights reserved.
+
+// ==================================================================
+// KVM_Memory
+// ==================================================================
+[Description (
+        "A class derived from CIM_Memory to represent "
+        "the KVM virtual memory.")]
+class KVM_Memory : CIM_Memory
+{
+};
+

@@ -1,0 +1,3 @@
+# Copyright IBM Corp. 2007
+Xen_NetworkPool root/ibmsd Virt_DevicePoolProvider Virt_DevicePool instance
+KVM_NetworkPool root/ibmsd Virt_DevicePoolProvider Virt_DevicePool instance

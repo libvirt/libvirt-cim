@@ -1,0 +1,5 @@
+// Copyright IBM Corp. 2007
+Xen_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool {
+};
+KVM_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool {
+};
