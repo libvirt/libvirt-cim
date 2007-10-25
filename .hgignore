@@ -1,6 +1,9 @@
 syntax: glob
 *.orig
 *.rej
+*.old
+*.diff
+*.patch
 *~
 *.o
 tests/*.err
