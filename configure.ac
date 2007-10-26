@@ -133,10 +133,7 @@ fi
 
 CFLAGS_STRICT="-Werror"
 
-AC_CHECK_LIB(cmpiutil, cu_check_args, [], [
-		       echo "libcmpiutil not found"
-		       exit 1
-		       ])
+CHECK_LIBCU
 
 AC_ARG_ENABLE([werror],
     [  --enable-werror         enable werror on builds [[default=yes]]],

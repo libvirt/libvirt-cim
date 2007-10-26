@@ -258,7 +258,45 @@ AC_DEFUN([CHECK_LIBXML2],
 	fi 
 	]
 )
-                                                               
+
+AC_DEFUN([_CHECK_LIBCU_PC],
+	[
+	if pkg-config --exists libcmpiutil; then
+		CPPFLAGS="$CPPFLAGS `pkg-config --cflags libcmpiutil`"
+		LDFLAGS="$LDFLAGS `pkg-config --libs libcmpiutil`"
+		found_libcu=yes
+	fi
+	]
+)
+
+AC_DEFUN([_CHECK_LIBCU_NOPC],
+	[
+	DIRS="/usr /usr/local"
+	for dir in $DIRS; do
+		if test -f "${dir}/include/libcmpiutil/libcmpiutil.h"; then
+			CPPFLAGS="$CPPFLAGS -I${dir}/include/libcmpiutil"
+			LDFLAGS="$LDFLAGS -lcmpiutil -L${dir}/lib"
+			found_libcu=yes
+		fi
+	done
+	]
+)
+
+AC_DEFUN([CHECK_LIBCU],
+	[
+	_CHECK_LIBCU_PC
+	if test "x$found_libcu" != "xyes"; then
+		_CHECK_LIBCU_NOPC
+	fi
+	AC_CHECK_LIB(cmpiutil, cu_check_args, [], [
+		     AC_MSG_ERROR(libcmpiutil not found)
+                     ])
+	AC_CHECK_HEADER([libcmpiutil.h], [], [
+                        AC_MSG_ERROR([libcmpiutil.h not found])
+		     ])
+	]
+)
+
 dnl
 dnl The check for the libvirt library
 dnl Sets the LIBVIRTDIR variable
