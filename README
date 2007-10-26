@@ -1,0 +1,36 @@
+
+       libvirt-cim : A CIM provider for libvirt
+
+Libvirt-cim is a CMPI CIM provider that implements the DMTF SVPC
+virtualization model.  It is free software available under the GNU
+Lesser General Public License.  The goal is to support most of the
+features exported by libvirt itself, enabling management of multiple
+platforms with a single provider.
+
+The latest version of the library can be found here:
+
+  http://libvirt.org/hg/libvirt-cim
+
+and the development discussion mailing list is here:
+
+  https://www.redhat.com/mailman/listinfo/libvirt-cim
+
+Building
+--------
+
+Requirements:
+
+  - Pegasus or SFCB development headers
+  - libvirt 0.2.3 or greater
+  - e2fsprogs-devel
+  - libxml2
+  - libcmpiutil (http://libvirt.org/hg/libcmpiutil)
+  - DMTF v2.16 experimental CIM Schema installed
+
+Procedure:
+
+  $ ./autoconfiscate.sh
+  $ ./configure
+  $ make
+  $ sudo make install
+  $ sudo make postinstall
