@@ -896,6 +896,80 @@ static struct method_handler *my_handlers[] = {
 STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
                    _BROKER, CMNoHook, my_handlers);
 
+
+static CMPIStatus return_vsms(const CMPIObjectPath *reference,
+                              const CMPIResult *results,
+                              int name_only)
+{
+        CMPIStatus s;
+        CMPIInstance *inst;
+
+        inst = get_typed_instance(_BROKER,
+                                  "VirtualSystemManagementService",
+                                  NAMESPACE(reference));
+        if (inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to create instance");
+                goto out;
+        }
+
+        CMSetProperty(inst, "Name",
+                      (CMPIValue *)"Management Service", CMPI_chars);
+
+        if (name_only)
+                cu_return_instance_name(results, inst);
+        else
+                CMReturnInstance(results, inst);
+
+        CMSetStatus(&s, CMPI_RC_OK);
+
+ out:
+        return s;
+}
+
+static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
+                                    const CMPIContext *context,
+                                    const CMPIResult *results,
+                                    const CMPIObjectPath *reference)
+{
+        return return_vsms(reference, results, 1);
+}
+
+static CMPIStatus EnumInstances(CMPIInstanceMI *self,
+                                const CMPIContext *context,
+                                const CMPIResult *results,
+                                const CMPIObjectPath *reference,
+                                const char **properties)
+{
+
+        return return_vsms(reference, results, 0);
+}
+
+static CMPIStatus GetInstance(CMPIInstanceMI *self,
+                              const CMPIContext *context,
+                              const CMPIResult *results,
+                              const CMPIObjectPath *reference,
+                              const char **properties)
+{
+        return return_vsms(reference, results, 0);
+}
+
+DEFAULT_CI();
+DEFAULT_MI();
+DEFAULT_DI();
+DEFAULT_EQ();
+DEFAULT_INST_CLEANUP();
+
+/* Avoid a warning in the stub macro below */
+CMPIInstanceMI *
+Virt_VirtualSystemManagementService_Create_InstanceMI(const CMPIBroker *,
+                                                      const CMPIContext *,
+                                                      CMPIStatus *rc);
+
+CMInstanceMIStub(, Virt_VirtualSystemManagementService, _BROKER, CMNoHook);
+
+
 /*
  * Local Variables:
  * mode: C
