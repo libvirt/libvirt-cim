@@ -201,6 +201,11 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                                 NAMESPACE(ref),
                                 poolid,
                                 list);
+        else if (STARTS_WITH(poolid, "DiskPool"))
+                rasds_from_pool(CIM_RASD_TYPE_DISK,
+                                NAMESPACE(ref),
+                                poolid,
+                                list);
         else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
