@@ -222,6 +222,11 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                                ns,
                                poolid,
                                list);
+        else if (STARTS_WITH(poolid, "DiskPool"))
+                devs_from_pool(CIM_RASD_TYPE_DISK,
+                               ns,
+                               poolid,
+                               list);
         else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
