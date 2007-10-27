@@ -19,6 +19,7 @@ MOFS = \
 	schema/MemoryPool.mof \
 	schema/ElementCapabilities.mof \
 	schema/ProcessorPool.mof \
+	schema/DiskPool.mof \
 	schema/HostedResourcePool.mof \
 	schema/ElementConformsToProfile.mof \
 	schema/ComputerSystemIndication.mof \
@@ -54,6 +55,7 @@ REGS = \
 	schema/MemoryPool.registration \
 	schema/ElementCapabilities.registration \
 	schema/ProcessorPool.registration \
+	schema/DiskPool.registration \
 	schema/HostedResourcePool.registration \
 	schema/ComputerSystemIndication.registration \
 	schema/ResourceAllocationSettingData.registration \

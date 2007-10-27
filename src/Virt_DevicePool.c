@@ -19,10 +19,14 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  */
+#define __USE_FILE_OFFSET64
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/statvfs.h>
+#include <inttypes.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>
@@ -39,7 +43,151 @@
 
 static const CMPIBroker *_BROKER;
 
+#define DISK_POOL_CONFIG "/tmp/diskpool.conf"
+
 char *device_pool_names[] = {"ProcessorPool", "MemoryPool", NULL};
+
+struct disk_pool {
+        char *tag;
+        char *path;
+};
+
+static int parse_diskpool_line(struct disk_pool *pool,
+                               const char *line)
+{
+        int ret;
+
+        ret = sscanf(line, "%as %as", &pool->tag, &pool->path);
+        if (ret != 2) {
+                free(pool->tag);
+                free(pool->path);
+        }
+
+        return (ret == 2);
+}
+
+static int get_diskpool_config(struct disk_pool **_pools)
+{
+        const char *path = DISK_POOL_CONFIG;
+        FILE *config;
+        char *line = NULL;
+        size_t len = 0;
+        int count = 0;
+        struct disk_pool *pools = NULL;
+
+        config = fopen(path, "r");
+        if (config == NULL) {
+                CU_DEBUG("Failed to open %s: %m", path);
+                return 0;
+        }
+
+        while (getline(&line, &len, config) > 0) {
+                pools = realloc(pools,
+                                (count + 1) * (sizeof(*pools)));
+                if (pools == NULL) {
+                        CU_DEBUG("Failed to alloc new pool");
+                        goto out;
+                }
+
+                if (parse_diskpool_line(&pools[count], line))
+                        count++;
+        }
+
+ out:
+        free(line);
+        *_pools = pools;
+        fclose(config);
+
+        return count;
+}
+
+static void free_diskpool(struct disk_pool *pools, int count)
+{
+        int i;
+
+        if (pools == NULL)
+                return;
+
+        for (i = 0; i < count; i++) {
+                free(pools[i].tag);
+                free(pools[i].path);
+        }
+
+        free(pools);
+}
+
+static char *_diskpool_member_of(const char *file)
+{
+        struct disk_pool *pools = NULL;
+        int count;
+        int i;
+        char *pool = NULL;
+
+        count = get_diskpool_config(&pools);
+        if (count == 0)
+                return NULL;
+
+        for (i = 0; i < count; i++) {
+                if (STARTS_WITH(file, pools[i].path)) {
+                        int ret;
+
+                        ret = asprintf(&pool, "DiskPool/%s", pools[i].tag);
+                        if (ret == -1)
+                                pool = NULL;
+                        break;
+                }
+        }
+
+        free_diskpool(pools, count);
+
+        return pool;
+}
+
+static char *diskpool_member_of(const CMPIBroker *broker, char *rasd_id)
+{
+        char *host = NULL;
+        char *dev = NULL;
+        int ret;
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
+        int count = 0;
+        struct virt_device *devs = NULL;
+        int i;
+        char *pool = NULL;
+        CMPIStatus s;
+
+        ret = parse_fq_devid(rasd_id, &host, &dev);
+        if (!ret)
+                goto out;
+
+        conn = lv_connect(broker, &s);
+        if (conn == NULL)
+                goto out;
+
+        dom = virDomainLookupByName(conn, host);
+        if (dom == NULL)
+                goto out;
+
+        count = get_disk_devices(dom, &devs);
+
+        for (i = 0; i < count; i++) {
+                if (STREQ((devs[i].dev.disk.virtual_dev), dev)) {
+                        pool = _diskpool_member_of(devs[i].dev.disk.source);
+                        break;
+                }
+        }
+
+ out:
+        if (count > 0)
+                cleanup_virt_devices(&devs, count);
+
+        free(host);
+        free(dev);
+        virConnectClose(conn);
+        virDomainFree(dom);
+
+        return pool;
+}
 
 static char *netpool_member_of(const CMPIBroker *broker, char *rasd_id)
 {
@@ -100,6 +248,8 @@ char *pool_member_of(const CMPIBroker *broker, uint16_t type, char *id)
                 poolid = strdup("MemoryPool/0");
         else if (type == CIM_RASD_TYPE_NET)
                 poolid = netpool_member_of(broker, id);
+        else if (type == CIM_RASD_TYPE_DISK)
+                poolid = diskpool_member_of(broker, id);
         else
                 return NULL;
 
@@ -296,6 +446,96 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
         return s;
 }
 
+static CMPIInstance *diskpool_from_path(const char *path,
+                                        const char *id,
+                                        const char *ns,
+                                        const CMPIBroker *broker)
+{
+        CMPIInstance *inst;
+        char *poolid = NULL;
+        const uint16_t type = CIM_RASD_TYPE_DISK;
+        struct statvfs vfs;
+        uint64_t cap;
+        uint64_t res;
+
+        inst = get_typed_instance(broker, "DiskPool", ns);
+
+        if (asprintf(&poolid, "DiskPool/%s", id) == -1)
+                return NULL;
+
+        CMSetProperty(inst, "InstanceID",
+                      (CMPIValue *)poolid, CMPI_chars);
+
+        CMSetProperty(inst, "ResourceType",
+                      (CMPIValue *)&type, CMPI_uint16);
+
+        CMSetProperty(inst, "AllocationUnits",
+                      (CMPIValue *)"Megabytes", CMPI_chars);
+
+        if (statvfs(path, &vfs) != 0) {
+                CU_DEBUG("Failed to statvfs(%s): %m", path);
+                goto out;
+        }
+
+        cap = (uint64_t) vfs.f_frsize * vfs.f_blocks;
+        res = cap - (uint64_t)(vfs.f_frsize * vfs.f_bfree);
+
+        cap >>= 20;
+        res >>= 20;
+
+        CMSetProperty(inst, "Capacity",
+                      (CMPIValue *)&cap, CMPI_uint64);
+
+        CMSetProperty(inst, "Reserved",
+                      (CMPIValue *)&res, CMPI_uint64);
+
+ out:
+        free(poolid);
+
+        return inst;
+}
+
+static CMPIStatus diskpool_instance(virConnectPtr conn,
+                                    struct inst_list *list,
+                                    const char *ns,
+                                    const char *id,
+                                    const CMPIBroker *broker)
+{
+        CMPIStatus s;
+        struct disk_pool *pools = NULL;
+        int count = 0;
+        int i;
+
+        count = get_diskpool_config(&pools);
+        if ((id == NULL) && (count == 0)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No such pool `%s'", id);
+                goto out;
+        }
+
+        for (i = 0; i < count; i++) {
+                CMPIInstance *pool;
+
+                if ((id != NULL) && (!STREQ(id, pools[i].tag)))
+                        continue;
+                /* Either this matches id, or we're matching all */
+
+                pool = diskpool_from_path(pools[i].path,
+                                          pools[i].tag,
+                                          ns,
+                                          broker);
+                if (pool != NULL)
+                        inst_list_add(list, pool);
+        }
+
+        CMSetStatus(&s, CMPI_RC_OK);
+ out:
+        free_diskpool(pools, count);
+
+        return s;
+}
+
 static CMPIStatus _get_pool(const CMPIBroker *broker,
                             virConnectPtr conn,
                             const char *type,
@@ -309,6 +549,8 @@ static CMPIStatus _get_pool(const CMPIBroker *broker,
                 return procpool_instance(conn, list, ns, id, broker);
         else if (STARTS_WITH(type, "NetworkPool"))
                 return netpool_instance(conn, list, ns, id, broker);
+        else if (STARTS_WITH(type, "DiskPool"))
+                return diskpool_instance(conn, list, ns, id, broker);
 
         return (CMPIStatus){CMPI_RC_ERR_NOT_FOUND, NULL};
 }
