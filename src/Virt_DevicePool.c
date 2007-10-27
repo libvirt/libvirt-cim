@@ -70,9 +70,11 @@ static char *netpool_member_of(const CMPIBroker *broker, char *rasd_id)
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].id), dev)) {
-                        asprintf(&result,
-                                 "NetworkPool/%s",
-                                 devs[i].dev.net.bridge);
+                        ret = asprintf(&result,
+                                       "NetworkPool/%s",
+                                       devs[i].dev.net.bridge);
+                        if (ret == -1)
+                                result = NULL;
                         break;
                 }
         }
