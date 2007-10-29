@@ -4,7 +4,7 @@ SUBDIRS = tests
 
 CFLAGS += $(CFLAGS_STRICT)
 
-noinst_HEADERS = cs_util.h misc_util.h device_parsing.h hostres.h
+noinst_HEADERS = cs_util.h misc_util.h device_parsing.h hostres.h xmlgen.h
 
 lib_LTLIBRARIES = libxkutil.la
 

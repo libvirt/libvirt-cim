@@ -74,9 +74,11 @@ EXTRA_BASE_MOFS = \
 	schema/KVM_ResourceAllocationSettingData.mof
 
 pkgdata_DATA = $(MOFS) $(REGS)
-pkgdata_SCRIPTS = provider-register.sh
+pkgdata_SCRIPTS = provider-register.sh register_base.sh
 
-EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)
+EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
+             libvirt-cim.spec.in libvirt-cim.spec	\
+	     doc/CodingStyle doc/SubmittingPatches
 
 # Un/Register the providers and class definitions from/to the current CIMOM.
 # @CIMSERVER@ is set by the configure script
@@ -88,3 +90,6 @@ postinstall:
 preuninstall:
 	sh provider-register.sh -d -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -d -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
+
+rpm: clean
+	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.gz)

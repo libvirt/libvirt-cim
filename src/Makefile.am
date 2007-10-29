@@ -1,7 +1,20 @@
 # Copyright IBM Corp. 2007
 SUBDIRS = tests
 
-noinst_HEADERS = Virt_ElementConformsToProfile.h profiles.h
+noinst_HEADERS = profiles.h svpc_types.h	\
+    Virt_AllocationCapabilities.h		\
+    Virt_ComputerSystem.h			\
+    Virt_ComputerSystemIndication.h		\
+    Virt_Device.h				\
+    Virt_DevicePool.h				\
+    Virt_ElementConformsToProfile.h		\
+    Virt_EnabledLogicalElementCapabilities.h	\
+    Virt_HostSystem.h				\
+    Virt_RASD.h					\
+    Virt_RegisteredProfile.h			\
+    Virt_SettingsDefineCapabilities.h		\
+    Virt_VirtualSystemManagementCapabilities.h	\
+    Virt_VSSD.h
 
 XKUADD = $(top_builddir)/libxkutil/libxkutil.la
 
@@ -9,7 +22,7 @@ CFLAGS += -I$(top_builddir)/libxkutil $(CFLAGS_STRICT)
 
 AM_LDFLAGS = $(XKUADD)
 
-providerdir = @PROVIDERDIR@
+providerdir = $(PROVIDERDIR)
 
 provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_Device.la \

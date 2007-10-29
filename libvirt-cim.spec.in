@@ -1,0 +1,65 @@
+# -*- rpm-spec -*-
+
+Summary: A CIM provider for libvirt
+Name: libvirt-cim
+Version: @PACKAGE_VERSION@
+Release: 1%{?dist}%{?extra_release}
+License: LGPL
+Group: Development/Libraries
+Source: libvirt-cim-%{version}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-root
+URL: http://libvirt.org/CIM/
+Requires: libxml2
+Requires: libvirt >= 0.2.3
+BuildRequires: sblim-cmpi-devel
+BuildRequires: libvirt-devel >= 0.2.3
+BuildRequires: e2fsprogs-devel
+BuildRequires: libxml2-devel
+BuildRequires: libcmpiutil-devel
+
+%description
+Libvirt-cim is a CMPI CIM provider that implements the DMTF SVPC
+virtualization model. The goal is to support most of the features
+exported by libvirt itself, enabling management of multiple
+platforms with a single provider.
+
+%prep
+%setup -q
+
+%build
+%configure --disable-werror
+make
+
+%install
+rm -fr %{buildroot}
+
+%makeinstall PROVIDERDIR=%{buildroot}%{_libdir}/cmpi
+cp provider-register.sh register_base.sh %{buildroot}%{_datadir}/libvirt-cim/
+rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
+rm -f $RPM_BUILD_ROOT%{_libdir}/*.a
+rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.la
+rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.a
+
+%clean
+rm -fr %{buildroot}
+
+%post
+/sbin/ldconfig
+
+%postun
+/sbin/ldconfig
+
+%files 
+%defattr(-, root, root)
+
+%doc README doc/CodingStyle doc/SubmittingPatches
+%doc provider-register.sh register_base.sh
+%{_libdir}/lib*.so*
+%{_libdir}/cmpi/lib*.so*
+%{_datadir}/libvirt-cim/*.sh
+%{_datadir}/libvirt-cim/*.mof
+%{_datadir}/libvirt-cim/*.registration
+
+%changelog
+* Fri Oct 26 2007 Daniel Veillard <veillard@redhat.com> - 0.1-1
+- created

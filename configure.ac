@@ -180,7 +180,7 @@ echo "   ./configure PROVIDERDIR=/home/me/lib/sblim/"
 echo "----------------------------------------------------------"
 
 # Generate configure scripts for the Makefile
-AC_OUTPUT
+AC_OUTPUT(libvirt-cim.spec)
 
 echo "You may now run make"
 
