@@ -463,3 +463,12 @@ AC_DEFUN([DEFINE_MAXMEM],
     AC_DEFINE_UNQUOTED([MAX_MEM], $1, [Max memory for a guest.])
     ]
 )
+
+#
+# Define disk pool config.
+#
+AC_DEFUN([DEFINE_DISK_CONFIG],
+    [
+    AC_DEFINE_UNQUOTED([DISK_POOL_CONFIG], "$1", [Disk pool config filepath.])
+    ]
+)

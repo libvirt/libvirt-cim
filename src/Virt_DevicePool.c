@@ -32,6 +32,8 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
+#include "config.h"
+
 #include "misc_util.h"
 #include "hostres.h"
 #include "device_parsing.h"
@@ -42,8 +44,6 @@
 #include "svpc_types.h"
 
 static const CMPIBroker *_BROKER;
-
-#define DISK_POOL_CONFIG "/tmp/diskpool.conf"
 
 char *device_pool_names[] = {"ProcessorPool", "MemoryPool", NULL};
 

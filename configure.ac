@@ -35,6 +35,11 @@ AC_ARG_VAR([LIBVIRTDIR],[the directory where the libvirt package is installed.])
 AC_ARG_VAR([TESTSUITEDIR],[the directory where the SBLIM testsuite is installed.
 ])
 
+AC_ARG_WITH([diskconfig], 
+            [  --with-diskconfig=PATH  Set config file for disk pool. (default=/tmp/diskpool.conf)], 
+            [DEFINE_DISK_CONFIG($with_diskconfig)], 
+            [DEFINE_DISK_CONFIG(/tmp/diskpool.conf)]
+)
 AC_ARG_WITH([maxmem], 
             [  --with-maxmem=FOO	  Set max memory (MB) for a guest.], 
             [DEFINE_MAXMEM($with_maxmem)], 
