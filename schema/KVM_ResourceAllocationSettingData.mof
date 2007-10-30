@@ -1,9 +1,4 @@
 // Copyright IBM Corp. 2007
 class KVM_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData {
 
-      [Key,
-        Description ("The type of allocated resource"),
-        Override ("ResourceType")]
-      uint16 ResourceType;
-
 };

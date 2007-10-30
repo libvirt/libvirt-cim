@@ -83,8 +83,10 @@ libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabiliti
                                         -lVirt_HostSystem
 
 libVirt_AllocationCapabilities_la_SOURCES = Virt_AllocationCapabilities.c
+libVirt_AllocationCapabilities_la_LIBADD = -lVirt_RASD
 
 libVirt_SettingsDefineCapabilities_la_SOURCES = Virt_SettingsDefineCapabilities.c
+libVirt_SettingsDefineCapabilities_la_LIBADD = -lVirt_RASD
 
 libVirt_RegisteredProfile_la_SOURCES = Virt_RegisteredProfile.c
 

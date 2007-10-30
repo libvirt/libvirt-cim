@@ -27,6 +27,7 @@ int rasds_for_domain(const CMPIBroker *broker,
                      const uint16_t type,
                      const char *ns,
                      struct inst_list *_list);
+CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type);
 
 #endif
 

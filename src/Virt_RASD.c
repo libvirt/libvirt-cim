@@ -205,10 +205,38 @@ static CMPIInstance *get_rasd_instance(const CMPIContext *context,
         return inst;
 }
 
+CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type)
+{
+       char *base = NULL;
+       CMPIrc rc = CMPI_RC_ERR_FAILED;
+
+       base = class_base_name(cn);
+       if (base == NULL)
+                goto out;
+
+       if (STREQ(base, "DiskResourceAllocationSettingData"))
+               *type = CIM_RASD_TYPE_DISK;
+       else if (STREQ(base, "NetResourceAllocationSettingData"))
+               *type = CIM_RASD_TYPE_NET;
+       else if (STREQ(base, "ProcResourceAllocationSettingData"))
+               *type = CIM_RASD_TYPE_PROC;
+       else if (STREQ(base, "MemResourceAllocationSettingData"))
+               *type = CIM_RASD_TYPE_MEM;
+       else
+               goto out;
+
+       rc = CMPI_RC_OK;
+
+ out:
+       free(base);
+
+       return rc;
+}
+
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIContext *context,
                               const CMPIResult *results,
-                              const CMPIObjectPath *reference,
+                              const CMPIObjectPath *ref,
                               const char **properties)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -216,7 +244,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         char *id = NULL;
         uint16_t type;
 
-        id = cu_get_str_path(reference, "InstanceID");
+        id = cu_get_str_path(ref, "InstanceID");
         if (id == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -224,14 +252,14 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                 goto out;
         }
 
-        if (!cu_get_u16_path(reference, "ResourceType", &type)) {
+        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Missing or invalid ResourceType");
+                           "Unable to determine RASD type");
                 goto out;
         }
 
-        inst = get_rasd_instance(context, reference, id, type);
+        inst = get_rasd_instance(context, ref, id, type);
 
         if (inst != NULL)
                 CMReturnInstance(results, inst);

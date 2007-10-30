@@ -161,9 +161,15 @@ static int rasd_to_vdev(CMPIInstance *inst,
         char *id = NULL;
         char *name = NULL;
         char *devid = NULL;
+        CMPIObjectPath *op;
 
-        if (cu_get_u16_prop(inst, "ResourceType", &type) != CMPI_RC_OK)
+        op = CMGetObjectPath(inst, NULL);
+        if (op == NULL)
                 goto err;
+
+        if (rasd_type_from_classname(CLASSNAME(op), &type) != CMPI_RC_OK)
+                goto err;
+
         dev->type = (int)type;
 
         if (cu_get_str_prop(inst, "InstanceID", &id) != CMPI_RC_OK)
@@ -210,7 +216,6 @@ static int rasd_to_vdev(CMPIInstance *inst,
 static int classify_resources(struct inst_list *all,
                               struct domain *domain)
 {
-        int ret;
         int i;
         uint16_t type;
 
@@ -223,8 +228,14 @@ static int classify_resources(struct inst_list *all,
         domain->dev_net = calloc(all->cur, sizeof(struct virt_device));
 
         for (i = 0; i < all->cur; i++) {
-                ret = cu_get_u16_prop(all->list[i], "ResourceType", &type);
-                if (ret != CMPI_RC_OK)
+                CMPIObjectPath *op;
+
+                op = CMGetObjectPath(all->list[i], NULL);
+                if (op == NULL)
+                        return 0;
+
+                if (rasd_type_from_classname(CLASSNAME(op), &type) != 
+                    CMPI_RC_OK)
                         return 0;
 
                 if (type == CIM_RASD_TYPE_PROC)
@@ -692,6 +703,7 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
         struct domain *dominfo = NULL;
         uint16_t type;
         char *xml = NULL;
+        CMPIObjectPath *op;
 
         if (!get_dominfo(dom, &dominfo)) {
                 cu_statusf(_BROKER, &s,
@@ -700,10 +712,18 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        if (cu_get_u16_prop(rasd, "ResourceType", &type) != CMPI_RC_OK) {
+        op = CMGetObjectPath(rasd, NULL);
+        if (op == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Missing ResourceType");
+                           "Unable to get RASD path");
+                goto out;
+        }
+
+        if (rasd_type_from_classname(CLASSNAME(op), &type) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine RASD type");
                 goto out;
         }
 

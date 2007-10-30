@@ -162,7 +162,6 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
         CMPIStatus s;
         CMPIInstance *dev = NULL;
         char *id = NULL;
-        int ret;
         uint16_t type;
 
         ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
@@ -175,8 +174,7 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        ret = cu_get_u16_path(ref, "ResourceType", &type);
-        if (!ret) {
+        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing ResourceType");

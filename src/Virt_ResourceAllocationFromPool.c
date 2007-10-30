@@ -42,7 +42,6 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s;
-        int ret;
         uint16_t type;
         char *id = NULL;
         char *poolid = NULL;
@@ -52,11 +51,10 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
 
         inst_list_init(&_list);
 
-        ret = cu_get_u16_path(ref, "ResourceType", &type);
-        if (!ret) {
+        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Missing ResourceType");
+                           "Unable to determine RASD type");
                 goto out;
         }
 
@@ -113,8 +111,16 @@ static int filter_by_pool(struct inst_list *dest,
 
         for (i = 0; i < src->cur; i++) {
                 CMPIInstance *inst = src->list[i];
+                CMPIObjectPath *op;
 
-                cu_get_u16_prop(inst, "ResourceType", &type);
+                op = CMGetObjectPath(inst, NULL);
+                if (op == NULL)
+                        continue;
+
+                if (rasd_type_from_classname(CLASSNAME(op), &type) !=
+                    CMPI_RC_OK)
+                        continue;
+
                 cu_get_str_prop(inst, "InstanceID", &rasd_id);
 
                 poolid = pool_member_of(_BROKER, type, rasd_id);

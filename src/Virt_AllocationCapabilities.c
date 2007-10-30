@@ -29,6 +29,7 @@
 #include "misc_util.h"
 
 #include "Virt_AllocationCapabilities.h"
+#include "Virt_RASD.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -44,8 +45,7 @@ CMPIStatus get_alloc_cap(const CMPIBroker *broker,
         *inst = get_typed_instance(broker, "AllocationCapabilities", 
                                    NAMESPACE(ref));
 
-        ret = cu_get_u16_path(ref, "ResourceType", &type);
-        if (ret != 1) {
+        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 CMSetStatusWithChars(broker, &s, CMPI_RC_ERR_FAILED,
                                      "Could not get ResourceType.");
                 goto out;
