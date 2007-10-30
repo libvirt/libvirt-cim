@@ -29,13 +29,13 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_SystemDevice.la \
                        libVirt_ComputerSystemIndication.la \
                        libVirt_RASD.la \
+                       libVirt_HostSystem.la \
                        libVirt_VirtualSystemManagementService.la \
                        libVirt_VirtualSystemManagementCapabilities.la \
                        libVirt_EnabledLogicalElementCapabilities.la \
                        libVirt_AllocationCapabilities.la \
                        libVirt_SettingsDefineCapabilities.la \
                        libVirt_VSSD.la \
-                       libVirt_HostSystem.la \
                        libVirt_HostedDependency.la \
                        libVirt_RegisteredProfile.la \
                        libVirt_ElementConformsToProfile.la \
@@ -56,7 +56,7 @@ libVirt_ComputerSystemIndication_la_SOURCES = Virt_ComputerSystemIndication.c
 libVirt_ComputerSystemIndication_la_LIBADD = -lVirt_ComputerSystem -lpthread -lrt
 
 libVirt_VirtualSystemManagementService_la_SOURCES = Virt_VirtualSystemManagementService.c
-libVirt_VirtualSystemManagementService_la_LIBADD = -lVirt_ComputerSystem -lVirt_ComputerSystemIndication -lVirt_RASD
+libVirt_VirtualSystemManagementService_la_LIBADD = -lVirt_ComputerSystem -lVirt_ComputerSystemIndication -lVirt_RASD -lVirt_HostSystem
 
 libVirt_VirtualSystemManagementCapabilities_la_SOURCES = Virt_VirtualSystemManagementCapabilities.c
 

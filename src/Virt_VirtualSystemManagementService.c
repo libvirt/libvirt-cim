@@ -44,6 +44,7 @@
 #include "Virt_ComputerSystem.h"
 #include "Virt_ComputerSystemIndication.h"
 #include "Virt_RASD.h"
+#include "Virt_HostSystem.h"
 #include "svpc_types.h"
 
 const static CMPIBroker *_BROKER;
@@ -896,18 +897,24 @@ static struct method_handler *my_handlers[] = {
 STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
                    _BROKER, CMNoHook, my_handlers);
 
-
-static CMPIStatus return_vsms(const CMPIObjectPath *reference,
-                              const CMPIResult *results,
-                              int name_only)
+static CMPIStatus _get_vsms(const CMPIObjectPath *reference,
+                            CMPIInstance **_inst,
+                            int name_only)
 {
         CMPIStatus s;
         CMPIInstance *inst;
+        CMPIInstance *host;
+        char *val = NULL;
+
+        s = get_host_cs(_BROKER, reference, &host);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         inst = get_typed_instance(_BROKER,
                                   "VirtualSystemManagementService",
                                   NAMESPACE(reference));
         if (inst == NULL) {
+                CU_DEBUG("Failed to get typed instance");
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to create instance");
@@ -917,13 +924,52 @@ static CMPIStatus return_vsms(const CMPIObjectPath *reference,
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"Management Service", CMPI_chars);
 
+        if (cu_get_str_prop(host, "Name", &val) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get name of System");
+                goto out;
+        }
+
+        CMSetProperty(inst, "SystemName",
+                      (CMPIValue *)val, CMPI_chars);
+        free(val);
+
+        if (cu_get_str_prop(host, "CreationClassName", &val) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get creation class of system");
+                goto out;
+        }
+
+        CMSetProperty(inst, "SystemCreationClassName",
+                      (CMPIValue *)val, CMPI_chars);
+        free(val);
+
+        CMSetStatus(&s, CMPI_RC_OK);
+
+        *_inst = inst;
+ out:
+        return s;
+}
+
+static CMPIStatus return_vsms(const CMPIObjectPath *reference,
+                              const CMPIResult *results,
+                              int name_only)
+{
+        CMPIInstance *inst;
+        CMPIStatus s;
+
+        s = _get_vsms(reference, &inst, name_only);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
         if (name_only)
                 cu_return_instance_name(results, inst);
         else
                 CMReturnInstance(results, inst);
 
         CMSetStatus(&s, CMPI_RC_OK);
-
  out:
         return s;
 }
@@ -946,13 +992,58 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
         return return_vsms(reference, results, 0);
 }
 
+static int compare_prop(const CMPIObjectPath *ref,
+                        const CMPIInstance *inst,
+                        const char *name,
+                        int mandatory)
+{
+        char *prop = NULL;
+        char *key = NULL;
+        int rc = 0;
+
+        key = cu_get_str_path(ref, name);
+        if (key == NULL) {
+                rc = !mandatory;
+                goto out;
+        }
+
+        if (cu_get_str_prop(inst, name, &prop) != CMPI_RC_OK)
+                goto out;
+
+        rc = STREQ(key, prop);
+ out:
+        free(prop);
+        free(key);
+
+        return rc;
+}
+
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIContext *context,
                               const CMPIResult *results,
-                              const CMPIObjectPath *reference,
+                              const CMPIObjectPath *ref,
                               const char **properties)
 {
-        return return_vsms(reference, results, 0);
+        CMPIInstance *inst;
+        CMPIStatus s;
+
+        s = _get_vsms(ref, &inst, 0);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+
+        if (!compare_prop(ref, inst, "CreationClassName", 0) ||
+            !compare_prop(ref, inst, "SystemName", 0) ||
+            !compare_prop(ref, inst, "Name", 1) ||
+            !compare_prop(ref, inst, "SystemCreationClassName", 0))
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
+        else {
+                CMSetStatus(&s, CMPI_RC_OK);
+                CMReturnInstance(results, inst);
+        }
+
+        return s;
 }
 
 DEFAULT_CI();
