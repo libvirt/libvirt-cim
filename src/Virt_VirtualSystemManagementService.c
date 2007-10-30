@@ -86,11 +86,14 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
         int ret;
 
         sys_str = cu_get_str_arg(argsin, "SystemSettings");
-        if (sys_str == NULL)
+        if (sys_str == NULL) {
+                CU_DEBUG("No SystemSettings string argument");
                 goto out;
+        }
 
         ret = cu_parse_embedded_instance(sys_str, _BROKER, sys);
         if (ret) {
+                CU_DEBUG("Unable to parse SystemSettings instance");
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED,
                                      "SystemSettings parse error");
@@ -99,7 +102,7 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
 
         res_arr = cu_get_array_arg(argsin, "ResourceSettings");
         if (res_arr == NULL) {
-                printf("Failed to get array arg\n");
+                CU_DEBUG("Failed to get array arg");
                 goto out;
         }
 
@@ -251,11 +254,14 @@ static CMPIInstance *connect_and_create(char *xml,
         CMPIInstance *inst;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
-        if (conn == NULL)
+        if (conn == NULL) {
+                CU_DEBUG("libvirt connection failed");
                 return NULL;
+        }
 
         dom = virDomainDefineXML(conn, xml);
         if (dom == NULL) {
+                CU_DEBUG("Failed to define domain from XML");
                 CMSetStatusWithChars(_BROKER, s,
                                      CMPI_RC_ERR_FAILED,
                                      "Failed to create domain");
@@ -264,10 +270,12 @@ static CMPIInstance *connect_and_create(char *xml,
 
         name = virDomainGetName(dom);
         inst = instance_from_name(_BROKER, conn, (char *)name, ref);
-        if (inst == NULL)
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get new instance");
                 CMSetStatusWithChars(_BROKER, s,
                                      CMPI_RC_ERR_FAILED,
                                      "Failed to lookup resulting system");
+        }
 
         virConnectClose(conn);
 
@@ -291,6 +299,7 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         }
 
         if (!classify_resources(resources, domain)) {
+                CU_DEBUG("Failed to classify resources");
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "ResourceSettings Error");
@@ -298,6 +307,7 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         }
 
         if (!vssd_to_domain(vssd, domain)) {
+                CU_DEBUG("Failed to create domain from VSSD");
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "SystemSettings Error");
@@ -305,7 +315,7 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         }
 
         xml = system_to_xml(domain);
-        printf("\nSystem XML:\n%s\n", xml);
+        CU_DEBUG("System XML:\n%s", xml);
 
         inst = connect_and_create(xml, ref, s);
 
@@ -347,7 +357,7 @@ static CMPIStatus define_system(CMPIMethodMI *self,
 
         inst_list_init(&res);
 
-        printf("Parsing args\n");
+        CU_DEBUG("DefineSystem");
 
         s = define_system_parse_args(argsin, &vssd, &res);
         if (s.rc != CMPI_RC_OK)
