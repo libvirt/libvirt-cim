@@ -65,7 +65,7 @@ static bool lifecycle_enabled = 0;
 static bool _lifecycle_indication(const CMPIBroker *broker,
                                   const CMPIContext *ctx,
                                   const CMPIObjectPath *newsystem,
-                                  char *type)
+                                  const char *type)
 {
         CMPIObjectPath *ind_op;
         CMPIInstance *ind;
@@ -171,7 +171,7 @@ static bool async_ind(CMPIContext *context,
 
         free(type_cn);
 
-        return _lifecycle_indication(_BROKER, context, op, (char *)type_name);
+        return _lifecycle_indication(_BROKER, context, op, type_name);
 }
 
 static CMPI_THREAD_RETURN lifecycle_thread(void *params)
