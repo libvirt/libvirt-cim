@@ -20,6 +20,7 @@
  */
 struct reg_prof {
         uint16_t reg_org; // Valid: 1 = Other, 2 = DMTF
+        char *reg_id;
         char *reg_name;
         char *reg_version;
         int ad_types;
@@ -28,49 +29,27 @@ struct reg_prof {
         char *provider_name;
 };
 
-struct reg_prof Processor = {
+struct reg_prof SystemVirtualization = {
         .reg_org = 2,
-        .reg_name = "Processor Profile",
-        .reg_version = "2.15",
-        .provider_name = "Processor"
-};
-
-struct reg_prof LogicalDisk = {
-        .reg_org = 2,
-        .reg_name = "Logical Disk Profile",
-        .reg_version = "2.15",
-        .provider_name = "LogicalDisk"
-};
-
-struct reg_prof NetworkPort = {
-        .reg_org = 2,
-        .reg_name = "Network Port Profile",
-        .reg_version = "2.15",
-        .provider_name = "NetworkPort"
-};
-
-struct reg_prof ComputerSystem = {
-        .reg_org = 2,
-        .reg_name = "Computer System Profile",
-        .reg_version = "2.15",
-        .provider_name = "ComputerSystem"
-};
-
-struct reg_prof SVP = {
-        .reg_org = 2,
+        .reg_id = "DSP1042-1.0.0a",
         .reg_name = "System Virtualization Profile",
-        .reg_version = "2.15",
-        .provider_name = "VirtualSystemManagementService"
+        .reg_version = "1.0.0a",
+        .provider_name = "HostSystem"
+};
+
+struct reg_prof VirtualSystem = {
+        .reg_org = 2,
+        .reg_id = "DSP1057-1.0.0a",
+        .reg_name = "Virtual System Profile",
+        .reg_version = "1.0.0a",
+        .provider_name = "ComputerSystem"
 };
 
 
 // Make sure to add pointer to your reg_prof struct here.
 struct reg_prof *profiles[] = {
-        &Processor,
-        &LogicalDisk,
-        &NetworkPort,
-        &ComputerSystem,
-        &SVP,
+        &SystemVirtualization,
+        &VirtualSystem,
         NULL
 };
 

@@ -38,39 +38,22 @@
 
 const static CMPIBroker *_BROKER;
 
-static bool reg_prof_set_id(CMPIInstance *instance, 
-                            struct reg_prof *profile)
-{
-        char *id;
-
-        if (asprintf(&id, "%s_%s", profile->reg_name, 
-                     profile->reg_version) == -1)
-                id = NULL;
-        
-        if(id)
-                CMSetProperty(instance, "InstanceID", 
-                              (CMPIValue *)id, CMPI_chars);
-
-        return id != NULL;
-}
-
 CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
-				const CMPIObjectPath *ref, 
+                                const char *namespace,
+                                const char **properties,
 				struct reg_prof *profile)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIObjectPath *op;
         CMPIInstance *instance = NULL;
         char *classname;
 
         classname = get_typed_class("RegisteredProfile");
         if (classname == NULL) {
-                //TRACE(1, "Can't assemble classname.");
-                printf("Can't assemble classname.\n");
                 goto out;
         }
 
-        op = CMNewObjectPath(broker, NAMESPACE(ref), classname, &s);
+        op = CMNewObjectPath(broker, namespace, classname, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto out;
 
@@ -78,10 +61,15 @@ CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto out;
 
-        reg_prof_set_id(instance, profile);
-
-        CMSetProperty(instance, "CreationClassName", 
-                      (CMPIValue *)classname, CMPI_chars);
+        if (properties) {
+                s = CMSetPropertyFilter(instance, properties, NULL);
+                if (s.rc != CMPI_RC_OK) {
+                        goto out;
+                }
+        }
+        
+        CMSetProperty(instance, "InstanceID",
+                      (CMPIValue *)profile->reg_id, CMPI_chars);
 
         CMSetProperty(instance, "RegisteredOrganization", 
                       (CMPIValue *)&profile->reg_org, CMPI_uint16);
@@ -103,26 +91,19 @@ static CMPIStatus enum_profs(const CMPIObjectPath *ref,
                              const char **properties,
                              bool names_only)
 {
-        int i;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
+        int i;
 
         for (i = 0; profiles[i] != NULL; i++) {
-                instance = reg_prof_instance(_BROKER, ref, profiles[i]);
+                instance = reg_prof_instance(_BROKER, 
+                                             NAMESPACE(ref), 
+                                             properties, 
+                                             profiles[i]);
                 if (instance == NULL) {
                         CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
                                              "Can't create profile instance.");
                         goto out;
-                }
-                
-                if (properties) {
-                        s = CMSetPropertyFilter(instance, properties, NULL);
-                        if (s.rc != CMPI_RC_OK) {
-                                CMSetStatusWithChars(_BROKER, &s, 
-                                                     CMPI_RC_ERR_FAILED,
-                                                     "Property filter failed.");
-                                goto out;
-                        }
                 }
 
                 if (names_only)
@@ -132,6 +113,44 @@ static CMPIStatus enum_profs(const CMPIObjectPath *ref,
         }
 
  out:
+        return s;
+}
+
+static CMPIStatus get_prof(const CMPIObjectPath *ref,
+                           const CMPIResult *results,
+                           const char **properties)
+{       
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *instance = NULL;
+        char* id;
+        int i;
+
+        id = cu_get_str_path(ref, "InstanceID");
+        if (id == NULL) {
+                CMSetStatusWithChars(_BROKER, &s,
+                                     CMPI_RC_ERR_FAILED,
+                                     "No InstanceID specified");
+                return s;
+        }
+
+        for (i = 0; profiles[i] != NULL; i++) {
+                if(STREQ(id, profiles[i]->reg_id)) {
+                        instance = reg_prof_instance(_BROKER, 
+                                                     NAMESPACE(ref), 
+                                                     properties,
+                                                     profiles[i]);
+                        break;
+                }
+        }
+
+        if(instance)
+                CMReturnInstance(results, instance);
+        else
+                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+                
+
+        free(id);
+
         return s;
 }
 
@@ -152,7 +171,15 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
         return enum_profs(reference, results, properties, false);
 }
 
-DEFAULT_GI();
+static CMPIStatus GetInstance(CMPIInstanceMI *self,
+                              const CMPIContext *context,
+                              const CMPIResult *results,
+                              const CMPIObjectPath *reference,
+                              const char **properties)
+{
+        return get_prof(reference, results, properties);
+}
+
 DEFAULT_CI();
 DEFAULT_MI();
 DEFAULT_DI();

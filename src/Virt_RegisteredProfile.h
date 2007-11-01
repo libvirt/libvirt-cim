@@ -22,8 +22,9 @@
 #define __VIRT_REGISTERED_PROFILE_H
 
 CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
-				const CMPIObjectPath *ref, 
-				struct reg_prof *profile);
+                                const char *namespace,
+                                const char **properties,
+                                struct reg_prof *profile);
 
 #endif
 
