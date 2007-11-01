@@ -1,7 +1,7 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes ...
-Xen_ElementConformsToProfile root/ibmsd Virt_ElementConformsToProfileProvider Virt_ElementConformsToProfile  association
+#Xen_ElementConformsToProfile root/ibmsd Virt_ElementConformsToProfileProvider Virt_ElementConformsToProfile  association
 Xen_ElementConformsToProfile root/interop Virt_ElementConformsToProfileProvider Virt_ElementConformsToProfile  association
 # Classname Namespace ProviderName ProviderModule ProviderTypes ...
-KVM_ElementConformsToProfile root/ibmsd Virt_ElementConformsToProfileProvider Virt_ElementConformsToProfile  association
+#KVM_ElementConformsToProfile root/ibmsd Virt_ElementConformsToProfileProvider Virt_ElementConformsToProfile  association
 KVM_ElementConformsToProfile root/interop Virt_ElementConformsToProfileProvider Virt_ElementConformsToProfile  association
