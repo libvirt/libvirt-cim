@@ -35,7 +35,6 @@
 #include "std_association.h"
 
 #include "Virt_RegisteredProfile.h"
-#include "Virt_ElementConformsToProfile.h"
 
 /* Associate an XXX_RegisteredProfile to the proper XXX_ManagedElement.
  *
@@ -46,75 +45,53 @@
 
 const static CMPIBroker *_BROKER;
 
-static CMPIStatus prof_from_ref(struct reg_prof *prof,
-                                const CMPIObjectPath *ref)
+static CMPIStatus elem_instances(const CMPIObjectPath *ref,
+                                 struct std_assoc_info *info,
+                                 struct inst_list *list,
+                                 struct reg_prof *profile)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        char *tmp_str;
-        int tmp_int;
-        
-        memset(prof, 0, sizeof(*prof));
-
-        prof->reg_name = cu_get_str_path(ref, "RegisteredName");
-        prof->reg_version = cu_get_str_path(ref, "RegisteredVersion");
-        prof->other_reg_org = cu_get_str_path(ref, "OtherRegisteredOrganization");
-
-        tmp_str = cu_get_str_path(ref, "RegisteredOrganization");
-        if (tmp_str) {
-                sscanf(tmp_str, "%d", &tmp_int);
-                prof->reg_org = (uint16_t)tmp_int;
-        }
-
-        free(tmp_str);
-        return s;
-
-}
-
-static bool compare_profiles(struct reg_prof *target,
-                             struct reg_prof *candidate)
-{
-        if (!STREQC(target->reg_name, candidate->reg_name))
-                return false;
-
-        COMPARE_OPT_STR(target, candidate, reg_version);
-        COMPARE_OPT_NUM(target, candidate, reg_org);
-        //COMPARE_OPT_NUM(target, candidate, ad_types);
-        COMPARE_OPT_STR(target, candidate, other_reg_org);
-        //COMPARE_OPT_STR(target, candidate, ad_type_descriptions);
-
-        return true;
-}
-
-static CMPIInstance *elem_instance(const CMPIObjectPath *ref,
-                                   char *provider_name)
-{
-        CMPIStatus s;
         CMPIObjectPath *op;
-        CMPIInstance *instance = NULL;
+        CMPIEnumeration *en  = NULL;
+        CMPIData data ;
         char *classname;
 
-        classname = get_typed_class(provider_name);
+        classname = get_typed_class(profile->provider_name);
         if (classname == NULL) {
-                //TRACE("Can't assemble classname.");
-                printf("Can't assemble classname.\n");
+                CMSetStatusWithChars(_BROKER, &s,
+                                     CMPI_RC_ERR_FAILED, 
+                                     "Can't assemble classname." );
                 goto out;
         }
 
-        op = CMNewObjectPath(_BROKER, NAMESPACE(ref), classname, &s);
+        op = CMNewObjectPath(_BROKER, "/root/ibmsd", classname, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
-                goto out;
+                goto error;
+        
+        en = CBEnumInstances(_BROKER, info->context , op, NULL, &s);
+        if (en == NULL) {
+                CMSetStatusWithChars(_BROKER, &s,
+                                     CMPI_RC_ERR_FAILED, 
+                                     "Upcall enumInstances to target class failed.");
+                goto error;
+        }
 
-        instance = CMNewInstance(_BROKER, op, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(instance))
-                goto out;
+        while (CMHasNext(en, &s)) {
+                data = CMGetNext(en, &s);
+                if (CMIsNullObject(data.value.inst)) {
+                        CMSetStatusWithChars(_BROKER, &s,
+                                             CMPI_RC_ERR_FAILED, 
+                                             "Failed to retrieve enumeration entry.");
+                        goto error;
+                }
 
-        CMSetProperty(instance, "CreationClassName", (CMPIValue *)classname, 
-                      CMPI_chars);
+                inst_list_add(list, data.value.inst);
+        }
 
- out:
+ error:
         free(classname);
-
-        return instance;
+ out:
+        return s;
 }
 
 static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
@@ -122,25 +99,28 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *instance;
-        struct reg_prof target;
-        struct reg_prof *candidate;
+        char *id;
         int i;
-
-        s = prof_from_ref(&target, ref);
-
-        for (i = 0; profiles[i] != NULL; i++) {
-                candidate = profiles[i];
-                if (!compare_profiles(&target, candidate))
-                        continue;
-
-                instance = elem_instance(ref, candidate->provider_name);
-                if (instance == NULL)
-                        goto out;
-
-                inst_list_add(list, instance);
+        
+        id = cu_get_str_path(ref, "InstanceID");
+        if (id == NULL) {
+                CMSetStatusWithChars(_BROKER, &s,
+                                     CMPI_RC_ERR_FAILED,
+                                     "No InstanceID specified");
+                goto out;
         }
 
+        for (i = 0; profiles[i] != NULL; i++) {
+                if (STREQ(id, profiles[i]->reg_id)) {
+                        s = elem_instances(ref, info, list, profiles[i]);
+                        if ((s.rc != CMPI_RC_OK))
+                                goto error;
+                        break;
+                }
+        }
+        
+ error:
+        free(id);
  out:
         return s;
 }
@@ -152,74 +132,62 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
         char *classname;
-        char *provider_name;
         struct reg_prof *candidate;
         int i;
 
-        classname = cu_get_str_path(ref, "CreationClassName");
+        classname = class_base_name(CLASSNAME(ref));
         if (classname == NULL) {
                 CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Can't get class name from element.");
-                goto error1;
-        }
-
-        provider_name = class_base_name(classname);
-        if (provider_name == NULL) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Can't get provider name.");
-                goto error2;
+                                     "Can't get class name.");
+                goto out;
         }
 
         for (i = 0; profiles[i] != NULL; i++) {
                 candidate = profiles[i];
-                if (!STREQC(candidate->provider_name, provider_name))
+                if (!STREQC(candidate->provider_name, classname))
                         continue;
 
-                instance = reg_prof_instance(_BROKER, ref, candidate);
+                instance = reg_prof_instance(_BROKER, 
+                                             "/root/interop", 
+                                             NULL, 
+                                             candidate);
                 if (instance == NULL) {
                         CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
                                              "Can't create profile instance.");
-                        goto error3;
+                        goto error;
                 }
                 
                 inst_list_add(list, instance);
         }
 
- error3:
-        free(provider_name);
- error2:                
+ error:                
         free(classname);
- error1:
+ out:
         return s;
 }
 
-static CMPIInstance *make_ref(const CMPIObjectPath *ref,
-                              const CMPIInstance *inst,
+static CMPIInstance *make_ref(const CMPIObjectPath *source_op,
+                              const CMPIInstance *target_inst,
                               struct std_assoc_info *info,
                               struct std_assoc *assoc)
 {
-        CMPIInstance *refinst;
-        char *base;
+        CMPIInstance *assoc_inst;
 
-        base = class_base_name(assoc->target_class);
+        assoc_inst = get_typed_instance(_BROKER,
+                                        "ElementConformsToProfile",
+                                        NAMESPACE(source_op));
+                
+        if (!CMIsNullObject(assoc_inst)) {
+                CMPIObjectPath *target_op;
+                target_op = CMGetObjectPath(target_inst, NULL);
 
-        refinst = get_typed_instance(_BROKER,
-                                     base,
-                                     NAMESPACE(ref));
-        if (refinst != NULL) {
-                CMPIObjectPath *instop;
-
-                instop = CMGetObjectPath(inst, NULL);
-
-                CMSetProperty(refinst, assoc->source_prop,
-                              (CMPIValue *)ref, CMPI_ref);
-                CMSetProperty(refinst, assoc->target_prop,
-                              (CMPIValue *)instop, CMPI_ref);
+                CMSetProperty(assoc_inst, assoc->source_prop,
+                              (CMPIValue *)&(source_op), CMPI_ref);
+                CMSetProperty(assoc_inst, assoc->target_prop,
+                              (CMPIValue *)&(target_op), CMPI_ref);
         }
 
-        free(base);
-
-        return refinst;
+        return assoc_inst;
 }
 
 struct std_assoc forward = {

@@ -7,7 +7,6 @@ noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_ComputerSystemIndication.h		\
     Virt_Device.h				\
     Virt_DevicePool.h				\
-    Virt_ElementConformsToProfile.h		\
     Virt_EnabledLogicalElementCapabilities.h	\
     Virt_HostSystem.h				\
     Virt_RASD.h					\
