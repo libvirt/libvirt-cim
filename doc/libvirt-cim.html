@@ -1,0 +1,172 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="">
+  <title>Libvirt-CIM: The CIM provider for libvirt</title>
+</head>
+
+<body bgcolor="#ffffff">
+<h1 align="center">Libvirt-CIM: The CIM provider for libvirt</h1>
+
+<h1>Note: this is the flat content of the <a href="index.html">web site</a></h1>
+
+<h1 style="text-align: center">libvirt-cim</h1>
+
+<h3>What is <span class="style1">libvirt-cim?</span></h3>
+
+<p>Libvirt-CIM is a CIM provider for managing linux virtualization
+  platforms using libvirt.  It is written in C and should work in any
+  CIMOM that supports CMPI 2.0 providers.  The intent is to implement
+  the SVPC virtualization class model currently available in the DMTF
+  Experimental 2.16 schema.
+</p>
+
+<h2><a name="News">Releases</a></h2>
+
+<p>There have been no releases to date</p>
+
+<h2><a name="Introducti">Introduction</a></h2>
+
+<p>Libvirt-CIM is a CIM provider for managing linux virtualization
+  platforms using libvirt.  It is written in C and should work in any
+  CIMOM that supports CMPI 2.0 providers.  The intent is to implement
+  the SVPC virtualization class model currently available in the DMTF
+  Experimental 2.16 schema.
+</p>
+
+<p>The providers are currently under heavy development.  Focus is on
+  Xen support right now, which means some of the providers have some
+  "shortcuts" hard-coded to Xen right now.  The long-term goal is to
+  support all of the platforms that libvirt supports with minimal
+  differences.
+</p>
+
+<h2><a name="Downloads">Downloads</a></h2>
+
+<p>The libvirt-cim development tree can be found in the
+  <a href="http://libvirt.org/hg">libvirt.org/hg</a> repository.
+</p>
+
+<p>To get a copy of the development tree, use 
+  <a href="http://www.selenic.com/mercurial/wiki/">mercurial</a>'s
+  clone feature:
+</p>
+
+<p><code>$ hg clone http://libvirt.org/hg/libvirt-cim</code></p>
+
+<p>Alternatively, you can grab a 
+  <a href="http://libvirt.org/hg/libvirt-cim/archive/tip.tar.gz">tarball</a> or 
+  <a href="http://libvirt.org/hg/libvirt-cim/archive/tip.zip">zip</a>
+  file snapshot of the repository.
+</p>
+
+<h2><a name="Schema">Schema</a></h2>
+
+<p>The libvirt-cim provider depends on an installed 
+  <a href="http://www.dmtf.org/standards/cim/cim_schema_v216/">DMTF
+  CIM v2.16</a> Experimental schema.  The package can be obtained
+<a href="http://www.dmtf.org/standards/cim/cim_schema_v216/cimv216Experimental-MOFs.zip">here</a>.</p>
+
+<h4>To install the schema in Pegasus:</h4>
+
+<p><code>
+  $ PEGASUS_REPO=/var/lib/Pegasus # adjust this as needed<br/>
+  $ mkdir cim216<br/>
+  $ cd cim216<br/>
+  $ unzip $PATH_TO_ZIPFILE<br/>
+  $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/ibmsd cimv216.mof<br/>
+  $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/ibmsd qualifiers.mof<br/>
+  $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/ibmsd qualifiers_optional.mof<br/>
+</code></p>
+
+<h4>To install the schema in SFCB:</h4>
+
+<p><code>
+  $ SFCB_CIM=/usr/local/share/sfcb/CIM # adjust this as needed<br/>
+  $ mkdir cim216<br/>
+  $ cd cim216<br/>
+  $ unzip $PATH_TO_ZIPFILE<br/>
+  $ mv cimv216.mof CIM_Schema.mof<br/>
+  $ sudo cp * $SFCB_CIM<br/>
+  $ sudo sfcbrepos<br/>
+</code></p>
+
+<p><strong>Note:</strong> in both cases, the CIM v2.16 schema seems to have a
+    few classes that don't register correctly.  You may need to
+    disable installation of classes with something like the
+    following:
+</p>
+
+<p><code>
+--- CIM_Schema.mof      2007-10-15 00:15:44.000000000 -0700<br/>
++++ cimv216.mof 2007-10-22 10:11:19.000000000 -0700<br/>
+@@ -507,3 +507,3 @@<br/>
+ #pragma include ("Policy/CIM_SharedSecretAuthentication.mof")<br/>
+-#pragma include ("Security/CIM_SecurityIndication.mof")<br/>
++//#pragma include ("Security/CIM_SecurityIndication.mof")<br/>
+ #pragma include ("Support/PRS_Activity.mof")<br/>
+@@ -728,4 +728,4 @@<br/>
+ #pragma include ("Policy/CIM_PolicyConditionInPolicyRule.mof")<br/>
+-#pragma include ("Security/CIM_IPNetworkSecurityIndication.mof")<br/>
+-#pragma include ("Security/CIM_IPPacketFilterIndication.mof")<br/>
++//#pragma include ("Security/CIM_IPNetworkSecurityIndication.mof")<br/>
++//#pragma include ("Security/CIM_IPPacketFilterIndication.mof")<br/>
+ #pragma include ("Support/PRS_ActivityContact.mof")<br/>
+</code></p>
+
+<h2><a name="Platforms">Platform Support</a></h2>
+
+<p>Currently, libvirt-cim is targetting Xen as its primary support
+  platform because is has the largest installed user base.  The
+  long-term plan is to support many others (hopefully any that libvirt
+  supports).  This includes KVM and containers.
+</p>
+
+<p>The code base currently has many Xen-specific "shortcuts" that need
+  to be resolved and generalized in order to support other platforms.
+  A short list of these may include:</p>
+<ul>
+  <li>The XML generation and parsing code and the related device
+    modeling code.</li>
+  <li>The libvirt connection logic.  Right now, (in most places) we
+    detect the current hypervisor in use and connect to libvirt
+    appropriately.  This may or may not be the correct behavior in a
+    situation where you could need to support containers and QEMU
+    virtual machines.</li>
+  <li>Some lingering hard-coded "Xen_Foo" class names.</li>
+</ul>
+  
+<p>Further, supporting new platforms have some registration and
+  modeling implications:</p>
+<ul>
+  <li>Additions to the MOF and registration files for "branded"
+    classes (Xen_Foo, KVM_Foo, etc)</li>
+  <li>Modifications to some of the association providers that register
+    separate CMPI provider structures for each class type they handle
+    (to avoid duplicate results in the general case)</li>
+</ul>
+
+<h2><a name="architecture">Architecture</a></h2>
+
+<p>The libvirt-cim provider consists of two major parts:</p>
+
+<ul>
+  <li>The provider classes themselves (<tt>src/</tt>)</li>
+  <li>A helper library of common components (<tt>libxkutil/</tt>)</li>
+</ul>
+
+<p>The provider classes implement the actual CIM class model.  Some of
+  the provider libraries implement one CIM class and one providier.
+  However, many of them perform more than one task.  For example,
+  the <tt>Virt_Device</tt> and <tt>Virt_DevicePool</tt> providers
+  implement the device and device pool classes for each of the major
+  device types: Memory, Processor, Network, and Disk.
+</p>
+
+<p>The helper library contains common routines that almost all of the
+  providers use, such as libvirt connection type detection and device
+  and system XML parsing.  
+</p>
+
+</body>
+
+</html>

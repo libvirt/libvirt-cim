@@ -19,7 +19,7 @@
         <xsl:text>docs.html</xsl:text>
       </xsl:when>
       <xsl:when test="$name = '#Reporting'">
-        <xsl:text>bugs.html</xsl:text>
+        <xsl:text>development.html</xsl:text>
       </xsl:when>
       <xsl:when test="$name = '#help'">
         <xsl:text>help.html</xsl:text>
@@ -37,28 +37,19 @@
         <xsl:text>news.html</xsl:text>
       </xsl:when>
       <xsl:when test="$name = '#Contributi'">
-        <xsl:text>contribs.html</xsl:text>
-      </xsl:when>
-      <xsl:when test="$name = '#Format'">
-        <xsl:text>format.html</xsl:text>
+        <xsl:text>development.html</xsl:text>
       </xsl:when>
       <xsl:when test="$name = '#architecture'">
         <xsl:text>architecture.html</xsl:text>
       </xsl:when>
-      <xsl:when test="$name = '#Python'">
-        <xsl:text>python.html</xsl:text>
-      </xsl:when>
       <xsl:when test="$name = '#FAQ'">
         <xsl:text>FAQ.html</xsl:text>
       </xsl:when>
-      <xsl:when test="$name = '#Remote'">
-        <xsl:text>remote.html</xsl:text>
+      <xsl:when test="$name = '#Platforms'">
+        <xsl:text>platforms.html</xsl:text>
       </xsl:when>
-      <xsl:when test="$name = '#uri'">
-        <xsl:text>uri.html</xsl:text>
-      </xsl:when>
-      <xsl:when test="$name = '#HVSupport'">
-        <xsl:text>hvsupport.html</xsl:text>
+      <xsl:when test="$name = '#Schema'">
+	<xsl:text>schema.html</xsl:text>
       </xsl:when>
       <xsl:when test="$name = ''">
         <xsl:text>unknown.html</xsl:text>
@@ -77,56 +68,6 @@
   the main menu box
  -->
   <xsl:template name="linkList">
-  <div class="linkList">
-    <div class="llinks">
-      <h3 class="links"><span>main menu</span></h3>
-      <ul>
-        <li>Home</li>
-    <xsl:for-each select="/html/body/h2">
-    <xsl:variable name="filename">
-      <xsl:call-template name="filename">
-	<xsl:with-param name="name" select="concat('#', string(a[1]/@name))"/>
-      </xsl:call-template>
-    </xsl:variable>
-    <xsl:if test="$filename != ''">
-      <li>
-	<xsl:element name="a">
-	  <xsl:attribute name="href">
-	    <xsl:value-of select="$filename"/>
-	  </xsl:attribute>
-	  <xsl:if test="$filename = 'docs.html'">
-	      <xsl:attribute name="style">font-weight:bold</xsl:attribute>
-	  </xsl:if>
-	  <xsl:value-of select="."/>
-	</xsl:element>
-      </li>
-    </xsl:if>
-    </xsl:for-each>
-      <li><a href="{$href_base}html/index.html">API Menu</a></li>
-      <li><a href="{$href_base}examples/index.html">C code examples</a></li>
-      <li><a href="{$href_base}ChangeLog.html">Recent Changes</a></li>
-
-      </ul>
-    </div>
-    <div class="llinks">
-      <h3 class="links"><span>related links</span></h3>
-      <ul>
-        <li> <a href="https://www.redhat.com/archives/libvir-list/">Mail archive</a></li>
-        <li> <a href="https://bugzilla.redhat.com/bugzilla/buglist.cgi?product=Fedora+Core&amp;component=libvirt&amp;bug_status=NEW&amp;bug_status=ASSIGNED&amp;bug_status=REOPENED&amp;bug_status=MODIFIED&amp;short_desc_type=allwordssubstr&amp;short_desc=&amp;long_desc_type=allwordssubstr">Open bugs</a></li>
-	<li> <a href="http://virt-manager.et.redhat.com/">virt-manager</a></li>
-	<li> <a href="http://search.cpan.org/~danberr/Sys-Virt-0.1.0/">Perl bindings</a></li>
-	<li> <a href="http://et.redhat.com/~rjones/ocaml-libvirt/">OCaml bindings</a></li>
-        <li><a href="http://www.cl.cam.ac.uk/Research/SRG/netos/xen/index.html">Xen project</a></li>
-        <li><form action="{$href_base}search.php" enctype="application/x-www-form-urlencoded" method="get">
-         <input name="query" type="text" size="12" value="Search..." /><input name="submit" type="submit" value="Go" />
-      </form></li>
-        <li><a href="http://xmlsoft.org/"> <img src="{$href_base}Libxml2-Logo-90x34.gif" alt="Made with Libxml2 Logo" /></a></li>
-      </ul>
-      <p class='credits'>Graphics and design by <a href="mail:dfong@redhat.com">Diana Fong</a></p>
-    </div>
-  </div>
-  </xsl:template>
-  <xsl:template name="linkList2">
   <div class="linkList2">
     <div class="llinks2">
       <h3 class="links2"><span>main menu</span></h3>
@@ -152,106 +93,20 @@
       </li>
     </xsl:if>
     </xsl:for-each>
-      <li><a href="{$href_base}html/index.html">API Menu</a></li>
-      <li><a href="{$href_base}examples/index.html">C code examples</a></li>
-      <li><a href="{$href_base}ChangeLog.html">Recent Changes</a></li>
-
       </ul>
     </div>
     <div class="llinks2">
       <h3 class="links2"><span>related links</span></h3>
       <ul>
-        <li> <a href="https://www.redhat.com/archives/libvir-list/">Mail archive</a></li>
-        <li> <a href="https://bugzilla.redhat.com/bugzilla/buglist.cgi?product=Fedora+Core&amp;component=libvirt&amp;bug_status=NEW&amp;bug_status=ASSIGNED&amp;bug_status=REOPENED&amp;bug_status=MODIFIED&amp;short_desc_type=allwordssubstr&amp;short_desc=&amp;long_desc_type=allwordssubstr">Open bugs</a></li>
-	<li> <a href="http://virt-manager.et.redhat.com/">virt-manager</a></li>
-	<li> <a href="http://search.cpan.org/~danberr/Sys-Virt-0.1.0/">Perl bindings</a></li>
-	<li> <a href="http://et.redhat.com/~rjones/ocaml-libvirt/">OCaml bindings</a></li>
-        <li><a href="http://www.cl.cam.ac.uk/Research/SRG/netos/xen/index.html">Xen project</a></li>
-        <li><form action="{$href_base}search.php" enctype="application/x-www-form-urlencoded" method="get">
-         <input name="query" type="text" size="12" value="Search..." /><input name="submit" type="submit" value="Go" />
-      </form></li>
-        <li><a href="http://xmlsoft.org/"> <img src="{$href_base}Libxml2-Logo-90x34.gif" alt="Made with Libxml2 Logo" /></a></li>
+        <li> <a href="https://www.redhat.com/mailman/listinfo/libvirt-cim/">Mailing list</a></li>
+	<li> <a href="http://libvirt.org/">libvirt</a></li>
+        <li><a href="http://xmlsoft.org/"> <img src="http://libvirt.org/Libxml2-Logo-90x34.gif" alt="Made with Libxml2 Logo" /></a></li>
       </ul>
       <p class='credits'>Graphics and design by <a href="mail:dfong@redhat.com">Diana Fong</a></p>
     </div>
   </div>
   </xsl:template>
 
-<!--
-  the main menu box
- -->
-  <xsl:template name="develtoc">
-   <div class="left">
-    <form action="{$href_base}search.php"
-          enctype="application/x-www-form-urlencoded" method="get">
-      <input name="query" type="text" size="20" value=""/>
-      <input name="submit" type="submit" value="Search ..."/>
-    </form>
-    <div class="box">
-      <h2 class="box_title">API menu</h2>
-    </div>
-      <p><a href="{$href_base}index.html">Main menu</a></p>
-      <p><a href="{$href_base}/html/index.html">API menu</a></p>
-      <p><a href="{$href_base}ChangeLog.html">ChangeLog</a></p>
-    <div class="box">
-      <h2 class="box_title">API Indexes</h2>
-    </div>
-      <p><a href="{$href_base}APIchunk0.html">Alphabetic</a></p>
-      <p><a href="{$href_base}APIconstructors.html">Constructors</a></p>
-      <p><a href="{$href_base}APIfunctions.html">Functions/Types</a></p>
-      <p><a href="{$href_base}APIfiles.html">Modules</a></p>
-      <p><a href="{$href_base}APIsymbols.html">Symbols</a></p>
-    <div class="box">
-      <h2 class="box_title">related links</h2>
-    </div>
-    <p><a href="https://www.redhat.com/archives/libvir-list/">Mail archive</a></p>
-    <p> <a href="https://bugzilla.redhat.com/bugzilla/buglist.cgi?product=Fedora+Core&amp;component=libvirt&amp;bug_status=NEW&amp;bug_status=ASSIGNED&amp;bug_status=REOPENED&amp;bug_status=MODIFIED&amp;short_desc_type=allwordssubstr&amp;short_desc=&amp;long_desc_type=allwordssubstr">Open bugs</a></p>
-    <p> <a href="http://virt-manager.et.redhat.com/">virt-manager</a></p>
-    <p> <a href="http://search.cpan.org/~danberr/Sys-Virt-0.1.0/">Perl bindings</a></p>
-    <p> <a href="http://et.redhat.com/~rjones/ocaml-libvirt/">OCaml bindings</a></p>
-    <p><a href="http://www.cl.cam.ac.uk/Research/SRG/netos/xen/index.html">Xen project</a></p>
-    <a href="http://xmlsoft.org/"><img src="{$href_base}Libxml2-Logo-90x34.gif" alt="Made with Libxml2 Logo"/></a>
-   </div>
-  <div class="linkList2">
-    <div class="llinks2">
-      <h3 class="links2"><span>API menu</span></h3>
-      <ul>
-      <li><a href="{$href_base}index.html">Main menu</a></li>
-      <li><a href="{$href_base}/html/index.html">API menu</a></li>
-      <li><a href="{$href_base}ChangeLog.html">ChangeLog</a></li>
-      </ul>
-    </div>
-    <div class="llinks2">
-      <h3 class="links2"><span>API indexes</span></h3>
-      <ul>
-      <li><a href="{$href_base}APIchunk0.html">Alphabetic</a></li>
-      <li><a href="{$href_base}APIconstructors.html">Constructors</a></li>
-      <li><a href="{$href_base}APIfunctions.html">Functions/Types</a></li>
-      <li><a href="{$href_base}APIfiles.html">Modules</a></li>
-      <li><a href="{$href_base}APIsymbols.html">Symbols</a></li>
-      </ul>
-    </div>
-    <div class="llinks2">
-      <h3 class="links2"><span>related links</span></h3>
-      <ul>
-        <li> <a href="https://www.redhat.com/archives/libvir-list/">Mail archive</a></li>
-	<li> <a href="https://bugzilla.redhat.com/bugzilla/buglist.cgi?product=Fedora+Core&amp;component=libvirt&amp;bug_status=NEW&amp;bug_status=ASSIGNED&amp;bug_status=REOPENED&amp;bug_status=MODIFIED&amp;short_desc_type=allwordssubstr&amp;short_desc=&amp;long_desc_type=allwordssubstr">Open bugs</a></li>
-	<li> <a href="http://virt-manager.et.redhat.com/">virt-manager</a></li>
-	<li> <a href="http://search.cpan.org/~danberr/Sys-Virt-0.1.0/">Perl bindings</a></li>
-	<li> <a href="http://et.redhat.com/~rjones/ocaml-libvirt/">OCaml bindings</a></li>
-        <li><a href="http://www.cl.cam.ac.uk/Research/SRG/netos/xen/index.html">Xen project</a></li>
-        <li><form action="{$href_base}search.php" enctype="application/x-www-form-urlencoded" method="get">
-         <input name="query" type="text" size="12" value="Search..." /><input name="submit" type="submit" value="Go" />
-      </form></li>
-        <li><a href="http://xmlsoft.org/"> <img src="Libxml2-Logo-90x34.gif" alt="Made with Libxml2 Logo" /></a></li>
-      </ul>
-    </div>
-  </div>
-  </xsl:template>
-
-<!--
-  the menu box for developper's pages
- -->
 <!--
   the page title
  -->
@@ -265,7 +120,7 @@
  - Write the styles in the head
  -->
   <xsl:template name="style">
-    <link rel="stylesheet" type="text/css" href="{$href_base}libvirt.css" />
+    <link rel="stylesheet" type="text/css" href="http://libvirt.org/libvirt.css" />
     <link rel="SHORTCUT ICON" href="/32favicon.png" />
   </xsl:template>
 
@@ -332,7 +187,7 @@
 	      <xsl:apply-templates mode="subfile" select="$header/following-sibling::*[preceding-sibling::h2[1] = $header and name() != 'h2' ]"/>
 	    </div>
 	  </div>
-	  <xsl:call-template name="linkList2"/>
+	  <xsl:call-template name="linkList"/>
 	  <xsl:call-template name="bottom"/>
 	</div>
 	</body>

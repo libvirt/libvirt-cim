@@ -67,6 +67,7 @@ AC_CONFIG_FILES([
     libxkutil/tests/Makefile
     src/Makefile
     src/tests/Makefile
+    doc/Makefile
     Makefile 
     ])
 

@@ -1,5 +1,5 @@
 # Copyright IBM Corp. 2007
-SUBDIRS = libxkutil src
+SUBDIRS = libxkutil src doc
 
 MOFS = \
 	schema/ComputerSystem.mof \
