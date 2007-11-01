@@ -86,12 +86,12 @@ EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
 # @CIMSERVER@ is set by the configure script
 postinstall:
 	sh register_base.sh @CIMSERVER@ $(EXTRA_BASE_MOFS)
-	sh provider-register.sh -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
-	sh provider-register.sh -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
+	sh provider-register.sh -v -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
+	sh provider-register.sh -v -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
 
 preuninstall:
-	sh provider-register.sh -d -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
-	sh provider-register.sh -d -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
 
 rpm: clean
 	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.gz)

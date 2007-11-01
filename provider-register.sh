@@ -262,7 +262,7 @@ pegasus_uninstall()
 	    echo "Error: wbemexec not found" >&2
 	    return 1
 	fi
-	CLASSES=`cat $myregs 2> /dev/null | grep -v '^[[:space:]]*#.*' | cut -d ' ' -f 1 | grep -v '^CIM_'`
+	CLASSES=`cat $mymofs 2> /dev/null | grep '^class'| cut -d ' ' -f 2 | uniq`
 
 	for _TEMPDIR in /var/tmp /tmp
 	  do
