@@ -49,7 +49,7 @@ CMPIInstance *instance_from_name(const CMPIBroker *broker,
  */
 int enum_domains(const CMPIBroker *broker,
                  virConnectPtr conn,
-                 const CMPIObjectPath *op,
+                 const char *ns,
                  struct inst_list *instlist);
 
 

@@ -239,8 +239,7 @@ static int set_creation_class(CMPIInstance *instance)
 /* Populate an instance with information from a domain */
 static int instance_from_dom(const CMPIBroker *broker,
                              virDomainPtr dom,
-                             CMPIInstance *instance,
-                             const CMPIObjectPath *reference)
+                             CMPIInstance *instance)
 {
         if (!set_name_from_dom(dom, instance)) {
                 /* Print trace error */
@@ -291,7 +290,7 @@ CMPIInstance *instance_from_name(const CMPIBroker *broker,
         if (instance == NULL)
                 goto out;
 
-        if (!instance_from_dom(broker, dom, instance, op))
+        if (!instance_from_dom(broker, dom, instance))
                 instance = NULL;
 
  out:
@@ -303,7 +302,7 @@ CMPIInstance *instance_from_name(const CMPIBroker *broker,
 /* Enumerate domains on the given connection, return results */
 int enum_domains(const CMPIBroker *broker,
                  virConnectPtr conn,
-                 const CMPIObjectPath *op,
+                 const char *ns,
                  struct inst_list *instlist)
 {
         virDomainPtr *list = NULL;
@@ -315,14 +314,13 @@ int enum_domains(const CMPIBroker *broker,
                 goto out;
 
         for (i = 0; i < count; i++) {
-                CMPIStatus s;
                 CMPIInstance *inst;
 
-                inst = CMNewInstance(broker, op, &s);
-                if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(inst)))
+                inst = get_typed_instance(broker, "ComputerSystem", ns);
+                if (inst == NULL)
                         goto end;
 
-                if (instance_from_dom(broker, list[i], inst, op))
+                if (instance_from_dom(broker, list[i], inst))
                         inst_list_add(instlist, inst);
 
         end:
@@ -351,7 +349,7 @@ static CMPIStatus return_enum_domains(const CMPIObjectPath *reference,
                 return s;
 
         inst_list_init(&list);
-        ret = enum_domains(_BROKER, conn, reference, &list);
+        ret = enum_domains(_BROKER, conn, NAMESPACE(reference), &list);
         if (!ret) {
                 CMSetStatus(&s, CMPI_RC_ERR_FAILED);
                 goto out;

@@ -62,7 +62,7 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
         if (conn == NULL)
                 return s;
 
-        ret = enum_domains(_BROKER, conn, ref, list);
+        ret = enum_domains(_BROKER, conn, NAMESPACE(ref), list);
         if (ret) {
                 CMSetStatus(&s, CMPI_RC_OK);
         } else {
