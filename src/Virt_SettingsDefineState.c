@@ -98,7 +98,7 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
 
         ret = rasds_for_domain(_BROKER,
                                name,
-                               CIM_RASD_TYPE_DISK,
+                               device_type_from_classname(CLASSNAME(ref)),
                                NAMESPACE(ref),
                                &rasds);
 
