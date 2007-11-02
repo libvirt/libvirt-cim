@@ -80,11 +80,11 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
 
         inst_list_init(&rasds);
 
-        id = cu_get_str_path(ref, "InstanceID");
+        id = cu_get_str_path(ref, "DeviceID");
         if (id == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
+                           "Missing DeviceID");
                 goto out;
         }
 
@@ -92,7 +92,7 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Invalid InstanceID");
+                           "Invalid DeviceID");
                 goto out;
         }
 
