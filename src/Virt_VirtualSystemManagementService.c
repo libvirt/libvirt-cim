@@ -1022,32 +1022,6 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
         return return_vsms(reference, results, 0);
 }
 
-static int compare_prop(const CMPIObjectPath *ref,
-                        const CMPIInstance *inst,
-                        const char *name,
-                        int mandatory)
-{
-        char *prop = NULL;
-        char *key = NULL;
-        int rc = 0;
-
-        key = cu_get_str_path(ref, name);
-        if (key == NULL) {
-                rc = !mandatory;
-                goto out;
-        }
-
-        if (cu_get_str_prop(inst, name, &prop) != CMPI_RC_OK)
-                goto out;
-
-        rc = STREQ(key, prop);
- out:
-        free(prop);
-        free(key);
-
-        return rc;
-}
-
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIContext *context,
                               const CMPIResult *results,
@@ -1056,19 +1030,25 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 {
         CMPIInstance *inst;
         CMPIStatus s;
+        const struct cu_property *prop;
+        static struct cu_property props[] = {
+                {"CreationClassName", 0},
+                {"SystemName", 0},
+                {"SystemCreationClassName", 0},
+                {"Name", 1},
+                {NULL, 0}
+        };
 
         s = _get_vsms(ref, &inst, 0);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        if (!compare_prop(ref, inst, "CreationClassName", 0) ||
-            !compare_prop(ref, inst, "SystemName", 0) ||
-            !compare_prop(ref, inst, "Name", 1) ||
-            !compare_prop(ref, inst, "SystemCreationClassName", 0))
+        prop = cu_compare_ref(ref, inst, props);
+        if (prop != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance");
-        else {
+                           "No such instance (%s)", prop->name);
+        } else {
                 CMSetStatus(&s, CMPI_RC_OK);
                 CMReturnInstance(results, inst);
         }
