@@ -171,7 +171,7 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
         if (info->result_class) {
                 int type;
 
-                type = type_from_classname(info->result_class);
+                type = device_type_from_classname(info->result_class);
 
                 ret = get_dom_devices(host, list, type, NAMESPACE(ref));
         } else {

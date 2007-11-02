@@ -247,7 +247,7 @@ static CMPIInstance *device_instance(const CMPIBroker *broker,
         return instance;
 }
 
-int type_from_classname(const char *classname)
+int device_type_from_classname(const char *classname)
 {
         if (strstr(classname, "NetworkPort"))
                 return VIRT_DEV_NET;
@@ -321,7 +321,7 @@ static int dom_list_devices(virConnectPtr conn,
         int i;
         int type;
 
-        type = type_from_classname(CLASSNAME(ref));
+        type = device_type_from_classname(CLASSNAME(ref));
 
         ndom = get_domain_list(conn, &doms);
         if (ndom == 0)
@@ -458,8 +458,11 @@ static CMPIStatus get_device(const CMPIObjectPath *reference,
         CMPIStatus s;
         virConnectPtr conn;
         CMPIInstance *inst;
+        const char *cn;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        cn = CLASSNAME(reference);
+
+        conn = connect_by_classname(_BROKER, cn, &s);
         if (!conn)
                 return s;
 
@@ -467,7 +470,7 @@ static CMPIStatus get_device(const CMPIObjectPath *reference,
                                    conn,
                                    devid,
                                    NAMESPACE(reference),
-                                   type_from_classname(CLASSNAME(reference)));
+                                   device_type_from_classname(cn));
         if (inst) {
                 CMReturnInstance(results, inst);
                 CMSetStatus(&s, CMPI_RC_OK);

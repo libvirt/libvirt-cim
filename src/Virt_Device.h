@@ -56,7 +56,7 @@ CMPIInstance *instance_from_devid(const CMPIBroker *broker,
                                   const char *ns,
                                   int type);
 
-int type_from_classname(const char *classname);
+int device_type_from_classname(const char *classname);
 
 #endif
 

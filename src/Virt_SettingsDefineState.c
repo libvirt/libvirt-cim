@@ -148,7 +148,7 @@ static CMPIInstance *_get_typed_device(char *id,
                                   conn,
                                   id,
                                   ns,
-                                  type_from_classname(typestr));
+                                  device_type_from_classname(typestr));
  out:
         virConnectClose(conn);
 
