@@ -71,12 +71,8 @@ INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
 	schema/ElementConformsToProfile.registration
 
-EXTRA_BASE_MOFS = \
-	schema/Xen_ResourceAllocationSettingData.mof \
-	schema/KVM_ResourceAllocationSettingData.mof
-
 pkgdata_DATA = $(MOFS) $(REGS)
-pkgdata_SCRIPTS = provider-register.sh register_base.sh
+pkgdata_SCRIPTS = provider-register.sh
 
 EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
              libvirt-cim.spec.in libvirt-cim.spec	\
@@ -85,7 +81,6 @@ EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
 # Un/Register the providers and class definitions from/to the current CIMOM.
 # @CIMSERVER@ is set by the configure script
 postinstall:
-	sh register_base.sh @CIMSERVER@ $(EXTRA_BASE_MOFS)
 	sh provider-register.sh -v -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -v -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
 

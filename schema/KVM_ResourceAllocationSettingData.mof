@@ -1,4 +1,0 @@
-// Copyright IBM Corp. 2007
-class KVM_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData {
-
-};

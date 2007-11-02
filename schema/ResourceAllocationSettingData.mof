@@ -1,4 +1,12 @@
 // Copyright IBM Corp. 2007
+class Xen_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData {
+
+};
+
+class KVM_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData {
+
+};
+
 [Description ("Xen virtual disk configuration")]
 class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData{
 
