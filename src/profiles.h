@@ -31,15 +31,15 @@ struct reg_prof {
 
 struct reg_prof SystemVirtualization = {
         .reg_org = 2,
-        .reg_id = "DSP1042-1.0.0a",
-        .reg_name = "System Virtualization Profile",
-        .reg_version = "1.0.0a",
+        .reg_id = "CIM:DSP1042-SystemVirtualization-1.0.0",
+        .reg_name = "System Virtualization",
+        .reg_version = "1.0.0",
         .provider_name = "HostSystem"
 };
 
 struct reg_prof VirtualSystem = {
         .reg_org = 2,
-        .reg_id = "DSP1057-1.0.0a",
+        .reg_id = "CIM:DSP1057-VirtualSystem-1.0.0a",
         .reg_name = "Virtual System Profile",
         .reg_version = "1.0.0a",
         .provider_name = "ComputerSystem"
