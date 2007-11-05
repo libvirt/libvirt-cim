@@ -28,6 +28,8 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
+#include <libvirt.h>
+
 #include "cs_util.h"
 #include "libcmpiutil.h"
 #include "misc_util.h"
