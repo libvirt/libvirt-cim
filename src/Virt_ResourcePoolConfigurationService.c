@@ -89,7 +89,8 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-static CMPIInstance *rpcs_instance(const CMPIObjectPath *reference)
+static CMPIStatus rpcs_instance(const CMPIObjectPath *reference,
+                                CMPIInstance **_inst)
 {
         CMPIInstance *inst;
         CMPIInstance *host;
@@ -98,28 +99,47 @@ static CMPIInstance *rpcs_instance(const CMPIObjectPath *reference)
 
         s = get_host_cs(_BROKER, reference, &host);
         if (s.rc != CMPI_RC_OK)
-                return NULL;
+                goto out;
 
         inst = get_typed_instance(_BROKER,
                                   "ResourcePoolConfigurationService",
                                   NAMESPACE(reference));
+        if (inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get "
+                           "ResourcePoolConfigurationService instance");
+                goto out;
+        }
 
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"RPCS", CMPI_chars);
 
         prop = CMGetProperty(host, "CreationClassName", &s);
-        if (s.rc != CMPI_RC_OK)
-                return NULL;
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get CreationClassName from HostSystem");
+                goto out;
+        }
+
         CMSetProperty(inst, "SystemCreationClassName",
                       (CMPIValue *)&prop.value.string, CMPI_string);
 
         prop = CMGetProperty(host, "Name", NULL);
-        if (s.rc != CMPI_RC_OK)
-                return NULL;
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get Name from HostSystem");
+                goto out;
+        }
+
         CMSetProperty(inst, "SystemName",
                       (CMPIValue *)&prop.value.string, CMPI_string);
 
-        return inst;
+        *_inst = inst;
+ out:
+        return s;
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -129,12 +149,23 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const char **properties)
 {
         CMPIInstance *inst;
+        CMPIStatus s;
+        const char *prop = NULL;
 
-        inst = rpcs_instance(reference);
+        s = rpcs_instance(reference, &inst);
+        if (s.rc != CMPI_RC_OK)
+                return s;
 
-        CMReturnInstance(results, inst);
+        prop = cu_compare_ref(reference, inst);
+        if (prop != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", prop);
+        } else {
+                CMReturnInstance(results, inst);
+        }
 
-        return (CMPIStatus){CMPI_RC_OK, NULL};
+        return s;
 }
 
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
@@ -143,12 +174,13 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIObjectPath *reference)
 {
         CMPIInstance *inst;
+        CMPIStatus s;
 
-        inst = rpcs_instance(reference);
+        s = rpcs_instance(reference, &inst);
+        if (s.rc == CMPI_RC_OK)
+                cu_return_instance_name(results, inst);
 
-        cu_return_instance_name(results, inst);
-
-        return (CMPIStatus){CMPI_RC_OK, NULL};
+        return s;
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -159,12 +191,13 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
 {
 
         CMPIInstance *inst;
+        CMPIStatus s;
 
-        inst = rpcs_instance(reference);
+        s = rpcs_instance(reference, &inst);
+        if (s.rc == CMPI_RC_OK)
+                CMReturnInstance(results, inst);
 
-        CMReturnInstance(results, inst);
-
-        return (CMPIStatus){CMPI_RC_OK, NULL};
+        return s;
 }
 
 
