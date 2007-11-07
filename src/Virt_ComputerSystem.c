@@ -379,12 +379,7 @@ static CMPIStatus get_domain(const CMPIObjectPath *reference,
         CMPIInstance *inst[2] = {NULL, NULL};
         CMPIStatus s;
         virConnectPtr conn = NULL;
-        const struct cu_property *prop;
-        static struct cu_property props[] = {
-                {"CreationClassName", 0},
-                {"Name", 1},
-                {NULL, 0}
-        };
+        const char *prop = NULL;
 
         conn = lv_connect(_BROKER, &s);
         if (conn == NULL)
@@ -398,11 +393,11 @@ static CMPIStatus get_domain(const CMPIObjectPath *reference,
                 goto out;
         }
 
-        prop = cu_compare_ref(reference, inst[0], props);
+        prop = cu_compare_ref(reference, inst[0]);
         if (prop != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", prop->name);
+                           "No such instance (%s)", prop);
                 goto out;
         }
 

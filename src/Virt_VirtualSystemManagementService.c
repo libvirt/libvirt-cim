@@ -1030,24 +1030,17 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 {
         CMPIInstance *inst;
         CMPIStatus s;
-        const struct cu_property *prop;
-        static struct cu_property props[] = {
-                {"CreationClassName", 0},
-                {"SystemName", 0},
-                {"SystemCreationClassName", 0},
-                {"Name", 1},
-                {NULL, 0}
-        };
+        const char *prop;
 
         s = _get_vsms(ref, &inst, 0);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        prop = cu_compare_ref(ref, inst, props);
+        prop = cu_compare_ref(ref, inst);
         if (prop != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", prop->name);
+                           "No such instance (%s)", prop);
         } else {
                 CMSetStatus(&s, CMPI_RC_OK);
                 CMReturnInstance(results, inst);
