@@ -376,7 +376,7 @@ static CMPIStatus get_domain(const CMPIObjectPath *reference,
                              const CMPIResult *results,
                              char *name)
 {
-        CMPIInstance *inst[2] = {NULL, NULL};
+        CMPIInstance *inst;
         CMPIStatus s;
         virConnectPtr conn = NULL;
         const char *prop = NULL;
@@ -385,15 +385,15 @@ static CMPIStatus get_domain(const CMPIObjectPath *reference,
         if (conn == NULL)
                 return s;
 
-        inst[0] = instance_from_name(_BROKER, conn, name, reference);
-        if (inst[0] == NULL) {
+        inst = instance_from_name(_BROKER, conn, name, reference);
+        if (inst == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to find `%s'", name);
                 goto out;
         }
 
-        prop = cu_compare_ref(reference, inst[0]);
+        prop = cu_compare_ref(reference, inst);
         if (prop != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
@@ -401,10 +401,8 @@ static CMPIStatus get_domain(const CMPIObjectPath *reference,
                 goto out;
         }
 
-        cu_return_instances(results, inst);
-
+        CMReturnInstance(results, inst);
         CMSetStatus(&s, CMPI_RC_OK);
-        
  out:
         virConnectClose(conn);
 
