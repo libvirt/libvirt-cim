@@ -103,7 +103,7 @@ static char *disk_block_xml(const char *path, const char *vdev)
                        "<disk type='block' device='disk'>\n"
                        "  <driver name='phy'/>\n"
                        "  <source dev='%s'/>\n"
-                       "  <target dev='%s:disk'/>\n"
+                       "  <target dev='%s'/>\n"
                        "</disk>\n",
                        path,
                        vdev);
@@ -122,7 +122,7 @@ static char *disk_file_xml(const char *path, const char *vdev)
                        "<disk type='file' device='disk'>\n"
                        "  <driver name='tap' type='aio'/>\n"
                        "  <source file='%s'/>\n"
-                       "  <target dev='%s:disk'/>\n"
+                       "  <target dev='%s'/>\n"
                        "</disk>\n",
                        path,
                        vdev);
