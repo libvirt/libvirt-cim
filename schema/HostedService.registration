@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes ...
+Xen_HostedService root/ibmsd Xen_HostedServiceProvider Virt_HostedService association
+KVM_HostedService root/ibmsd KVM_HostedServiceProvider Virt_HostedService association
