@@ -28,6 +28,7 @@
 #include "misc_util.h"
 
 #include "Virt_HostSystem.h"
+#include "Virt_ResourcePoolConfigurationService.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -89,23 +90,24 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-static CMPIStatus rpcs_instance(const CMPIObjectPath *reference,
-                                CMPIInstance **_inst)
+CMPIStatus rpcs_instance(const CMPIObjectPath *reference,
+                         CMPIInstance **_inst,
+                         const CMPIBroker *broker)
 {
         CMPIInstance *inst;
         CMPIInstance *host;
         CMPIStatus s;
         CMPIData prop;
 
-        s = get_host_cs(_BROKER, reference, &host);
+        s = get_host_cs(broker, reference, &host);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        inst = get_typed_instance(_BROKER,
+        inst = get_typed_instance(broker,
                                   "ResourcePoolConfigurationService",
                                   NAMESPACE(reference));
         if (inst == NULL) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get "
                            "ResourcePoolConfigurationService instance");
@@ -117,7 +119,7 @@ static CMPIStatus rpcs_instance(const CMPIObjectPath *reference,
 
         prop = CMGetProperty(host, "CreationClassName", &s);
         if (s.rc != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get CreationClassName from HostSystem");
                 goto out;
@@ -128,7 +130,7 @@ static CMPIStatus rpcs_instance(const CMPIObjectPath *reference,
 
         prop = CMGetProperty(host, "Name", NULL);
         if (s.rc != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get Name from HostSystem");
                 goto out;
@@ -152,7 +154,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         CMPIStatus s;
         const char *prop = NULL;
 
-        s = rpcs_instance(reference, &inst);
+        s = rpcs_instance(reference, &inst, _BROKER);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
@@ -176,7 +178,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
         CMPIInstance *inst;
         CMPIStatus s;
 
-        s = rpcs_instance(reference, &inst);
+        s = rpcs_instance(reference, &inst, _BROKER);
         if (s.rc == CMPI_RC_OK)
                 cu_return_instance_name(results, inst);
 
@@ -193,7 +195,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
         CMPIInstance *inst;
         CMPIStatus s;
 
-        s = rpcs_instance(reference, &inst);
+        s = rpcs_instance(reference, &inst, _BROKER);
         if (s.rc == CMPI_RC_OK)
                 CMReturnInstance(results, inst);
 
