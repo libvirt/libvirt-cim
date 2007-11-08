@@ -360,6 +360,17 @@ bool provider_is_responsible(const CMPIBroker *broker,
         return rc;
 }
 
+bool domain_online(virDomainPtr dom)
+{
+        virDomainInfo info;
+
+        if (virDomainGetInfo(dom, &info) != 0)
+                return false;
+
+        return (info.state == VIR_DOMAIN_BLOCKED) ||
+                (info.state == VIR_DOMAIN_RUNNING);
+}
+
 
 /*
  * Local Variables:
