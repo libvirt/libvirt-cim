@@ -563,6 +563,59 @@ static struct virt_device **find_list(struct domain *dominfo,
         return list;
 }
 
+static CMPIStatus _resource_dynamic(struct domain *dominfo,
+                                    struct virt_device *dev,
+                                    bool attach)
+{
+        CMPIStatus s;
+        virConnectPtr conn;
+        virDomainPtr dom;
+        int (*func)(virDomainPtr, struct virt_device *);
+
+        if (attach)
+                func = attach_device;
+        else
+                func = detach_device;
+
+        conn = lv_connect(_BROKER, &s);
+        if (conn == NULL) {
+                CU_DEBUG("Failed to connect");
+                return s;
+        }
+
+        dom = virDomainLookupByName(conn, dominfo->name);
+        if (dom == NULL) {
+                CU_DEBUG("Failed to lookup VS `%s'", dominfo->name);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Virtual System `%s' not found", dominfo->name);
+                goto out;
+        }
+
+        if (!domain_online(dom)) {
+                CU_DEBUG("VS `%s' not online; skipping dynamic update",
+                         dominfo->name);
+                CMSetStatus(&s, CMPI_RC_OK);
+                goto out;
+        }
+
+        CU_DEBUG("Doing dynamic device update for `%s'", dominfo->name);
+
+        if (func(dom, dev) == 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to %s device",
+                           attach ? "attach" : "detach");
+        } else {
+                CMSetStatus(&s, CMPI_RC_OK);
+        }
+ out:
+        virDomainFree(dom);
+        virConnectClose(conn);
+
+        return s;
+}
+
 static CMPIStatus resource_del(struct domain *dominfo,
                                CMPIInstance *rasd,
                                uint16_t type,
@@ -593,8 +646,8 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
+                        s = _resource_dynamic(dominfo, dev, false);
                         dev->type = VIRT_DEV_UNKNOWN;
-                        CMSetStatus(&s, CMPI_RC_OK);
                         break;
                 }
         }
@@ -611,6 +664,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         CMPIStatus s;
         struct virt_device **_list;
         struct virt_device *list;
+        struct virt_device *dev;
         int *count;
 
         _list = find_list(dominfo, type, &count);
@@ -643,12 +697,19 @@ static CMPIStatus resource_add(struct domain *dominfo,
         *_list = list;
         memset(&list[*count], 0, sizeof(list[*count]));
 
-        list[*count].type = type;
-        list[*count].id = strdup(devid);
-        rasd_to_vdev(rasd, &list[*count]);
-        (*count)++;
+        dev = &list[*count];
+
+        dev->type = type;
+        dev->id = strdup(devid);
+        rasd_to_vdev(rasd, dev);
+
+        s = _resource_dynamic(dominfo, dev, true);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         CMSetStatus(&s, CMPI_RC_OK);
+        (*count)++;
+
  out:
         return s;
 }
@@ -728,6 +789,10 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
         }
 
         s = func(dominfo, rasd, type, devid);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Resource transform function failed");
+                goto out;
+        }
 
         xml = system_to_xml(dominfo);
         if (xml != NULL) {
