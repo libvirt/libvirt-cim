@@ -11,8 +11,10 @@ noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_HostSystem.h				\
     Virt_RASD.h					\
     Virt_RegisteredProfile.h			\
+    Virt_ResourcePoolConfigurationService.h     \
     Virt_SettingsDefineCapabilities.h		\
     Virt_VirtualSystemManagementCapabilities.h	\
+    Virt_VirtualSystemManagementService.h       \
     Virt_VSSD.h
 
 XKUADD = $(top_builddir)/libxkutil/libxkutil.la
@@ -46,7 +48,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_VSSDComponent.la \
                        libVirt_SettingsDefineState.la \
                        libVirt_ResourceAllocationFromPool.la \
-                       libVirt_ElementAllocatedFromPool.la
+                       libVirt_ElementAllocatedFromPool.la \
+                       libVirt_HostedService.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_Device_la_SOURCES = Virt_Device.c
@@ -110,3 +113,6 @@ libVirt_ResourceAllocationFromPool_la_LIBADD = -lVirt_DevicePool -lVirt_RASD
 
 libVirt_ElementAllocatedFromPool_la_SOURCES = Virt_ElementAllocatedFromPool.c
 libVirt_ElementAllocatedFromPool_la_LIBADD = -lVirt_DevicePool -lVirt_Device
+
+libVirt_HostedService_la_SOURCES = Virt_HostedService.c
+libVirt_HostedService_la_LIBADD = -lVirt_VirtualSystemManagementService -lVirt_ResourcePoolConfigurationService

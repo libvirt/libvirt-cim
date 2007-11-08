@@ -29,8 +29,9 @@ MOFS = \
 	schema/VSSDComponent.mof \
 	schema/SettingsDefineState.mof \
 	schema/NetPool.mof \
-	schema/ResourceAllocationFromPool.mof
-	schema/ElementAllocatedFromPool.mof
+	schema/ResourceAllocationFromPool.mof \
+	schema/ElementAllocatedFromPool.mof \
+	schema/HostedService.mof
 
 INTEROP_MOFS = \
 	schema/RegisteredProfile.mof \
@@ -65,7 +66,8 @@ REGS = \
 	schema/SettingsDefineState.registration \
 	schema/NetPool.registration \
 	schema/ResourceAllocationFromPool.registration \
-	schema/ElementAllocatedFromPool.registration
+	schema/ElementAllocatedFromPool.registration \
+	schema/HostedService.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
