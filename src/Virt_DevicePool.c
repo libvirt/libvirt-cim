@@ -45,7 +45,11 @@
 
 static const CMPIBroker *_BROKER;
 
-char *device_pool_names[] = {"ProcessorPool", "MemoryPool", NULL};
+char *device_pool_names[] = {"ProcessorPool",
+                             "MemoryPool",
+                             "DiskPool",
+                             "NetworkPool",
+                             NULL};
 
 struct disk_pool {
         char *tag;
