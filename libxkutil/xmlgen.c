@@ -317,8 +317,14 @@ char *system_to_xml(struct domain *dominfo)
         uint8_t uuid[16];
         char uuidstr[37];
 
-        uuid_generate(uuid);
-        uuid_unparse(uuid, uuidstr);
+        if (dominfo->uuid) {
+                strcpy(uuidstr, dominfo->uuid);
+                CU_DEBUG("Using existing UUID: %s");
+        } else {
+                CU_DEBUG("New UUID");
+                uuid_generate(uuid);
+                uuid_unparse(uuid, uuidstr);
+        }
 
         concat_devxml(&devxml, dominfo->dev_net, dominfo->dev_net_ct);
         concat_devxml(&devxml, dominfo->dev_disk, dominfo->dev_disk_ct);
