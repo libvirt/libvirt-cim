@@ -41,6 +41,7 @@
 #include "std_indication.h"
 #include "misc_util.h"
 
+#include "Virt_VirtualSystemManagementService.h"
 #include "Virt_ComputerSystem.h"
 #include "Virt_ComputerSystemIndication.h"
 #include "Virt_RASD.h"
@@ -992,25 +993,26 @@ static struct method_handler *my_handlers[] = {
 STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
                    _BROKER, CMNoHook, my_handlers);
 
-static CMPIStatus _get_vsms(const CMPIObjectPath *reference,
-                            CMPIInstance **_inst,
-                            int name_only)
+CMPIStatus get_vsms(const CMPIObjectPath *reference,
+                    CMPIInstance **_inst,
+                    const CMPIBroker *broker,
+                    int name_only)
 {
         CMPIStatus s;
         CMPIInstance *inst;
         CMPIInstance *host;
         char *val = NULL;
 
-        s = get_host_cs(_BROKER, reference, &host);
+        s = get_host_cs(broker, reference, &host);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        inst = get_typed_instance(_BROKER,
+        inst = get_typed_instance(broker,
                                   "VirtualSystemManagementService",
                                   NAMESPACE(reference));
         if (inst == NULL) {
                 CU_DEBUG("Failed to get typed instance");
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to create instance");
                 goto out;
@@ -1020,7 +1022,7 @@ static CMPIStatus _get_vsms(const CMPIObjectPath *reference,
                       (CMPIValue *)"Management Service", CMPI_chars);
 
         if (cu_get_str_prop(host, "Name", &val) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get name of System");
                 goto out;
@@ -1031,7 +1033,7 @@ static CMPIStatus _get_vsms(const CMPIObjectPath *reference,
         free(val);
 
         if (cu_get_str_prop(host, "CreationClassName", &val) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get creation class of system");
                 goto out;
@@ -1055,7 +1057,7 @@ static CMPIStatus return_vsms(const CMPIObjectPath *reference,
         CMPIInstance *inst;
         CMPIStatus s;
 
-        s = _get_vsms(reference, &inst, name_only);
+        s = get_vsms(reference, &inst, _BROKER, name_only);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -1097,7 +1099,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         CMPIStatus s;
         const char *prop;
 
-        s = _get_vsms(ref, &inst, 0);
+        s = get_vsms(ref, &inst, _BROKER, 0);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
