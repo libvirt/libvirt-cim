@@ -111,6 +111,9 @@ void cleanup_virt_devices(struct virt_device **devs, int count);
 char *get_fq_devid(char *host, char *_devid);
 int parse_fq_devid(char *devid, char **host, char **device);
 
+int attach_device(virDomainPtr dom, struct virt_device *dev);
+int detach_device(virDomainPtr dom, struct virt_device *dev);
+
 #endif
 
 /*

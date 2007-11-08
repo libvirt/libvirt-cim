@@ -192,7 +192,7 @@ static char *mem_to_xml(struct mem_device *mem)
         return xml;
 }
 
-static char *device_to_xml(struct virt_device *dev)
+char *device_to_xml(struct virt_device *dev)
 {
         switch (dev->type) {
         case VIRT_DEV_NET:

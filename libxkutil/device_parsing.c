@@ -31,6 +31,7 @@
 #include <libcmpiutil.h>
 
 #include "device_parsing.h"
+#include "xmlgen.h"
 #include "../src/svpc_types.h"
 
 #define DISK_XPATH      (xmlChar *)"/domain/devices/disk"
@@ -614,6 +615,60 @@ void cleanup_dominfo(struct domain **dominfo)
         *dominfo = NULL;
 }
 
+static int change_device(virDomainPtr dom,
+                         struct virt_device *dev,
+                         bool attach)
+{
+        char *xml = NULL;
+        int ret = 0;
+        int (*func)(virDomainPtr, char *);
+
+        if (attach)
+                func = virDomainAttachDevice;
+        else
+                func = virDomainDetachDevice;
+
+        xml = device_to_xml(dev);
+        if (xml == NULL) {
+                CU_DEBUG("Failed to get XML for device `%s'", dev->id);
+                goto out;
+        }
+
+        if (func(dom, xml) != 0) {
+                CU_DEBUG("Failed to dynamically change device:");
+                CU_DEBUG("%s", xml);
+                goto out;
+        }
+
+        ret = 1;
+ out:
+        free(xml);
+
+        return ret;
+
+}
+
+int attach_device(virDomainPtr dom, struct virt_device *dev)
+{
+        if ((dev->type == VIRT_DEV_NET) ||
+            (dev->type == VIRT_DEV_DISK))
+                return change_device(dom, dev, true);
+
+        CU_DEBUG("Unhandled device type %i", dev->type);
+
+        return 0;
+}
+
+int detach_device(virDomainPtr dom, struct virt_device *dev)
+{
+        if ((dev->type == VIRT_DEV_NET) ||
+            (dev->type == VIRT_DEV_DISK))
+                return change_device(dom, dev, false);
+
+        CU_DEBUG("Unhandled device type %i", dev->type);
+
+        return 0;
+}
 
 /*
  * Local Variables:

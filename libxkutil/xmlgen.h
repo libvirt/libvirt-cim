@@ -31,5 +31,6 @@ struct kv {
 };
 
 char *system_to_xml(struct domain *dominfo);
+char *device_to_xml(struct virt_device *dev);
 
 #endif
