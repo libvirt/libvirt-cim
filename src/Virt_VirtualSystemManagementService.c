@@ -995,8 +995,7 @@ STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
 
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
-                    const CMPIBroker *broker,
-                    int name_only)
+                    const CMPIBroker *broker)
 {
         CMPIStatus s;
         CMPIInstance *inst;
@@ -1057,7 +1056,7 @@ static CMPIStatus return_vsms(const CMPIObjectPath *reference,
         CMPIInstance *inst;
         CMPIStatus s;
 
-        s = get_vsms(reference, &inst, _BROKER, name_only);
+        s = get_vsms(reference, &inst, _BROKER);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -1099,7 +1098,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         CMPIStatus s;
         const char *prop;
 
-        s = get_vsms(ref, &inst, _BROKER, 0);
+        s = get_vsms(ref, &inst, _BROKER);
         if (s.rc != CMPI_RC_OK)
                 return s;
 

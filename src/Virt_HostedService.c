@@ -63,7 +63,7 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         if (!CMIsNullObject(inst))
                 inst_list_add(list, inst);
 
-        s = get_vsms(ref, &inst, _BROKER, 0);
+        s = get_vsms(ref, &inst, _BROKER);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))

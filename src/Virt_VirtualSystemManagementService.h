@@ -21,5 +21,4 @@
 
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
-                    const CMPIBroker *broker,
-                    int name_only);
+                    const CMPIBroker *broker);
