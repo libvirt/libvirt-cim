@@ -1,5 +1,5 @@
 # Copyright IBM Corp. 2007
-Xen_DiskResourceAllocationSettingData root/ibmsd Virt_RASDProvider Virt_RASD instance
-Xen_NetResourceAllocationSettingData root/ibmsd Virt_RASDProvider Virt_RASD instance
-Xen_ProcResourceAllocationSettingData root/ibmsd Virt_RASDProvider Virt_RASD instance
-Xen_MemResourceAllocationSettingData root/ibmsd Virt_RASDProvider Virt_RASD instance
+Xen_DiskResourceAllocationSettingData root/virt Virt_RASDProvider Virt_RASD instance
+Xen_NetResourceAllocationSettingData root/virt Virt_RASDProvider Virt_RASD instance
+Xen_ProcResourceAllocationSettingData root/virt Virt_RASDProvider Virt_RASD instance
+Xen_MemResourceAllocationSettingData root/virt Virt_RASDProvider Virt_RASD instance

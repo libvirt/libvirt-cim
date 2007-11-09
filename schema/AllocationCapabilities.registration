@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes ...
-Xen_AllocationCapabilities root/ibmsd Virt_AllocationCapabilitiesProvider Virt_AllocationCapabilities instance
-KVM_AllocationCapabilities root/ibmsd Virt_AllocationCapabilitiesProvider Virt_AllocationCapabilities instance
+Xen_AllocationCapabilities root/virt Virt_AllocationCapabilitiesProvider Virt_AllocationCapabilities instance
+KVM_AllocationCapabilities root/virt Virt_AllocationCapabilitiesProvider Virt_AllocationCapabilities instance

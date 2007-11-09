@@ -35,6 +35,14 @@ AC_ARG_VAR([LIBVIRTDIR],[the directory where the libvirt package is installed.])
 AC_ARG_VAR([TESTSUITEDIR],[the directory where the SBLIM testsuite is installed.
 ])
 
+AC_ARG_WITH([namespace],
+            AC_HELP_STRING([--with-namespace=ns],
+                           [CIM namespace to use, default root/virt]),
+            [test "x$withval" != "x" && CIM_VIRT_NS="$withval"],
+            [CIM_VIRT_NS="root/virt"])
+AC_SUBST(CIM_VIRT_NS)
+AC_DEFINE_UNQUOTED(CIM_VIRT_NS, "$CIM_VIRT_NS", [Namespace for provider source])
+
 AC_ARG_WITH([diskconfig], 
             [  --with-diskconfig=PATH  Set config file for disk pool. (default=/tmp/diskpool.conf)], 
             [DEFINE_DISK_CONFIG($with_diskconfig)], 

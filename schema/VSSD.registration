@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes ...
-Xen_VirtualSystemSettingData root/ibmsd Virt_VSSDProvider Virt_VSSD instance
-KVM_VirtualSystemSettingData root/ibmsd Virt_VSSDProvider Virt_VSSD instance
+Xen_VirtualSystemSettingData root/virt Virt_VSSDProvider Virt_VSSD instance
+KVM_VirtualSystemSettingData root/virt Virt_VSSDProvider Virt_VSSD instance

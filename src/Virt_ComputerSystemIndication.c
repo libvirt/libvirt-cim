@@ -142,7 +142,7 @@ static bool async_ind(CMPIContext *context,
         CMPIStatus s;
         const char *type_name;
         char *type_cn = NULL;
-        const char *ns = "root/ibmsd";
+        const char *ns = CIM_VIRT_NS;
 
         /* FIXME: Hmm, need to get the namespace a better way */
 

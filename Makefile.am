@@ -83,11 +83,11 @@ EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
 # Un/Register the providers and class definitions from/to the current CIMOM.
 # @CIMSERVER@ is set by the configure script
 postinstall:
-	sh provider-register.sh -v -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
+	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -v -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
 
 preuninstall:
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n /root/ibmsd -r $(REGS) -m $(MOFS)
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n /root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
 
 rpm: clean

@@ -1,5 +1,5 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes ...
-Xen_NetworkPort root/ibmsd Virt_DeviceProvider Virt_Device instance
+Xen_NetworkPort root/virt Virt_DeviceProvider Virt_Device instance
 # Classname Namespace ProviderName ProviderModule ProviderTypes ...
-KVM_NetworkPort root/ibmsd Virt_DeviceProvider Virt_Device instance
+KVM_NetworkPort root/virt Virt_DeviceProvider Virt_Device instance

@@ -1,2 +1,2 @@
-Xen_DiskPool root/ibmsd Virt_DevicePoolProvider Virt_DevicePool instance
-KVM_DiskPool root/ibmsd Virt_DevicePoolProvider Virt_DevicePool instance
+Xen_DiskPool root/virt Virt_DevicePoolProvider Virt_DevicePool instance
+KVM_DiskPool root/virt Virt_DevicePoolProvider Virt_DevicePool instance

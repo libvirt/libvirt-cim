@@ -34,6 +34,8 @@
 #include "profiles.h"
 #include "std_association.h"
 
+#include "config.h"
+
 #include "Virt_RegisteredProfile.h"
 
 /* Associate an XXX_RegisteredProfile to the proper XXX_ManagedElement.
@@ -64,7 +66,7 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        op = CMNewObjectPath(_BROKER, "/root/ibmsd", classname, &s);
+        op = CMNewObjectPath(_BROKER, CIM_VIRT_NS, classname, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto error;
         
