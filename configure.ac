@@ -54,20 +54,20 @@ AC_ARG_WITH([maxmem],
             [DEFINE_MAXMEM(4096)]
 )
 
+AC_ARG_WITH(html-dir,
+            AC_HELP_STRING([--with-html-dir=path],
+                           [path to html directory, default $datadir/doc/$PACKAGE-$VERSION/html]),
+            [test "x$withval" != "x" && HTML_DIR="$withval"],
+	    [HTML_DIR='$(datadir)/doc/$(PACKAGE)-$(VERSION)/html'])
+AC_SUBST(HTML_DIR)
+
 # Autogenerate the autoconf header file to store build settings
 AC_CONFIG_HEADER([config.h])
 
-# We need a absolute here for beam to work
 topdir=`pwd`
 AC_SUBST(topdir)
 
-AC_CHECK_PROG([found_beam_compile],[beam_compile],[yes])
-
-BEAMFILES="parser-messages BEAM_STATS BEAM-complaints MISC_ERRORS *.beam"
-AC_SUBST(BEAMFILES)
-
-# Autogenerate runbeam-c, which must be executable
-#AC_CONFIG_FILES([beam/runbeam-c],[chmod a+x beam/runbeam-c])
+AC_PATH_PROG(XSLTPROC, xsltproc, /usr/bin/xsltproc)
 
 # Autogenerate the Makefile
 AC_CONFIG_FILES([
@@ -140,11 +140,6 @@ else
    TESTSUITE_SUPPORT=Enabled
 fi
 
-#
-# Enable the beam source analysis system.  This requires that beam's
-# bin directory is in your path
-#
-
 CFLAGS_STRICT="-Werror"
 
 CHECK_LIBCU
@@ -156,21 +151,6 @@ AC_ARG_ENABLE([werror],
      fi])
 
 AC_SUBST(CFLAGS_STRICT)
-
-AC_ARG_ENABLE([beam],
-    [  --enable-beam           use beam to compile source [[default=no]]],
-    [if test "x$enableval" = "xyes"; then
-        if test "x$found_beam_compile" = "xyes"; then 
-            AC_MSG_NOTICE(Building beam configuration) 
-            beam_configure --c $CC -o beam/compiler_c_config.tcl
-            CC="\$(top_srcdir)/beam/runbeam-c"
-        else
-            AC_CHECK_FAIL(beam,beam,http://w3.eda.ibm.com/beam,
-                Can not find beam_compile in path! Can not enable beam analysis!
-)
-        fi
-    fi],
-    )
 
 CFLAGS="$CFLAGS $CC_WARNINGS"
 

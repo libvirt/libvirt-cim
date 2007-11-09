@@ -34,7 +34,7 @@ make
 rm -fr %{buildroot}
 
 %makeinstall PROVIDERDIR=%{buildroot}%{_libdir}/cmpi
-cp provider-register.sh register_base.sh %{buildroot}%{_datadir}/libvirt-cim/
+cp provider-register.sh %{buildroot}%{_datadir}/libvirt-cim/
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.la
@@ -43,8 +43,25 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.a
 %clean
 rm -fr %{buildroot}
 
+%pre
+%define REGISTRATION %{_datadir}/%{name}/*.registration
+%define SCHEMA %{_datadir}/%{name}/*.mof
+
+%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	-n /@CIM_VIRT_NS@ \
+	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+
 %post
 /sbin/ldconfig
+
+%{_datadir}/%{name}/provider-register.sh -t pegasus \
+	-n /@CIM_VIRT_NS@ \
+	-r %{REGISTRATION} -m %{SCHEMA} || true
+
+%preun
+%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	-n /@CIM_VIRT_NS@ \
+	-r %{REGISTRATION} -m %{SCHEMA} || true
 
 %postun
 /sbin/ldconfig
@@ -53,7 +70,8 @@ rm -fr %{buildroot}
 %defattr(-, root, root)
 
 %doc README doc/CodingStyle doc/SubmittingPatches
-%doc provider-register.sh register_base.sh
+%doc provider-register.sh
+%doc doc/*.html
 %{_libdir}/lib*.so*
 %{_libdir}/cmpi/lib*.so*
 %{_datadir}/libvirt-cim/*.sh
