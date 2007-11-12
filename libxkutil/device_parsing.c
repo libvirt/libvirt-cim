@@ -615,9 +615,9 @@ void cleanup_dominfo(struct domain **dominfo)
         *dominfo = NULL;
 }
 
-static int change_device(virDomainPtr dom,
-                         struct virt_device *dev,
-                         bool attach)
+static int _change_device(virDomainPtr dom,
+                          struct virt_device *dev,
+                          bool attach)
 {
         char *xml = NULL;
         int ret = 0;
@@ -648,11 +648,28 @@ static int change_device(virDomainPtr dom,
 
 }
 
+static int change_memory(virDomainPtr dom,
+                         struct virt_device *dev)
+{
+        CU_DEBUG("Changing memory of %s to %llu/%llu",
+                 virDomainGetName(dom),
+                 dev->dev.mem.size,
+                 dev->dev.mem.maxsize);
+
+        if (virDomainSetMemory(dom, dev->dev.mem.size))
+                return 0;
+
+        if (virDomainSetMaxMemory(dom, dev->dev.mem.maxsize))
+                return 0;
+
+        return 1;
+}
+
 int attach_device(virDomainPtr dom, struct virt_device *dev)
 {
         if ((dev->type == VIRT_DEV_NET) ||
             (dev->type == VIRT_DEV_DISK))
-                return change_device(dom, dev, true);
+                return _change_device(dom, dev, true);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 
@@ -663,7 +680,17 @@ int detach_device(virDomainPtr dom, struct virt_device *dev)
 {
         if ((dev->type == VIRT_DEV_NET) ||
             (dev->type == VIRT_DEV_DISK))
-                return change_device(dom, dev, false);
+                return _change_device(dom, dev, false);
+
+        CU_DEBUG("Unhandled device type %i", dev->type);
+
+        return 0;
+}
+
+int change_device(virDomainPtr dom, struct virt_device *dev)
+{
+        if (dev->type == VIRT_DEV_MEM)
+                return change_memory(dom, dev);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 

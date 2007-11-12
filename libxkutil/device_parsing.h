@@ -113,6 +113,7 @@ int parse_fq_devid(char *devid, char **host, char **device);
 
 int attach_device(virDomainPtr dom, struct virt_device *dev);
 int detach_device(virDomainPtr dom, struct virt_device *dev);
+int change_device(virDomainPtr dom, struct virt_device *dev);
 
 #endif
 
