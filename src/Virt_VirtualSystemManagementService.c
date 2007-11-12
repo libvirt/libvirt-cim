@@ -51,6 +51,7 @@
 const static CMPIBroker *_BROKER;
 
 static int parse_str_inst_array(CMPIArray *array,
+                                const char *ns,
                                 struct inst_list *list)
 {
         int count;
@@ -67,8 +68,9 @@ static int parse_str_inst_array(CMPIArray *array,
                 /* FIXME: Check for string here */
 
                 ret = cu_parse_embedded_instance(CMGetCharPtr(item.value.string),
-                                        _BROKER,
-                                        &inst);
+                                                 _BROKER,
+                                                 ns,
+                                                 &inst);
 
                 if (ret == 0)
                         inst_list_add(list, inst);
@@ -79,6 +81,7 @@ static int parse_str_inst_array(CMPIArray *array,
 
 static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                                            CMPIInstance **sys,
+                                           const char *ns,
                                            struct inst_list *res)
 {
         CMPIStatus s = {CMPI_RC_ERR_FAILED, NULL};
@@ -92,7 +95,10 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                 goto out;
         }
 
-        ret = cu_parse_embedded_instance(sys_str, _BROKER, sys);
+        ret = cu_parse_embedded_instance(sys_str,
+                                         _BROKER,
+                                         ns,
+                                         sys);
         if (ret) {
                 CU_DEBUG("Unable to parse SystemSettings instance");
                 CMSetStatusWithChars(_BROKER, &s,
@@ -107,7 +113,7 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                 goto out;
         }
 
-        ret = parse_str_inst_array(res_arr, res);
+        ret = parse_str_inst_array(res_arr, ns, res);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
@@ -371,7 +377,7 @@ static CMPIStatus define_system(CMPIMethodMI *self,
 
         CU_DEBUG("DefineSystem");
 
-        s = define_system_parse_args(argsin, &vssd, &res);
+        s = define_system_parse_args(argsin, &vssd, NAMESPACE(reference), &res);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -527,7 +533,10 @@ static CMPIStatus mod_system_settings(CMPIMethodMI *self,
                 return s;
         }
 
-        if (cu_parse_embedded_instance(inst_str, _BROKER, &inst)) {
+        if (cu_parse_embedded_instance(inst_str,
+                                       _BROKER,
+                                       NAMESPACE(reference),
+                                       &inst)) {
                 CMPIStatus s;
 
                 cu_statusf(_BROKER, &s,
@@ -889,7 +898,7 @@ static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        parse_str_inst_array(array, &list);
+        parse_str_inst_array(array, NAMESPACE(ref), &list);
 
         s = _update_resource_settings(ref, &list, func);
 
