@@ -50,6 +50,12 @@
 
 const static CMPIBroker *_BROKER;
 
+enum ResourceAction {
+        RESOURCE_ADD,
+        RESOURCE_DEL,
+        RESOURCE_MOD,
+};
+
 static int parse_str_inst_array(CMPIArray *array,
                                 const char *ns,
                                 struct inst_list *list)
@@ -568,6 +574,9 @@ static struct virt_device **find_list(struct domain *dominfo,
         } else if (type == VIRT_DEV_VCPU) {
                 list = &dominfo->dev_vcpu;
                 *count = &dominfo->dev_vcpu_ct;
+        } else if (type == VIRT_DEV_MEM) {
+                list = &dominfo->dev_mem;
+                *count = &dominfo->dev_mem_ct;
         }
 
         return list;
@@ -575,17 +584,26 @@ static struct virt_device **find_list(struct domain *dominfo,
 
 static CMPIStatus _resource_dynamic(struct domain *dominfo,
                                     struct virt_device *dev,
-                                    bool attach)
+                                    enum ResourceAction action)
 {
         CMPIStatus s;
         virConnectPtr conn;
         virDomainPtr dom;
         int (*func)(virDomainPtr, struct virt_device *);
 
-        if (attach)
+        if (action == RESOURCE_ADD)
                 func = attach_device;
-        else
+        else if (action == RESOURCE_DEL)
                 func = detach_device;
+        else if (action == RESOURCE_MOD)
+                func = change_device;
+        else {
+                CU_DEBUG("Unknown dynamic resource action: %i", action);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Internal error (undefined resource action)");
+                return s;
+        }
 
         conn = lv_connect(_BROKER, &s);
         if (conn == NULL) {
@@ -614,8 +632,8 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
         if (func(dom, dev) == 0) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Unable to %s device",
-                           attach ? "attach" : "detach");
+                           "Unable to change (%i) device",
+                           action);
         } else {
                 CMSetStatus(&s, CMPI_RC_OK);
         }
@@ -638,7 +656,7 @@ static CMPIStatus resource_del(struct domain *dominfo,
         int i;
 
         _list = find_list(dominfo, type, &count);
-        if (_list != NULL)
+        if ((type == CIM_RASD_TYPE_MEM) || (_list != NULL))
                 list = *_list;
         else {
                 cu_statusf(_BROKER, &s,
@@ -656,7 +674,7 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        s = _resource_dynamic(dominfo, dev, false);
+                        s = _resource_dynamic(dominfo, dev, RESOURCE_DEL);
                         dev->type = VIRT_DEV_UNKNOWN;
                         break;
                 }
@@ -678,7 +696,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         int *count;
 
         _list = find_list(dominfo, type, &count);
-        if (_list == NULL) {
+        if ((type == CIM_RASD_TYPE_MEM) || (_list == NULL)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Cannot add resources of type %" PRIu16,
@@ -713,7 +731,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         dev->id = strdup(devid);
         rasd_to_vdev(rasd, dev);
 
-        s = _resource_dynamic(dominfo, dev, true);
+        s = _resource_dynamic(dominfo, dev, RESOURCE_ADD);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -755,7 +773,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
 
                 if (STREQ(dev->id, devid)) {
                         rasd_to_vdev(rasd, dev);
-                        CMSetStatus(&s, CMPI_RC_OK);
+                        s = _resource_dynamic(dominfo, dev, RESOURCE_MOD);
                         break;
                 }
         }
