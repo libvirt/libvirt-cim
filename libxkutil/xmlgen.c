@@ -244,21 +244,29 @@ static int concat_devxml(char ** xml, struct virt_device *list, int count)
 static char *system_xml(struct domain *domain)
 {
         int ret;
+        char *bl = NULL;
+        char *bl_args = NULL;
         char *xml;
+
+        bl = tagify("bootloader", domain->bootloader, NULL, 0);
+        bl_args = tagify("bootloader_args", domain->bootloader_args, NULL, 0);
 
         ret = asprintf(&xml,
                        "<name>%s</name>\n"
-                       "<bootloader>%s</bootloader>\n"
-                       "<bootloader_args>%s</bootloader_args>\n"
+                       "%s\n"
+                       "%s\n"
                        "<on_poweroff>%s</on_poweroff>\n"
                        "<on_crash>%s</on_crash>\n",
                        domain->name,
-                       domain->bootloader,
-                       domain->bootloader_args,
+                       bl,
+                       bl_args,
                        vssd_recovery_action_str(domain->on_poweroff),
                        vssd_recovery_action_str(domain->on_crash));
         if (ret == -1)
                 xml = NULL;
+
+        free(bl);
+        free(bl_args);
 
         return xml;
 }
