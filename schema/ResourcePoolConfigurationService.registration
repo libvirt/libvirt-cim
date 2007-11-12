@@ -1,3 +1,4 @@
 # Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_ResourcePoolConfigurationService root/virt Virt_ResourcePoolConfigurationServiceProvider Virt_ResourcePoolConfigurationService instance method
 KVM_ResourcePoolConfigurationService root/virt Virt_ResourcePoolConfigurationServiceProvider Virt_ResourcePoolConfigurationService instance method

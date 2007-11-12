@@ -1,44 +1,32 @@
-// Copyright 2007 IBM. All rights reserved.
+// Copyright IBM Corp. 2007
 
-// *******************************************************************
-// Associations
-// *******************************************************************
-
-// ==================================================================
-// Xen_SystemDevice
-// ==================================================================
 [Association,
  Description (
-        "A class to associate a Xen_ComputerSystem with its devices" 
-)]
+        "A class to associate a Xen_ComputerSystem with its devices." )
+]
 class Xen_SystemDevice : CIM_SystemDevice
 {
+
    [Override ( "GroupComponent" )]
    Xen_ComputerSystem REF GroupComponent;
 
    [Override ( "PartComponent" )]
    CIM_LogicalDevice REF PartComponent;
+
 };
 
-// Copyright 2007 IBM. All rights reserved.
-
-// *******************************************************************
-// Associations
-// *******************************************************************
-
-// ==================================================================
-// KVM_SystemDevice
-// ==================================================================
 [Association,
  Description (
-        "A class to associate a KVM_ComputerSystem with its devices" 
-)]
+        "A class to associate a KVM_ComputerSystem with its devices." )
+]
 class KVM_SystemDevice : CIM_SystemDevice
 {
+
    [Override ( "GroupComponent" )]
    KVM_ComputerSystem REF GroupComponent;
 
    [Override ( "PartComponent" )]
    CIM_LogicalDevice REF PartComponent;
+
 };
 

@@ -1,4 +1,5 @@
 // Copyright IBM Corp. 2007
+
 [Description ("Xen_ComputerSystem created")]
 class Xen_ComputerSystemCreatedIndication : CIM_InstCreation
 {
@@ -8,7 +9,6 @@ class Xen_ComputerSystemCreatedIndication : CIM_InstCreation
 class Xen_ComputerSystemDeletedIndication : CIM_InstDeletion
 {
 };
-
 
 [Description ("KVM_ComputerSystem lifecycle")]
 class KVM_ComputerSystemCreatedIndication : CIM_InstCreation

@@ -1,5 +1,4 @@
 # Copyright IBM Corp. 2007
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_HostedDependency root/virt Virt_HostedDependencyProvider Virt_HostedDependency association
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
 KVM_HostedDependency root/virt Virt_HostedDependencyProvider Virt_HostedDependency association

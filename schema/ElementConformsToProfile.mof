@@ -1,23 +1,17 @@
-// Copyright 2007 IBM. All rights reserved.
+// Copyright IBM Corp. 2007
 
-// ==================================================================
-// Xen_ElementConformsToProfile
-// ==================================================================
 [Association,
  Description (
-        "A class to associate a ManagedElement with its RegisteredProfile."
-)]
+        "A class to associate a ManagedElement with its RegisteredProfile.")
+]
 class Xen_ElementConformsToProfile : CIM_ElementConformsToProfile
 {
 };
 
-// ==================================================================
-// KVM_ElementConformsToProfile
-// ==================================================================
 [Association,
  Description (
-        "A class to associate a ManagedElement with its RegisteredProfile."
-)]
+        "A class to associate a ManagedElement with its RegisteredProfile.")
+]
 class KVM_ElementConformsToProfile : CIM_ElementConformsToProfile
 {
 };

@@ -1,6 +1,9 @@
 // Copyright IBM Corp. 2007
-class Xen_VirtualSystemManagementService : CIM_VirtualSystemManagementService {
+
+class Xen_VirtualSystemManagementService : CIM_VirtualSystemManagementService
+{
 };
 
-class KVM_VirtualSystemManagementService : CIM_VirtualSystemManagementService {
+class KVM_VirtualSystemManagementService : CIM_VirtualSystemManagementService
+{
 };

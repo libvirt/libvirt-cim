@@ -1,5 +1,4 @@
 # Copyright IBM Corp. 2007
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_VirtualSystemManagementCapabilities root/virt Virt_VirtualSystemManagementCapabilitiesProvider Virt_VirtualSystemManagementCapabilities instance
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
 KVM_VirtualSystemManagementCapabilities root/virt Virt_VirtualSystemManagementCapabilitiesProvider Virt_VirtualSystemManagementCapabilities instance

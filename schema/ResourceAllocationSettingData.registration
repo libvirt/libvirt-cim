@@ -1,4 +1,5 @@
 # Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_DiskResourceAllocationSettingData root/virt Virt_RASDProvider Virt_RASD instance
 Xen_NetResourceAllocationSettingData root/virt Virt_RASDProvider Virt_RASD instance
 Xen_ProcResourceAllocationSettingData root/virt Virt_RASDProvider Virt_RASD instance

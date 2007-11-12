@@ -1,6 +1,11 @@
 // Copyright IBM Corp. 2007
-class Xen_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool {
+
+[Association]
+class Xen_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool
+{
 };
 
-class KVM_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool {
+[Association]
+class KVM_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool
+{
 };

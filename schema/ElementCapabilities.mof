@@ -1,23 +1,17 @@
-// Copyright 2007 IBM. All rights reserved.
+// Copyright IBM Corp. 2007
 
-// ==================================================================
-// Xen_ElementCapabilities
-// ==================================================================
 [Association,
  Description (
-        "A class to associate a ManagedElement with its Capabilities."
-)]
+        "A class to associate a ManagedElement with its Capabilities.")
+]
 class Xen_ElementCapabilities : CIM_ElementCapabilities
 {
 };
 
-// ==================================================================
-// KVM_ElementCapabilities
-// ==================================================================
 [Association,
  Description (
-        "A class to associate a ManagedElement with its Capabilities."
-)]
+        "A class to associate a ManagedElement with its Capabilities.")
+]
 class KVM_ElementCapabilities : CIM_ElementCapabilities
 {
 };

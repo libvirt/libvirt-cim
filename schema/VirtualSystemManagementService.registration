@@ -1,3 +1,4 @@
 # Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_VirtualSystemManagementService root/virt Virt_VirtualSystemManagementService Virt_VirtualSystemManagementService method instance
 KVM_VirtualSystemManagementService root/virt Virt_VirtualSystemManagementService Virt_VirtualSystemManagementService method instance

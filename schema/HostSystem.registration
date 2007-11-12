@@ -1,5 +1,4 @@
 # Copyright IBM Corp. 2007
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_HostSystem root/virt Virt_HostSystemProvider Virt_HostSystem instance
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
 KVM_HostSystem root/virt Virt_HostSystemProvider Virt_HostSystem instance

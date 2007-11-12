@@ -1,7 +1,11 @@
 // Copyright IBM Corp. 2007
+
 [Association]
-class Xen_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool {
+class Xen_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool
+{
 };
+
 [Association]
-class KVM_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool {
+class KVM_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool
+{
 };

@@ -1,5 +1,4 @@
 # Copyright IBM Corp. 2007
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_MemoryPool root/virt Virt_DevicePoolProvider Virt_DevicePool instance
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
 KVM_MemoryPool root/virt Virt_DevicePoolProvider Virt_DevicePool instance

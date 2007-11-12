@@ -1,23 +1,17 @@
-// Copyright 2007 IBM. All rights reserved.
+// Copyright IBM Corp. 2007
 
-// ==================================================================
-// Xen_HostSystem
-// ==================================================================
 [Description (
 	"A class derived from CIM_ComputerSystem to represent "
-	"the Xen host system")]
+	"the Xen host system.")
+]
 class Xen_HostSystem : CIM_ComputerSystem
 {
 };
 
-// Copyright 2007 IBM. All rights reserved.
-
-// ==================================================================
-// KVM_HostSystem
-// ==================================================================
 [Description (
 	"A class derived from CIM_ComputerSystem to represent "
-	"the KVM host system.")]
+	"the KVM host system.")
+]
 class KVM_HostSystem : CIM_ComputerSystem
 {
 };

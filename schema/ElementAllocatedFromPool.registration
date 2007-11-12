@@ -1,3 +1,4 @@
 # Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_ElementAllocatedFromPool root/virt Xen_ElementAllocatedFromPoolProvider Virt_ElementAllocatedFromPool association
 KVM_ElementAllocatedFromPool root/virt KVM_ElementAllocatedFromPoolProvider Virt_ElementAllocatedFromPool association

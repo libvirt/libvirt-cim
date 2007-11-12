@@ -1,6 +1,9 @@
+// Copyright IBM Corp. 2007
+
 class Xen_DiskPool : CIM_ResourcePool
 {
 };
+
 class KVM_DiskPool : CIM_ResourcePool
 {
 };

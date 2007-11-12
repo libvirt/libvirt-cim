@@ -1,5 +1,4 @@
 # Copyright IBM Corp. 2007
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
+# Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_ComputerSystem root/virt Virt_ComputerSystemProvider Virt_ComputerSystem instance method
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
 KVM_ComputerSystem root/virt Virt_ComputerSystemProvider Virt_ComputerSystem instance

@@ -1,8 +1,9 @@
 // Copyright IBM Corp. 2007
-class Xen_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationService {
 
+class Xen_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationService
+{
 };
 
-class KVM_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationService {
-
+class KVM_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationService
+{
 };

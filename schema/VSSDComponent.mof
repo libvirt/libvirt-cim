@@ -1,6 +1,11 @@
 // Copyright IBM Corp. 2007
-class Xen_VirtualSystemSettingDataComponent : CIM_Component {
+
+[Association]
+class Xen_VirtualSystemSettingDataComponent : CIM_Component
+{
 };
 
-class KVM_VirtualSystemSettingDataComponent : CIM_Component {
+[Association]
+class KVM_VirtualSystemSettingDataComponent : CIM_Component
+{
 };
