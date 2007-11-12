@@ -388,6 +388,8 @@ static CMPIStatus define_system(CMPIMethodMI *self,
                 goto out;
 
         sys = create_system(vssd, &res, reference, &s);
+        if (sys == NULL)
+                goto out;
 
         inst_list_free(&res);
 
