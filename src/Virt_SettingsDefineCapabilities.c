@@ -23,6 +23,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <sys/vfs.h>
+#include <errno.h>
 
 #include "config.h"
 
@@ -37,8 +39,14 @@
 #include "svpc_types.h"
 
 #include "Virt_SettingsDefineCapabilities.h"
+#include "Virt_DevicePool.h"
 
 const static CMPIBroker *_BROKER;
+
+/* These are used in more than one place so they are defined here. */
+#define SDC_DISK_MIN 2000
+#define SDC_DISK_DEF 5000
+#define SDC_DISK_INC 250
 
 static bool rasd_prop_copy_value(struct sdc_rasd_prop src, 
                                  struct sdc_rasd_prop *dest)
@@ -192,6 +200,145 @@ static struct sdc_rasd_prop *mem_inc(const CMPIObjectPath *ref,
         return rasd;
 }
 
+static struct sdc_rasd_prop *disk_min(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        uint16_t disk_size = SDC_DISK_MIN;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
+                {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint16},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
+static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        char *inst_id;
+        CMPIrc prop_ret;
+        uint16_t free_space;
+        uint64_t free_64;
+        virConnectPtr conn;
+        CMPIInstance *pool_inst;
+        struct sdc_rasd_prop *rasd = NULL;
+        
+        inst_id = cu_get_str_path(ref, "InstanceID");
+        if (inst_id == NULL) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get InstanceID.");
+                goto out;
+        }
+
+        conn = lv_connect(_BROKER, s);
+        if (s->rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get connection.");
+                goto out;
+        }
+
+        /* Getting the relevant resource pool directly finds the free space 
+           for us.  It is in the Capacity field. */
+        pool_inst = get_pool_by_id(_BROKER, conn, inst_id, NAMESPACE(ref));
+        if (pool_inst == NULL) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get pool instance.");
+                goto out;
+        }
+
+        prop_ret = cu_get_u64_prop(pool_inst, "Capacity", &free_64);
+        if (prop_ret != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get capacity from instance.");
+                goto out;
+        }
+        CU_DEBUG("Got capacity from pool_inst: %lld", free_64);
+        
+        free_space = (uint16_t)free_64;
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
+                {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&free_space, CMPI_uint16},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+ out:
+        free(inst_id);
+        return rasd;
+}
+
+static struct sdc_rasd_prop *disk_def(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        uint16_t disk_size = SDC_DISK_DEF;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
+                {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint16},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
+static struct sdc_rasd_prop *disk_inc(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        uint16_t disk_size = SDC_DISK_INC;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
+                {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint16},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
 static struct sdc_rasd mem = {
         .resource_type = CIM_RASD_TYPE_MEM,
         .min = mem_min,
@@ -200,8 +347,17 @@ static struct sdc_rasd mem = {
         .inc = mem_inc
 };
 
+static struct sdc_rasd disk = {
+        .resource_type = CIM_RASD_TYPE_DISK,
+        .min = disk_min,
+        .max = disk_max,
+        .def = disk_def,
+        .inc = disk_inc
+};
+
 static struct sdc_rasd *sdc_rasd_list[] = {
         &mem,
+        &disk,
         NULL
 };
 
