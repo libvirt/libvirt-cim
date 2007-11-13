@@ -94,14 +94,16 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
 
         inst_id = cu_get_str_path(ref, "InstanceID");
         if (inst_id == NULL) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get InstanceID.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get InstanceID.");
                 goto out;
         }
 
         if (!parse_fq_devid(inst_id, &host, &device)) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get system name.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get system name.");
                 goto out;
         }
 
@@ -152,14 +154,16 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
 
         inst_id = cu_get_str_path(ref, "InstanceID");
         if (inst_id == NULL) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get InstanceID.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get InstanceID.");
                 goto error1;
         }
 
         if (!parse_fq_devid(inst_id, &host, &device)) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get system name.");
+                cu_status(_BROKER, &s, 
+                          CMPI_RC_ERR_FAILED,
+                          "Could not get system name.");
                 goto error1;
         }
 

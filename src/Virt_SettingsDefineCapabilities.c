@@ -96,84 +96,100 @@ static bool free_rasd_prop_list(struct sdc_rasd_prop *prop_list)
         return true;
 }
 
-static struct sdc_rasd_prop *mem_max(void)
+static struct sdc_rasd_prop *mem_max(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
 {
         bool ret;
-        struct sdc_rasd_prop *rasd;
+        struct sdc_rasd_prop *rasd = NULL;
         uint64_t max_vq = MAX_MEM;
 
-        struct sdc_rasd_prop max[] = {
+        struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&max_vq, CMPI_uint64},
                 PROP_END
         };
         
-        ret = dup_rasd_prop_list(max, &rasd);
-        if (ret)
-                return rasd;
-        else
-                return NULL;
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
 }
 
-static struct sdc_rasd_prop *mem_min(void)
+static struct sdc_rasd_prop *mem_min(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
 {
         bool ret;
-        struct sdc_rasd_prop *rasd;
+        struct sdc_rasd_prop *rasd = NULL;
         uint64_t min_vq = 64;
 
-        struct sdc_rasd_prop min[] = {
+        struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&min_vq, CMPI_uint64},
                 PROP_END
         };
 
-        ret = dup_rasd_prop_list(min, &rasd);
-        if (ret)
-                return rasd;
-        else
-                return NULL;
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
 }
 
-static struct sdc_rasd_prop *mem_def(void)
+static struct sdc_rasd_prop *mem_def(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
 {
         bool ret;
-        struct sdc_rasd_prop *rasd;
+        struct sdc_rasd_prop *rasd = NULL;
         uint64_t def_vq = 256;
 
-        struct sdc_rasd_prop def[] = {
+        struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&def_vq, CMPI_uint64},
                 PROP_END
         };
 
-        ret = dup_rasd_prop_list(def, &rasd);
-        if (ret)
-                return rasd;
-        else
-                return NULL;
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
 }
 
-static struct sdc_rasd_prop *mem_inc(void)
+static struct sdc_rasd_prop *mem_inc(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
 {
         bool ret;
-        struct sdc_rasd_prop *rasd;
+        struct sdc_rasd_prop *rasd = NULL;
         uint64_t inc_vq = 1;
 
-        struct sdc_rasd_prop inc[] = {
+        struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&inc_vq, CMPI_uint64},
                 PROP_END
         };
 
-        ret = dup_rasd_prop_list(inc, &rasd);
-        if (ret)
-                return rasd;
-        else
-                return NULL;
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
 }
 
 static struct sdc_rasd mem = {
@@ -190,17 +206,17 @@ static struct sdc_rasd *sdc_rasd_list[] = {
 };
 
 static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
+                                   CMPIStatus *s,
                                    const CMPIObjectPath *ref,
                                    struct sdc_rasd *rasd,
                                    sdc_rasd_type type)
 {
-        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         struct sdc_rasd_prop *prop_list;
         int i;
         char *inst_id;
         uint16_t resource_type;
-        /* Defaults for the following three values are from 
+        /* Defaults for the following are from 
            CIM_SettingsDefineCapabilities.mof. */
         uint16_t policy = SDC_POLICY_INDEPENDENT;
         uint16_t role = SDC_ROLE_SUPPORTED;
@@ -209,43 +225,40 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
         case SDC_RASD_MIN:
                 if (rasd->min == NULL)
                         goto out;
-                prop_list = rasd->min();
+                prop_list = rasd->min(ref, s);
                 inst_id = "Minimum";
                 range = SDC_RANGE_MIN;
                 break;
         case SDC_RASD_MAX:
                 if (rasd->max == NULL)
                         goto out;
-                prop_list = rasd->max();
+                prop_list = rasd->max(ref, s);
                 inst_id = "Maximum";
                 range = SDC_RANGE_MAX;
                 break;
         case SDC_RASD_INC:
                 if (rasd->inc == NULL)
                         goto out;
-                prop_list = rasd->inc();
+                prop_list = rasd->inc(ref, s);
                 inst_id = "Increment";
                 range = SDC_RANGE_INC;
                 break;
         case SDC_RASD_DEF:
                 if (rasd->def == NULL)
                         goto out;
-                prop_list = rasd->def();
+                prop_list = rasd->def(ref, s);
                 inst_id = "Default";
                 role = SDC_ROLE_DEFAULT;
                 range = SDC_RANGE_POINT;
                 break;
         default:
-                CMSetStatusWithChars(broker, &s, CMPI_RC_ERR_FAILED,
+                CMSetStatusWithChars(broker, s, CMPI_RC_ERR_FAILED,
                                      "Unsupported sdc_rasd type.");
                 goto out;
         }
 
-        if (prop_list == NULL) {
-                CMSetStatusWithChars(broker, &s, CMPI_RC_ERR_FAILED,
-                                     "Failed to get prop_list.");
+        if (s->rc != CMPI_RC_OK) 
                 goto out;
-        }
 
         inst = get_typed_instance(broker,
                                   "ResourceAllocationSettingData",
@@ -291,7 +304,11 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
 
         if (rasd) {
                 for (i = SDC_RASD_MIN; i <= SDC_RASD_INC; i++) {
-                        inst = sdc_rasd_inst(_BROKER, ref, rasd, i);
+                        inst = sdc_rasd_inst(_BROKER, &s, ref, rasd, i);
+                        if (s.rc != CMPI_RC_OK) {
+                                CU_DEBUG("Problem getting inst.");
+                                goto out;
+                        }
                         CU_DEBUG("Got inst.\n");
                         if (inst != NULL) {
                                 inst_list_add(list, inst);
@@ -307,6 +324,7 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                                      "Unsupported device type.");
         }
 
+ out:
         return s;
 }
 

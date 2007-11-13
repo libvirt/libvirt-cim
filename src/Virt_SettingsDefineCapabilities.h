@@ -50,7 +50,8 @@ struct sdc_rasd_prop {
         CMPIType type;
 };
 
-typedef struct sdc_rasd_prop *(*rasd_prop_func_t)(void);
+typedef struct sdc_rasd_prop *(*rasd_prop_func_t)(const CMPIObjectPath *ref,
+                                                  CMPIStatus *s);
 
 struct sdc_rasd {
         uint16_t resource_type;
