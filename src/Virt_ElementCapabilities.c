@@ -183,6 +183,50 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus alloc_to_pool(const CMPIObjectPath *ref,
+                                struct std_assoc_info *info,
+                                struct inst_list *list)
+{
+        /* Pool to alloc is more important.  That will be done first. */
+        RETURN_UNSUPPORTED();
+}
+
+static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
+                                struct std_assoc_info *info,
+                                struct inst_list *list)
+{
+        int ret;
+        char *inst_id;
+        uint16_t type;
+        CMPIInstance *inst = NULL;
+        CMPIStatus s = {CMPI_RC_OK};
+
+        inst_id = cu_get_str_path(ref, "InstanceID");
+        if (inst_id == NULL) {
+                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                                     "Could not get InstanceID.");
+                goto out;
+        }
+
+        inst = get_typed_instance(_BROKER, "AllocationCapabilities", 
+                                  NAMESPACE(ref));
+        CMSetProperty(inst, "InstanceID", inst_id, CMPI_chars);
+        
+        ret = cu_get_u16_path(ref, "ResourceType", &type);
+        if (ret != 1) {
+                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                                     "Could not get ResourceType.");
+                goto out;
+        }
+        CMSetProperty(inst, "ResourceType", &type, CMPI_uint16);
+
+        inst_list_add(list, inst);
+        
+ out:
+        free(inst_id);
+
+        return s;
+}
 static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                               const CMPIInstance *inst,
                               struct std_assoc_info *info,
@@ -280,12 +324,36 @@ struct std_assoc ele_cap_to_computer_system = {
         .make_ref = make_ref
 };
 
+struct std_assoc alloc_cap_to_resource_pool = {
+        .source_class = "CIM_AllocationCapabilities",
+        .source_prop = "Capabilities",
+
+        .target_class = "CIM_ResourcePool",
+        .target_prop = "ManagedElement",
+
+        .handler = alloc_to_pool,
+        .make_ref = make_ref
+};
+
+struct std_assoc resource_pool_to_alloc_cap = {
+        .source_class = "CIM_ResourcePool",
+        .source_prop = "ManagedElement",
+
+        .target_class = "CIM_AllocationCapabilities",
+        .target_prop = "Capabilities",
+
+        .handler = pool_to_alloc,
+        .make_ref = make_ref
+};
+
 struct std_assoc *assoc_handlers[] = {
         &xen_cs_to_ele_cap,
         &kvm_cs_to_ele_cap,
         &system_to_vsm_cap,
         &vsm_cap_to_system,
         &ele_cap_to_computer_system,
+        &alloc_cap_to_resource_pool,
+        &resource_pool_to_alloc_cap,
         NULL
 };
 
