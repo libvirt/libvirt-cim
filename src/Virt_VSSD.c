@@ -45,7 +45,8 @@ static int instance_from_dom(virDomainPtr dom,
         CMPIObjectPath *op;
         struct domain *dominfo = NULL;
 
-        if (!get_dominfo(dom, &dominfo))
+        ret = get_dominfo(dom, &dominfo);
+        if (!ret)
                 goto out;
 
         op = CMGetObjectPath(inst, NULL);

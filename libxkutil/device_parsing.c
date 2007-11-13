@@ -575,16 +575,24 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
         xml = virDomainGetXMLDesc(dom, 0);
         if (!xml) {
                 free(*dominfo);
+                *dominfo = NULL;
                 return 0;
         }
 
         ret = _get_dominfo(xml, *dominfo);
-        free(xml);
+        if (!ret) {
+                free(*dominfo);
+                *dominfo = NULL;
+                goto out;
+        }
 
         (*dominfo)->dev_mem_ct = get_mem_devices(dom, &(*dominfo)->dev_mem);
         (*dominfo)->dev_net_ct = get_net_devices(dom, &(*dominfo)->dev_net);
         (*dominfo)->dev_disk_ct = get_disk_devices(dom, &(*dominfo)->dev_disk);
         (*dominfo)->dev_vcpu_ct = get_vcpu_devices(dom, &(*dominfo)->dev_vcpu);
+
+out:
+        free(xml);
 
         return ret;
 }
