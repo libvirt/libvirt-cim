@@ -161,9 +161,9 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         }
 
         if (!parse_fq_devid(inst_id, &host, &device)) {
-                cu_status(_BROKER, &s, 
-                          CMPI_RC_ERR_FAILED,
-                          "Could not get system name.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get system name.");
                 goto error1;
         }
 
