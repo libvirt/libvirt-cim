@@ -35,12 +35,12 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_VirtualSystemManagementCapabilities.la \
                        libVirt_EnabledLogicalElementCapabilities.la \
                        libVirt_AllocationCapabilities.la \
-                       libVirt_SettingsDefineCapabilities.la \
                        libVirt_VSSD.la \
                        libVirt_HostedDependency.la \
                        libVirt_RegisteredProfile.la \
                        libVirt_ElementConformsToProfile.la \
                        libVirt_DevicePool.la \
+                       libVirt_SettingsDefineCapabilities.la \
                        libVirt_HostedResourcePool.la \
                        libVirt_ElementCapabilities.la \
                        libVirt_ResourcePoolConfigurationService.la \
