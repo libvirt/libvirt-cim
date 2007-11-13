@@ -26,6 +26,8 @@
 #include <sys/vfs.h>
 #include <errno.h>
 
+#include <libvirt.h>
+
 #include "config.h"
 
 #include "cmpidt.h"
@@ -190,6 +192,117 @@ static struct sdc_rasd_prop *mem_inc(const CMPIObjectPath *ref,
                 PROP_END
         };
 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
+static struct sdc_rasd_prop *proc_min(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        uint16_t num_procs = 1;
+        struct sdc_rasd_prop *rasd = NULL;
+ 
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                PROP_END
+        };
+ 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
+static struct sdc_rasd_prop *proc_max(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        virConnectPtr conn;
+        uint16_t num_procs = 0;
+        struct sdc_rasd_prop *rasd = NULL;
+        
+        CU_DEBUG("In proc_max()");
+
+        conn = lv_connect(_BROKER, s);
+        if (conn == NULL) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not connect to hypervisor.");
+                goto out;
+        }
+
+        num_procs = virConnectGetMaxVcpus(conn, NULL);
+        CU_DEBUG("libvirt says %d max vcpus", num_procs);
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                PROP_END
+        };
+ 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+ out:
+        return rasd;
+}
+
+static struct sdc_rasd_prop *proc_def(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        uint16_t num_procs = 1;
+        struct sdc_rasd_prop *rasd = NULL;
+ 
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                PROP_END
+        };
+ 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
+static struct sdc_rasd_prop *proc_inc(const CMPIObjectPath *ref,
+                                      CMPIStatus *s)
+{
+        bool ret;
+        uint16_t num_procs = 1;
+        struct sdc_rasd_prop *rasd = NULL;
+ 
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                PROP_END
+        };
+ 
         ret = dup_rasd_prop_list(tmp, &rasd);
         if (!ret) {
                 cu_statusf(_BROKER, s, 
@@ -455,6 +568,14 @@ static struct sdc_rasd mem = {
         .inc = mem_inc
 };
 
+static struct sdc_rasd processor = {
+         .resource_type = CIM_RASD_TYPE_PROC,
+         .min = proc_min,
+         .max = proc_max,
+         .def = proc_def,
+         .inc = proc_inc
+};
+
 static struct sdc_rasd network = {
         .resource_type = CIM_RASD_TYPE_NET,
         .min = net_min,
@@ -473,6 +594,7 @@ static struct sdc_rasd disk = {
 
 static struct sdc_rasd *sdc_rasd_list[] = {
         &mem,
+        &processor,
         &network,
         &disk,
         NULL
