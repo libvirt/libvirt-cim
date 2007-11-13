@@ -200,6 +200,114 @@ static struct sdc_rasd_prop *mem_inc(const CMPIObjectPath *ref,
         return rasd;
 }
 
+static struct sdc_rasd_prop *net_min(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
+{
+        bool ret;
+        uint16_t num_nics = 0;
+        struct sdc_rasd_prop *rasd = NULL;
+ 
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                PROP_END
+        };
+ 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
+static int net_max_xen(const CMPIObjectPath *ref,
+                       CMPIStatus *s)
+{
+        /* No dynamic lookup for now. */
+        return 6;
+}
+ 
+static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
+{
+        bool ret;
+        uint16_t num_nics;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        /* TODO: relevant functions for KVM etc. and dispatch code. */ 
+        num_nics = net_max_xen(ref, s);
+        if (s->rc != CMPI_RC_OK) {
+                goto out;
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get max nic count");
+        }
+ 
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                PROP_END
+        };
+ 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+ out:
+        return rasd;
+}
+
+static struct sdc_rasd_prop *net_def(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
+{
+        bool ret;
+        uint16_t num_nics = 1;
+        struct sdc_rasd_prop *rasd = NULL;
+ 
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                PROP_END
+        };
+ 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+ 
+static struct sdc_rasd_prop *net_inc(const CMPIObjectPath *ref,
+                                     CMPIStatus *s)
+{
+        bool ret;
+        uint16_t num_nics = 1;
+        struct sdc_rasd_prop *rasd = NULL;
+ 
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                PROP_END
+        };
+ 
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD.");
+        }
+
+        return rasd;
+}
+
 static struct sdc_rasd_prop *disk_min(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
@@ -347,6 +455,14 @@ static struct sdc_rasd mem = {
         .inc = mem_inc
 };
 
+static struct sdc_rasd network = {
+        .resource_type = CIM_RASD_TYPE_NET,
+        .min = net_min,
+        .max = net_max,
+        .def = net_def,
+        .inc = net_inc
+};
+
 static struct sdc_rasd disk = {
         .resource_type = CIM_RASD_TYPE_DISK,
         .min = disk_min,
@@ -357,6 +473,7 @@ static struct sdc_rasd disk = {
 
 static struct sdc_rasd *sdc_rasd_list[] = {
         &mem,
+        &network,
         &disk,
         NULL
 };
