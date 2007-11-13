@@ -55,12 +55,10 @@ static bool rasd_prop_copy_value(struct sdc_rasd_prop src,
 {
         bool rc = true;
 
-        CU_DEBUG("Copying '%s'.\n", src.field);
+        CU_DEBUG("Copying '%s'.", src.field);
         if (src.type & CMPI_string) {
-                CU_DEBUG("String type.\n");
                 dest->value = (CMPIValue *)strdup((char *)src.value);
         } else if (src.type & CMPI_INTEGER) {
-                CU_DEBUG("Integer type.\n");
                 dest->value = malloc(sizeof(CMPIValue));
                 memcpy(dest->value, src.value, sizeof(CMPIValue));
         } else {
@@ -78,7 +76,6 @@ static bool dup_rasd_prop_list(struct sdc_rasd_prop *src,
         *dest = NULL;
         
         for (i = 0, count = 1; src[i].field != NULL; i++, count++) {
-                CU_DEBUG("count: %d, i: %d.  reallocing.\n", count, i);
                 *dest = realloc(*dest, count * sizeof(struct sdc_rasd_prop));
                 (*dest)[i].field = strdup(src[i].field);
                 ret = rasd_prop_copy_value(src[i], &(*dest)[i]);
@@ -86,7 +83,6 @@ static bool dup_rasd_prop_list(struct sdc_rasd_prop *src,
         }
         
         /* Make sure to terminate the list. */
-        CU_DEBUG("Terminating list. count: %d, i: %d\n", count, i);
         *dest = realloc(*dest, count * sizeof(struct sdc_rasd_prop));
         (*dest)[i] = (struct sdc_rasd_prop)PROP_END;
 
@@ -668,16 +664,15 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
         CMSetProperty(inst, "ResourceType", &resource_type, CMPI_uint16);
 
         for (i = 0; prop_list[i].field != NULL; i++) {
-                CU_DEBUG("Setting property '%s'.\n", prop_list[i].field);
+                CU_DEBUG("Setting property '%s'.", prop_list[i].field);
                 CMSetProperty(inst, prop_list[i].field, 
                               prop_list[i].value, prop_list[i].type);
-                CU_DEBUG("Set.\n");
         }
 
-        CU_DEBUG("freeing prop_list.\n");
+        CU_DEBUG("freeing prop_list.");
         free_rasd_prop_list(prop_list);
  out:
-        CU_DEBUG("Returning inst.\n");
+        CU_DEBUG("Returning inst.");
         return inst;
 }
 
@@ -704,17 +699,17 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                                 CU_DEBUG("Problem getting inst.");
                                 goto out;
                         }
-                        CU_DEBUG("Got inst.\n");
+                        CU_DEBUG("Got inst.");
                         if (inst != NULL) {
                                 inst_list_add(list, inst);
-                                CU_DEBUG("Added inst.\n");
+                                CU_DEBUG("Added inst.");
                         } else {
-                                CU_DEBUG("Inst is null, not added.\n");
+                                CU_DEBUG("Inst is null, not added.");
                         }
                 }
                 
         } else {
-                CU_DEBUG("Unsupported type.\n");
+                CU_DEBUG("Unsupported type.");
                 CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
                                      "Unsupported device type.");
         }
@@ -731,7 +726,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         int ret;
         uint16_t type;
 
-        CU_DEBUG("Getting ResourceType.\n");
+        CU_DEBUG("Getting ResourceType.");
 
         ret = cu_get_u16_path(ref, "ResourceType", &type);
         if (ret != 1) {
@@ -740,7 +735,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
         
-        CU_DEBUG("ResourceType: %hi.\n", type);
+        CU_DEBUG("ResourceType: %hi.", type);
 
         s = sdc_rasds_for_type(ref, list, type);
 
