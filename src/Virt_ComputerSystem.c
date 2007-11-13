@@ -381,6 +381,11 @@ static CMPIStatus get_domain(const CMPIObjectPath *reference,
         virConnectPtr conn = NULL;
         const char *prop = NULL;
 
+        if (!provider_is_responsible(_BROKER, reference, &s)) {
+                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+                return s;
+        }
+
         conn = lv_connect(_BROKER, &s);
         if (conn == NULL)
                 return s;
