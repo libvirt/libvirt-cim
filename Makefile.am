@@ -21,6 +21,7 @@ MOFS = \
 	schema/ProcessorPool.mof \
 	schema/DiskPool.mof \
 	schema/HostedResourcePool.mof \
+	schema/RegisteredProfile.mof \
 	schema/ElementConformsToProfile.mof \
 	schema/ComputerSystemIndication.mof \
 	schema/ResourceAllocationSettingData.mof \

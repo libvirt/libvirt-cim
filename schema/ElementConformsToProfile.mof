@@ -6,6 +6,10 @@
 ]
 class Xen_ElementConformsToProfile : CIM_ElementConformsToProfile
 {
+
+  [Override ("ConformantStandard")]
+  Xen_RegisteredProfile REF ConformantStandard;
+
 };
 
 [Association,
@@ -14,5 +18,9 @@ class Xen_ElementConformsToProfile : CIM_ElementConformsToProfile
 ]
 class KVM_ElementConformsToProfile : CIM_ElementConformsToProfile
 {
+
+  [Override ("ConformantStandard")]
+  KVM_RegisteredProfile REF ConformantStandard;
+
 };
 
