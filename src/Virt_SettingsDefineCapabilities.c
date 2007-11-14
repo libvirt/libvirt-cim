@@ -332,27 +332,80 @@ static struct sdc_rasd_prop *net_min(const CMPIObjectPath *ref,
         return rasd;
 }
 
-static int net_max_xen(const CMPIObjectPath *ref,
-                       CMPIStatus *s)
+static uint16_t net_max_kvm(const CMPIObjectPath *ref,
+                            CMPIStatus *s)
 {
-        /* No dynamic lookup for now. */
-        return 6;
+        /* This appears to not require anything dynamic. */
+        return 32;
+}
+static uint16_t net_max_xen(const CMPIObjectPath *ref,
+                            CMPIStatus *s)
+{
+        int rc;
+        virConnectPtr conn;
+        unsigned long version;
+        uint16_t num_nics = -1;
+
+        conn = lv_connect(_BROKER, s);
+        if (s->rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get connection.");
+                goto out;
+        }
+
+        rc = virConnectGetVersion(conn, &version);
+        CU_DEBUG("libvir : version=%ld, rc=%d", version, rc);
+        if (rc != 0) {
+                cu_statusf(_BROKER, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get xen version.");
+                goto out;
+        }
+
+        if (version >= 3001000)
+                num_nics = 8;
+        else
+                num_nics = 4;
+        
+ out:
+        virConnectClose(conn);
+        return num_nics;
 }
  
 static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
                                      CMPIStatus *s)
 {
         bool ret;
+        char *prefix;
         uint16_t num_nics;
         struct sdc_rasd_prop *rasd = NULL;
 
-        /* TODO: relevant functions for KVM etc. and dispatch code. */ 
-        num_nics = net_max_xen(ref, s);
-        if (s->rc != CMPI_RC_OK) {
+        prefix = class_prefix_name(CLASSNAME(ref));
+        if (prefix == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get prefix from reference.");
                 goto out;
+        }
+
+        if (STREQC(prefix, "Xen")) {
+                num_nics = net_max_xen(ref, s);
+        } else if (STREQC(prefix, "KVM")) {
+                num_nics = net_max_kvm(ref, s);
+        } else {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_NOT_SUPPORTED,
+                           "Unsupported hypervisor: '%s'", prefix);
+                goto out;
+        }
+                
+
+        if (s->rc != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
                            "Could not get max nic count");
+                goto out;
         }
  
         struct sdc_rasd_prop tmp[] = {
@@ -368,6 +421,7 @@ static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
                            "Could not copy RASD.");
         }
  out:
+        free(prefix);
         return rasd;
 }
 
