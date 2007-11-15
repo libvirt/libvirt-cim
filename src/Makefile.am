@@ -49,7 +49,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_SettingsDefineState.la \
                        libVirt_ResourceAllocationFromPool.la \
                        libVirt_ElementAllocatedFromPool.la \
-                       libVirt_HostedService.la
+                       libVirt_HostedService.la \
+                       libVirt_ElementSettingData.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_Device_la_SOURCES = Virt_Device.c
@@ -116,3 +117,6 @@ libVirt_ElementAllocatedFromPool_la_LIBADD = -lVirt_DevicePool -lVirt_Device
 
 libVirt_HostedService_la_SOURCES = Virt_HostedService.c
 libVirt_HostedService_la_LIBADD = -lVirt_VirtualSystemManagementService -lVirt_ResourcePoolConfigurationService
+
+libVirt_ElementSettingData_la_SOURCES = Virt_ElementSettingData.c
+libVirt_ElementSettingData_la_LIBADD = -lVirt_VSSD

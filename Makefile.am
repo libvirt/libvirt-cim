@@ -32,7 +32,8 @@ MOFS = \
 	schema/NetPool.mof \
 	schema/ResourceAllocationFromPool.mof \
 	schema/ElementAllocatedFromPool.mof \
-	schema/HostedService.mof
+	schema/HostedService.mof \
+	schema/ElementSettingData.mof
 
 INTEROP_MOFS = \
 	schema/RegisteredProfile.mof \
@@ -68,7 +69,8 @@ REGS = \
 	schema/NetPool.registration \
 	schema/ResourceAllocationFromPool.registration \
 	schema/ElementAllocatedFromPool.registration \
-	schema/HostedService.registration
+	schema/HostedService.registration \
+	schema/ElementSettingData.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
