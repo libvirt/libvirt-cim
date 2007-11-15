@@ -336,7 +336,7 @@ static uint16_t net_max_kvm(const CMPIObjectPath *ref,
                             CMPIStatus *s)
 {
         /* This appears to not require anything dynamic. */
-        return 32;
+        return KVM_MAX_NICS;
 }
 static uint16_t net_max_xen(const CMPIObjectPath *ref,
                             CMPIStatus *s)
@@ -364,7 +364,7 @@ static uint16_t net_max_xen(const CMPIObjectPath *ref,
         }
 
         if (version >= 3001000)
-                num_nics = 8;
+                num_nics = XEN_MAX_NICS;
         else
                 num_nics = 4;
         

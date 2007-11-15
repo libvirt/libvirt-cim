@@ -35,6 +35,22 @@ AC_ARG_VAR([LIBVIRTDIR],[the directory where the libvirt package is installed.])
 AC_ARG_VAR([TESTSUITEDIR],[the directory where the SBLIM testsuite is installed.
 ])
 
+AC_ARG_WITH([kvm-max-nics],
+	    AC_HELP_STRING([--with-kvm-max-nics=X],
+			   [Maximum NICs to advertise for KVM]),
+	    [test "x$withval" != "x" && KVM_MAX_NICS=$withval],
+	    [KVM_MAX_NICS=8])
+AC_SUBST(KVM_MAX_NICS)
+AC_DEFINE_UNQUOTED(KVM_MAX_NICS, $KVM_MAX_NICS, [Maximum NIC limit for KVM])
+
+AC_ARG_WITH([xen-max-nics],
+	    AC_HELP_STRING([--with-xen-max-nics=X],
+			   [Maximum NIC limit to advertise for Xen (unless known by the provider)]),
+            [test "x$withval" != "x" && XEN_MAX_NICS=$withval],
+	    [XEN_MAX_NICS=8])
+AC_SUBST(XEN_MAX_NICS)
+AC_DEFINE_UNQUOTED(XEN_MAX_NICS, $XEN_MAX_NICS, [Maximum NIC limit for Xen])
+
 AC_ARG_WITH([namespace],
             AC_HELP_STRING([--with-namespace=ns],
                            [CIM namespace to use, default root/virt]),
