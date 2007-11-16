@@ -11,11 +11,12 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-root
 URL: http://libvirt.org/CIM/
 Requires: libxml2
 Requires: libvirt >= 0.2.3
-BuildRequires: sblim-cmpi-devel
+BuildRequires: tog-pegasus-devel
 BuildRequires: libvirt-devel >= 0.2.3
 BuildRequires: e2fsprogs-devel
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
+BuildConflicts: sblim-cmpi-devel
 
 %description
 Libvirt-cim is a CMPI CIM provider that implements the DMTF SVPC
