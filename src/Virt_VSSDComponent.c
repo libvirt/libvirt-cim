@@ -41,10 +41,7 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s;
-        char *id = NULL;
-        char *pfx = NULL;
         char *name = NULL;
-        int ret;
         int i = 0;
         int types[] = {
                 CIM_RASD_TYPE_PROC,
@@ -56,19 +53,10 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
 
         ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (!parse_instanceid(ref, NULL, &name)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
-                goto out;
-        }
-
-        ret = sscanf(id, "%a[^:]:%as", &pfx, &name);
-        if (ret != 2) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Invalid InstanceID");
+                           "Unable to get system name");
                 goto out;
         }
 
@@ -83,8 +71,6 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        free(id);
-        free(pfx);
         free(name);
 
         return s;

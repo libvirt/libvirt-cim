@@ -371,6 +371,55 @@ bool domain_online(virDomainPtr dom)
                 (info.state == VIR_DOMAIN_RUNNING);
 }
 
+int parse_id(char *id, 
+             char **pfx,
+             char **name)
+{
+        int ret;
+        char *tmp_pfx;
+        char *tmp_name;
+
+        ret = sscanf(id, "%a[^:]:%as", &tmp_pfx, &tmp_name);
+        if (ret != 2) {
+                ret = 0;
+                goto out;
+        }
+
+        if (pfx)
+                *pfx = strdup(tmp_pfx);
+
+        if (name)
+                *name = strdup(tmp_name);
+
+        ret = 1;
+
+ out:
+        free(tmp_pfx);
+        free(tmp_name);
+
+        return ret;
+}
+
+bool parse_instanceid(const CMPIObjectPath *ref,
+                      char **pfx,
+                      char **name)
+{
+        int ret;
+        char *id = NULL;
+
+        id = cu_get_str_path(ref, "InstanceID");
+        if (id == NULL)
+                 return false;
+
+        ret = parse_id(id, pfx, name);
+
+        free(id);
+
+        if (!ret)
+                 return false;
+
+        return true;
+}
 
 /*
  * Local Variables:

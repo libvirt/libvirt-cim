@@ -89,6 +89,9 @@ uint64_t allocated_memory(virConnectPtr conn);
 char *association_prefix(const char *provider_name);
 bool match_pn_to_cn(const char *pn, const char *cn);
 
+int parse_id(char *id, char **pfx, char **name);
+bool parse_instanceid(const CMPIObjectPath *ref, char **pfx, char **name);
+
 #define ASSOC_MATCH(pn, cn)                            \
         if (!match_pn_to_cn((pn), (cn))) {             \
                 return (CMPIStatus){CMPI_RC_OK, NULL}; \
