@@ -47,7 +47,8 @@ static int net_set_type(CMPIInstance *instance,
 {
         uint16_t cim_type;
 
-        if (STREQC(dev->type, "ethernet"))
+        if (STREQC(dev->type, "ethernet") ||
+            STREQC(dev->type, "bridge"))
                 cim_type = CIM_NET_ETHERNET;
         else
                 cim_type = CIM_NET_UNKNOWN;
