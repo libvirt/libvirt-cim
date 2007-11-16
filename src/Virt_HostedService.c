@@ -43,6 +43,8 @@ static CMPIStatus service_to_host(const CMPIObjectPath *ref,
         CMPIStatus s;
         CMPIInstance *instance;
 
+        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+
         s = get_host_cs(_BROKER, ref, &instance);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, instance);
@@ -56,6 +58,8 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
+
+        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
 
         s = rpcs_instance(ref, &inst, _BROKER);
         if (s.rc != CMPI_RC_OK)
