@@ -24,6 +24,7 @@
 
 #include <libcmpiutil.h>
 #include <std_invokemethod.h>
+#include <std_instance.h>
 
 #include "misc_util.h"
 
@@ -82,7 +83,7 @@ static struct method_handler *my_handlers[] = {
 };
 
 STDIM_MethodMIStub(, Virt_ResourcePoolConfigurationServiceProvider,
-                   _BROKER, CMNoHook, my_handlers);
+                   _BROKER, libvirt_cim_init(), my_handlers);
 
 DEFAULT_CI();
 DEFAULT_MI();
@@ -203,13 +204,8 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
 }
 
 
-CMPIInstanceMI *
-Virt_ResourcePoolConfigurationServiceProvider_Create_InstanceMI(const CMPIBroker *,
-                                              const CMPIContext *,
-                                              CMPIStatus *rc);
-
-CMInstanceMIStub(, Virt_ResourcePoolConfigurationServiceProvider,
-                 _BROKER, CMNoHook);
+STD_InstanceMIStub(, Virt_ResourcePoolConfigurationServiceProvider,
+                   _BROKER, libvirt_cim_init());
 
 
 /*

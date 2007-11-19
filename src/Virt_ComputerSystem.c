@@ -34,6 +34,7 @@
 #include "libcmpiutil.h"
 #include "misc_util.h"
 #include "std_invokemethod.h"
+#include "std_instance.h"
 
 #include "Virt_ComputerSystem.h"
 
@@ -682,13 +683,7 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         return s;
 }
 
-/* Avoid a warning in the stub macro below */
-CMPIInstanceMI *
-Virt_ComputerSystemProvider_Create_InstanceMI(const CMPIBroker *,
-                                              const CMPIContext *,
-                                              CMPIStatus *rc);
-
-CMInstanceMIStub(, Virt_ComputerSystemProvider, _BROKER, CMNoHook);
+STD_InstanceMIStub(, Virt_ComputerSystemProvider, _BROKER, libvirt_cim_init());
 
 static struct method_handler RequestStateChange = {
         .name = "RequestStateChange",
@@ -707,7 +702,7 @@ static struct method_handler *my_handlers[] = {
 STDIM_MethodMIStub(,
                    Virt_ComputerSystemProvider,
                    _BROKER,
-                   CMNoHook,
+                   libvirt_cim_init(),
                    my_handlers);
 
 /*

@@ -30,6 +30,7 @@
 #include <cmpimacs.h>
 
 #include "libcmpiutil.h"
+#include "std_instance.h"
 #include "cs_util.h"
 #include "misc_util.h"
 #include "device_parsing.h"
@@ -531,13 +532,7 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-/* Avoid a warning in the stub macro below */
-CMPIInstanceMI *
-Virt_DeviceProvider_Create_InstanceMI(const CMPIBroker *,
-                                      const CMPIContext *,
-                                      CMPIStatus *rc);
-
-CMInstanceMIStub(, Virt_DeviceProvider, _BROKER, CMNoHook);
+STD_InstanceMIStub(, Virt_DeviceProvider, _BROKER, libvirt_cim_init());
 
 /*
  * Local Variables:

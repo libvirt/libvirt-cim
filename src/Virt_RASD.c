@@ -29,6 +29,8 @@
 #include <cmpimacs.h>
 
 #include <libcmpiutil.h>
+#include <std_instance.h>
+
 #include "device_parsing.h"
 #include "misc_util.h"
 
@@ -313,13 +315,7 @@ DEFAULT_EIN();
 DEFAULT_INST_CLEANUP();
 DEFAULT_EQ();
 
-/* Avoid a warning in the stub macro below */
-CMPIInstanceMI *
-Virt_RASDProvider_Create_InstanceMI(const CMPIBroker *,
-                                    const CMPIContext *,
-                                    CMPIStatus *rc);
-
-CMInstanceMIStub(, Virt_RASDProvider, _BROKER, CMNoHook);
+STD_InstanceMIStub(, Virt_RASDProvider, _BROKER, libvirt_cim_init());
 
 /*
  * Local Variables:

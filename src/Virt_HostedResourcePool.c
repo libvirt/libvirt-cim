@@ -151,7 +151,7 @@ struct std_assoc *assoc_handlers[] = {
 };
 
 
-STDA_AssocMIStub(, Virt_HostedResourcePoolProvider, _BROKER, CMNoHook, assoc_handlers);
+STDA_AssocMIStub(, Virt_HostedResourcePoolProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 
 /*
  * Local Variables:

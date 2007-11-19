@@ -872,8 +872,8 @@ struct std_assoc *assoc_handlers[] = {
 };
 
 
-STDA_AssocMIStub(, Xen_SettingsDefineCapabilitiesProvider, _BROKER, CMNoHook, assoc_handlers);
-STDA_AssocMIStub(, KVM_SettingsDefineCapabilitiesProvider, _BROKER, CMNoHook, assoc_handlers);
+STDA_AssocMIStub(, Xen_SettingsDefineCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
+STDA_AssocMIStub(, KVM_SettingsDefineCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 
 /*
  * Local Variables:

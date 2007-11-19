@@ -27,6 +27,8 @@
 #include <cmpimacs.h>
 
 #include "libcmpiutil.h"
+#include "std_instance.h"
+
 #include "misc_util.h"
 
 const static CMPIBroker *_BROKER;
@@ -112,14 +114,8 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 }
 
 
-/* Avoid a warning in the stub macro below */
-CMPIInstanceMI *
-Virt_ResourcePoolConfigurationCapabilitiesProvider_Create_InstanceMI(const CMPIBroker *,
-                                                                    const CMPIContext *,
-                                                                    CMPIStatus *rc);
-
-CMInstanceMIStub(, Virt_ResourcePoolConfigurationCapabilitiesProvider, _BROKER,
-                 CMNoHook);
+STD_InstanceMIStub(, Virt_ResourcePoolConfigurationCapabilitiesProvider,
+                   _BROKER, libvirt_cim_init());
 
 /*
  * Local Variables:

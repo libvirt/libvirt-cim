@@ -150,7 +150,7 @@ static struct std_assoc *handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Virt_HostedDependencyProvider, _BROKER, CMNoHook, handlers);
+STDA_AssocMIStub(, Virt_HostedDependencyProvider, _BROKER, libvirt_cim_init(), handlers);
 
 /*
  * Local Variables:

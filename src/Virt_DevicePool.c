@@ -39,6 +39,7 @@
 #include "device_parsing.h"
 
 #include <libcmpiutil.h>
+#include <std_instance.h>
 
 #include "Virt_DevicePool.h"
 #include "svpc_types.h"
@@ -718,13 +719,7 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-/* Avoid a warning in the stub macro below */
-CMPIInstanceMI *
-Virt_DevicePoolProvider_Create_InstanceMI(const CMPIBroker *,
-                                          const CMPIContext *,
-                                          CMPIStatus *rc);
-
-CMInstanceMIStub(, Virt_DevicePoolProvider, _BROKER, CMNoHook);
+STD_InstanceMIStub(, Virt_DevicePoolProvider, _BROKER, libvirt_cim_init());
 
 
 /*

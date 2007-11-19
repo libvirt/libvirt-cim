@@ -301,7 +301,7 @@ DEFAULT_AF();
 DEFAULT_MP();
 
 STDI_IndicationMIStub(, Virt_ComputerSystemIndicationProvider,
-                      _BROKER, CMNoHook, &csi);
+                      _BROKER, libvirt_cim_init(), &csi);
 
 /*
  * Local Variables:

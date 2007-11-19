@@ -36,9 +36,10 @@
 #include "xmlgen.h"
 
 #include "libcmpiutil.h"
-
 #include "std_invokemethod.h"
 #include "std_indication.h"
+#include "std_instance.h"
+
 #include "misc_util.h"
 
 #include "Virt_VirtualSystemManagementService.h"
@@ -1020,7 +1021,7 @@ static struct method_handler *my_handlers[] = {
 };
 
 STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
-                   _BROKER, CMNoHook, my_handlers);
+                   _BROKER, libvirt_cim_init(), my_handlers);
 
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
@@ -1150,13 +1151,8 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-/* Avoid a warning in the stub macro below */
-CMPIInstanceMI *
-Virt_VirtualSystemManagementService_Create_InstanceMI(const CMPIBroker *,
-                                                      const CMPIContext *,
-                                                      CMPIStatus *rc);
-
-CMInstanceMIStub(, Virt_VirtualSystemManagementService, _BROKER, CMNoHook);
+STD_InstanceMIStub(, Virt_VirtualSystemManagementService, _BROKER,
+                   libvirt_cim_init());
 
 
 /*
