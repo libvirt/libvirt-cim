@@ -92,6 +92,8 @@ bool match_pn_to_cn(const char *pn, const char *cn);
 int parse_id(char *id, char **pfx, char **name);
 bool parse_instanceid(const CMPIObjectPath *ref, char **pfx, char **name);
 
+bool libvirt_cim_init(void);
+
 #define ASSOC_MATCH(pn, cn)                            \
         if (!match_pn_to_cn((pn), (cn))) {             \
                 return (CMPIStatus){CMPI_RC_OK, NULL}; \

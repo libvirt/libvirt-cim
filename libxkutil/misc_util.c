@@ -421,6 +421,11 @@ bool parse_instanceid(const CMPIObjectPath *ref,
         return true;
 }
 
+bool libvirt_cim_init(void)
+{
+        return virInitialize == 0;
+}
+
 /*
  * Local Variables:
  * mode: C
