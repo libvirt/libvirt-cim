@@ -223,23 +223,12 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 {
         CMPIStatus s;
         CMPIInstance *inst;
-        char *iid;
-        char *orgid;
         char *locid;
 
-        iid = cu_get_str_path(reference, "InstanceID");
-        if (iid == NULL) {
-                CMSetStatusWithChars(_BROKER, &s,
-                            CMPI_RC_ERR_FAILED,
-                            "InstanceID not specified");
-                return s;
-        }
-
-        if (!parse_instance_id(iid, &orgid, &locid)) {
-                CMSetStatusWithChars(_BROKER, &s,
-                            CMPI_RC_ERR_FAILED,
+        if (!parse_instanceid(reference, NULL, &locid)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
                             "Invalid InstanceID specified");
-                free(iid);
                 return s;
         }
 
@@ -249,8 +238,6 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 
         CMSetStatus(&s, CMPI_RC_OK);
 
-        free(iid);
-        free(orgid);
         free(locid);
 
         return s;

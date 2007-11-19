@@ -155,29 +155,6 @@ bool match_pn_to_cn(const char *pn, const char *cn)
         return result;
 }
 
-int parse_instance_id(char *_iid, char **orgid, char **locid)
-{
-        char *iid = NULL;
-        char *delim = NULL;
-        int ret = 0;
-
-        iid = strdup(_iid);
-
-        delim = strchr(iid, ':');
-        if (!delim) {
-                free(iid);
-                goto out;
-        }
-
-        *delim = '\0';
-        *orgid = iid;
-        *locid = strdup(delim+1);
-
-        ret = 1;
- out:
-        return ret;
-}
-
 static const char *prefix_from_uri(const char *uri)
 {
         if (strstr(uri, "xen"))
