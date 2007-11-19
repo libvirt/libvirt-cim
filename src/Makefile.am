@@ -55,68 +55,84 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_Device_la_SOURCES = Virt_Device.c
 
+libVirt_ComputerSystemIndication_la_DEPENDENCIES = libVirt_ComputerSystem.la
 libVirt_ComputerSystemIndication_la_SOURCES = Virt_ComputerSystemIndication.c
 libVirt_ComputerSystemIndication_la_LIBADD = -lVirt_ComputerSystem -lpthread -lrt
 
+libVirt_VirtualSystemManagementService_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_ComputerSystemIndication.la libVirt_RASD.la libVirt_HostSystem.la
 libVirt_VirtualSystemManagementService_la_SOURCES = Virt_VirtualSystemManagementService.c
 libVirt_VirtualSystemManagementService_la_LIBADD = -lVirt_ComputerSystem -lVirt_ComputerSystemIndication -lVirt_RASD -lVirt_HostSystem
 
 libVirt_VirtualSystemManagementCapabilities_la_SOURCES = Virt_VirtualSystemManagementCapabilities.c
 
+libVirt_SystemDevice_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_Device.la
 libVirt_SystemDevice_la_SOURCES = Virt_SystemDevice.c
 libVirt_SystemDevice_la_LIBADD = -lVirt_ComputerSystem -lVirt_Device
 
 libVirt_VSSD_la_SOURCES = Virt_VSSD.c
 libVirt_HostSystem_la_SOURCES = Virt_HostSystem.c
 
+libVirt_HostedDependency_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_HostSystem.la
 libVirt_HostedDependency_la_SOURCES = Virt_HostedDependency.c
 libVirt_HostedDependency_la_LIBADD = -lVirt_ComputerSystem -lVirt_HostSystem
 
 libVirt_DevicePool_la_SOURCES = Virt_DevicePool.c
 
+libVirt_ElementConformsToProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la
 libVirt_ElementConformsToProfile_la_SOURCES = Virt_ElementConformsToProfile.c
 libVirt_ElementConformsToProfile_la_LIBADD = -lVirt_RegisteredProfile
 
 libVirt_EnabledLogicalElementCapabilities_la_SOURCES = Virt_EnabledLogicalElementCapabilities.c
 
+libVirt_ElementCapabilities_la_DEPENDENCIES = libVirt_VirtualSystemManagementCapabilities.la libVirt_EnabledLogicalElementCapabilities.la libVirt_ComputerSystem.la libVirt_HostSystem.la
 libVirt_ElementCapabilities_la_SOURCES = Virt_ElementCapabilities.c
 libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabilities \
                                         -lVirt_EnabledLogicalElementCapabilities \
                                         -lVirt_ComputerSystem \
                                         -lVirt_HostSystem
 
+libVirt_AllocationCapabilities_la_DEPENDENCIES = libVirt_RASD.la
 libVirt_AllocationCapabilities_la_SOURCES = Virt_AllocationCapabilities.c
 libVirt_AllocationCapabilities_la_LIBADD = -lVirt_RASD
 
+libVirt_SettingsDefineCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la
 libVirt_SettingsDefineCapabilities_la_SOURCES = Virt_SettingsDefineCapabilities.c
 libVirt_SettingsDefineCapabilities_la_LIBADD = -lVirt_RASD -lVirt_DevicePool
 
 libVirt_RegisteredProfile_la_SOURCES = Virt_RegisteredProfile.c
 
+libVirt_HostedResourcePool_la_DEPENDENCIES = libVirt_DevicePool.la libVirt_HostSystem.la
 libVirt_HostedResourcePool_la_SOURCES = Virt_HostedResourcePool.c
 libVirt_HostedResourcePool_la_LIBADD = -lVirt_DevicePool -lVirt_HostSystem
 
 libVirt_RASD_la_SOURCES = Virt_RASD.c
 
+libVirt_ResourcePoolConfigurationService_la_DEPENDENCIES = libVirt_HostSystem.la
 libVirt_ResourcePoolConfigurationService_la_SOURCES = Virt_ResourcePoolConfigurationService.c
 libVirt_ResourcePoolConfigurationService_la_LIBADD = -lVirt_HostSystem
 
 libVirt_ResourcePoolConfigurationCapabilities_la_SOURCES = Virt_ResourcePoolConfigurationCapabilities.c
 
+libVirt_VSSDComponent_la_DEPENDENCIES = libVirt_VSSD.la libVirt_RASD.la
 libVirt_VSSDComponent_la_SOURCES = Virt_VSSDComponent.c
 libVirt_VSSDComponent_la_LIBADD = -lVirt_VSSD -lVirt_RASD
 
+libVirt_SettingsDefineState_la_DEPENDENCIES = libVirt_Device.la libVirt_RASD.la libVirt_VSSD.la libVirt_ComputerSystem.la
 libVirt_SettingsDefineState_la_SOURCES = Virt_SettingsDefineState.c
 libVirt_SettingsDefineState_la_LIBADD = -lVirt_Device -lVirt_RASD -lVirt_VSSD -lVirt_ComputerSystem
 
+libVirt_ResourceAllocationFromPool_la_DEPENDENCIES = libVirt_DevicePool.la libVirt_RASD.la
 libVirt_ResourceAllocationFromPool_la_SOURCES = Virt_ResourceAllocationFromPool.c
 libVirt_ResourceAllocationFromPool_la_LIBADD = -lVirt_DevicePool -lVirt_RASD
 
+libVirt_ElementAllocatedFromPool_la_DEPENDENCIES = libVirt_DevicePool.la libVirt_Device.la
 libVirt_ElementAllocatedFromPool_la_SOURCES = Virt_ElementAllocatedFromPool.c
 libVirt_ElementAllocatedFromPool_la_LIBADD = -lVirt_DevicePool -lVirt_Device
 
+libVirt_HostedService_la_DEPENDENCIES = libVirt_VirtualSystemManagementService.la libVirt_ResourcePoolConfigurationService.la
 libVirt_HostedService_la_SOURCES = Virt_HostedService.c
 libVirt_HostedService_la_LIBADD = -lVirt_VirtualSystemManagementService -lVirt_ResourcePoolConfigurationService
 
+libVirt_ElementSettingData_la_DEPENDENCIES = libVirt_VSSD.la
 libVirt_ElementSettingData_la_SOURCES = Virt_ElementSettingData.c
 libVirt_ElementSettingData_la_LIBADD = -lVirt_VSSD
