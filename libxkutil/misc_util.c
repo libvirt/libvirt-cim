@@ -56,6 +56,8 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
         const char *uri;
         virConnectPtr conn;
 
+        CMSetStatus(s, CMPI_RC_OK);
+
         uri = cn_to_uri(classname);
         if (!uri) {
                 CMSetStatusWithChars(broker, s, 
@@ -64,11 +66,11 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
                 return NULL;
         }
 
+        CU_DEBUG("Connecting to libvirt with uri `%s'", uri);
+
         conn = virConnectOpen(uri);
         if (!conn) {
-                CMSetStatusWithChars(broker, s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Unable to connect to hypervisor");
+                CU_DEBUG("Unable to connect to `%s'", uri);
                 return NULL;
         }
 
@@ -334,28 +336,21 @@ bool provider_is_responsible(const CMPIBroker *broker,
                              const CMPIObjectPath *reference,
                              CMPIStatus *status)
 {
-        const char *dft_pfx;
         char *pfx;
-        bool rc = false;
+        bool rc = true;
 
         CMSetStatus(status, CMPI_RC_OK);
 
         pfx = class_prefix_name(CLASSNAME(reference));
 
-        if (STREQC(pfx, "CIM"))
+        if (STREQC(pfx, "CIM")) {
                 cu_statusf(broker, status,
                            CMPI_RC_ERR_FAILED,
                            "Please exactly specify the class (check CIMOM behavior!): %s", 
                            CLASSNAME(reference));
+                rc = false;
+        }
 
-        dft_pfx = default_prefix();
-        if (dft_pfx == NULL)
-                goto out;
-        
-        if (STREQC(pfx, dft_pfx)) 
-                rc = true;
-
- out:
         free(pfx);
         return rc;
 }
