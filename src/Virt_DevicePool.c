@@ -602,9 +602,9 @@ static void __return_pool(const CMPIResult *results,
                           bool name_only)
 {
         if (name_only)
-                cu_return_instance_names(results, list->list);
+                cu_return_instance_names(results, list);
         else
-                cu_return_instances(results, list->list);
+                cu_return_instances(results, list);
 }
 
 static CMPIStatus return_pool(const CMPIObjectPath *ref,

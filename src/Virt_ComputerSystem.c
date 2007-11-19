@@ -356,9 +356,9 @@ static CMPIStatus return_enum_domains(const CMPIObjectPath *reference,
         }
 
         if (names_only)
-                cu_return_instance_names(results, list.list);
+                cu_return_instance_names(results, &list);
         else
-                cu_return_instances(results, list.list);
+                cu_return_instances(results, &list);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
