@@ -344,10 +344,7 @@ static CMPIStatus return_enum_domains(const CMPIObjectPath *reference,
         virConnectPtr conn = NULL;
         int ret;
 
-        if (!provider_is_responsible(_BROKER, reference, &s))
-                return s;
-
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL)
                 return s;
 
@@ -387,7 +384,7 @@ static CMPIStatus get_domain(const CMPIObjectPath *reference,
                 return s;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL)
                 return s;
 
@@ -610,7 +607,7 @@ static CMPIStatus __state_change(char *name,
         virDomainPtr dom = NULL;
         virDomainInfo info;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 

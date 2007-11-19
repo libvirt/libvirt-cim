@@ -61,6 +61,7 @@ const static int device_types[DEV_TYPE_COUNT] =
 static int get_dom_devices(const char *name,
                            struct inst_list *list,
                            int type,
+                           const char *host_cn,
                            const char *ns)
 {
         virConnectPtr conn = NULL;
@@ -68,7 +69,7 @@ static int get_dom_devices(const char *name,
         CMPIStatus s;
         int ret = 0;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, host_cn, &s);
         if (conn == NULL)
                 goto out;
 
@@ -87,17 +88,19 @@ static int get_dom_devices(const char *name,
 
 static int get_all_devices(const char *name,
                            struct inst_list *list,
-                           char *ns)
+                           const char *host_cn,
+                           const char *ns)
 {
         int i;
 
         for (i = 0; i < DEV_TYPE_COUNT; i++)
-                get_dom_devices(name, list, device_types[i], ns);
+                get_dom_devices(name, list, device_types[i], host_cn, ns);
 
         return i;
 }
 
 static CMPIInstance *host_instance(char *name,
+                                   const char *host_cn,
                                    const char *ns)
 {
         CMPIInstance *inst = NULL;
@@ -114,7 +117,7 @@ static CMPIInstance *host_instance(char *name,
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto out;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, host_cn, &s);
         if (conn == NULL)
                 goto out;
 
@@ -173,9 +176,16 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
 
                 type = device_type_from_classname(info->result_class);
 
-                ret = get_dom_devices(host, list, type, NAMESPACE(ref));
+                ret = get_dom_devices(host,
+                                      list,
+                                      type,
+                                      CLASSNAME(ref),
+                                      NAMESPACE(ref));
         } else {
-                ret = get_all_devices(host, list, NAMESPACE(ref));
+                ret = get_all_devices(host,
+                                      list,
+                                      CLASSNAME(ref),
+                                      NAMESPACE(ref));
         }
 
         if (ret >= 0) {
@@ -218,6 +228,7 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
         }
 
         sys = host_instance(host,
+                            CLASSNAME(ref),
                             NAMESPACE(ref));
 
         if (sys == NULL)
