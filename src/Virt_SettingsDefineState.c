@@ -118,14 +118,14 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
 
 static CMPIInstance *_get_typed_device(char *id,
                                        int type,
-                                       const char *ns,
+                                       const CMPIObjectPath *ref,
                                        CMPIStatus *s)
 {
         virConnectPtr conn = NULL;
         CMPIInstance *dev = NULL;
         const char *typestr;
 
-        conn = lv_connect(_BROKER, s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (conn == NULL)
                 goto out;
 
@@ -147,7 +147,7 @@ static CMPIInstance *_get_typed_device(char *id,
         dev = instance_from_devid(_BROKER,
                                   conn,
                                   id,
-                                  ns,
+                                  NAMESPACE(ref),
                                   device_type_from_classname(typestr));
  out:
         virConnectClose(conn);
@@ -181,7 +181,7 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        dev = _get_typed_device(id, type, NAMESPACE(ref), &s);
+        dev = _get_typed_device(id, type, ref, &s);
         if (dev == NULL)
                 goto out;
 
@@ -205,7 +205,7 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
         CMPIInstance *vssd;
         CMPIStatus s;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 return s;
 
@@ -268,7 +268,7 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
