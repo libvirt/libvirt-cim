@@ -288,6 +288,7 @@ CMPIInstance *instance_from_name(const CMPIBroker *broker,
                 return 0;
 
         instance = get_typed_instance(broker,
+                                      pfx_from_conn(conn),
                                       "ComputerSystem",
                                       NAMESPACE(op));
         if (instance == NULL)
@@ -319,7 +320,10 @@ int enum_domains(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 CMPIInstance *inst;
 
-                inst = get_typed_instance(broker, "ComputerSystem", ns);
+                inst = get_typed_instance(broker,
+                                          pfx_from_conn(conn),
+                                          "ComputerSystem",
+                                          ns);
                 if (inst == NULL)
                         goto end;
 
