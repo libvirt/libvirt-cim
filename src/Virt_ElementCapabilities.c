@@ -167,7 +167,7 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
                 goto error1;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (s.rc != CMPI_RC_OK)
                 goto error1;
 
