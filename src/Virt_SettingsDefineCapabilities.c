@@ -706,6 +706,7 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
                 goto out;
 
         inst = get_typed_instance(broker,
+                                  CLASSNAME(ref),
                                   "ResourceAllocationSettingData",
                                   NAMESPACE(ref));
         
@@ -820,6 +821,7 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                 return NULL;
 
         refinst = get_typed_instance(_BROKER,
+                                     CLASSNAME(ref),
                                      base,
                                      NAMESPACE(ref));
 
