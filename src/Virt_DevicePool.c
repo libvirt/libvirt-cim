@@ -624,6 +624,28 @@ CMPIInstance *get_pool_by_id(const CMPIBroker *broker,
         return inst;
 }
 
+CMPIStatus get_all_pools(const CMPIBroker *broker,
+                         virConnectPtr conn,
+                         const char *ns,
+                         struct inst_list *list)
+{
+        int i;
+        CMPIStatus s = {CMPI_RC_OK};
+
+        for (i = 0; device_pool_names[i]; i++) {
+                s = get_pool_by_type(broker,
+                                     conn,
+                                     device_pool_names[i],
+                                     ns,
+                                     list);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
+ out:
+        return s;
+}
+
 static void __return_pool(const CMPIResult *results,
                           struct inst_list *list,
                           bool name_only)

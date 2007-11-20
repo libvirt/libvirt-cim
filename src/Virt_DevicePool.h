@@ -55,6 +55,18 @@ char *pool_member_of(const CMPIBroker *broker,
                      uint16_t type,
                      const char *id);
 
+/**
+ * Get all device pools on the system for the given connection
+ *
+ * @param broker The current Broker
+ * @param conn The libvirt connection to use
+ * @param ns Namespace for the pools
+ * @param list Return instances in this struct
+ */
+CMPIStatus get_all_pools(const CMPIBroker *broker,
+                         virConnectPtr conn,
+                         const char *ns,
+                         struct inst_list *list);
 #endif
 
 /*
