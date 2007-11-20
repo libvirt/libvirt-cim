@@ -358,7 +358,7 @@ static bool trigger_indication(const CMPIContext *context,
         char *type;
         CMPIStatus s;
 
-        type = get_typed_class(base_type);
+        type = get_typed_class("Xen", base_type);
 
         s = stdi_trigger_indication(_BROKER, context, type, ns);
 
@@ -1059,6 +1059,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                 goto out;
 
         inst = get_typed_instance(broker,
+                                  CLASSNAME(reference),
                                   "VirtualSystemManagementService",
                                   NAMESPACE(reference));
         if (inst == NULL) {
