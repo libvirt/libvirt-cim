@@ -91,9 +91,9 @@ libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabiliti
                                         -lVirt_ComputerSystem \
                                         -lVirt_HostSystem
 
-libVirt_AllocationCapabilities_la_DEPENDENCIES = libVirt_RASD.la
+libVirt_AllocationCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la
 libVirt_AllocationCapabilities_la_SOURCES = Virt_AllocationCapabilities.c
-libVirt_AllocationCapabilities_la_LIBADD = -lVirt_RASD
+libVirt_AllocationCapabilities_la_LIBADD = -lVirt_RASD -lVirt_DevicePool
 
 libVirt_SettingsDefineCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la
 libVirt_SettingsDefineCapabilities_la_SOURCES = Virt_SettingsDefineCapabilities.c

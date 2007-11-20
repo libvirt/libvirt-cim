@@ -32,6 +32,7 @@
 
 #include "Virt_AllocationCapabilities.h"
 #include "Virt_RASD.h"
+#include "Virt_DevicePool.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -88,6 +89,101 @@ static CMPIStatus return_alloc_cap(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus ac_from_pool(const CMPIBroker *broker, 
+                               const CMPIObjectPath *ref,
+                               CMPIInstance *pool, 
+                               CMPIInstance **alloc_cap)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        *alloc_cap = get_typed_instance(broker,
+                                        CLASSNAME(ref),
+                                        "AllocationCapabilities",
+                                        NAMESPACE(ref));
+        if (*alloc_cap == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get alloc_cap instance");
+                goto out;
+        }
+
+        s = cu_copy_prop(broker, pool, *alloc_cap, "InstanceID", NULL);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error copying InstanceID");
+                goto out;
+        }
+                
+        s = cu_copy_prop(broker, pool, *alloc_cap, "ResourceType", NULL);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error copying InstanceID");
+                goto out;
+        }
+ out:
+        return s;
+}
+
+static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
+                                      const CMPIObjectPath *ref,
+                                      const CMPIResult *results,
+                                      bool names_only,
+                                      const char **properties)
+{
+        int i;
+        virConnectPtr conn = NULL;
+        CMPIInstance *alloc_cap_inst;
+        struct inst_list alloc_cap_list;
+        struct inst_list device_pool_list;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CU_DEBUG("In alloc_cap_instances()");
+
+        inst_list_init(&device_pool_list);
+        inst_list_init(&alloc_cap_list);
+
+        if (!provider_is_responsible(broker, ref, &s))
+                goto out;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not connect to hypervisor");
+                goto out;
+        }
+
+        s = get_all_pools(broker, conn, NAMESPACE(ref), &device_pool_list);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error fetching device pools");
+                goto out;
+        }
+
+        for (i = 0; i < device_pool_list.cur; i++) {
+                s = ac_from_pool(broker, ref, 
+                                 device_pool_list.list[i], 
+                                 &alloc_cap_inst);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+
+                inst_list_add(&alloc_cap_list, alloc_cap_inst);
+        }
+
+        if (names_only)
+                cu_return_instance_names(results, &alloc_cap_list);
+        else
+                cu_return_instances(results, &alloc_cap_list);
+
+ out:
+        virConnectClose(conn);
+        inst_list_free(&alloc_cap_list);
+        inst_list_free(&device_pool_list);
+        return s;
+}
+
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIContext *context,
                               const CMPIResult *results,
@@ -97,8 +193,23 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         return return_alloc_cap(reference, results, 0);
 }
 
-DEFAULT_EI();
-DEFAULT_EIN();
+static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
+                                    const CMPIContext *context,
+                                    const CMPIResult *results,
+                                    const CMPIObjectPath *reference)
+{
+        return alloc_cap_instances(_BROKER, reference, results, true, NULL);
+}
+
+static CMPIStatus EnumInstances(CMPIInstanceMI *self,
+                                const CMPIContext *context,
+                                const CMPIResult *results,
+                                const CMPIObjectPath *reference,
+                                const char **properties)
+{
+        return alloc_cap_instances(_BROKER, reference, results, false, properties);
+}
+
 DEFAULT_CI();
 DEFAULT_MI();
 DEFAULT_DI();
