@@ -108,6 +108,7 @@ CMPIInstance *get_vssd_instance(virDomainPtr dom,
         CMPIInstance *inst;
 
         inst = get_typed_instance(broker,
+                                  CLASSNAME(ref),
                                   "VirtualSystemSettingData",
                                   NAMESPACE(ref));
 
