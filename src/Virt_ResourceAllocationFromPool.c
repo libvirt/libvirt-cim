@@ -66,7 +66,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        poolid = pool_member_of(_BROKER, type, id);
+        poolid = pool_member_of(_BROKER, CLASSNAME(ref), type, id);
         if (poolid == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -123,7 +123,7 @@ static int filter_by_pool(struct inst_list *dest,
 
                 cu_get_str_prop(inst, "InstanceID", &rasd_id);
 
-                poolid = pool_member_of(_BROKER, type, rasd_id);
+                poolid = pool_member_of(_BROKER, CLASSNAME(op), type, rasd_id);
                 if (STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
 

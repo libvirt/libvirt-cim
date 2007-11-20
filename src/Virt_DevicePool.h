@@ -39,7 +39,21 @@ CMPIInstance *get_pool_by_id(const CMPIBroker *broker,
                              const char *id,
                              const char *ns);
 
-char *pool_member_of(const CMPIBroker *broker, uint16_t type, char *id);
+
+/**
+ * Get the InstanceID of a pool that a given RASD id (for type) is in
+ *
+ * @param broker The current Broker
+ * @param refcn A reference classname to be used for libvirt
+ *              connections.  This can be anything as long as the
+ *              prefix is correct.
+ * @param type The ResourceType of the RASD
+ * @param id The InstanceID of the RASD
+ */
+char *pool_member_of(const CMPIBroker *broker,
+                     const char *refcn,
+                     uint16_t type,
+                     const char *id);
 
 #endif
 

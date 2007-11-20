@@ -148,7 +148,9 @@ static char *_diskpool_member_of(const char *file)
         return pool;
 }
 
-static char *diskpool_member_of(const CMPIBroker *broker, char *rasd_id)
+static char *diskpool_member_of(const CMPIBroker *broker,
+                                const char *rasd_id,
+                                const char *refcn)
 {
         char *host = NULL;
         char *dev = NULL;
@@ -165,7 +167,7 @@ static char *diskpool_member_of(const CMPIBroker *broker, char *rasd_id)
         if (!ret)
                 goto out;
 
-        conn = lv_connect(broker, &s);
+        conn = connect_by_classname(broker, refcn, &s);
         if (conn == NULL)
                 goto out;
 
@@ -194,7 +196,9 @@ static char *diskpool_member_of(const CMPIBroker *broker, char *rasd_id)
         return pool;
 }
 
-static char *netpool_member_of(const CMPIBroker *broker, char *rasd_id)
+static char *netpool_member_of(const CMPIBroker *broker,
+                               const char *rasd_id,
+                               const char *refcn)
 {
         char *host = NULL;
         char *dev = NULL;
@@ -211,7 +215,7 @@ static char *netpool_member_of(const CMPIBroker *broker, char *rasd_id)
         if (!ret)
                 goto out;
 
-        conn = lv_connect(broker, &s);
+        conn = connect_by_classname(broker, refcn, &s);
         if (conn == NULL)
                 goto out;
 
@@ -243,7 +247,10 @@ static char *netpool_member_of(const CMPIBroker *broker, char *rasd_id)
         return result;
 }
 
-char *pool_member_of(const CMPIBroker *broker, uint16_t type, char *id)
+char *pool_member_of(const CMPIBroker *broker,
+                     const char *refcn,
+                     uint16_t type,
+                     const char *id)
 {
         char *poolid = NULL;
 
@@ -252,9 +259,9 @@ char *pool_member_of(const CMPIBroker *broker, uint16_t type, char *id)
         else if (type == CIM_RASD_TYPE_MEM)
                 poolid = strdup("MemoryPool/0");
         else if (type == CIM_RASD_TYPE_NET)
-                poolid = netpool_member_of(broker, id);
+                poolid = netpool_member_of(broker, id, refcn);
         else if (type == CIM_RASD_TYPE_DISK)
-                poolid = diskpool_member_of(broker, id);
+                poolid = diskpool_member_of(broker, id, refcn);
         else
                 return NULL;
 
@@ -630,7 +637,7 @@ static CMPIStatus return_pool(const CMPIObjectPath *ref,
 
         inst_list_init(&list);
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
@@ -691,7 +698,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                 goto out;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL)
                 goto out;
 

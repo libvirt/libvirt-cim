@@ -84,7 +84,7 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        poolid = pool_member_of(_BROKER, type, id);
+        poolid = pool_member_of(_BROKER, CLASSNAME(ref), type, id);
         if (poolid == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -120,21 +120,27 @@ static int filter_by_pool(struct inst_list *dest,
                           const char *_poolid)
 {
         int i;
-        char *dev_id = NULL;
         char *poolid = NULL;
 
         for (i = 0; i < src->cur; i++) {
                 CMPIInstance *inst = src->list[i];
+                char *cn = NULL;
+                char *dev_id = NULL;
 
+                cu_get_str_prop(inst, "CreationClassName", &cn);
                 cu_get_str_prop(inst, "DeviceID", &dev_id);
+
+                if ((dev_id == NULL) || (cn == NULL))
+                        goto end;
 
                 printf("Device %hhi:%s", type, dev_id);
 
-                poolid = pool_member_of(_BROKER, type, dev_id);
+                poolid = pool_member_of(_BROKER, cn, type, dev_id);
                 if (poolid && STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
-
+        end:
                 free(dev_id);
+                free(cn);
         }
 
         return dest->cur;
