@@ -100,8 +100,7 @@ static int get_all_devices(const char *name,
 }
 
 static CMPIInstance *host_instance(char *name,
-                                   const char *host_cn,
-                                   const char *ns)
+                                   const CMPIObjectPath *ref)
 {
         CMPIInstance *inst = NULL;
         virConnectPtr conn = NULL;
@@ -109,15 +108,16 @@ static CMPIInstance *host_instance(char *name,
         CMPIObjectPath *op;
         char *host_class;
 
-        host_class = get_typed_class("ComputerSystem");
+        host_class = get_typed_class(CLASSNAME(ref),
+                                     "ComputerSystem");
         if (host_class == NULL)
                 goto out;
 
-        op = CMNewObjectPath(_BROKER, ns, host_class, &s);
+        op = CMNewObjectPath(_BROKER, NAMESPACE(ref), host_class, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto out;
 
-        conn = connect_by_classname(_BROKER, host_cn, &s);
+        conn = connect_by_classname(_BROKER, host_class, &s);
         if (conn == NULL)
                 goto out;
 
@@ -139,6 +139,7 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         CMPIInstance *refinst = NULL;
 
         refinst = get_typed_instance(_BROKER,
+                                     CLASSNAME(ref),
                                      "SystemDevice",
                                      NAMESPACE(ref));
 
@@ -227,9 +228,7 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        sys = host_instance(host,
-                            CLASSNAME(ref),
-                            NAMESPACE(ref));
+        sys = host_instance(host, ref);
 
         if (sys == NULL)
                 cu_statusf(_BROKER, &s,
