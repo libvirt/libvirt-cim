@@ -105,7 +105,8 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                 goto out;
         }
 
-        classname = get_typed_class("VirtualSystemManagementCapabilities");
+        classname = get_typed_class(CLASSNAME(ref),
+                                    "VirtualSystemManagementCapabilities");
         if (classname == NULL) {
                 CMSetStatusWithChars(broker, &s,
                                      CMPI_RC_ERR_FAILED,
