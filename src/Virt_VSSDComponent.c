@@ -160,6 +160,7 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         CMPIInstance *refinst = NULL;
 
         refinst = get_typed_instance(_BROKER,
+                                     CLASSNAME(ref),
                                      "VirtualSystemSettingDataComponent",
                                      NAMESPACE(ref));
 
