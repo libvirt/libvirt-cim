@@ -71,7 +71,10 @@ static bool _lifecycle_indication(const CMPIBroker *broker,
         CMPIInstance *ind;
         CMPIStatus s;
 
-        ind = get_typed_instance(broker, type, NAMESPACE(newsystem));
+        ind = get_typed_instance(broker,
+                                 "Xen", /* Temporary hack */
+                                 type,
+                                 NAMESPACE(newsystem));
         if (ind == NULL) {
                 printf("Failed to create ind\n");
                 return false;
@@ -148,12 +151,12 @@ static bool async_ind(CMPIContext *context,
 
         if (type == CS_CREATED) {
                 type_name = "ComputerSystemCreatedIndication";
-                type_cn = get_typed_class(type_name);
+                type_cn = get_typed_class(pfx_from_conn(conn), type_name);
 
                 op = CMNewObjectPath(_BROKER, ns, type_cn, &s);
         } else if (type == CS_DELETED) {
                 type_name = "ComputerSystemDeletedIndication";
-                type_cn = get_typed_class(type_name);
+                type_cn = get_typed_class(pfx_from_conn(conn), type_name);
 
                 op = CMNewObjectPath(_BROKER, ns, type_cn, &s);
         } else {
