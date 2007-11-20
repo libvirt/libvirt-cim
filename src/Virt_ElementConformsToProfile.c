@@ -58,7 +58,7 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         CMPIData data ;
         char *classname;
 
-        classname = get_typed_class(profile->provider_name);
+        classname = get_typed_class("Xen", profile->provider_name);
         if (classname == NULL) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED, 
@@ -176,6 +176,7 @@ static CMPIInstance *make_ref(const CMPIObjectPath *source_op,
         CMPIInstance *assoc_inst;
 
         assoc_inst = get_typed_instance(_BROKER,
+                                        "Xen",
                                         "ElementConformsToProfile",
                                         NAMESPACE(source_op));
                 
