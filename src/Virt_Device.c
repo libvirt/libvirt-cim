@@ -95,12 +95,17 @@ static int net_set_systemname(CMPIInstance *instance,
 
 static CMPIInstance *net_instance(const CMPIBroker *broker,
                                   struct net_device *dev,
-                                  const char *domain,
+                                  const virDomainPtr dom,
                                   const char *ns)
 {
         CMPIInstance *inst;
+        virConnectPtr conn;
 
-        inst = get_typed_instance(broker, "NetworkPort", ns);
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "NetworkPort",
+                                  ns);
 
         if (!net_set_type(inst, dev))
                 return NULL;
@@ -108,7 +113,7 @@ static CMPIInstance *net_instance(const CMPIBroker *broker,
         if (!net_set_hwaddr(inst, dev, broker))
                 return NULL;
 
-        if (!net_set_systemname(inst, domain))
+        if (!net_set_systemname(inst, virDomainGetName(dom)))
                 return NULL;
 
         return inst;        
@@ -125,12 +130,17 @@ static int disk_set_name(CMPIInstance *instance,
 
 static CMPIInstance *disk_instance(const CMPIBroker *broker,
                                    struct disk_device *dev,
-                                   const char *domain,
+                                   const virDomainPtr dom,
                                    const char *ns)
 {
         CMPIInstance *inst;
+        virConnectPtr conn;
 
-        inst = get_typed_instance(broker, "LogicalDisk", ns);
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "LogicalDisk",
+                                  ns);
 
         if (!disk_set_name(inst, dev))
                 return NULL;
@@ -158,12 +168,17 @@ static int mem_set_size(CMPIInstance *instance,
 
 static CMPIInstance *mem_instance(const CMPIBroker *broker,
                                   struct mem_device *dev,
-                                  const char *domain,
+                                  const virDomainPtr dom,
                                   const char *ns)
 {
         CMPIInstance *inst;
+        virConnectPtr conn;
 
-        inst = get_typed_instance(broker, "Memory", ns);
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "Memory",
+                                  ns);
 
         if (!mem_set_size(inst, dev))
                 return NULL;
@@ -173,23 +188,28 @@ static CMPIInstance *mem_instance(const CMPIBroker *broker,
 
 static CMPIInstance *vcpu_instance(const CMPIBroker *broker,
                                    struct _virVcpuInfo *dev,
-                                   const char *domain,
+                                   const virDomainPtr dom,
                                    const char *ns)
 {
         CMPIInstance *inst;
+        virConnectPtr conn;
 
-        inst = get_typed_instance(broker, "Processor", ns);
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "Processor",
+                                  ns);
 
         return inst;
 }
 
 static int device_set_devid(CMPIInstance *instance,
                             struct virt_device *dev,
-                            const char *domain)
+                            const virDomainPtr dom)
 {
         char *id;
 
-        id = get_fq_devid((char *)domain, dev->id);
+        id = get_fq_devid((char *)virDomainGetName(dom), dev->id);
         if (id == NULL)
                 return 0;
 
@@ -202,17 +222,17 @@ static int device_set_devid(CMPIInstance *instance,
 }
 
 static int device_set_systemname(CMPIInstance *instance,
-                                 const char *domain)
+                                 const virDomainPtr dom)
 {
         CMSetProperty(instance, "SystemName",
-                      (CMPIValue *)domain, CMPI_chars);
+                      (CMPIValue *)virDomainGetName(dom), CMPI_chars);
 
         return 1;
 }
 
 static CMPIInstance *device_instance(const CMPIBroker *broker,
                                      struct virt_device *dev,
-                                     const char *domain,
+                                     const virDomainPtr dom,
                                      const char *ns)
 {
         CMPIInstance *instance;
@@ -220,22 +240,22 @@ static CMPIInstance *device_instance(const CMPIBroker *broker,
         if (dev->type == VIRT_DEV_NET)
                 instance = net_instance(broker,
                                         &dev->dev.net,
-                                        domain,
+                                        dom,
                                         ns);
         else if (dev->type == VIRT_DEV_DISK)
                 instance = disk_instance(broker,
                                          &dev->dev.disk,
-                                         domain,
+                                         dom,
                                          ns);
         else if (dev->type == VIRT_DEV_MEM)
                 instance = mem_instance(broker,
                                         &dev->dev.mem,
-                                        domain,
+                                        dom,
                                         ns);
         else if (dev->type == VIRT_DEV_VCPU)
                 instance = vcpu_instance(broker,
                                          &dev->dev.vcpu,
-                                         domain,
+                                         dom,
                                          ns);
         else
                 return NULL;
@@ -243,8 +263,8 @@ static CMPIInstance *device_instance(const CMPIBroker *broker,
         if (!instance)
                 return NULL;
 
-        device_set_devid(instance, dev, domain);
-        device_set_systemname(instance, domain);
+        device_set_devid(instance, dev, dom);
+        device_set_systemname(instance, dom);
 
         return instance;
 }
@@ -288,11 +308,6 @@ int dom_devices(const CMPIBroker *broker,
         int count;
         int i;
         struct virt_device *devs = NULL;
-        const char *domain;
-
-        domain = virDomainGetName(dom);
-        if (!domain)
-                return 0;
 
         count = get_devices(dom, &devs, type);
         if (count <= 0)
@@ -301,7 +316,7 @@ int dom_devices(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 CMPIInstance *dev = NULL;
 
-                dev = device_instance(broker, &devs[i], domain, ns);
+                dev = device_instance(broker, &devs[i], dom, ns);
                 if (dev)
                         inst_list_add(list, dev);
 
@@ -442,7 +457,7 @@ CMPIInstance *instance_from_devid(const CMPIBroker *broker,
         if (!dev)
                 goto out;
 
-        instance = device_instance(broker, dev, domain, ns);
+        instance = device_instance(broker, dev, dom, ns);
         cleanup_virt_device(dev);
 
  out:
