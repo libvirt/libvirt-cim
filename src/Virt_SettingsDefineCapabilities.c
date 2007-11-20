@@ -232,7 +232,7 @@ static struct sdc_rasd_prop *proc_max(const CMPIObjectPath *ref,
         
         CU_DEBUG("In proc_max()");
 
-        conn = lv_connect(_BROKER, s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (conn == NULL) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
@@ -346,7 +346,7 @@ static uint16_t net_max_xen(const CMPIObjectPath *ref,
         unsigned long version;
         uint16_t num_nics = -1;
 
-        conn = lv_connect(_BROKER, s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (s->rc != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
@@ -515,7 +515,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = lv_connect(_BROKER, s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (s->rc != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
