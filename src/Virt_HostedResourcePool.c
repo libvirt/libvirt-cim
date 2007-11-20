@@ -103,6 +103,7 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         base = class_base_name(info->assoc_class);
 
         refinst = get_typed_instance(_BROKER,
+                                     CLASSNAME(ref),
                                      base,
                                      NAMESPACE(ref));
         if (refinst != NULL) {
