@@ -345,7 +345,10 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
                 return s;
         }
 
-        inst = get_typed_instance(broker, "MemoryPool", ns);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "MemoryPool",
+                                  ns);
 
         mempool_set_total(inst, conn);
         mempool_set_reserved(inst, conn);
@@ -380,7 +383,10 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
                 return s;
         }
 
-        inst = get_typed_instance(broker, "ProcessorPool", ns);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "ProcessorPool",
+                                  ns);
 
         procpool_set_total(inst, conn);
         set_units(inst, "Processors");
@@ -399,13 +405,17 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
 static CMPIStatus _netpool_for_bridge(struct inst_list *list,
                                       const char *ns,
                                       const char *bridge,
+                                      const char *refcn,
                                       const CMPIBroker *broker)
 {
         char *id = NULL;
         uint16_t type = CIM_RASD_TYPE_NET;
         CMPIInstance *inst;
 
-        inst = get_typed_instance(broker, "NetworkPool", ns);
+        inst = get_typed_instance(broker,
+                                  refcn,
+                                  "NetworkPool",
+                                  ns);
 
         if (asprintf(&id, "NetworkPool/%s", bridge) == -1)
                 return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
@@ -440,7 +450,11 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
                                    "No such network pool `%s'", id);
                         goto out;
                 }
-                return _netpool_for_bridge(list, ns, id, broker);
+                return _netpool_for_bridge(list,
+                                           ns,
+                                           id,
+                                           pfx_from_conn(conn),
+                                           broker);
         }
 
         bridges = list_bridges();
@@ -448,7 +462,11 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
                 return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
 
         for (i = 0; bridges[i]; i++) {
-                _netpool_for_bridge(list, ns, bridges[i], broker);
+                _netpool_for_bridge(list,
+                                    ns,
+                                    bridges[i],
+                                    pfx_from_conn(conn),
+                                    broker);
                 free(bridges[i]);
         }
 
@@ -461,6 +479,7 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
 static CMPIInstance *diskpool_from_path(const char *path,
                                         const char *id,
                                         const char *ns,
+                                        const char *refcn,
                                         const CMPIBroker *broker)
 {
         CMPIInstance *inst;
@@ -470,7 +489,7 @@ static CMPIInstance *diskpool_from_path(const char *path,
         uint64_t cap;
         uint64_t res;
 
-        inst = get_typed_instance(broker, "DiskPool", ns);
+        inst = get_typed_instance(broker, refcn, "DiskPool", ns);
 
         if (asprintf(&poolid, "DiskPool/%s", id) == -1)
                 return NULL;
@@ -536,6 +555,7 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
                 pool = diskpool_from_path(pools[i].path,
                                           pools[i].tag,
                                           ns,
+                                          pfx_from_conn(conn),
                                           broker);
                 if (pool != NULL)
                         inst_list_add(list, pool);
