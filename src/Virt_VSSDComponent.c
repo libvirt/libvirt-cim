@@ -84,7 +84,7 @@ static CMPIStatus vssd_for_name(const char *host,
         virDomainPtr dom = NULL;
         CMPIStatus s;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
