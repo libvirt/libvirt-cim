@@ -70,9 +70,13 @@ void free_domain_list(virDomainPtr *list, int count);
 char *class_prefix_name(const char *classname);
 char *class_base_name(const char *classname);
 
-/* Returns "%s_%s" % (prefix($classname), new_base) */
-char *get_typed_class(const char *new_base);
+/* Returns a class prefix based on the URI reported by conn */
+const char *pfx_from_conn(virConnectPtr conn);
+
+/* Returns "%s_%s" % (prefix($refcn), new_base) */
+char *get_typed_class(const char *refcn, const char *new_base);
 CMPIInstance *get_typed_instance(const CMPIBroker *broker,
+                                 const char *refcn,
                                  const char *base,
                                  const char *namespace);
 

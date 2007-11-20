@@ -155,43 +155,6 @@ bool match_pn_to_cn(const char *pn, const char *cn)
         return result;
 }
 
-static const char *prefix_from_uri(const char *uri)
-{
-        if (strstr(uri, "xen"))
-                return "Xen";
-        else if (strstr(uri, "qemu"))
-                return "KVM";
-        else
-                return NULL;
-}
-
-static bool is_xen(void)
-{
-        return access("/proc/xen/privcmd", R_OK) == 0;
-}
-
-static bool is_kvm(void)
-{
-        return access("/sys/module/kvm", R_OK) == 0;
-}
-
-static bool is_user(void)
-{
-        return getenv(URI_ENV) != NULL;
-}
-
-static const char *default_prefix(void)
-{
-        if (is_user())
-                return prefix_from_uri(getenv(URI_ENV));
-        else if (is_xen())
-                return "Xen";
-        else if (is_kvm())
-                return "KVM";
-        else
-                return NULL;
-}
-
 uint64_t allocated_memory(virConnectPtr conn)
 {
         virDomainPtr *list;
@@ -218,24 +181,61 @@ uint64_t allocated_memory(virConnectPtr conn)
         return memory;
 }
 
+const char *pfx_from_conn(virConnectPtr conn)
+{
+        char *uri;
+        const char *pfx = "Xen";
+
+        uri = virConnectGetURI(conn);
+        if (uri == NULL)
+                return pfx; /* Default/Error case */
+
+        CU_DEBUG("URI of connection is: %s", uri);
+
+        if (STARTS_WITH(uri, "xen"))
+                pfx = "Xen";
+        else if (STARTS_WITH(uri, "qemu"))
+                pfx = "KVM";
+
+        free(uri);
+
+        return pfx;
+}
+
+char *get_typed_class(const char *refcn, const char *new_base)
+{
+        char *class = NULL;
+        char *pfx;
+
+        if (strchr(refcn, '_'))
+                pfx = class_prefix_name(refcn);
+        else
+                pfx = strdup(refcn);
+
+        if (pfx == NULL)
+                return NULL;
+
+        if (asprintf(&class, "%s_%s", pfx, new_base) == -1)
+                class = NULL;
+
+        free(pfx);
+
+        return class;
+}
+
 CMPIInstance *get_typed_instance(const CMPIBroker *broker,
+                                 const char *refcn,
                                  const char *base,
                                  const char *namespace)
 {
-        const char *prefix;
         char *new_cn;
         CMPIObjectPath *op;
         CMPIInstance *inst = NULL;
         CMPIStatus s;
 
-        prefix = default_prefix();
-        if (prefix == NULL)
+        new_cn = get_typed_class(refcn, base);
+        if (new_cn == NULL)
                 goto out;
-
-        if (asprintf(&new_cn, "%s_%s", prefix, base) == -1) {
-                new_cn = NULL;
-                goto out;
-        }
 
         op = CMNewObjectPath(broker, namespace, new_cn, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
@@ -254,21 +254,6 @@ CMPIInstance *get_typed_instance(const CMPIBroker *broker,
         return inst;
 }
 
-char *get_typed_class(const char *new_base)
-{
-        const char *pfx;
-        char *class = NULL;
-
-        pfx = default_prefix();
-        if (pfx == NULL)
-                return NULL;
-
-        if (asprintf(&class, "%s_%s", pfx, new_base) == -1)
-                class = NULL;
-
-        return class;
-}
-
 char *class_base_name(const char *classname)
 {
         char *tmp;
@@ -282,27 +267,15 @@ char *class_base_name(const char *classname)
 
 virConnectPtr lv_connect(const CMPIBroker *broker, CMPIStatus *s)
 {
-        const char *uri = NULL;
         virConnectPtr conn;
 
-        if (is_user())
-                uri = getenv(URI_ENV);
-        else if (is_xen())
-                uri = "xen";
-        else if (is_kvm())
-                uri = "qemu:///system";
-        else {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to determine hypervisor type");
-                return NULL;
-        }
+        /* This is going away, so just assume Xen for right now */
 
-        conn = virConnectOpen(uri);
+        conn = virConnectOpen("xen");
         if (conn == NULL)
                 cu_statusf(broker, s,
                            CMPI_RC_ERR_FAILED,
-                           "Unable to connect to %s", uri);
+                           "Unable to connect to xen");
         else
                 CMSetStatus(s, CMPI_RC_OK);
 
