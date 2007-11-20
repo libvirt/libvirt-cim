@@ -208,7 +208,9 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = get_typed_instance(_BROKER, "AllocationCapabilities", 
+        inst = get_typed_instance(_BROKER,
+                                  CLASSNAME(ref),
+                                  "AllocationCapabilities",
                                   NAMESPACE(ref));
         CMSetProperty(inst, "InstanceID", inst_id, CMPI_chars);
         
@@ -240,6 +242,7 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                 return NULL;
 
         refinst = get_typed_instance(_BROKER,
+                                     CLASSNAME(ref),
                                      base,
                                      NAMESPACE(ref));
 
