@@ -44,7 +44,9 @@ CMPIStatus get_alloc_cap(const CMPIBroker *broker,
         uint16_t type;
         int ret;
 
-        *inst = get_typed_instance(broker, "AllocationCapabilities", 
+        *inst = get_typed_instance(broker,
+                                   CLASSNAME(ref),
+                                   "AllocationCapabilities",
                                    NAMESPACE(ref));
 
         if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
