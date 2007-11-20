@@ -482,7 +482,7 @@ static CMPIStatus update_system_settings(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
@@ -587,7 +587,8 @@ static struct virt_device **find_list(struct domain *dominfo,
 
 static CMPIStatus _resource_dynamic(struct domain *dominfo,
                                     struct virt_device *dev,
-                                    enum ResourceAction action)
+                                    enum ResourceAction action,
+                                    const char *refcn)
 {
         CMPIStatus s;
         virConnectPtr conn;
@@ -608,7 +609,7 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
                 return s;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, refcn, &s);
         if (conn == NULL) {
                 CU_DEBUG("Failed to connect");
                 return s;
@@ -653,10 +654,15 @@ static CMPIStatus resource_del(struct domain *dominfo,
                                const char *devid)
 {
         CMPIStatus s;
+        CMPIObjectPath *op;
         struct virt_device **_list;
         struct virt_device *list;
         int *count;
         int i;
+
+        op = CMGetObjectPath(rasd, &s);
+        if ((op == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         _list = find_list(dominfo, type, &count);
         if ((type == CIM_RASD_TYPE_MEM) || (_list != NULL))
@@ -677,7 +683,10 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        s = _resource_dynamic(dominfo, dev, RESOURCE_DEL);
+                        s = _resource_dynamic(dominfo,
+                                              dev,
+                                              RESOURCE_DEL,
+                                              CLASSNAME(op));
                         dev->type = VIRT_DEV_UNKNOWN;
                         break;
                 }
@@ -693,10 +702,15 @@ static CMPIStatus resource_add(struct domain *dominfo,
                                const char *devid)
 {
         CMPIStatus s;
+        CMPIObjectPath *op;
         struct virt_device **_list;
         struct virt_device *list;
         struct virt_device *dev;
         int *count;
+
+        op = CMGetObjectPath(rasd, &s);
+        if ((op == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         _list = find_list(dominfo, type, &count);
         if ((type == CIM_RASD_TYPE_MEM) || (_list == NULL)) {
@@ -734,7 +748,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         dev->id = strdup(devid);
         rasd_to_vdev(rasd, dev);
 
-        s = _resource_dynamic(dominfo, dev, RESOURCE_ADD);
+        s = _resource_dynamic(dominfo, dev, RESOURCE_ADD, CLASSNAME(op));
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -751,10 +765,15 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                                const char *devid)
 {
         CMPIStatus s;
+        CMPIObjectPath *op;
         struct virt_device **_list;
         struct virt_device *list;
         int *count;
         int i;
+
+        op = CMGetObjectPath(rasd, &s);
+        if ((op == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         _list = find_list(dominfo, type, &count);
         if (_list != NULL)
@@ -776,7 +795,10 @@ static CMPIStatus resource_mod(struct domain *dominfo,
 
                 if (STREQ(dev->id, devid)) {
                         rasd_to_vdev(rasd, dev);
-                        s = _resource_dynamic(dominfo, dev, RESOURCE_MOD);
+                        s = _resource_dynamic(dominfo,
+                                              dev,
+                                              RESOURCE_MOD,
+                                              CLASSNAME(op));
                         break;
                 }
         }
@@ -850,7 +872,7 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
         virConnectPtr conn = NULL;
         CMPIStatus s;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
