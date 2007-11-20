@@ -118,7 +118,8 @@ CMPIStatus get_ele_cap(const CMPIBroker *broker,
                 goto out;
         }
 
-        classname = get_typed_class("EnabledLogicalElementCapabilities");
+        classname = get_typed_class(CLASSNAME(ref),
+                                    "EnabledLogicalElementCapabilities");
         if (classname == NULL) {
                 CMSetStatusWithChars(broker, &s,
                                      CMPI_RC_ERR_FAILED,
