@@ -105,6 +105,7 @@ CMPIStatus rpcs_instance(const CMPIObjectPath *reference,
                 goto out;
 
         inst = get_typed_instance(broker,
+                                  CLASSNAME(reference),
                                   "ResourcePoolConfigurationService",
                                   NAMESPACE(reference));
         if (inst == NULL) {
