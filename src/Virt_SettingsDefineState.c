@@ -99,7 +99,7 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         ret = rasds_for_domain(_BROKER,
                                name,
                                device_type_from_classname(CLASSNAME(ref)),
-                               NAMESPACE(ref),
+                               ref,
                                &rasds);
 
         rasd = find_rasd(&rasds, id);

@@ -134,7 +134,7 @@ static int filter_by_pool(struct inst_list *dest,
 }
 
 static int rasds_from_pool(uint16_t type,
-                           const char *ns,
+                           const CMPIObjectPath *ref,
                            const char *poolid,
                            struct inst_list *list)
 {
@@ -161,7 +161,7 @@ static int rasds_from_pool(uint16_t type,
                 rasds_for_domain(_BROKER,
                                  name,
                                  type,
-                                 ns,
+                                 ref,
                                  &tmp);
 
                 filter_by_pool(list, &tmp, poolid);
@@ -194,22 +194,22 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
 
         if (STARTS_WITH(poolid, "ProcessorPool"))
                 rasds_from_pool(CIM_RASD_TYPE_PROC,
-                                NAMESPACE(ref),
+                                ref,
                                 poolid,
                                 list);
         else if (STARTS_WITH(poolid, "MemoryPool"))
                 rasds_from_pool(CIM_RASD_TYPE_MEM,
-                                NAMESPACE(ref),
+                                ref,
                                 poolid,
                                 list);
         else if (STARTS_WITH(poolid, "NetworkPool"))
                 rasds_from_pool(CIM_RASD_TYPE_NET,
-                                NAMESPACE(ref),
+                                ref,
                                 poolid,
                                 list);
         else if (STARTS_WITH(poolid, "DiskPool"))
                 rasds_from_pool(CIM_RASD_TYPE_DISK,
-                                NAMESPACE(ref),
+                                ref,
                                 poolid,
                                 list);
         else {

@@ -175,7 +175,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
 }
 
 static CMPIInstance *get_rasd_instance(const CMPIContext *context,
-                                       const CMPIObjectPath *ns,
+                                       const CMPIObjectPath *ref,
                                        const char *id,
                                        const uint16_t type)
 {
@@ -191,13 +191,13 @@ static CMPIInstance *get_rasd_instance(const CMPIContext *context,
         if (!ret)
                 return NULL;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
         dev = find_dev(conn, type, host, devid);
         if (dev)
-                inst = rasd_from_vdev(_BROKER, dev, host, NAMESPACE(ns));
+                inst = rasd_from_vdev(_BROKER, dev, host, NAMESPACE(ref));
 
  out:
         virConnectClose(conn);
@@ -276,7 +276,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 int rasds_for_domain(const CMPIBroker *broker,
                      const char *name,
                      const uint16_t type,
-                     const char *ns,
+                     const CMPIObjectPath *ref,
                      struct inst_list *_list)
 {
         struct virt_device *list;
@@ -284,8 +284,10 @@ int rasds_for_domain(const CMPIBroker *broker,
         int i;
         virConnectPtr conn;
         CMPIStatus s;
+        const char *ns = NAMESPACE(ref);
+        const char *cn = CLASSNAME(ref);
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(broker, cn, &s);
         if (conn == NULL)
                 return 0;
 

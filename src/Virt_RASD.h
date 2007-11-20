@@ -22,11 +22,23 @@
 #define __VIRT_RASD_H
 
 char *rasd_to_xml(CMPIInstance *rasd);
+
+/**
+ * Get a list of RASDs for a given domain
+ *
+ * @param broker The current broker
+ * @param name The name of the domain in question
+ * @param type The ResourceType of the desired RASDs
+ * @param ref A reference used for hypervisor connection and namespace
+ *            setting of the resulting instances
+ * @param _list The list of instances to populate
+ */
 int rasds_for_domain(const CMPIBroker *broker,
                      const char *name,
                      const uint16_t type,
-                     const char *ns,
+                     const CMPIObjectPath *ref,
                      struct inst_list *_list);
+
 CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type);
 
 #endif
