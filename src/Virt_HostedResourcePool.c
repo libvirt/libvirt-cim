@@ -76,7 +76,7 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
                 return s;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 return s;
 
