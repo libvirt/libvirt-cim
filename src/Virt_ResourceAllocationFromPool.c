@@ -74,7 +74,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
@@ -144,7 +144,7 @@ static int rasds_from_pool(uint16_t type,
         int count;
         int i;
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 return 0;
 
