@@ -92,7 +92,7 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
@@ -147,7 +147,7 @@ static int filter_by_pool(struct inst_list *dest,
 }
 
 static int devs_from_pool(uint16_t type,
-                          const char *ns,
+                          const CMPIObjectPath *ref,
                           const char *poolid,
                           struct inst_list *list)
 {
@@ -156,8 +156,10 @@ static int devs_from_pool(uint16_t type,
         virDomainPtr *doms = NULL;
         int count;
         int i;
+        const char *ns = NAMESPACE(ref);
+        const char *cn = CLASSNAME(ref);
 
-        conn = lv_connect(_BROKER, &s);
+        conn = connect_by_classname(_BROKER, cn, &s);
         if (conn == NULL)
                 return 0;
 
@@ -200,7 +202,6 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
 {
         char *poolid;
         CMPIStatus s;
-        const char *ns = NAMESPACE(ref);
 
         poolid = cu_get_str_path(ref, "InstanceID");
         if (poolid == NULL) {
@@ -215,22 +216,22 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
         /* FIXME, make this shared with the RAFP version */
         if (STARTS_WITH(poolid, "ProcessorPool"))
                 devs_from_pool(CIM_RASD_TYPE_PROC,
-                               ns,
+                               ref,
                                poolid,
                                list);
         else if (STARTS_WITH(poolid, "MemoryPool"))
                 devs_from_pool(CIM_RASD_TYPE_MEM,
-                               ns,
+                               ref,
                                poolid,
                                list);
         else if (STARTS_WITH(poolid, "NetworkPool"))
                 devs_from_pool(CIM_RASD_TYPE_NET,
-                               ns,
+                               ref,
                                poolid,
                                list);
         else if (STARTS_WITH(poolid, "DiskPool"))
                 devs_from_pool(CIM_RASD_TYPE_DISK,
-                               ns,
+                               ref,
                                poolid,
                                list);
         else {
