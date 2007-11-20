@@ -447,7 +447,7 @@ char *get_fq_devid(char *host, char *_devid)
                 return devid;
 }
 
-int parse_fq_devid(char *devid, char **host, char **device)
+int parse_fq_devid(const char *devid, char **host, char **device)
 {
         int ret;
 
