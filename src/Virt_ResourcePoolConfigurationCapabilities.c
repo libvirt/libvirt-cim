@@ -54,6 +54,7 @@ static CMPIStatus get_rpc_cap(const CMPIBroker *broker,
         CMPIInstance *inst;
 
         inst = get_typed_instance(broker,
+                                  CLASSNAME(reference),
                                   "ResourcePoolConfigurationCapabilities",
                                   NAMESPACE(reference));
         if (inst == NULL)
