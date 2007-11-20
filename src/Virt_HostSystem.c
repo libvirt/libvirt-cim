@@ -65,7 +65,7 @@ CMPIStatus get_host_cs(const CMPIBroker *broker,
 
         ns = NAMESPACE(reference);
 
-        classname = get_typed_class("HostSystem");
+        classname = get_typed_class(CLASSNAME(reference), "HostSystem");
         if (classname == NULL) {
                 CMSetStatusWithChars(broker, &s,
                                      CMPI_RC_ERR_FAILED,
