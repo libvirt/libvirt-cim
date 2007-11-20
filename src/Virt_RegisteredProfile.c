@@ -50,7 +50,7 @@ CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
         CMPIInstance *instance = NULL;
         char *classname;
 
-        classname = get_typed_class("RegisteredProfile");
+        classname = get_typed_class("Xen", "RegisteredProfile");
         if (classname == NULL) {
                 goto out;
         }
