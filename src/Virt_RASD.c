@@ -177,10 +177,11 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         return inst;
 }
 
-static CMPIInstance *get_rasd_instance(const CMPIContext *context,
-                                       const CMPIObjectPath *ref,
-                                       const char *id,
-                                       const uint16_t type)
+CMPIInstance *get_rasd_instance(const CMPIContext *context,
+                                const CMPIObjectPath *ref,
+                                const CMPIBroker *broker,
+                                const char *id,
+                                const uint16_t type)
 {
         CMPIInstance *inst = NULL;
         CMPIStatus s;
@@ -194,13 +195,13 @@ static CMPIInstance *get_rasd_instance(const CMPIContext *context,
         if (!ret)
                 return NULL;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
         dev = find_dev(conn, type, host, devid);
         if (dev)
-                inst = rasd_from_vdev(_BROKER, dev, host, ref);
+                inst = rasd_from_vdev(broker, dev, host, ref);
 
  out:
         virConnectClose(conn);
@@ -264,7 +265,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                 goto out;
         }
 
-        inst = get_rasd_instance(context, ref, id, type);
+        inst = get_rasd_instance(context, ref, _BROKER, id, type);
 
         if (inst != NULL)
                 CMReturnInstance(results, inst);
@@ -273,6 +274,8 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                            CMPI_RC_ERR_FAILED,
                            "Unknown instance");
  out:
+        free(id);
+
         return s;
 }
 
