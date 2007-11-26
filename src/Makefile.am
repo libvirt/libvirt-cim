@@ -133,6 +133,6 @@ libVirt_HostedService_la_DEPENDENCIES = libVirt_VirtualSystemManagementService.l
 libVirt_HostedService_la_SOURCES = Virt_HostedService.c
 libVirt_HostedService_la_LIBADD = -lVirt_VirtualSystemManagementService -lVirt_ResourcePoolConfigurationService
 
-libVirt_ElementSettingData_la_DEPENDENCIES = libVirt_VSSD.la
+libVirt_ElementSettingData_la_DEPENDENCIES = libVirt_VSSD.la libVirt_RASD.la
 libVirt_ElementSettingData_la_SOURCES = Virt_ElementSettingData.c
-libVirt_ElementSettingData_la_LIBADD = -lVirt_VSSD
+libVirt_ElementSettingData_la_LIBADD = -lVirt_VSSD -lVirt_RASD

@@ -31,12 +31,13 @@
 #include "misc_util.h"
 
 #include "Virt_VSSD.h"
+#include "Virt_RASD.h"
 
 const static CMPIBroker *_BROKER;
 
-static CMPIStatus vssd_to_sd(const CMPIObjectPath *ref,
-                             struct std_assoc_info *info,
-                             struct inst_list *list)
+static CMPIStatus vssd_to_vssd(const CMPIObjectPath *ref,
+                               struct std_assoc_info *info,
+                               struct inst_list *list)
 {
         CMPIStatus s;
         CMPIInstance *inst;
@@ -79,6 +80,49 @@ static CMPIStatus vssd_to_sd(const CMPIObjectPath *ref,
         virDomainFree(dom);
         virConnectClose(conn);
         free(host);
+
+        return s;
+}
+
+static CMPIStatus rasd_to_rasd(const CMPIObjectPath *ref,
+                               struct std_assoc_info *info,
+                               struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        char *id = NULL;
+        uint16_t type;
+
+        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+
+        id = cu_get_str_path(ref, "InstanceID");
+        if (id == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }
+
+        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine RASD type");
+                goto out;
+        }
+
+        inst = get_rasd_instance(info->context, ref, _BROKER, id, type);
+        if (inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error getting associated RASD");
+
+                goto out;
+        }
+
+        inst_list_add(list, inst);
+
+ out:
+        free(id);
 
         return s;
 }
@@ -130,7 +174,7 @@ out:
         return refinst;
 }
 
-static struct std_assoc vssd_to_sd_fd_bkwd = {
+static struct std_assoc _vssd_to_vssd = {
         .source_class = "CIM_VirtualSystemSettingData",
         .source_prop = "ManagedElement",
 
@@ -139,12 +183,26 @@ static struct std_assoc vssd_to_sd_fd_bkwd = {
 
         .assoc_class = "CIM_ElementSettingData",
 
-        .handler = vssd_to_sd,
+        .handler = vssd_to_vssd,
+        .make_ref = make_ref
+};
+
+static struct std_assoc _rasd_to_rasd = {
+        .source_class = "CIM_ResourceAllocationSettingData",
+        .source_prop = "ManagedElement",
+
+        .target_class = "CIM_ManagedElement",
+        .target_prop = "SettingData",
+
+        .assoc_class = "CIM_ElementSettingData",
+
+        .handler = rasd_to_rasd,
         .make_ref = make_ref
 };
 
 static struct std_assoc *handlers[] = {
-        &vssd_to_sd_fd_bkwd,
+        &_vssd_to_vssd,
+        &_rasd_to_rasd,
         NULL
 };
 
