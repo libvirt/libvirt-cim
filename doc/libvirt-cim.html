@@ -76,6 +76,7 @@
   $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/virt cimv216.mof<br/>
   $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/virt qualifiers.mof<br/>
   $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/virt qualifiers_optional.mof<br/>
+  $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/interop cimv216-interop.mof<br/>
 </code></p>
 
 <h4>To install the schema in SFCB:</h4>
@@ -111,6 +112,23 @@
 +//#pragma include ("Security/CIM_IPNetworkSecurityIndication.mof")<br/>
 +//#pragma include ("Security/CIM_IPPacketFilterIndication.mof")<br/>
  #pragma include ("Support/PRS_ActivityContact.mof")<br/>
+</code></p>
+
+<p><strong>cimv216-interop.mof</strong> is not part of the official DMTF 
+    CIM v2.16 schema package. Please create with the following content:
+</p>
+
+<p><code>
+#pragma locale ("en_US")<br/>
+#pragma include ("qualifiers.mof")<br/>
+#pragma include ("qualifiers_optional.mof")<br/>
+#pragma include ("Core/CIM_ManagedElement.mof")<br/>
+#pragma include ("Interop/CIM_RegisteredProfile.mof")<br/>
+#pragma include ("Interop/CIM_RegisteredSubProfile.mof")<br/>
+#pragma include ("Core/CIM_Dependency.mof")<br/>
+#pragma include ("Interop/CIM_ElementConformsToProfile.mof")<br/>
+#pragma include ("Interop/CIM_ReferencedProfile.mof")<br/>
+#pragma include ("Interop/CIM_SubProfileRequiresProfile.mof")<br/>
 </code></p>
 
 <h2><a name="Platforms">Platform Support</a></h2>
