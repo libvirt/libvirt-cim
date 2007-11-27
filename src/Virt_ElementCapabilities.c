@@ -133,10 +133,22 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
 {
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        char *sys_name = NULL;
 
-        s = get_ele_cap(_BROKER, ref, &inst);
+        sys_name = cu_get_str_path(ref, "Name");
+        if (sys_name == NULL) {
+                CMSetStatusWithChars(_BROKER, &s,
+                                     CMPI_RC_ERR_FAILED,
+                                     "Missing key: Name");
+                goto out;
+        }
+
+        s = get_ele_cap(_BROKER, ref, sys_name, &inst);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
+
+  out:
+        free(sys_name);
         
         return s;
 }
