@@ -36,20 +36,24 @@
 
 const static CMPIBroker *_BROKER;
 
-static int set_host_system_properties(CMPIInstance *instance,
-                                      const char *classname)
+static int set_host_system_properties(CMPIInstance *instance)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIObjectPath *op;
         char hostname[256] = {0};
 
-        CMSetProperty(instance, "CreationClassName",
-                      (CMPIValue *)classname, CMPI_chars);
+        op = CMGetObjectPath(instance, &s);
+        if ((s.rc == CMPI_RC_OK) || !CMIsNullObject(op)) {
+                CMSetProperty(instance, "CreationClassName",
+                              (CMPIValue *)CLASSNAME(op), CMPI_chars);
+        }
 
         if (gethostname(hostname, sizeof(hostname) - 1) != 0)
                 strcpy(hostname, "unknown");
 
         CMSetProperty(instance, "Name",
                       (CMPIValue *)hostname, CMPI_chars);
-
+        
         return 1;
 }
 
@@ -57,44 +61,32 @@ CMPIStatus get_host_cs(const CMPIBroker *broker,
                        const CMPIObjectPath *reference,
                        CMPIInstance **instance)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        CMPIObjectPath *op;
-        CMPIStatus s;
-        char *ns;
-        char *classname;
+        virConnectPtr conn = NULL;
 
-        ns = NAMESPACE(reference);
+        *instance = NULL;
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                return s;
 
-        classname = get_typed_class(CLASSNAME(reference), "HostSystem");
-        if (classname == NULL) {
-                CMSetStatusWithChars(broker, &s,
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "HostSystem",
+                                  NAMESPACE(reference));
+
+        if (inst == NULL) {
+                CMSetStatusWithChars(broker, &s, 
                                      CMPI_RC_ERR_FAILED,
-                                     "Invalid class");
+                                     "Can't create HostSystem instance.");
                 goto out;
         }
 
-        op = CMNewObjectPath(broker, ns, classname, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op)) {
-                CMSetStatusWithChars(broker, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Cannot get object path for HostSystem");
-                goto out;
-        }
-
-        inst = CMNewInstance(broker, op, &s);
-        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(op))) {
-                CMSetStatusWithChars(broker, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Failed to instantiate HostSystem");
-                goto out;
-        }
-
-        set_host_system_properties(inst, classname);
+        set_host_system_properties(inst);
 
  out:
+        virConnectClose(conn);
         *instance = inst;
-
-        free(classname);
 
         return s;
 }
@@ -103,17 +95,11 @@ static CMPIStatus return_host_cs(const CMPIObjectPath *reference,
                                  const CMPIResult *results,
                                  int name_only)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
-        char *ns;
-
-        if (!provider_is_responsible(_BROKER, reference, &s))
-                return s;
-
-        ns = NAMESPACE(reference);
 
         s = get_host_cs(_BROKER, reference, &instance);
-        if (s.rc != CMPI_RC_OK)
+        if (s.rc != CMPI_RC_OK || instance == NULL)
                 goto out;
 
         if (name_only)
