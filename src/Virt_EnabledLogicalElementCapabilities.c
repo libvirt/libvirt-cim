@@ -31,6 +31,7 @@
 
 #include "misc_util.h"
 #include "device_parsing.h"
+#include "cs_util.h"
 
 #include "Virt_EnabledLogicalElementCapabilities.h"
 
@@ -103,20 +104,12 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
 CMPIStatus get_ele_cap(const CMPIBroker *broker,
                        const CMPIObjectPath *ref,
+                       const char *sys_name,
                        CMPIInstance **inst)
 {
         CMPIStatus s;
         CMPIObjectPath *op;
         char *classname = NULL;
-        char *sys_name = NULL;
-        
-        sys_name = cu_get_str_path(ref, "Name");
-        if (sys_name == NULL) {
-                CMSetStatusWithChars(broker, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Missing key: Name");
-                goto out;
-        }
 
         classname = get_typed_class(CLASSNAME(ref),
                                     "EnabledLogicalElementCapabilities");
@@ -147,7 +140,6 @@ CMPIStatus get_ele_cap(const CMPIBroker *broker,
 
  out:
         free(classname);
-        free(sys_name);
 
         return s;
 }
@@ -158,16 +150,50 @@ static CMPIStatus return_ele_cap(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        
-        s = get_ele_cap(_BROKER, ref, &inst);
-        if (s.rc != CMPI_RC_OK)
+        virConnectPtr conn = NULL;
+        virDomainPtr *list = NULL;
+        int count;
+        int i;
+        const char *name;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
                 goto out;
 
-        if (names_only)
-                cu_return_instance_name(results, inst);
-        else
-                CMReturnInstance(results, inst);
+        count = get_domain_list(conn, &list);
+        if (count <= 0)
+                goto out;
+
+        for (i = 0; i < count; i++) {
+                name = virDomainGetName(list[i]);
+                if (name == NULL) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to get domain names");
+                        goto end;
+                }
+
+                s = get_ele_cap(_BROKER, ref, name, &inst);
+                if (s.rc != CMPI_RC_OK)
+                        goto end;
+
+                if (names_only)
+                        cu_return_instance_name(results, inst);
+                else
+                        CMReturnInstance(results, inst);
+
+          end:
+                virDomainFree(list[i]);
+
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
  out:
+        free(list);
+
+        virConnectClose(conn);
+
         return s;
 }
 
