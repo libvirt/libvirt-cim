@@ -1048,20 +1048,27 @@ STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
                     const CMPIBroker *broker)
-{
-        CMPIStatus s;
-        CMPIInstance *inst;
-        CMPIInstance *host;
+{ 
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        CMPIInstance *host = NULL;
         char *val = NULL;
+        virConnectPtr conn = NULL;
+
+        *_inst = NULL;
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                return s;
 
         s = get_host_cs(broker, reference, &host);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
         inst = get_typed_instance(broker,
-                                  CLASSNAME(reference),
+                                  pfx_from_conn(conn),
                                   "VirtualSystemManagementService",
                                   NAMESPACE(reference));
+
         if (inst == NULL) {
                 CU_DEBUG("Failed to get typed instance");
                 cu_statusf(broker, &s,
@@ -1076,7 +1083,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         if (cu_get_str_prop(host, "Name", &val) != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Unable to get name of System");
+                           "Unable to get name of HostSystem");
                 goto out;
         }
 
@@ -1087,7 +1094,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         if (cu_get_str_prop(host, "CreationClassName", &val) != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Unable to get creation class of system");
+                           "Unable to get creation class of HostSystem");
                 goto out;
         }
 
@@ -1097,8 +1104,10 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
 
         CMSetStatus(&s, CMPI_RC_OK);
 
-        *_inst = inst;
  out:
+        virConnectClose(conn);
+        *_inst = inst;
+
         return s;
 }
 
@@ -1106,19 +1115,17 @@ static CMPIStatus return_vsms(const CMPIObjectPath *reference,
                               const CMPIResult *results,
                               int name_only)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
-        CMPIStatus s;
 
         s = get_vsms(reference, &inst, _BROKER);
-        if (s.rc != CMPI_RC_OK)
+        if (s.rc != CMPI_RC_OK || inst == NULL)
                 goto out;
 
         if (name_only)
                 cu_return_instance_name(results, inst);
         else
                 CMReturnInstance(results, inst);
-
-        CMSetStatus(&s, CMPI_RC_OK);
  out:
         return s;
 }
