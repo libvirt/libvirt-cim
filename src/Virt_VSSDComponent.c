@@ -117,15 +117,14 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
 {
         CMPIStatus s;
         CMPIInstance *vssd = NULL;
-        char *id = NULL;
+        const char *id = NULL;
         char *host = NULL;
         char *devid = NULL;
         int ret;
 
         ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -145,7 +144,6 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
                 inst_list_add(list, vssd);
 
  out:
-        free(id);
         free(host);
         free(devid);
 
