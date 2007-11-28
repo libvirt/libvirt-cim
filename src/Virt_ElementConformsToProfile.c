@@ -70,14 +70,14 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
 
         op = CMNewObjectPath(_BROKER, CIM_VIRT_NS, classname, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
-                goto error;
+                goto out;
         
         en = CBEnumInstances(_BROKER, info->context , op, NULL, &s);
         if (en == NULL) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED, 
                                      "Upcall enumInstances to target class failed.");
-                goto error;
+                goto out;
         }
 
         while (CMHasNext(en, &s)) {
@@ -86,15 +86,15 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
                         CMSetStatusWithChars(_BROKER, &s,
                                              CMPI_RC_ERR_FAILED, 
                                              "Failed to retrieve enumeration entry.");
-                        goto error;
+                        goto out;
                 }
 
                 inst_list_add(list, data.value.inst);
         }
 
- error:
-        free(classname);
  out:
+        free(classname);
+        
         return s;
 }
 
@@ -124,14 +124,13 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
                         s = elem_instances(ref, info, list, 
                                            profiles[i], conn);
                         if ((s.rc != CMPI_RC_OK))
-                                goto error;
+                                goto out;
                         break;
                 }
         }
         
- error:
-        free(id);
  out:
+        free(id);
         virConnectClose(conn);
 
         return s;
@@ -173,15 +172,14 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
                         CMSetStatusWithChars(_BROKER, &s, 
                                              CMPI_RC_ERR_FAILED,
                                              "Can't create profile instance.");
-                        goto error;
+                        goto out;
                 }
                 
                 inst_list_add(list, instance);
         }
-
- error:                
+             
+ out: 
         free(classname);
- out:
         virConnectClose(conn);
 
         return s;
