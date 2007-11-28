@@ -34,7 +34,7 @@
  */
 CMPIInstance *instance_from_name(const CMPIBroker *broker,
                                  virConnectPtr conn,
-                                 char *name,
+                                 const char *name,
                                  const CMPIObjectPath *ns);
 
 

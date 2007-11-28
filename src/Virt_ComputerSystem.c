@@ -277,7 +277,7 @@ static int instance_from_dom(const CMPIBroker *broker,
 /* Given a hypervisor connection and a domain name, return an instance */
 CMPIInstance *instance_from_name(const CMPIBroker *broker,
                                  virConnectPtr conn,
-                                 char *name,
+                                 const char *name,
                                  const CMPIObjectPath *op)
 {
         virDomainPtr dom;
@@ -376,7 +376,7 @@ static CMPIStatus return_enum_domains(const CMPIObjectPath *reference,
 
 static CMPIStatus get_domain(const CMPIObjectPath *reference,
                              const CMPIResult *results,
-                             char *name)
+                             const char *name)
 {
         CMPIInstance *inst;
         CMPIStatus s;
@@ -440,10 +440,9 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        char *name;
+        const char *name;
 
-        name = cu_get_str_path(reference, "Name");
-        if (name == NULL) {
+        if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {
                 CMPIStatus s;
                 
                 CMSetStatusWithChars(_BROKER, &s,
@@ -602,7 +601,7 @@ static CMPIStatus state_change_reset(virDomainPtr dom, virDomainInfoPtr info)
         return s;
 }
 
-static CMPIStatus __state_change(char *name,
+static CMPIStatus __state_change(const char *name,
                                  uint16_t state,
                                  const CMPIObjectPath *ref)
 {
@@ -660,7 +659,7 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         CMPIStatus s;
         uint16_t state;
         int ret;
-        char *name = NULL;
+        const char *name = NULL;
 
         ret = cu_get_u16_arg(argsin, "RequestedState", &state);
         if (!ret) {
@@ -668,8 +667,7 @@ static CMPIStatus state_change(CMPIMethodMI *self,
                 goto out;
         }
 
-        name = cu_get_str_path(reference, "Name");
-        if (name == NULL) {
+        if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED,
                                      "Name key not specified");
@@ -679,8 +677,6 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         s = __state_change(name, state, reference);
 
  out:
-        free(name);
-
         return s;
 }
 
