@@ -247,11 +247,10 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
-        char *id = NULL;
+        const char *id = NULL;
         uint16_t type;
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -274,8 +273,6 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                            CMPI_RC_ERR_FAILED,
                            "Unknown instance");
  out:
-        free(id);
-
         return s;
 }
 
