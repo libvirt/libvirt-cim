@@ -95,10 +95,9 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
         CMPIStatus s;
         CMPIObjectPath *op;
         char *classname = NULL;
-        char *sys_name = NULL;
+        const char *sys_name = NULL;
         
-        sys_name = cu_get_str_path(ref, "Name");
-        if (sys_name == NULL) {
+        if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
                 CMSetStatusWithChars(broker, &s,
                                      CMPI_RC_ERR_FAILED,
                                      "Missing key: Name");
@@ -134,7 +133,6 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
 
  out:
         free(classname);
-        free(sys_name);
 
         return s;
 }
