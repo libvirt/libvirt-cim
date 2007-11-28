@@ -158,14 +158,13 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        char *host = NULL;
+        const char *host = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret;
 
         ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
 
-        host = cu_get_str_path(ref, "Name");
-        if (host == NULL) {
+        if (cu_get_str_path(ref, "Name", &host) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing Name");
@@ -205,7 +204,7 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        char *devid = NULL;
+        const char *devid = NULL;
         char *host = NULL;
         char *dev = NULL;
         CMPIInstance *sys;
@@ -213,8 +212,7 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
 
         ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
 
-        devid = cu_get_str_path(ref, "DeviceID");
-        if (devid == NULL) {
+        if (cu_get_str_path(ref, "DeviceID", &devid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing DeviceID");
@@ -242,7 +240,6 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
  out:
         free(dev);
         free(host);
-        free(devid);
 
         return s;
 }
