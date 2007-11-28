@@ -46,7 +46,7 @@ static CMPIInstance *find_rasd(struct inst_list *list,
         CMPIInstance *inst;
 
         for (i = 0; i < list->cur; i++) {
-                char *id;
+                const char *id;
                 int ret;
 
                 inst = list->list[i];
@@ -55,12 +55,8 @@ static CMPIInstance *find_rasd(struct inst_list *list,
                 if (ret != CMPI_RC_OK)
                         continue;
 
-                if (STREQ(id, devid)) {
-                        free(id);
+                if (STREQ(id, devid))
                         return inst;
-                } else {
-                        free(id);
-                }
         }
 
         return NULL;
@@ -73,15 +69,14 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         CMPIStatus s;
         CMPIInstance *rasd;
         struct inst_list rasds;
-        char *id = NULL;
+        const char *id = NULL;
         char *name = NULL;
         char *devid = NULL;
         int ret;
 
         inst_list_init(&rasds);
 
-        id = cu_get_str_path(ref, "DeviceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "DeviceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing DeviceID");
@@ -109,14 +104,13 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        free(id);
         free(name);
         free(devid);
 
         return s;
 }
 
-static CMPIInstance *_get_typed_device(char *id,
+static CMPIInstance *_get_typed_device(const char *id,
                                        int type,
                                        const CMPIObjectPath *ref,
                                        CMPIStatus *s)
@@ -161,13 +155,12 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
 {
         CMPIStatus s;
         CMPIInstance *dev = NULL;
-        char *id = NULL;
+        const char *id = NULL;
         uint16_t type;
 
         ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -190,8 +183,6 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        free(id);
-
         return s;
 }
 
@@ -201,7 +192,7 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
 {
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
-        char *name;
+        const char *name;
         CMPIInstance *vssd;
         CMPIStatus s;
 
@@ -209,8 +200,7 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
         if (conn == NULL)
                 return s;
 
-        name = cu_get_str_path(ref, "Name");
-        if (name == NULL) {
+        if (cu_get_str_path(ref, "Name", &name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing Name property");
@@ -232,7 +222,6 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        free(name);
         virDomainFree(dom);
         virConnectClose(conn);
 
@@ -244,7 +233,7 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        char *id = NULL;
+        const char *id = NULL;
         char *pfx = NULL;
         char *name = NULL;
         int ret;
@@ -252,8 +241,7 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
         CMPIStatus s;
         CMPIInstance *cs;
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -284,7 +272,6 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
  out:
         free(name);
         free(pfx);
-        free(id);
 
         virConnectClose(conn);
 
