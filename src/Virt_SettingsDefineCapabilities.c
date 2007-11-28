@@ -499,7 +499,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
         bool ret;
-        char *inst_id;
+        const char *inst_id;
         CMPIrc prop_ret;
         uint16_t free_space;
         uint64_t free_64;
@@ -507,8 +507,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         CMPIInstance *pool_inst;
         struct sdc_rasd_prop *rasd = NULL;
         
-        inst_id = cu_get_str_path(ref, "InstanceID");
-        if (inst_id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
                            "Could not get InstanceID.");
@@ -558,7 +557,6 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         }
 
  out:
-        free(inst_id);
         return rasd;
 }
 
