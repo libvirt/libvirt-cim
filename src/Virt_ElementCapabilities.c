@@ -53,8 +53,8 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
 {
         CMPIInstance *inst;
         CMPIrc host_rc;
-        char *host_name = NULL;
-        char *sys_name = NULL;
+        const char *host_name = NULL;
+        const char *sys_name = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         s = get_host_cs(_BROKER, ref, &inst);
@@ -65,7 +65,13 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         if (host_rc != CMPI_RC_OK)
                 goto out;
         
-        sys_name = cu_get_str_path(ref, "Name");
+        if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing `Name' property");
+                goto out;
+        }
+
         if (!STREQ(sys_name, host_name)) {
                 cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
                            "System '%s' is not a host system.", sys_name);
@@ -76,7 +82,6 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
  out:
-        free(sys_name);
         return s;
 }
 
@@ -84,16 +89,15 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        char *inst_id;
+        const char *inst_id;
         char *host;
         char *device;
-        char *host_name;
+        const char *host_name;
         CMPIrc host_rc;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
-        inst_id = cu_get_str_path(ref, "InstanceID");
-        if (inst_id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
                            "Could not get InstanceID.");
@@ -123,7 +127,6 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
  out:
         free(host);
         free(device);
-        free(inst_id);
         return s;
 }
 
@@ -133,10 +136,9 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
 {
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        char *sys_name = NULL;
+        const char *sys_name = NULL;
 
-        sys_name = cu_get_str_path(ref, "Name");
-        if (sys_name == NULL) {
+        if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED,
                                      "Missing key: Name");
@@ -148,8 +150,6 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
                 inst_list_add(list, inst);
 
   out:
-        free(sys_name);
-        
         return s;
 }
 
@@ -157,15 +157,14 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
                             struct std_assoc_info *info,
                             struct inst_list *list)
 {
-        char *inst_id;
+        const char *inst_id;
         char *host;
         char *device;
         CMPIInstance *inst;
         virConnectPtr conn;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
-        inst_id = cu_get_str_path(ref, "InstanceID");
-        if (inst_id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
                            "Could not get InstanceID.");
@@ -191,7 +190,7 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
  error1:
         free(host);
         free(device);
-        free(inst_id);
+
         return s;
 }
 
@@ -208,13 +207,12 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
                                 struct inst_list *list)
 {
         int ret;
-        char *inst_id;
+        const char *inst_id;
         uint16_t type;
         CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK};
 
-        inst_id = cu_get_str_path(ref, "InstanceID");
-        if (inst_id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
                                      "Could not get InstanceID.");
                 goto out;
@@ -237,8 +235,6 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
         inst_list_add(list, inst);
         
  out:
-        free(inst_id);
-
         return s;
 }
 static CMPIInstance *make_ref(const CMPIObjectPath *ref,
