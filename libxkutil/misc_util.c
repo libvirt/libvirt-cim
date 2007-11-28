@@ -33,6 +33,7 @@
 #include "cmpimacs.h"
 
 #include "libcmpiutil.h"
+#include "std_association.h"
 
 #include "misc_util.h"
 #include "cs_util.h"
@@ -304,6 +305,41 @@ bool provider_is_responsible(const CMPIBroker *broker,
         free(pfx);
         return rc;
 }
+
+bool match_hypervisor_prefix(const CMPIObjectPath *reference,
+                             struct std_assoc_info *info)
+{
+        char *ref_pfx = NULL;
+        char *pfx = NULL;
+        bool rc = true;
+
+        ref_pfx = class_prefix_name(CLASSNAME(reference));
+
+        if (info->assoc_class) {
+                pfx = class_prefix_name(info->assoc_class);
+
+                if (!STREQC(ref_pfx, pfx) &&
+                    !STREQC("CIM", pfx))
+                        rc = false;
+
+                free(pfx);
+        }
+
+        if (info->result_class) {
+                pfx = class_prefix_name(info->result_class);
+
+                if (!STREQC(ref_pfx, pfx) &&
+                    !STREQC("CIM", pfx))
+                        rc = false;
+
+                free(pfx);
+        }
+        
+        free(ref_pfx);
+        return rc;
+}
+
+
 
 bool domain_online(virDomainPtr dom)
 {

@@ -32,6 +32,7 @@
 #include "cmpimacs.h"
 
 #include <libcmpiutil.h>
+#include <std_association.h>
 
 /* Check if the provider is reponsible for the given class:
  * e.g. Xen is running on the system and KVM_... is asked for,
@@ -104,6 +105,9 @@ bool libvirt_cim_init(void);
         }
 
 #endif
+
+bool match_hypervisor_prefix(const CMPIObjectPath *reference,
+                             struct std_assoc_info *info);
 
 /*
  * Local Variables:
