@@ -133,9 +133,14 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
+        virConnectPtr conn = NULL;
         char *classname;
         struct reg_prof *candidate;
         int i;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return s;
 
         classname = class_base_name(CLASSNAME(ref));
         if (classname == NULL) {
@@ -151,10 +156,12 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
 
                 instance = reg_prof_instance(_BROKER, 
                                              "/root/interop", 
-                                             NULL, 
+                                             NULL,
+                                             conn,
                                              candidate);
                 if (instance == NULL) {
-                        CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                        CMSetStatusWithChars(_BROKER, &s, 
+                                             CMPI_RC_ERR_FAILED,
                                              "Can't create profile instance.");
                         goto error;
                 }
@@ -165,6 +172,8 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
  error:                
         free(classname);
  out:
+        virConnectClose(conn);
+
         return s;
 }
 
