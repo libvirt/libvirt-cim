@@ -730,10 +730,9 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         CMPIStatus s;
         CMPIInstance *inst;
         virConnectPtr conn = NULL;
-        char *id = NULL;
+        const char *id = NULL;
 
-        id = cu_get_str_path(reference, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -756,7 +755,6 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 
 
  out:
-        free(id);
         virConnectClose(conn);
 
         return s;
