@@ -107,6 +107,9 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
         char *id;
         int i;
         
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
+
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 return s;
@@ -146,6 +149,9 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         char *classname;
         struct reg_prof *candidate;
         int i;
+        
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
