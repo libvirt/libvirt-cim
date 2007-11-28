@@ -92,12 +92,11 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                                            struct inst_list *res)
 {
         CMPIStatus s = {CMPI_RC_ERR_FAILED, NULL};
-        char *sys_str = NULL;
+        const char *sys_str = NULL;
         CMPIArray *res_arr;
         int ret;
 
-        sys_str = cu_get_str_arg(argsin, "SystemSettings");
-        if (sys_str == NULL) {
+        if (cu_get_str_arg(argsin, "SystemSettings", &sys_str) != CMPI_RC_OK) {
                 CU_DEBUG("No SystemSettings string argument");
                 goto out;
         }
@@ -114,8 +113,8 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                 goto out;
         }
 
-        res_arr = cu_get_array_arg(argsin, "ResourceSettings");
-        if (res_arr == NULL) {
+        if (cu_get_array_arg(argsin, "ResourceSettings", &res_arr) !=
+            CMPI_RC_OK) {
                 CU_DEBUG("Failed to get array arg");
                 goto out;
         }
@@ -125,8 +124,6 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        free(sys_str);
-
         return s;
 }
 
@@ -135,11 +132,14 @@ static int vssd_to_domain(CMPIInstance *inst,
 {
         uint16_t tmp;
         int ret = 0;
+        const char *val;
 
-        free(domain->name);
-        ret = cu_get_str_prop(inst, "VirtualSystemIdentifier", &domain->name);
+        ret = cu_get_str_prop(inst, "VirtualSystemIdentifier", &val);
         if (ret != CMPI_RC_OK)
                 goto out;
+
+        free(domain->name);
+        domain->name = strdup(val);
 
         ret = cu_get_u16_prop(inst, "AutomaticShutdownAction", &tmp);
         if (ret != CMPI_RC_OK)
@@ -153,15 +153,19 @@ static int vssd_to_domain(CMPIInstance *inst,
 
         domain->on_crash = (int)tmp;
 
-        free(domain->bootloader);
-        ret = cu_get_str_prop(inst, "Bootloader", &domain->bootloader);
+        ret = cu_get_str_prop(inst, "Bootloader", &val);
         if (ret != CMPI_RC_OK)
-                domain->bootloader = strdup("");
+                val = "";
+
+        free(domain->bootloader);
+        domain->bootloader = strdup(val);
+
+        ret = cu_get_str_prop(inst, "BootloaderArgs", &val);
+        if (ret != CMPI_RC_OK)
+                val = "";
 
         free(domain->bootloader_args);
-        ret = cu_get_str_prop(inst, "BootloaderArgs", &domain->bootloader_args);
-        if (ret != CMPI_RC_OK)
-                domain->bootloader_args = strdup("");
+        domain->bootloader_args = strdup(val);
 
         ret = 1;
  out:
@@ -172,7 +176,8 @@ static int rasd_to_vdev(CMPIInstance *inst,
                         struct virt_device *dev)
 {
         uint16_t type;
-        char *id = NULL;
+        const char *id = NULL;
+        const char *val = NULL;
         char *name = NULL;
         char *devid = NULL;
         CMPIObjectPath *op;
@@ -196,16 +201,20 @@ static int rasd_to_vdev(CMPIInstance *inst,
                 free(dev->dev.disk.virtual_dev);
                 dev->dev.disk.virtual_dev = devid;
 
+                if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK)
+                        val = "/dev/null";
+
                 free(dev->dev.disk.source);
-                cu_get_str_prop(inst, "Address", &dev->dev.disk.source);
+                dev->dev.disk.source = strdup(val);
         } else if (type == VIRT_DEV_NET) {
                 free(dev->dev.net.mac);
                 dev->dev.net.mac = devid;
 
+                if (cu_get_str_prop(inst, "NetworkType", &val) != CMPI_RC_OK)
+                        val = "bridge";
+
                 free(dev->dev.net.type);
-                cu_get_str_prop(inst, "NetworkType", &dev->dev.net.type);
-                if (dev->dev.net.type == NULL)
-                        dev->dev.net.type = strdup("bridge");
+                dev->dev.net.type = strdup(val);
         } else if (type == VIRT_DEV_MEM) {
                 cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
                 cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
@@ -215,12 +224,10 @@ static int rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.mem.maxsize <<= 10;
         }
 
-        free(id);
         free(name);
 
         return 1;
  err:
-        free(id);
         free(name);
         free(devid);
 
@@ -411,7 +418,7 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
                                  const CMPIArgs *argsin,
                                  CMPIArgs *argsout)
 {
-        char *dom_name = NULL;
+        const char *dom_name = NULL;
         CMPIStatus status = {CMPI_RC_OK, NULL};
         CMPIValue rc;
         CMPIObjectPath *sys;
@@ -426,8 +433,7 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
                 goto error1;
         }
 
-        sys = cu_get_ref_arg(argsin, "AffectedSystem");
-        if (sys == NULL) {
+        if (cu_get_ref_arg(argsin, "AffectedSystem", &sys) != CMPI_RC_OK) {
                 rc.uint32 = IM_RC_FAILED;
                 goto error2;
         }
@@ -455,7 +461,6 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
                 rc.uint32 = IM_RC_SYS_NOT_FOUND;
         }
 
-        free(dom_name);
  error2:
         virConnectClose(conn);
  error1:
@@ -467,7 +472,7 @@ static CMPIStatus update_system_settings(const CMPIObjectPath *ref,
                                          CMPIInstance *vssd)
 {
         CMPIStatus s;
-        char *name = NULL;
+        const char *name = NULL;
         CMPIrc ret;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
@@ -513,7 +518,6 @@ static CMPIStatus update_system_settings(const CMPIObjectPath *ref,
 
  out:
         free(xml);
-        free(name);
         virDomainFree(dom);
         virConnectClose(conn);
         cleanup_dominfo(&dominfo);
@@ -529,11 +533,10 @@ static CMPIStatus mod_system_settings(CMPIMethodMI *self,
                                       const CMPIArgs *argsin,
                                       CMPIArgs *argsout)
 {
-        char *inst_str;
+        const char *inst_str;
         CMPIInstance *inst;
 
-        inst_str = cu_get_str_arg(argsin, "SystemSettings");
-        if (inst == NULL) {
+        if (cu_get_str_arg(argsin, "SystemSettings", &inst_str) != CMPI_RC_OK) {
                 CMPIStatus s;
 
                 cu_statusf(_BROKER, &s,
@@ -878,7 +881,7 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
 
         for (i = 0; i < list->cur; i++) {
                 CMPIInstance *inst = list->list[i];
-                char *id = NULL;
+                const char *id = NULL;
                 char *name = NULL;
                 char *devid = NULL;
                 virDomainPtr dom = NULL;
@@ -910,7 +913,6 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
         end:
                 free(name);
                 free(devid);
-                free(id);
                 virDomainFree(dom);
 
                 if (s.rc != CMPI_RC_OK)
@@ -927,21 +929,20 @@ static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
                                            const CMPIArgs *argsin,
                                            resmod_fn func)
 {
-        CMPIArray *array;
+        CMPIArray *arr;
         CMPIStatus s;
         struct inst_list list;
 
         inst_list_init(&list);
 
-        array = cu_get_array_arg(argsin, "ResourceSettings");
-        if (array == NULL) {
+        if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing ResourceSettings");
                 goto out;
         }
 
-        parse_str_inst_array(array, NAMESPACE(ref), &list);
+        parse_str_inst_array(arr, NAMESPACE(ref), &list);
 
         s = _update_resource_settings(ref, &list, func);
 
@@ -1052,7 +1053,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         CMPIInstance *host = NULL;
-        char *val = NULL;
+        const char *val = NULL;
         virConnectPtr conn = NULL;
 
         *_inst = NULL;
@@ -1089,7 +1090,6 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
 
         CMSetProperty(inst, "SystemName",
                       (CMPIValue *)val, CMPI_chars);
-        free(val);
 
         if (cu_get_str_prop(host, "CreationClassName", &val) != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
@@ -1100,7 +1100,6 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
 
         CMSetProperty(inst, "SystemCreationClassName",
                       (CMPIValue *)val, CMPI_chars);
-        free(val);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
