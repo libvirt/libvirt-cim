@@ -104,7 +104,7 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn = NULL;
-        char *id;
+        const char *id;
         int i;
         
         if (!match_hypervisor_prefix(ref, info))
@@ -114,8 +114,7 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
         if (conn == NULL)
                 return s;
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED,
                                      "No InstanceID specified");
@@ -133,7 +132,6 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
         }
         
  out:
-        free(id);
         virConnectClose(conn);
 
         return s;
