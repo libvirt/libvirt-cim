@@ -84,7 +84,7 @@ CMPIInstance *get_typed_instance(const CMPIBroker *broker,
 /* Parse an OrgID:LocID string into its constituent parts */
 int parse_instance_id(char *iid, char **orgid, char **locid);
 
-char *get_key_from_ref_arg(const CMPIArgs *args, char *arg, char *key);
+const char *get_key_from_ref_arg(const CMPIArgs *args, char *arg, char *key);
 
 bool domain_exists(virConnectPtr conn, const char *name);
 bool domain_online(virDomainPtr dom);
@@ -94,7 +94,7 @@ uint64_t allocated_memory(virConnectPtr conn);
 char *association_prefix(const char *provider_name);
 bool match_pn_to_cn(const char *pn, const char *cn);
 
-int parse_id(char *id, char **pfx, char **name);
+int parse_id(const char *id, char **pfx, char **name);
 bool parse_instanceid(const CMPIObjectPath *ref, char **pfx, char **name);
 
 bool libvirt_cim_init(void);

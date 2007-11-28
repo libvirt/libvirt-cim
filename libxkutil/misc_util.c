@@ -86,15 +86,18 @@ void free_domain_list(virDomainPtr *list, int count)
                 virDomainFree(list[i]);
 }
 
-char *get_key_from_ref_arg(const CMPIArgs *args, char *arg, char *key)
+const char *get_key_from_ref_arg(const CMPIArgs *args, char *arg, char *key)
 {
         CMPIObjectPath *ref = NULL;
+        const char *val = NULL;
 
-        ref = cu_get_ref_arg(args, arg);
-        if (ref == NULL)
+        if (cu_get_ref_arg(args, arg, &ref) != CMPI_RC_OK)
                 return NULL;
 
-        return cu_get_str_path(ref, key);
+        if (cu_get_str_path(ref, key, &val) != CMPI_RC_OK)
+                return NULL;
+
+        return val;
 }
 
 bool domain_exists(virConnectPtr conn, const char *name)
@@ -352,7 +355,7 @@ bool domain_online(virDomainPtr dom)
                 (info.state == VIR_DOMAIN_RUNNING);
 }
 
-int parse_id(char *id, 
+int parse_id(const char *id,
              char **pfx,
              char **name)
 {
@@ -386,15 +389,12 @@ bool parse_instanceid(const CMPIObjectPath *ref,
                       char **name)
 {
         int ret;
-        char *id = NULL;
+        const char *id = NULL;
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL)
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK)
                  return false;
 
         ret = parse_id(id, pfx, name);
-
-        free(id);
 
         if (!ret)
                  return false;
