@@ -63,7 +63,7 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
 {
         CMPIStatus s;
         uint16_t type;
-        char *id = NULL;
+        const char *id = NULL;
         char *poolid = NULL;
         virConnectPtr conn = NULL;
         CMPIInstance *pool = NULL;
@@ -76,8 +76,7 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        id = cu_get_str_path(ref, "DeviceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "DeviceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing DeviceID");
@@ -107,7 +106,6 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
         }
 
  out:
-        free(id);
         free(poolid);
         virConnectClose(conn);
 
@@ -124,23 +122,20 @@ static int filter_by_pool(struct inst_list *dest,
 
         for (i = 0; i < src->cur; i++) {
                 CMPIInstance *inst = src->list[i];
-                char *cn = NULL;
-                char *dev_id = NULL;
+                const char *cn = NULL;
+                const char *dev_id = NULL;
 
                 cu_get_str_prop(inst, "CreationClassName", &cn);
                 cu_get_str_prop(inst, "DeviceID", &dev_id);
 
                 if ((dev_id == NULL) || (cn == NULL))
-                        goto end;
+                        continue;
 
                 printf("Device %hhi:%s", type, dev_id);
 
                 poolid = pool_member_of(_BROKER, cn, type, dev_id);
                 if (poolid && STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
-        end:
-                free(dev_id);
-                free(cn);
         }
 
         return dest->cur;
@@ -200,11 +195,10 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
 {
-        char *poolid;
+        const char *poolid;
         CMPIStatus s;
 
-        poolid = cu_get_str_path(ref, "InstanceID");
-        if (poolid == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -244,8 +238,6 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        free(poolid);
-
         return s;
 }
 
