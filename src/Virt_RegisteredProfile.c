@@ -129,15 +129,14 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
         virConnectPtr conn = NULL;
-        char* id;
+        const char* id;
         int i;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 return s;
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED,
                                      "No InstanceID specified");
@@ -159,9 +158,6 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
                 CMReturnInstance(results, instance);
         else
                 CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
-                
-        free(id);
-
  out:
         virConnectClose(conn);
 
