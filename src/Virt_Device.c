@@ -470,7 +470,7 @@ CMPIInstance *instance_from_devid(const CMPIBroker *broker,
 
 static CMPIStatus get_device(const CMPIObjectPath *reference,
                              const CMPIResult *results,
-                             char *devid)
+                             const char *devid)
 {
         CMPIStatus s;
         virConnectPtr conn;
@@ -525,10 +525,9 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        char *devid;
+        const char *devid;
 
-        devid = cu_get_str_path(reference, "DeviceID");
-        if (devid == NULL) {
+        if (cu_get_str_path(reference, "DeviceID", &devid) != CMPI_RC_OK) {
                 CMPIStatus s;
 
                 CMSetStatusWithChars(_BROKER, &s,
