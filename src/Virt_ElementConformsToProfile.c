@@ -50,7 +50,8 @@ const static CMPIBroker *_BROKER;
 static CMPIStatus elem_instances(const CMPIObjectPath *ref,
                                  struct std_assoc_info *info,
                                  struct inst_list *list,
-                                 struct reg_prof *profile)
+                                 struct reg_prof *profile,
+                                 virConnectPtr conn)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIObjectPath *op;
@@ -58,7 +59,8 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         CMPIData data ;
         char *classname;
 
-        classname = get_typed_class("Xen", profile->provider_name);
+        classname = get_typed_class(pfx_from_conn(conn), 
+                                    profile->provider_name);
         if (classname == NULL) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED, 
@@ -101,9 +103,14 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        virConnectPtr conn = NULL;
         char *id;
         int i;
         
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return s;
+
         id = cu_get_str_path(ref, "InstanceID");
         if (id == NULL) {
                 CMSetStatusWithChars(_BROKER, &s,
@@ -114,7 +121,8 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
 
         for (i = 0; profiles[i] != NULL; i++) {
                 if (STREQ(id, profiles[i]->reg_id)) {
-                        s = elem_instances(ref, info, list, profiles[i]);
+                        s = elem_instances(ref, info, list, 
+                                           profiles[i], conn);
                         if ((s.rc != CMPI_RC_OK))
                                 goto error;
                         break;
@@ -124,6 +132,8 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
  error:
         free(id);
  out:
+        virConnectClose(conn);
+
         return s;
 }
 
@@ -182,10 +192,16 @@ static CMPIInstance *make_ref(const CMPIObjectPath *source_op,
                               struct std_assoc_info *info,
                               struct std_assoc *assoc)
 {
-        CMPIInstance *assoc_inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *assoc_inst = NULL;
+        virConnectPtr conn = NULL;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(source_op), &s);
+        if (conn == NULL)
+                return NULL;
 
         assoc_inst = get_typed_instance(_BROKER,
-                                        "Xen",
+                                        pfx_from_conn(conn),
                                         "ElementConformsToProfile",
                                         NAMESPACE(source_op));
                 
@@ -198,6 +214,8 @@ static CMPIInstance *make_ref(const CMPIObjectPath *source_op,
                 CMSetProperty(assoc_inst, assoc->target_prop,
                               (CMPIValue *)&(target_op), CMPI_ref);
         }
+
+        virConnectClose(conn);
 
         return assoc_inst;
 }
