@@ -43,7 +43,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
 {
         CMPIStatus s;
         uint16_t type;
-        char *id = NULL;
+        const char *id = NULL;
         char *poolid = NULL;
         virConnectPtr conn = NULL;
         struct inst_list _list;
@@ -58,8 +58,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        id = cu_get_str_path(ref, "InstanceID");
-        if (id == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -92,7 +91,6 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
         }
 
  out:
-        free(id);
         free(poolid);
         virConnectClose(conn);
         inst_list_free(&_list);
@@ -106,7 +104,7 @@ static int filter_by_pool(struct inst_list *dest,
 {
         int i;
         uint16_t type;
-        char *rasd_id = NULL;
+        const char *rasd_id = NULL;
         char *poolid = NULL;
 
         for (i = 0; i < src->cur; i++) {
@@ -126,8 +124,6 @@ static int filter_by_pool(struct inst_list *dest,
                 poolid = pool_member_of(_BROKER, CLASSNAME(op), type, rasd_id);
                 if (STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
-
-                free(rasd_id);
         }
 
         return dest->cur;
@@ -182,10 +178,9 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s;
-        char *poolid;
+        const char *poolid;
 
-        poolid = cu_get_str_path(ref, "InstanceID");
-        if (poolid == NULL) {
+        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -222,8 +217,6 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        free(poolid);
-
         return s;
 }
 
