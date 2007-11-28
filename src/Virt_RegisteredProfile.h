@@ -24,6 +24,7 @@
 CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
                                 const char *namespace,
                                 const char **properties,
+                                virConnectPtr conn,
                                 struct reg_prof *profile);
 
 #endif

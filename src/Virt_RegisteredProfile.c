@@ -43,25 +43,23 @@ const static CMPIBroker *_BROKER;
 CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
                                 const char *namespace,
                                 const char **properties,
+                                virConnectPtr conn,
 				struct reg_prof *profile)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIObjectPath *op;
         CMPIInstance *instance = NULL;
-        char *classname;
 
-        classname = get_typed_class("Xen", "RegisteredProfile");
-        if (classname == NULL) {
+        instance = get_typed_instance(broker,
+                                      pfx_from_conn(conn),
+                                      "RegisteredProfile",
+                                      namespace);
+
+        if (instance == NULL) {
+                CMSetStatusWithChars(broker, &s, 
+                                     CMPI_RC_ERR_FAILED,
+                                     "Can't create RegisteredProfile instance.");
                 goto out;
         }
-
-        op = CMNewObjectPath(broker, namespace, classname, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
-                goto out;
-
-        instance = CMNewInstance(broker, op, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
-                goto out;
 
         if (properties) {
                 s = CMSetPropertyFilter(instance, properties, NULL);
@@ -83,8 +81,6 @@ CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
                       (CMPIValue *)profile->reg_version, CMPI_chars);
 
  out:
-        free(classname);
-
         return instance;
 }
 
@@ -95,12 +91,18 @@ static CMPIStatus enum_profs(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
+        virConnectPtr conn = NULL;
         int i;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return s;
 
         for (i = 0; profiles[i] != NULL; i++) {
                 instance = reg_prof_instance(_BROKER, 
                                              NAMESPACE(ref), 
-                                             properties, 
+                                             properties,
+                                             conn,
                                              profiles[i]);
                 if (instance == NULL) {
                         CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
@@ -115,6 +117,8 @@ static CMPIStatus enum_profs(const CMPIObjectPath *ref,
         }
 
  out:
+        virConnectClose(conn);
+
         return s;
 }
 
@@ -124,15 +128,20 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
 {       
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
+        virConnectPtr conn = NULL;
         char* id;
         int i;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return s;
 
         id = cu_get_str_path(ref, "InstanceID");
         if (id == NULL) {
                 CMSetStatusWithChars(_BROKER, &s,
                                      CMPI_RC_ERR_FAILED,
                                      "No InstanceID specified");
-                return s;
+                goto out;
         }
 
         for (i = 0; profiles[i] != NULL; i++) {
@@ -140,6 +149,7 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
                         instance = reg_prof_instance(_BROKER, 
                                                      NAMESPACE(ref), 
                                                      properties,
+                                                     conn,
                                                      profiles[i]);
                         break;
                 }
@@ -150,8 +160,10 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
         else
                 CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
                 
-
         free(id);
+
+ out:
+        virConnectClose(conn);
 
         return s;
 }
