@@ -33,3 +33,91 @@ then you just add a line saying
 using your real name (sorry, no pseudonyms or anonymous contributions.)
 
 
+
+Guidelines for Submitting Patches.
+
+           Patches should be submitted using Mercurial's patchbomb extension, 
+           and we recommend using the queues extension as well.  On top of that, 
+           we have some guidelines you should follow when submitting patches.  
+           This makes reviewing patches easier, which in turns improves the 
+           chances of your patch being accepted in a timely fashion.
+
+Single Patches:
+
+       (a) When you add a patch to the queue you have an idea of where you're
+           going with it, and the commit message should reflect that.  Be
+           specific.  Avoid  just saying something like, "Various fixes to
+           AllocationCapabilities."  Add a list of what was actually fixed, 
+           like, "Add EnumInstanceNames support," and, "Eliminate duplicate 
+           instances."  
+
+       (b) The first line of your commit message will be the subject of the 
+           patch email when you send it out, so write it like a subject.  Keep 
+           it short and to the point, then start a new line and feel free to be 
+           as verbose as you need to be.  The entire commit message will be 
+           included in the patch.
+
+       (c) Stay on task with a patch.  If you notice other problems while you
+           are working on patch, and they are not most definitely specific to 
+           your patch, they should be another patch.  The same goes for 
+           nitpicking.  While it might be only a line or two here and there 
+           that is off track, this is actually one of the easiest ways to make 
+           a patch difficult to review.  All the trivial changes hide what is 
+           really going on.  Make the unrelated changes a new patch or don't 
+           make them at all.
+
+       (d) If your patch addresses a strange issue or a rare edge case that 
+           the reviewers are unlikely to be familiar with, make sure the commit 
+           message include some example testcase with results, so the reviewers 
+           can verify your patch more quickly.
+           
+       (e) Before you email, export.  If you have a patch called "alloc_fixes", 
+           which would be emailed with "hg email alloc_fixes", you should first 
+           run "hg export alloc_fixes".  This lets you review your patch.  Does 
+           it have any typos in the comments?  Did you accidentally include an 
+           irrelevant change?  Is your commit message still accurate and useful?
+           This is the single biggest step in ensuring you have a good patch.
+
+       (f) If your patch needs to be reworked and resent, prepend a "version 
+           number" to the first line of the commit message.  For example, "Add 
+           EnumInstance to RASD," becomes "#2 Add EnumInstance to RASD."  This 
+           helps mail readers thread discussions correctly and helps 
+           maintainers know they are applying the right version of your patch.  
+           At the end of the commit message, explain what is different from one 
+           version to the next.  Nobody likes having to diff a diff.  
+
+       (g) If your patch depends on a patch that exists on the mailing list but 
+           not in the tree, it is okay to send your patch to the list as long 
+           as your commit message mentions the dependency.  It is also a good 
+           idea to import the patch into your tree before you make your patch.
+           For example, a new patch called "cu_statusf API change" is on the 
+           list, and your patch needs the new API.  Save the email (no need to 
+           trim headers) as api_change.eml, then do "hg qimport api_change.eml" 
+           and "hg qpush" so that the patch is applied to your tree.  Now write 
+           your patch on top of it.  You should still indicate the dependency 
+           in your commit message.
+
+
+Patchsets:
+
+       (a) When you send a group of patches, Mercurial's email extension will
+           create a "header" email.  Make the subject and body of that email
+           meaningful, so we know how the patches relate.  It's easy to say, 
+           "Each patch has a commit message, it's obvious how they work 
+           together," but the rest of the list usually won't agree with that.  
+           If the commit messages for each patch are good, you shouldn't need 
+           more than a sentence or two to tie them all together, but you do 
+           need it.
+
+       (b) If any of your patches are rejected and you rework them, resend the
+           entire set.  This prevents things like, "So use patch 1 of 4 from 
+           the set I sent yesterday, 2 and 3 of 4 from the patch I sent an hour 
+           later, and patch 4 of 4 from today."
+
+       (c) If you resend a patchset, apply part (f) of the Single Patches 
+           guidelines to your "Patch [0 of 3]" header email, for all the same 
+           reasons.
+
+Questions/Comments on the Guidelines should be directed to:
+Jay Gagnon <grendel@linux.vnet.ibm.com>
+Patch Compliance Officer
