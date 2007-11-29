@@ -119,27 +119,51 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         return refinst;
 }
 
+char* group_component[] = {
+        "Xen_HostSystem",
+        "KVM_HostSystem",
+        NULL
+};
+
+char* part_component[] = {
+        "Xen_ProcessorPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_DiskPool",
+        "KVM_ProcessorPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_DiskPool",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_HostedResourcePool",
+        "KVM_HostedResourcePool",        
+        NULL
+};
+
 struct std_assoc forward = {
-        .source_class = "CIM_ResourcePool",
+        .source_class = (char**)&part_component,
         .source_prop = "PartComponent",
 
-        .target_class = "CIM_System",
+        .target_class = (char**)&group_component,
         .target_prop = "GroupComponent",
 
-        .assoc_class = NULL,
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = pool_to_sys,
         .make_ref = make_ref
 };
 
 struct std_assoc backward = {
-        .source_class = "CIM_System",
+        .source_class = (char**)&group_component,
         .source_prop = "GroupComponent",
 
-        .target_class = "CIM_ResourcePool",
+        .target_class = (char**)&part_component,
         .target_prop = "PartComponent",
 
-        .assoc_class = NULL,
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = sys_to_pool,
         .make_ref = make_ref
