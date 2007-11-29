@@ -237,21 +237,23 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
  out:
         return s;
 }
+
 static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                               const CMPIInstance *inst,
                               struct std_assoc_info *info,
                               struct std_assoc *assoc)
 {
-        CMPIInstance *refinst;
-        char *base;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *refinst = NULL;
+        virConnectPtr conn = NULL;
 
-        base = class_base_name(assoc->assoc_class);
-        if (base == NULL)
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
                 return NULL;
 
         refinst = get_typed_instance(_BROKER,
-                                     CLASSNAME(ref),
-                                     base,
+                                     pfx_from_conn(conn),
+                                     "ElementCapabilities",
                                      NAMESPACE(ref));
 
         if (refinst != NULL) {
@@ -265,109 +267,146 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                               (CMPIValue *)&instop, CMPI_ref);
         }
 
-        free(base);
+        virConnectClose(conn);
 
         return refinst;
 }
 
+char* assoc_classname[] = {
+        "Xen_ElementCapabilities",
+        "KVM_ElementCapabilities",        
+        NULL
+};
+
+char* host_system[] = {
+        "Xen_HostSystem",
+        "KVM_HostSystem",
+        NULL
+};
+
+char* virtual_system_management_capabilities[] = {
+        "Xen_VirtualSystemManagementCapabilities",
+        "KVM_VirtualSystemManagementCapabilities",
+        NULL
+};
+
 struct std_assoc system_to_vsm_cap = {
-        .source_class = "CIM_System",
+        .source_class = (char**)&host_system,
         .source_prop = "ManagedElement",
 
-        .target_class = "CIM_VirtualSystemManagementCapabilities",
+        .target_class = (char**)&virtual_system_management_capabilities,
         .target_prop = "Capabilities",
 
-        .assoc_class = "CIM_ElementCapabilities",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = sys_to_cap,
         .make_ref = make_ref
 };
 
 struct std_assoc vsm_cap_to_system = {
-        .source_class = "CIM_VirtualSystemManagementCapabilities",
+        .source_class = (char**)&virtual_system_management_capabilities,
         .source_prop = "Capabilities",
 
-        .target_class = "CIM_System",
+        .target_class = (char**)&host_system,
         .target_prop = "ManagedElement",
 
-        .assoc_class = "CIM_ElementCapabilities",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = cap_to_sys,
         .make_ref = make_ref
 };
 
-struct std_assoc xen_cs_to_ele_cap = {
-        .source_class = "Xen_ComputerSystem",
-        .source_prop = "ManagedElement",
-
-        .target_class = "CIM_EnabledLogicalElementCapabilities",
-        .target_prop = "Capabilities",
-
-        .assoc_class = "CIM_ElementCapabilities",
-
-        .handler = cs_to_cap,
-        .make_ref = make_ref
+char* computer_system[] = {
+        "Xen_ComputerSystem",
+        "KVM_ComputerSystem",
+        NULL
 };
 
-struct std_assoc kvm_cs_to_ele_cap = {
-        .source_class = "KVM_ComputerSystem",
-        .source_prop = "ManagedElement",
-
-        .target_class = "CIM_EnabledLogicalElementCapabilities",
-        .target_prop = "Capabilities",
-
-        .assoc_class = "CIM_ElementCapabilities",
-
-        .handler = cs_to_cap,
-        .make_ref = make_ref
+char* enabled_logical_element_capabilities[] = {
+        "Xen_EnabledLogicalElementCapabilities",
+        "KVM_EnabledLogicalElementCapabilities",
+        NULL
 };
 
-struct std_assoc ele_cap_to_computer_system = {
-        .source_class = "CIM_EnabledLogicalElementCapabilities",
+struct std_assoc ele_cap_to_cs = {
+        .source_class = (char**)&enabled_logical_element_capabilities,
         .source_prop = "Capabilities",
 
-        .target_class = "CIM_ComputerSystem",
+        .target_class = (char**)&computer_system,
         .target_prop = "ManagedElement",
 
-        .assoc_class = "CIM_ElementCapabilities",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = cap_to_cs,
         .make_ref = make_ref
 };
 
+struct std_assoc cs_to_ele_cap = {
+        .source_class = (char**)&computer_system,
+        .source_prop = "ManagedElement",
+
+        .target_class = (char**)&enabled_logical_element_capabilities,
+        .target_prop = "Capabilities",
+
+        .assoc_class = (char**)&assoc_classname,
+
+        .handler = cs_to_cap,
+        .make_ref = make_ref
+};
+
+char* allocation_capabilities[] = {
+        "Xen_AllocationCapabilities",
+        "KVM_AllocationCapabilities",
+        NULL
+};
+
+char* resource_pool[] = {
+        "Xen_ProcessorPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_DiskPool",
+        "KVM_ProcessorPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_DiskPool",
+        NULL
+};
+
 struct std_assoc alloc_cap_to_resource_pool = {
-        .source_class = "CIM_AllocationCapabilities",
+        .source_class = (char**)&allocation_capabilities,
         .source_prop = "Capabilities",
 
-        .target_class = "CIM_ResourcePool",
+        .target_class = (char**)&resource_pool,
         .target_prop = "ManagedElement",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = alloc_to_pool,
         .make_ref = make_ref
 };
 
 struct std_assoc resource_pool_to_alloc_cap = {
-        .source_class = "CIM_ResourcePool",
+        .source_class = (char**)&resource_pool,
         .source_prop = "ManagedElement",
 
-        .target_class = "CIM_AllocationCapabilities",
+        .target_class = (char**)&allocation_capabilities,
         .target_prop = "Capabilities",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = pool_to_alloc,
         .make_ref = make_ref
 };
 
 struct std_assoc *assoc_handlers[] = {
-        &xen_cs_to_ele_cap,
-        &kvm_cs_to_ele_cap,
         &system_to_vsm_cap,
         &vsm_cap_to_system,
-        &ele_cap_to_computer_system,
+        &ele_cap_to_cs,
+        &cs_to_ele_cap,
         &alloc_cap_to_resource_pool,
         &resource_pool_to_alloc_cap,
         NULL
 };
-
 
 STDA_AssocMIStub(, Xen_ElementCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 STDA_AssocMIStub(, KVM_ElementCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
