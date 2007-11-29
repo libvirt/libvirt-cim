@@ -129,17 +129,18 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct std_assoc *assoc)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *refinst = NULL;
-        char *base;
+        virConnectPtr conn = NULL;
         uint16_t prop_value = 1;
 
-        base = class_base_name(assoc->assoc_class);
-        if (base == NULL)
-                goto out;
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return NULL;
 
         refinst = get_typed_instance(_BROKER,
-                                     CLASSNAME(ref),
-                                     base,
+                                     pfx_from_conn(conn),
+                                     "ElementSettingData",
                                      NAMESPACE(ref));
 
         if (refinst != NULL) {
@@ -165,33 +166,55 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                         (CMPIValue *)&prop_value, CMPI_uint16);
         }
 
-out:
-        free(base);
+        virConnectClose(conn);
 
         return refinst;
 }
 
+char* virtual_system_setting_data[] = {
+        "Xen_VirtualSystemSettingData",
+        "KVM_VirtualSystemSettingData",        
+        NULL
+};
+
+char* resource_allocation_setting_data[] = {
+        "Xen_ResourceAllocationSettingData",
+        "KVM_ResourceAllocationSettingData",        
+        NULL
+};
+
+char* managed_element[] = {
+        "CIM_ManagedElement",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_ElementSettingData",
+        "KVM_ElementSettingData",        
+        NULL
+};
+
 static struct std_assoc _vssd_to_vssd = {
-        .source_class = "CIM_VirtualSystemSettingData",
+        .source_class = (char**)&virtual_system_setting_data,
         .source_prop = "ManagedElement",
 
-        .target_class = "CIM_ManagedElement",
+        .target_class = (char**)&managed_element,
         .target_prop = "SettingData",
 
-        .assoc_class = "CIM_ElementSettingData",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = vssd_to_vssd,
         .make_ref = make_ref
 };
 
 static struct std_assoc _rasd_to_rasd = {
-        .source_class = "CIM_ResourceAllocationSettingData",
+        .source_class = (char**)&resource_allocation_setting_data,
         .source_prop = "ManagedElement",
 
-        .target_class = "CIM_ManagedElement",
+        .target_class = (char**)&managed_element,
         .target_prop = "SettingData",
 
-        .assoc_class = "CIM_ElementSettingData",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = rasd_to_rasd,
         .make_ref = make_ref
