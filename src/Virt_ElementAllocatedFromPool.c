@@ -264,23 +264,57 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         return refinst;
 }
 
+char* antecedent[] = {
+        "Xen_ProcessorPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_DiskPool",
+        "KVM_ProcessorPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_DiskPool",       
+        NULL
+};
+
+char* dependent[] = {
+        "Xen_Processor",
+        "Xen_Memory",
+        "Xen_Network",
+        "Xen_Disk",
+        "KVM_Processor",
+        "KVM_Memory",
+        "KVM_Network",
+        "KVM_Disk",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_ElementAllocatedFromPool",
+        "KVM_ElementAllocatedFromPool",        
+        NULL
+};
+
 static struct std_assoc _vdev_to_pool = {
-        .source_class = "CIM_LogicalDevice",
+        .source_class = (char**)&dependent,
         .source_prop = "Dependent",
 
-        .target_class = "CIM_ResourcePool",
+        .target_class = (char**)&antecedent,
         .target_prop = "Antecedent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = vdev_to_pool,
         .make_ref = make_ref
 };
 
 static struct std_assoc _pool_to_vdev = {
-        .source_class = "CIM_ResourcePool",
+        .source_class = (char**)&antecedent,
         .source_prop = "Antecedent",
 
-        .target_class = "CIM_LogicalDevice",
+        .target_class = (char**)&dependent,
         .target_prop = "Dependent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = pool_to_vdev,
         .make_ref = make_ref
