@@ -222,27 +222,47 @@ static CMPIInstance *make_ref(const CMPIObjectPath *source_op,
         return assoc_inst;
 }
 
+char* conformant_standard[] = {
+        "Xen_RegisteredProfile",
+        "KVM_RegisteredProfile",        
+        NULL
+};
+
+char* managed_element[] = {
+        "Xen_HostSystem",
+        "Xen_ComputerSystem",
+        "KVM_HostSystem",
+        "KVM_ComputerSystem",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_ElementConformsToProfile",
+        "KVM_ElementConformsToProfile",        
+        NULL
+};
+
 struct std_assoc forward = {
-        .source_class = "CIM_RegisteredProfile",
+        .source_class = (char**)&conformant_standard,
         .source_prop = "ConformantStandard",
 
-        .target_class = "CIM_ManagedElement",
+        .target_class = (char**)&managed_element,
         .target_prop = "ManagedElement",
 
-        .assoc_class = NULL,
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = prof_to_elem,
         .make_ref = make_ref
 };
 
 struct std_assoc backward = {
-        .source_class = "CIM_ManagedElement",
+        .source_class = (char**)&managed_element,
         .source_prop = "ManagedElement",
 
-        .target_class = "CIM_RegisteredProfile",
+        .target_class = (char**)&conformant_standard,
         .target_prop = "ConformantStandard",
 
-        .assoc_class = NULL,
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = elem_to_prof,
         .make_ref = make_ref
@@ -253,7 +273,6 @@ struct std_assoc *assoc_handlers[] = {
         &backward,
         NULL
 };
-
 
 STDA_AssocMIStub(, Virt_ElementConformsToProfileProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 /*

@@ -36,6 +36,8 @@ MOFS = \
 	schema/ElementSettingData.mof
 
 INTEROP_MOFS = \
+	schema/ComputerSystem.mof \
+	schema/HostSystem.mof \
 	schema/RegisteredProfile.mof \
 	schema/ElementConformsToProfile.mof
 
