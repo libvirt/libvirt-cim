@@ -78,7 +78,7 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = get_vsm_cap(_BROKER, ref, &inst);
+        s = get_vsm_cap(_BROKER, ref, sys_name, &inst);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
  out:
