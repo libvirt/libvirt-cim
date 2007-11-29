@@ -33,6 +33,7 @@
 #include "device_parsing.h"
 
 #include "Virt_VirtualSystemManagementCapabilities.h"
+#include "Virt_HostSystem.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -90,19 +91,12 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
 CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                        const CMPIObjectPath *ref,
+                       const char* sys_name,
                        CMPIInstance **inst)
 {
         CMPIStatus s;
         CMPIObjectPath *op;
         char *classname = NULL;
-        const char *sys_name = NULL;
-        
-        if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
-                CMSetStatusWithChars(broker, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Missing key: Name");
-                goto out;
-        }
 
         classname = get_typed_class(CLASSNAME(ref),
                                     "VirtualSystemManagementCapabilities");
@@ -143,8 +137,16 @@ static CMPIStatus return_vsm_cap(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        
-        s = get_vsm_cap(_BROKER, ref, &inst);
+        const char *hostname = NULL;
+
+        s = get_host_cs(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        if (cu_get_str_prop(inst, "Name", &hostname) != CMPI_RC_OK)
+                goto out;
+
+        s = get_vsm_cap(_BROKER, ref, hostname, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
