@@ -99,55 +99,54 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         return refinst;
 }
 
-static struct std_assoc xen_vs_to_host = {
-        .source_class = "Xen_ComputerSystem",
+char* antecedent[] = {
+        "Xen_ComputerSystem",
+        "KVM_ComputerSystem",       
+        NULL
+};
+
+char* dependent[] = {
+        "Xen_HostSystem",
+        "KVM_HostSystem",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_HostedDependency",
+        "KVM_HostedDependency",        
+        NULL
+};
+
+static struct std_assoc _vs_to_host = {
+        .source_class = (char**)&antecedent,
         .source_prop = "Antecedent",
 
-        .target_class = "Xen_HostSystem",
-        .source_prop = "Dependent",
+        .target_class = (char**)&dependent,
+        .target_prop = "Dependent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = vs_to_host,
         .make_ref = make_ref
 };
 
-static struct std_assoc kvm_vs_to_host = {
-        .source_class = "KVM_ComputerSystem",
-        .source_prop = "Antecedent",
-
-        .target_class = "KVM_HostSystem",
+static struct std_assoc _host_to_vs = {
+        .source_class = (char**)&dependent,
         .source_prop = "Dependent",
 
-        .handler = vs_to_host,
-        .make_ref = make_ref
-};
-
-static struct std_assoc xen_host_to_vs = {
-        .source_class = "Xen_HostSystem",
-        .source_prop = "Dependent",
-
-        .target_class = "Xen_ComputerSystem",
+        .target_class = (char**)&antecedent,
         .target_prop = "Antecedent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = host_to_vs,
         .make_ref = make_ref
 };
 
-static struct std_assoc kvm_host_to_vs = {
-        .source_class = "KVM_HostSystem",
-        .source_prop = "Dependent",
-
-        .target_class = "KVM_ComputerSystem",
-        .target_prop = "Antecedent",
-
-        .handler = host_to_vs,
-        .make_ref = make_ref
-};
 
 static struct std_assoc *handlers[] = {
-        &xen_vs_to_host,
-        &xen_host_to_vs,
-        &kvm_vs_to_host,
-        &kvm_host_to_vs,
+        &_vs_to_host,
+        &_host_to_vs,
         NULL
 };
 
