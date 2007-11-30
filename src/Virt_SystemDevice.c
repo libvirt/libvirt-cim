@@ -171,22 +171,10 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        if (info->result_class) {
-                int type;
-
-                type = device_type_from_classname(info->result_class);
-
-                ret = get_dom_devices(host,
-                                      list,
-                                      type,
-                                      CLASSNAME(ref),
-                                      NAMESPACE(ref));
-        } else {
-                ret = get_all_devices(host,
-                                      list,
-                                      CLASSNAME(ref),
-                                      NAMESPACE(ref));
-        }
+        ret = get_all_devices(host,
+                              list,
+                              CLASSNAME(ref),
+                              NAMESPACE(ref));
 
         if (ret >= 0) {
                 CMSetStatus(&s, CMPI_RC_OK);
