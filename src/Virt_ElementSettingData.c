@@ -178,13 +178,14 @@ char* virtual_system_setting_data[] = {
 };
 
 char* resource_allocation_setting_data[] = {
-        "Xen_ResourceAllocationSettingData",
-        "KVM_ResourceAllocationSettingData",        
-        NULL
-};
-
-char* managed_element[] = {
-        "CIM_ManagedElement",
+        "Xen_DiskResourceAllocationSettingData",
+        "Xen_MemResourceAllocationSettingData",
+        "Xen_NetResourceAllocationSettingData",
+        "Xen_ProcResourceAllocationSettingData",
+        "KVM_DiskResourceAllocationSettingData",
+        "KVM_MemResourceAllocationSettingData",
+        "KVM_NetResourceAllocationSettingData",
+        "KVM_ProcResourceAllocationSettingData",
         NULL
 };
 
@@ -198,7 +199,7 @@ static struct std_assoc _vssd_to_vssd = {
         .source_class = (char**)&virtual_system_setting_data,
         .source_prop = "ManagedElement",
 
-        .target_class = (char**)&managed_element,
+        .target_class = (char**)&virtual_system_setting_data,
         .target_prop = "SettingData",
 
         .assoc_class = (char**)&assoc_classname,
@@ -211,7 +212,7 @@ static struct std_assoc _rasd_to_rasd = {
         .source_class = (char**)&resource_allocation_setting_data,
         .source_prop = "ManagedElement",
 
-        .target_class = (char**)&managed_element,
+        .target_class = (char**)&resource_allocation_setting_data,
         .target_prop = "SettingData",
 
         .assoc_class = (char**)&assoc_classname,
