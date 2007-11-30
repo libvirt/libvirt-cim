@@ -244,23 +244,51 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
         return s;
 }
 
+char* group_component[] = {
+        "Xen_ComputerSystem",
+        "KVM_ComputerSystem",
+        NULL
+};
+
+char* part_component[] = {
+        "Xen_Processor",
+        "Xen_Memory",
+        "Xen_Network",
+        "Xen_Disk",
+        "KVM_Processor",
+        "KVM_Memory",
+        "KVM_Network",
+        "KVM_Disk",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_SystemDevice",
+        "KVM_SystemDevice",        
+        NULL
+};
+
 static struct std_assoc forward = {
-        .source_class = "CIM_System",
+        .source_class = (char**)&group_component,
         .source_prop = "GroupComponent",
 
-        .target_class = "CIM_LogicalDevice",
+        .target_class = (char**)&part_component,
         .target_prop = "PartComponent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = sys_to_dev,
         .make_ref = make_ref
 };
 
 static struct std_assoc backward = {
-        .source_class = "CIM_LogicalDevice",
+        .source_class = (char**)&part_component,
         .source_prop = "PartComponent",
 
-        .target_class = "CIM_System",
+        .target_class = (char**)&group_component,
         .target_prop = "GroupComponent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = dev_to_sys,
         .make_ref = make_ref
