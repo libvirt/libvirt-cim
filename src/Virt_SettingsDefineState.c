@@ -301,33 +301,79 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         return refinst;
 }
 
+char* logical_device[] = {
+        "Xen_Processor",
+        "Xen_Memory",
+        "Xen_Network",
+        "Xen_Disk",
+        "KVM_Processor",
+        "KVM_Memory",
+        "KVM_Network",
+        "KVM_Disk",
+        NULL
+};
+
+char* resource_allocation_setting_data[] = {
+        "Xen_DiskResourceAllocationSettingData",
+        "Xen_MemResourceAllocationSettingData",
+        "Xen_NetResourceAllocationSettingData",
+        "Xen_ProcResourceAllocationSettingData",
+        "KVM_DiskResourceAllocationSettingData",
+        "KVM_MemResourceAllocationSettingData",
+        "KVM_NetResourceAllocationSettingData",
+        "KVM_ProcResourceAllocationSettingData",
+        NULL
+};
+
+char* computer_system[] = {
+        "Xen_ComputerSystem",
+        "KVM_ComputerSystem",
+        NULL
+};
+
+char* virtual_system_setting_data[] = {
+        "Xen_VirtualSystemSettingData",
+        "KVM_VirtualSystemSettingData",        
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_SettingsDefineState",
+        "KVM_SettingsDefineState",        
+        NULL
+};
+
 static struct std_assoc _dev_to_rasd = {
-        .source_class = "CIM_LogicalDevice",
+        .source_class = (char**)&logical_device,
         .source_prop = "ManagedElement",
 
-        .target_class = "CIM_ResourceAllocationSettingData",
+        .target_class = (char**)&resource_allocation_setting_data,
         .target_prop = "SettingData",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = dev_to_rasd,
         .make_ref = make_ref
 };
 
 static struct std_assoc _rasd_to_dev = {
-        .source_class = "CIM_ResourceAllocationSettingData",
+        .source_class = (char**)&resource_allocation_setting_data,
         .source_prop = "SettingData",
 
-        .target_class = "CIM_LogicalDevice",
+        .target_class = (char**)&logical_device,
         .target_prop = "ManagedElement",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = rasd_to_dev,
         .make_ref = make_ref
 };
 
 static struct std_assoc _vs_to_vssd = {
-        .source_class = "CIM_ComputerSystem",
+        .source_class = (char**)&computer_system,
         .source_prop = "ManagedElement",
 
-        .target_class = "CIM_VirtualSystemSettingData",
+        .target_class = (char**)&virtual_system_setting_data,
         .target_prop = "SettingData",
 
         .handler = vs_to_vssd,
@@ -335,10 +381,10 @@ static struct std_assoc _vs_to_vssd = {
 };
 
 static struct std_assoc _vssd_to_vs = {
-        .source_class = "CIM_VirtualSystemSettingData",
+        .source_class = (char**)&virtual_system_setting_data,
         .source_prop = "SettingData",
 
-        .target_class = "CIM_ComputerSystem",
+        .target_class = (char**)&computer_system,
         .target_prop = "ManagedElement",
 
         .handler = vssd_to_vs,
