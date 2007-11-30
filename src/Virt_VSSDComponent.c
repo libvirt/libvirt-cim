@@ -173,23 +173,52 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         return refinst;
 }
 
+char* group_component[] = {
+        "Xen_VirtualSystemSettingData",
+        "KVM_VirtualSystemSettingData",
+        NULL
+};
+
+char* part_component[] = {
+        "Xen_DiskResourceAllocationSettingData",
+        "Xen_MemResourceAllocationSettingData",
+        "Xen_NetResourceAllocationSettingData",
+        "Xen_ProcResourceAllocationSettingData",
+        "KVM_DiskResourceAllocationSettingData",
+        "KVM_MemResourceAllocationSettingData",
+        "KVM_NetResourceAllocationSettingData",
+        "KVM_ProcResourceAllocationSettingData",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_VirtualSystemSettingDataComponent",
+        "KVM_VirtualSystemSettingDataComponent",        
+        NULL
+};
+
+
 static struct std_assoc forward = {
-        .source_class = "CIM_VirtualSystemSettingData",
+        .source_class = (char**)&group_component,
         .source_prop = "GroupComponent",
 
-        .target_class = "CIM_ResourceAllocationSettingData",
+        .target_class = (char**)&part_component,
         .target_prop = "PartComponent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = vssd_to_rasd,
         .make_ref = make_ref
 };
 
 static struct std_assoc backward = {
-        .source_class = "CIM_ResourceAllocationSettingData",
+        .source_class = (char**)&part_component,
         .source_prop = "PartComponent",
 
-        .target_class = "CIM_VirtualSystemSettingData",
+        .target_class = (char**)&group_component,
         .target_prop = "GroupComponent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = rasd_to_vssd,
         .make_ref = make_ref
