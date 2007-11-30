@@ -782,7 +782,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         CU_DEBUG("Getting ResourceType.");
 
         ret = cu_get_u16_path(ref, "ResourceType", &type);
-        if (ret != 1) {
+        if (ret != CMPI_RC_OK) {
                 CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
                                      "Could not get ResourceType.");
                 goto out;
@@ -811,16 +811,17 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct std_assoc *assoc)
 {
-        CMPIInstance *refinst;
-        char *base;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *refinst = NULL;
+        virConnectPtr conn = NULL;
 
-        base = class_base_name(assoc->assoc_class);
-        if (base == NULL)
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
                 return NULL;
 
         refinst = get_typed_instance(_BROKER,
-                                     CLASSNAME(ref),
-                                     base,
+                                     pfx_from_conn(conn),
+                                     "SettingsDefineCapabilities",
                                      NAMESPACE(ref));
 
         if (refinst != NULL) {
@@ -834,32 +835,50 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                               (CMPIValue *)&instop, CMPI_ref);
         }
 
-        free(base);
+        virConnectClose(conn);
 
         return refinst;
 }
 
+char* group_component[] = {
+        "Xen_AllocationCapabilities",
+        "KVM_AllocationCapabilities",
+        NULL
+};
+
+char* part_component[] = {
+        "Xen_ResourceAllocationSettingData",
+        "KVM_ResourceAllocationSettingData",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_SettingsDefineCapabilities",
+        "KVM_SettingsDefineCapabilities",        
+        NULL
+};
+
 struct std_assoc _alloc_cap_to_rasd = {
-        .source_class = "CIM_AllocationCapabilities",
+        .source_class = (char**)&group_component,
         .source_prop = "GroupComponent",
 
-        .target_class = "CIM_ResourceAllocationSettingData",
+        .target_class = (char**)&part_component,
         .target_prop = "PartComponent",
 
-        .assoc_class = "CIM_SettingsDefineCapabilities",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = alloc_cap_to_rasd,
         .make_ref = make_ref
 };
 
 struct std_assoc _rasd_to_alloc_cap = {
-        .source_class = "CIM_ResourceAllocationSettingData",
+        .source_class = (char**)&part_component,
         .source_prop = "PartComponent",
 
-        .target_class = "CIM_AllocationCapabilities",
+        .target_class = (char**)&group_component,
         .target_prop = "GroupComponent",
 
-        .assoc_class = "CIM_SettingsDefineCapabilities",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = rasd_to_alloc_cap,
         .make_ref = make_ref
