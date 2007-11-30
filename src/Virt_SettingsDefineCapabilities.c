@@ -847,8 +847,14 @@ char* group_component[] = {
 };
 
 char* part_component[] = {
-        "Xen_ResourceAllocationSettingData",
-        "KVM_ResourceAllocationSettingData",
+        "Xen_DiskResourceAllocationSettingData",
+        "Xen_MemResourceAllocationSettingData",
+        "Xen_NetResourceAllocationSettingData",
+        "Xen_ProcResourceAllocationSettingData",
+        "KVM_DiskResourceAllocationSettingData",
+        "KVM_MemResourceAllocationSettingData",
+        "KVM_NetResourceAllocationSettingData",
+        "KVM_ProcResourceAllocationSettingData",
         NULL
 };
 
