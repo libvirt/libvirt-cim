@@ -81,16 +81,17 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct std_assoc *assoc)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *refinst = NULL;
-        char *base;
+        virConnectPtr conn = NULL;
 
-        base = class_base_name(assoc->assoc_class);
-        if (base == NULL)
-                goto out;
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return NULL;
 
         refinst = get_typed_instance(_BROKER,
-                                     CLASSNAME(ref),
-                                     base,
+                                     pfx_from_conn(conn),
+                                     "HostedService",
                                      NAMESPACE(ref));
 
         if (refinst != NULL) {
@@ -101,67 +102,60 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
                 set_reference(assoc, refinst, ref, instop);
         }
 
-out:
+        virConnectClose(conn);
+
         return refinst;
 }
 
-static struct std_assoc xen_host_to_service = {
-        .source_class = "Xen_HostSystem",
+char* antecedent[] = {  
+        "Xen_HostSystem",
+        "KVM_HostSystem",
+        NULL
+};
+
+char* dependent[] = {
+        "Xen_ResourcePoolConfigurationService",
+        "Xen_VirtualSystemManagementService",
+        "KVM_ResourcePoolConfigurationService",
+        "KVM_VirtualSystemManagementService",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_HostedService",
+        "KVM_HostedService",        
+        NULL
+};
+
+static struct std_assoc _host_to_service = {
+        .source_class = (char**)&antecedent,
         .source_prop = "Antecedent",
 
-        .target_class = "CIM_ManagedElement",
+        .target_class = (char**)&dependent,
         .target_prop = "Dependent",
 
-        .assoc_class = "CIM_HostedService",
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = host_to_service,
         .make_ref = make_ref
 };
 
-static struct std_assoc xen_service_to_host = {
-        .source_class = "CIM_Service",
+static struct std_assoc _service_to_host = {
+        .source_class = (char**)&dependent,
         .source_prop = "Dependent",
-
-        .target_class = "CIM_ManagedElement",
+        
+        .target_class = (char**)&antecedent,
         .target_prop = "Antecedent",
 
-        .assoc_class = "CIM_HostedService",
-
-        .handler = service_to_host,
-        .make_ref = make_ref
-};
-
-static struct std_assoc kvm_host_to_service = {
-        .source_class = "KVM_HostSystem",
-        .source_prop = "Antecedent",
-
-        .target_class = "CIM_Service",
-        .target_prop = "Dependent",
-
-        .assoc_class = "CIM_HostedService",
-
-        .handler = host_to_service,
-        .make_ref = make_ref
-};
-
-static struct std_assoc kvm_service_to_host = {
-        .source_class = "CIM_Service",
-        .source_prop = "Dependent",
-
-        .target_class = "KVM_ComputerSystem",
-        .target_prop = "Antecedent",
-
-        .assoc_class = "CIM_HostedService",
-
+        .assoc_class = (char**)&assoc_classname,
+        
         .handler = service_to_host,
         .make_ref = make_ref
 };
 
 static struct std_assoc *handlers[] = {
-        &xen_host_to_service,
-        &xen_service_to_host,
-        &kvm_host_to_service,
-        &kvm_service_to_host,
+        &_host_to_service,
+        &_service_to_host,
         NULL
 };
 
