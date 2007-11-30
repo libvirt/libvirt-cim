@@ -73,8 +73,9 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         }
 
         if (!STREQ(sys_name, host_name)) {
-                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                           "System '%s' is not a host system.", sys_name);
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "System '%s' is not a host system", sys_name);
                 goto out;
         }
 
@@ -100,14 +101,14 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get InstanceID.");
+                           "Could not get InstanceID");
                 goto out;
         }
 
         if (!parse_fq_devid(inst_id, &host, &device)) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get system name.");
+                           "Could not get system name");
                 goto out;
         }
 
@@ -139,9 +140,9 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
         const char *sys_name = NULL;
 
         if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Missing key: Name");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing key: Name");
                 goto out;
         }
 
@@ -167,14 +168,14 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get InstanceID.");
+                           "Could not get InstanceID");
                 goto error1;
         }
 
         if (!parse_fq_devid(inst_id, &host, &device)) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get system name.");
+                           "Could not get system name");
                 goto error1;
         }
 
@@ -213,8 +214,9 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK};
 
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get InstanceID.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get InstanceID");
                 goto out;
         }
 
@@ -226,8 +228,9 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
         
         ret = cu_get_u16_path(ref, "ResourceType", &type);
         if (ret != 1) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get ResourceType.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get ResourceType");
                 goto out;
         }
         CMSetProperty(inst, "ResourceType", &type, CMPI_uint16);

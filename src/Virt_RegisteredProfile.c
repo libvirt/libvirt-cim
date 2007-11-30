@@ -55,9 +55,9 @@ CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
                                       namespace);
 
         if (instance == NULL) {
-                CMSetStatusWithChars(broker, &s, 
-                                     CMPI_RC_ERR_FAILED,
-                                     "Can't create RegisteredProfile instance.");
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Can't create RegisteredProfile instance");
                 goto out;
         }
 
@@ -105,8 +105,9 @@ static CMPIStatus enum_profs(const CMPIObjectPath *ref,
                                              conn,
                                              profiles[i]);
                 if (instance == NULL) {
-                        CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                             "Can't create profile instance.");
+                        cu_statusf(_BROKER, &s, 
+                                   CMPI_RC_ERR_FAILED,
+                                   "Can't create profile instance");
                         goto out;
                 }
 
@@ -137,9 +138,9 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
                 return s;
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "No InstanceID specified");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No InstanceID specified");
                 goto out;
         }
 

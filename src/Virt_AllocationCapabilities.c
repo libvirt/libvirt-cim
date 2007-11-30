@@ -51,15 +51,17 @@ CMPIStatus get_alloc_cap(const CMPIBroker *broker,
                                    NAMESPACE(ref));
 
         if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
-                CMSetStatusWithChars(broker, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get ResourceType.");
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get ResourceType");
                 goto out;
         }
 
         ret = asprintf(&inst_id, "%hi/%s", type, "0");
         if (ret == -1) {
-                CMSetStatusWithChars(broker, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get InstanceID.");
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get InstanceID");
                 goto out;
         }
 

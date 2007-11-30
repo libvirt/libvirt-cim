@@ -61,9 +61,9 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
 
         uri = cn_to_uri(classname);
         if (!uri) {
-                CMSetStatusWithChars(broker, s, 
-                                     CMPI_RC_ERR_FAILED,
-                                     "Unable to generate URI from classname");
+                cu_statusf(broker, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to generate URI from classname");
                 return NULL;
         }
 

@@ -76,9 +76,9 @@ CMPIStatus get_host_cs(const CMPIBroker *broker,
                                   NAMESPACE(reference));
 
         if (inst == NULL) {
-                CMSetStatusWithChars(broker, &s, 
-                                     CMPI_RC_ERR_FAILED,
-                                     "Can't create HostSystem instance.");
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Can't create HostSystem instance");
                 goto out;
         }
 

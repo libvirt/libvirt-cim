@@ -143,9 +143,9 @@ static CMPIStatus enum_vssd(const CMPIObjectPath *reference,
 
         count = get_domain_list(conn, &list);
         if (count < 0) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Failed to enumerate domains");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to enumerate domains");
                 goto out;
         } else if (count == 0) {
                 CMSetStatus(&s, CMPI_RC_OK);
@@ -229,7 +229,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         if (!parse_instanceid(reference, NULL, &locid)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                            "Invalid InstanceID specified");
+                           "Invalid InstanceID specified");
                 return s;
         }
 

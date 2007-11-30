@@ -445,9 +445,9 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {
                 CMPIStatus s;
                 
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "No domain name specified");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No domain name specified");
                 
                 return s;
         }
@@ -491,15 +491,15 @@ static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
                 break;
         default:
                 printf("Cannot go to enabled state from %i\n", info->state);
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Invalid state transition");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid state transition");
         };
 
         if (ret != 0)
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain Operation Failed");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain Operation Failed");
 
         return s;
 }
@@ -516,15 +516,15 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
                 break;
         default:
                 printf("Cannot go to disabled state from %i\n", info->state);
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Invalid state transition");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid state transition");
         };
 
         if (ret != 0)
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain Operation Failed");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain Operation Failed");
 
         return s;
 }
@@ -540,15 +540,15 @@ static CMPIStatus state_change_pause(virDomainPtr dom, virDomainInfoPtr info)
                 ret = virDomainSuspend(dom);
                 break;
         default:
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain not running");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain not running");
         };
 
         if (ret != 0)
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain Operation Failed");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain Operation Failed");
 
         return s;
 }
@@ -564,15 +564,15 @@ static CMPIStatus state_change_reboot(virDomainPtr dom, virDomainInfoPtr info)
                 ret = virDomainReboot(dom, 0);
                 break;
         default:
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain not running");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain not running");
         };
 
         if (ret != 0)
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain Operation Failed");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain Operation Failed");
 
         return s;
 }
@@ -588,15 +588,15 @@ static CMPIStatus state_change_reset(virDomainPtr dom, virDomainInfoPtr info)
                 ret = domain_reset(dom);
                 break;
         default:
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain not running");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain not running");
         };
 
         if (ret != 0)
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain Operation Failed");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain Operation Failed");
 
         return s;
 }
@@ -616,16 +616,16 @@ static CMPIStatus __state_change(const char *name,
 
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Domain not found");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Domain not found");
                 goto out;
         }
 
         if (virDomainGetInfo(dom, &info) != 0) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Unable to get current state");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get current state");
                 goto out;
         }
 
@@ -668,9 +668,9 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         }
 
         if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Name key not specified");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Name key not specified");
                 goto out;
         }
 

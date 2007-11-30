@@ -66,9 +66,9 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
         if (ret) {
                 CMSetStatus(&s, CMPI_RC_OK);
         } else {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Failed to get domain list");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get domain list");
         }
 
         CMSetStatus(&s, CMPI_RC_OK);

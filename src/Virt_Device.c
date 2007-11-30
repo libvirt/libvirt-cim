@@ -371,9 +371,9 @@ static CMPIStatus enum_devices(const CMPIObjectPath *reference,
                 return s;
 
         if (!dom_list_devices(conn, reference, &list)) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Failed to list domains");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to list domains");
                 return s;
         }
 
@@ -492,9 +492,9 @@ static CMPIStatus get_device(const CMPIObjectPath *reference,
                 CMReturnInstance(results, inst);
                 CMSetStatus(&s, CMPI_RC_OK);
         } else {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Unable to get device instance");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get device instance");
         }
 
         virConnectClose(conn);
@@ -530,9 +530,9 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         if (cu_get_str_path(reference, "DeviceID", &devid) != CMPI_RC_OK) {
                 CMPIStatus s;
 
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "No DeviceID specified");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No DeviceID specified");
 
                 return s;
         }

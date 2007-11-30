@@ -71,8 +71,7 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
         if (prop != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such HostSystem instance (%s)",
-                           prop);
+                           "No such HostSystem instance (%s)", prop);
                 return s;
         }
 

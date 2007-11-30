@@ -61,8 +61,9 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
         devid = get_fq_devid((char *)sys_name, "0");
         if (devid == NULL) {
-                CMSetStatusWithChars(broker, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get full ID.");
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get full ID");
                 goto out;
         }
         CMSetProperty(inst, "InstanceID", (CMPIValue *)devid, CMPI_chars);
@@ -101,25 +102,25 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
         classname = get_typed_class(CLASSNAME(ref),
                                     "VirtualSystemManagementCapabilities");
         if (classname == NULL) {
-                CMSetStatusWithChars(broker, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Invalid class");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid class");
                 goto out;
         }
 
         op = CMNewObjectPath(broker, NAMESPACE(ref), classname, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op)) {
-                CMSetStatusWithChars(broker, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Cannot get object path for VSMCapabilities");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Cannot get object path for VSMCapabilities");
                 goto out;
         }
 
         *inst = CMNewInstance(broker, op, &s);
         if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(*inst))) {
-                CMSetStatusWithChars(broker, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Failed to instantiate HostSystem");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to instantiate HostSystem");
                 goto out;
         }
 

@@ -107,9 +107,9 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                                          sys);
         if (ret) {
                 CU_DEBUG("Unable to parse SystemSettings instance");
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "SystemSettings parse error");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "SystemSettings parse error");
                 goto out;
         }
 
@@ -294,9 +294,9 @@ static CMPIInstance *connect_and_create(char *xml,
         dom = virDomainDefineXML(conn, xml);
         if (dom == NULL) {
                 CU_DEBUG("Failed to define domain from XML");
-                CMSetStatusWithChars(_BROKER, s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Failed to create domain");
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to create domain");
                 return NULL;
         }
 
@@ -304,9 +304,9 @@ static CMPIInstance *connect_and_create(char *xml,
         inst = instance_from_name(_BROKER, conn, (char *)name, ref);
         if (inst == NULL) {
                 CU_DEBUG("Failed to get new instance");
-                CMSetStatusWithChars(_BROKER, s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "Failed to lookup resulting system");
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to lookup resulting system");
         }
 
         virConnectClose(conn);
@@ -639,8 +639,7 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
         if (func(dom, dev) == 0) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Unable to change (%i) device",
-                           action);
+                           "Unable to change (%i) device", action);
         } else {
                 CMSetStatus(&s, CMPI_RC_OK);
         }
@@ -673,8 +672,7 @@ static CMPIStatus resource_del(struct domain *dominfo,
         else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Cannot delete resources of type %" PRIu16,
-                           type);
+                           "Cannot delete resources of type %" PRIu16, type);
                 goto out;
         }
 
@@ -719,8 +717,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         if ((type == CIM_RASD_TYPE_MEM) || (_list == NULL)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Cannot add resources of type %" PRIu16,
-                           type);
+                           "Cannot add resources of type %" PRIu16, type);
                 goto out;
         }
 
@@ -730,8 +727,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
                  */
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "[TEMP] Cannot add resources of type %" PRIu16,
-                           type);
+                           "[TEMP] Cannot add resources of type %" PRIu16, type);
                 goto out;
         }
 
@@ -784,8 +780,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Cannot modify resources of type %" PRIu16,
-                           type);
+                           "Cannot modify resources of type %" PRIu16, type);
                 goto out;
         }
 

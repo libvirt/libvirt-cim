@@ -62,9 +62,9 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         classname = get_typed_class(pfx_from_conn(conn), 
                                     profile->provider_name);
         if (classname == NULL) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED, 
-                                     "Can't assemble classname." );
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED, 
+                           "Can't assemble classname" );
                 goto out;
         }
 
@@ -74,18 +74,18 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         
         en = CBEnumInstances(_BROKER, info->context , op, NULL, &s);
         if (en == NULL) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED, 
-                                     "Upcall enumInstances to target class failed.");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED, 
+                           "Upcall enumInstances to target class failed");
                 goto out;
         }
 
         while (CMHasNext(en, &s)) {
                 data = CMGetNext(en, &s);
                 if (CMIsNullObject(data.value.inst)) {
-                        CMSetStatusWithChars(_BROKER, &s,
-                                             CMPI_RC_ERR_FAILED, 
-                                             "Failed to retrieve enumeration entry.");
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED, 
+                                   "Failed to retrieve enumeration entry");
                         goto out;
                 }
 
@@ -115,9 +115,9 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
                 return s;
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
-                CMSetStatusWithChars(_BROKER, &s,
-                                     CMPI_RC_ERR_FAILED,
-                                     "No InstanceID specified");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No InstanceID specified");
                 goto out;
         }
 
@@ -157,8 +157,9 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
 
         classname = class_base_name(CLASSNAME(ref));
         if (classname == NULL) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Can't get class name.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Can't get class name");
                 goto out;
         }
 
@@ -173,9 +174,9 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
                                              conn,
                                              candidate);
                 if (instance == NULL) {
-                        CMSetStatusWithChars(_BROKER, &s, 
-                                             CMPI_RC_ERR_FAILED,
-                                             "Can't create profile instance.");
+                        cu_statusf(_BROKER, &s, 
+                                   CMPI_RC_ERR_FAILED,
+                                   "Can't create profile instance");
                         goto out;
                 }
                 

@@ -55,7 +55,7 @@ static bool rasd_prop_copy_value(struct sdc_rasd_prop src,
 {
         bool rc = true;
 
-        CU_DEBUG("Copying '%s'.", src.field);
+        CU_DEBUG("Copying '%s'", src.field);
         if (src.type & CMPI_string) {
                 dest->value = (CMPIValue *)strdup((char *)src.value);
         } else if (src.type & CMPI_INTEGER) {
@@ -120,7 +120,7 @@ static struct sdc_rasd_prop *mem_max(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -144,7 +144,7 @@ static struct sdc_rasd_prop *mem_min(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -168,7 +168,7 @@ static struct sdc_rasd_prop *mem_def(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -192,7 +192,7 @@ static struct sdc_rasd_prop *mem_inc(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -216,7 +216,7 @@ static struct sdc_rasd_prop *proc_min(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -236,7 +236,7 @@ static struct sdc_rasd_prop *proc_max(const CMPIObjectPath *ref,
         if (conn == NULL) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not connect to hypervisor.");
+                           "Could not connect to hypervisor");
                 goto out;
         }
 
@@ -254,7 +254,7 @@ static struct sdc_rasd_prop *proc_max(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
  out:
@@ -279,7 +279,7 @@ static struct sdc_rasd_prop *proc_def(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -303,7 +303,7 @@ static struct sdc_rasd_prop *proc_inc(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -326,7 +326,7 @@ static struct sdc_rasd_prop *net_min(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -350,7 +350,7 @@ static uint16_t net_max_xen(const CMPIObjectPath *ref,
         if (s->rc != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get connection.");
+                           "Could not get connection");
                 goto out;
         }
 
@@ -359,7 +359,7 @@ static uint16_t net_max_xen(const CMPIObjectPath *ref,
         if (rc != 0) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get xen version.");
+                           "Could not get xen version");
                 goto out;
         }
 
@@ -385,7 +385,7 @@ static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
         if (prefix == NULL) {
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
-                           "Could not get prefix from reference.");
+                           "Could not get prefix from reference");
                 goto out;
         }
 
@@ -418,7 +418,7 @@ static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
  out:
         free(prefix);
@@ -442,7 +442,7 @@ static struct sdc_rasd_prop *net_def(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -465,7 +465,7 @@ static struct sdc_rasd_prop *net_inc(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -489,7 +489,7 @@ static struct sdc_rasd_prop *disk_min(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -510,7 +510,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get InstanceID.");
+                           "Could not get InstanceID");
                 goto out;
         }
 
@@ -518,7 +518,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         if (s->rc != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get connection.");
+                           "Could not get connection");
                 goto out;
         }
 
@@ -528,7 +528,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         if (pool_inst == NULL) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get pool instance.");
+                           "Could not get pool instance");
                 goto out;
         }
 
@@ -536,7 +536,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         if (prop_ret != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not get capacity from instance.");
+                           "Could not get capacity from instance");
                 goto out;
         }
         CU_DEBUG("Got capacity from pool_inst: %lld", free_64);
@@ -553,7 +553,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
  out:
@@ -578,7 +578,7 @@ static struct sdc_rasd_prop *disk_def(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -602,7 +602,7 @@ static struct sdc_rasd_prop *disk_inc(const CMPIObjectPath *ref,
         if (!ret) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
-                           "Could not copy RASD.");
+                           "Could not copy RASD");
         }
 
         return rasd;
@@ -695,8 +695,9 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
                 range = SDC_RANGE_POINT;
                 break;
         default:
-                CMSetStatusWithChars(broker, s, CMPI_RC_ERR_FAILED,
-                                     "Unsupported sdc_rasd type.");
+                cu_statusf(broker, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
                 goto out;
         }
 
@@ -717,15 +718,15 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
         CMSetProperty(inst, "ResourceType", &resource_type, CMPI_uint16);
 
         for (i = 0; prop_list[i].field != NULL; i++) {
-                CU_DEBUG("Setting property '%s'.", prop_list[i].field);
+                CU_DEBUG("Setting property '%s'", prop_list[i].field);
                 CMSetProperty(inst, prop_list[i].field, 
                               prop_list[i].value, prop_list[i].type);
         }
 
-        CU_DEBUG("freeing prop_list.");
+        CU_DEBUG("freeing prop_list");
         free_rasd_prop_list(prop_list);
  out:
-        CU_DEBUG("Returning inst.");
+        CU_DEBUG("Returning inst");
         return inst;
 }
 
@@ -749,22 +750,23 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                 for (i = SDC_RASD_MIN; i <= SDC_RASD_INC; i++) {
                         inst = sdc_rasd_inst(_BROKER, &s, ref, rasd, i);
                         if (s.rc != CMPI_RC_OK) {
-                                CU_DEBUG("Problem getting inst.");
+                                CU_DEBUG("Problem getting inst");
                                 goto out;
                         }
-                        CU_DEBUG("Got inst.");
+                        CU_DEBUG("Got inst");
                         if (inst != NULL) {
                                 inst_list_add(list, inst);
-                                CU_DEBUG("Added inst.");
+                                CU_DEBUG("Added inst");
                         } else {
-                                CU_DEBUG("Inst is null, not added.");
+                                CU_DEBUG("Inst is null, not added");
                         }
                 }
                 
         } else {
-                CU_DEBUG("Unsupported type.");
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Unsupported device type.");
+                CU_DEBUG("Unsupported type");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported device type");
         }
 
  out:
@@ -779,16 +781,17 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         int ret;
         uint16_t type;
 
-        CU_DEBUG("Getting ResourceType.");
+        CU_DEBUG("Getting ResourceType");
 
         ret = cu_get_u16_path(ref, "ResourceType", &type);
         if (ret != CMPI_RC_OK) {
-                CMSetStatusWithChars(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                                     "Could not get ResourceType.");
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get ResourceType");
                 goto out;
         }
         
-        CU_DEBUG("ResourceType: %hi.", type);
+        CU_DEBUG("ResourceType: %hi", type);
 
         s = sdc_rasds_for_type(ref, list, type);
 
