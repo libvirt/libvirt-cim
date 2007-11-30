@@ -243,23 +243,57 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
         return refinst;
 }
 
-static struct std_assoc _rasd_to_pool = {
-        .source_class = "CIM_ResourceAllocationSettingData",
-        .source_prop = "Dependent",
+char* antecedent[] = {
+        "Xen_ProcessorPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_DiskPool",
+        "KVM_ProcessorPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_DiskPool",
+        NULL
+};
 
-        .target_class = "CIM_ResourcePool",
+char* dependent[] = {
+        "Xen_DiskResourceAllocationSettingData",
+        "Xen_MemResourceAllocationSettingData",
+        "Xen_NetResourceAllocationSettingData",
+        "Xen_ProcResourceAllocationSettingData",
+        "KVM_DiskResourceAllocationSettingData",
+        "KVM_MemResourceAllocationSettingData",
+        "KVM_NetResourceAllocationSettingData",
+        "KVM_ProcResourceAllocationSettingData",
+        NULL
+};
+
+char* assoc_classname[] = {
+        "Xen_ResourceAllocationFromPool",
+        "KVM_ResourceAllocationFromPool",        
+        NULL
+};
+
+static struct std_assoc _rasd_to_pool = {
+        .source_class = (char**)&dependent,
+        .source_prop = "Dependent",
+        
+        .target_class = (char**)&antecedent,
         .target_prop = "Antecedent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = rasd_to_pool,
         .make_ref = make_ref
 };
 
 static struct std_assoc _pool_to_rasd = {
-        .source_class = "CIM_ResourcePool",
+        .source_class = (char**)&antecedent,
         .source_prop = "Antecedent",
 
-        .target_class = "CIM_ResourceAllocationSettingData",
+        .target_class = (char**)&dependent,
         .target_prop = "Dependent",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = pool_to_rasd,
         .make_ref = make_ref
