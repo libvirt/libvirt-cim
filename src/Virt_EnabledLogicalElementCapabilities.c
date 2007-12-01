@@ -30,7 +30,6 @@
 #include "std_instance.h"
 
 #include "misc_util.h"
-#include "device_parsing.h"
 #include "cs_util.h"
 
 #include "Virt_EnabledLogicalElementCapabilities.h"
@@ -58,24 +57,15 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         CMPIArray *array;
         uint16_t element;
         int edit_name = 0;
-        char *devid;
         
         CMSetProperty(inst, "CreationClassName",
                       (CMPIValue *)classname, CMPI_chars);
 
-        devid = get_fq_devid((char *)sys_name, "0");
-        if (devid == NULL) {
-                cu_statusf(broker, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get full ID");
-                goto error1;
-        }
-
-        CMSetProperty(inst, "InstanceID", (CMPIValue *)devid, CMPI_chars);
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)sys_name, CMPI_chars);
 
         array = CMNewArray(broker, 5, CMPI_uint16, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(array))
-                goto error2;
+                goto out;
         
         element = (uint16_t)ENABLED;
         CMSetArrayElementAt(array, 0, &element, CMPI_uint16);
@@ -97,9 +87,7 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
         CMSetProperty(inst, "ElementNameEditSupported",
                       (CMPIValue *)&edit_name, CMPI_boolean);
- error2:  
-        free(devid);
- error1:
+ out:
         return s;
 }
 
