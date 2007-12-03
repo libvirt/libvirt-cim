@@ -52,34 +52,22 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
                              struct inst_list *list)
 {
         CMPIInstance *inst;
-        CMPIrc host_rc;
-        const char *host_name = NULL;
-        const char *sys_name = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *prop;
 
         s = get_host_cs(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        host_rc = cu_get_str_prop(inst, "Name", &host_name);
-        if (host_rc != CMPI_RC_OK)
-                goto out;
-        
-        if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
+        prop = cu_compare_ref(ref, inst);
+        if (prop != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Missing `Name' property");
+                           "No such HostSystem (%s)", prop);
                 goto out;
         }
 
-        if (!STREQ(sys_name, host_name)) {
-                cu_statusf(_BROKER, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "System '%s' is not a host system", sys_name);
-                goto out;
-        }
-
-        s = get_vsm_cap(_BROKER, ref, sys_name, &inst);
+        s = get_vsm_cap(_BROKER, ref, &inst);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
  out:
@@ -90,44 +78,16 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        const char *inst_id;
-        char *host;
-        char *device;
-        const char *host_name;
-        CMPIrc host_rc;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-
-        if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get InstanceID");
-                goto out;
-        }
-
-        if (!parse_fq_devid(inst_id, &host, &device)) {
-                cu_statusf(_BROKER, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get system name");
-                goto out;
-        }
 
         s = get_host_cs(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        host_rc = cu_get_str_prop(inst, "Name", &host_name);
-        if (host_rc != CMPI_RC_OK)
-                goto out;
-
-        if (!STREQ(host_name, host))
-                goto out;
-
         inst_list_add(list, inst);
 
  out:
-        free(host);
-        free(device);
         return s;
 }
 
