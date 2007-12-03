@@ -1,6 +1,11 @@
 // Copyright IBM Corp. 2007
-class Xen_ElementSettingData : CIM_ElementSettingData {
+
+[Association]
+class Xen_ElementSettingData : CIM_ElementSettingData
+{
 };
 
-class KVM_ElementSettingData : CIM_ElementSettingData {
+[Association]
+class KVM_ElementSettingData : CIM_ElementSettingData
+{
 };
