@@ -20,7 +20,6 @@
  */
 CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                        const CMPIObjectPath *ref,
-                       const char* sys_name,
                        CMPIInstance **inst);
 /*
  * Local Variables:

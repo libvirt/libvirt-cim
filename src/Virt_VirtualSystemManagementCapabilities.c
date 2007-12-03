@@ -30,7 +30,6 @@
 #include "std_instance.h"
 
 #include "misc_util.h"
-#include "device_parsing.h"
 
 #include "Virt_VirtualSystemManagementCapabilities.h"
 #include "Virt_HostSystem.h"
@@ -48,25 +47,17 @@ enum {ADD_RESOURCES = 1,
 
 static CMPIStatus set_inst_properties(const CMPIBroker *broker,
                                       CMPIInstance *inst,
-                                      const char *classname,
-                                      const char *sys_name)
+                                      const char *classname)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIArray *array;
         uint16_t element;
-        char *devid;
-        
+
         CMSetProperty(inst, "CreationClassName",
                       (CMPIValue *)classname, CMPI_chars);
 
-        devid = get_fq_devid((char *)sys_name, "0");
-        if (devid == NULL) {
-                cu_statusf(broker, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get full ID");
-                goto out;
-        }
-        CMSetProperty(inst, "InstanceID", (CMPIValue *)devid, CMPI_chars);
+        CMSetProperty(inst, "InstanceID",
+                      (CMPIValue *)"ManagementCapabilities", CMPI_chars);
 
         array = CMNewArray(broker, 4, CMPI_uint16, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(array))
@@ -92,7 +83,6 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
 CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                        const CMPIObjectPath *ref,
-                       const char* sys_name,
                        CMPIInstance **inst)
 {
         CMPIStatus s;
@@ -124,7 +114,7 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                 goto out;
         }
 
-        s = set_inst_properties(broker, *inst, classname, sys_name);
+        s = set_inst_properties(broker, *inst, classname);
 
  out:
         free(classname);
@@ -138,16 +128,8 @@ static CMPIStatus return_vsm_cap(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        const char *hostname = NULL;
 
-        s = get_host_cs(_BROKER, ref, &inst);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-
-        if (cu_get_str_prop(inst, "Name", &hostname) != CMPI_RC_OK)
-                goto out;
-
-        s = get_vsm_cap(_BROKER, ref, hostname, &inst);
+        s = get_vsm_cap(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
