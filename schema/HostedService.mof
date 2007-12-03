@@ -1,6 +1,11 @@
 // Copyright IBM Corp. 2007
-class Xen_HostedService : CIM_HostedService {
+
+[Association]
+class Xen_HostedService : CIM_HostedService
+{
 };
 
-class KVM_HostedService : CIM_HostedService {
+[Association]
+class KVM_HostedService : CIM_HostedService
+{
 };
