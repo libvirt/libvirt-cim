@@ -128,6 +128,11 @@ static CMPIStatus return_vsm_cap(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
+        virConnectPtr conn = NULL;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                goto out;
 
         s = get_vsm_cap(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
@@ -138,6 +143,8 @@ static CMPIStatus return_vsm_cap(const CMPIObjectPath *ref,
         else
                 CMReturnInstance(results, inst);
  out:
+        virConnectClose(conn);
+
         return s;
 }
 
