@@ -304,12 +304,12 @@ static CMPIInstance *make_ref(const CMPIObjectPath *ref,
 char* logical_device[] = {
         "Xen_Processor",
         "Xen_Memory",
-        "Xen_Network",
-        "Xen_Disk",
+        "Xen_NetworkPort",
+        "Xen_LogicalDisk",
         "KVM_Processor",
         "KVM_Memory",
-        "KVM_Network",
-        "KVM_Disk",
+        "KVM_NetworkPort",
+        "KVM_LogicalDisk",
         NULL
 };
 
