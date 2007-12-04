@@ -1,0 +1,41 @@
+// Copyright IBM Corp. 2007
+
+// Placeholder definition until schema is available upstream
+
+class CIM_VirtualSystemMigrationService : CIM_Service {
+      uint32 VirtualSystemIsMigratableToHost(
+      	     [Out]
+	       CIM_ConcreteJob REF Job,
+	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
+	       string NewResourceSettingData[],
+	     [In, EmbeddedInstance("CIM_SettingData")]
+	       string MigrationSettingData,
+	     [In, EmbeddedInstance("CIM_VirtualSystemSettingData")]
+ 	       string NewSystemSettingData,
+	     [In]
+	       CIM_ComputerSystem REF ComputerSystem,
+	     [In]
+	       string DestinationHost);
+
+      uint32 MigrateVirtualSystemToHost(
+      	     [Out]
+	       CIM_ConcreteJob REF Job,
+	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
+	       string NewResourceSettingData[],
+	     [In, EmbeddedInstance("CIM_SettingData")]
+	       string MigrationSettingData,
+	     [In, EmbeddedInstance("CIM_VirtualSystemSettingData")]
+ 	       string NewSystemSettingData,
+	     [In]
+	       CIM_ComputerSystem REF ComputerSystem,
+	     [In]
+	       string DestinationHost);
+
+};
+
+class Xen_VirtualSystemMigrationService : CIM_VirtualSystemMigrationService {
+};
+
+class KVM_VirtualSystemMigrationService : CIM_VirtualSystemMigrationService {
+};
+

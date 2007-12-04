@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_VirtualSystemMigrationService root/virt Virt_VSMigrationService Virt_VSMigrationService instance method
+KVM_VirtualSystemMigrationService root/virt Virt_VSMigrationService Virt_VSMigrationService instance method

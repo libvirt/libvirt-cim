@@ -34,7 +34,8 @@ MOFS = \
 	schema/ElementAllocatedFromPool.mof \
 	schema/HostedService.mof \
 	schema/ElementSettingData.mof \
-	schema/VSMigrationCapabilities.mof
+	schema/VSMigrationCapabilities.mof \
+	schema/VSMigrationService.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -74,7 +75,8 @@ REGS = \
 	schema/ElementAllocatedFromPool.registration \
 	schema/HostedService.registration \
 	schema/ElementSettingData.registration \
-	schema/VSMigrationCapabilities.registration
+	schema/VSMigrationCapabilities.registration \
+	schema/VSMigrationService.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
