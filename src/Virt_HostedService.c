@@ -33,6 +33,7 @@
 #include "Virt_HostSystem.h"
 #include "Virt_VirtualSystemManagementService.h"
 #include "Virt_ResourcePoolConfigurationService.h"
+#include "Virt_VSMigrationService.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -72,6 +73,12 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
                 return s;
         if (!CMIsNullObject(inst))
             inst_list_add(list, inst);
+
+        s = get_migration_service(ref, &inst, _BROKER);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+        if (!CMIsNullObject(inst))
+                inst_list_add(list, inst);
 
         return s;
 }
@@ -116,8 +123,10 @@ char* antecedent[] = {
 char* dependent[] = {
         "Xen_ResourcePoolConfigurationService",
         "Xen_VirtualSystemManagementService",
+        "Xen_VirtualSystemMigrationService",
         "KVM_ResourcePoolConfigurationService",
         "KVM_VirtualSystemManagementService",
+        "KVM_VirtualSystemMigrationService",
         NULL
 };
 
