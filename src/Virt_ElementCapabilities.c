@@ -31,7 +31,6 @@
 #include "libcmpiutil.h"
 #include "misc_util.h"
 #include "std_association.h"
-#include "device_parsing.h"
 
 #include "Virt_VirtualSystemManagementCapabilities.h"
 #include "Virt_EnabledLogicalElementCapabilities.h"
@@ -125,8 +124,6 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
                             struct inst_list *list)
 {
         const char *inst_id;
-        char *host;
-        char *device;
         CMPIInstance *inst;
         virConnectPtr conn;
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -138,25 +135,16 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
                 goto error1;
         }
 
-        if (!parse_fq_devid(inst_id, &host, &device)) {
-                cu_statusf(_BROKER, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get system name");
-                goto error1;
-        }
-
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (s.rc != CMPI_RC_OK)
                 goto error1;
 
-        inst = instance_from_name(_BROKER, conn, host, ref);
+        inst = instance_from_name(_BROKER, conn, inst_id, ref);
         if (inst)
                 inst_list_add(list, inst);
 
         virConnectClose(conn);
  error1:
-        free(host);
-        free(device);
 
         return s;
 }
