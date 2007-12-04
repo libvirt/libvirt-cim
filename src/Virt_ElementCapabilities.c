@@ -37,6 +37,7 @@
 #include "Virt_EnabledLogicalElementCapabilities.h"
 #include "Virt_ComputerSystem.h"
 #include "Virt_HostSystem.h"
+#include "Virt_VSMigrationCapabilities.h"
 
 /* Associate an XXX_Capabilities to the proper XXX_ManagedElement.
  *
@@ -70,6 +71,11 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         s = get_vsm_cap(_BROKER, ref, &inst);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
+
+        s = get_migration_caps(ref, &inst, _BROKER);
+        if (s.rc == CMPI_RC_OK)
+                inst_list_add(list, inst);
+
  out:
         return s;
 }
@@ -249,8 +255,10 @@ char* host_system[] = {
 
 char* virtual_system_management_capabilities[] = {
         "Xen_VirtualSystemManagementCapabilities",
+        "Xen_VirtualSystemMigrationCapabilities",
         "KVM_VirtualSystemManagementCapabilities",
-        NULL
+        "KVM_VirtualSystemMigrationCapabilities",
+        NULL,
 };
 
 struct std_assoc system_to_vsm_cap = {

@@ -88,12 +88,13 @@ libVirt_ElementConformsToProfile_la_LIBADD = -lVirt_RegisteredProfile
 
 libVirt_EnabledLogicalElementCapabilities_la_SOURCES = Virt_EnabledLogicalElementCapabilities.c
 
-libVirt_ElementCapabilities_la_DEPENDENCIES = libVirt_VirtualSystemManagementCapabilities.la libVirt_EnabledLogicalElementCapabilities.la libVirt_ComputerSystem.la libVirt_HostSystem.la
+libVirt_ElementCapabilities_la_DEPENDENCIES = libVirt_VirtualSystemManagementCapabilities.la libVirt_EnabledLogicalElementCapabilities.la libVirt_ComputerSystem.la libVirt_HostSystem.la libVirt_VSMigrationCapabilities.la
 libVirt_ElementCapabilities_la_SOURCES = Virt_ElementCapabilities.c
 libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabilities \
                                         -lVirt_EnabledLogicalElementCapabilities \
                                         -lVirt_ComputerSystem \
-                                        -lVirt_HostSystem
+                                        -lVirt_HostSystem \
+                                        -lVirt_VSMigrationCapabilities
 
 libVirt_AllocationCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la
 libVirt_AllocationCapabilities_la_SOURCES = Virt_AllocationCapabilities.c
