@@ -1,0 +1,17 @@
+// Copyright IBM Corp. 2007
+
+class Virt_VirtualSystemMigrationCapabilities : CIM_Capabilities {
+
+  uint16 DestinationHostFormatsSupported[];
+
+  uint16 SynchronousMethodsSupported[];
+
+  uint16 AsynchronousMethodsSupported[];
+
+};
+
+class Xen_VirtualSystemMigrationCapabilities : Virt_VirtualSystemMigrationCapabilities {
+};
+
+class KVM_VirtualSystemMigrationCapabilities : Virt_VirtualSystemMigrationCapabilities {
+};

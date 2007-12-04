@@ -33,7 +33,8 @@ MOFS = \
 	schema/ResourceAllocationFromPool.mof \
 	schema/ElementAllocatedFromPool.mof \
 	schema/HostedService.mof \
-	schema/ElementSettingData.mof
+	schema/ElementSettingData.mof \
+	schema/VSMigrationCapabilities.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -72,7 +73,8 @@ REGS = \
 	schema/ResourceAllocationFromPool.registration \
 	schema/ElementAllocatedFromPool.registration \
 	schema/HostedService.registration \
-	schema/ElementSettingData.registration
+	schema/ElementSettingData.registration \
+	schema/VSMigrationCapabilities.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
