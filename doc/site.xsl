@@ -51,6 +51,9 @@
       <xsl:when test="$name = '#Schema'">
 	<xsl:text>schema.html</xsl:text>
       </xsl:when>
+      <xsl:when test="$name = '#Patches'">
+        <xsl:text>patches.html</xsl:text>
+      </xsl:when>
       <xsl:when test="$name = ''">
         <xsl:text>unknown.html</xsl:text>
       </xsl:when>

@@ -5,6 +5,7 @@ WEB_PAGES = index.html \
             downloads.html \
             intro.html \
             news.html \
+            patches.html \
             platforms.html \
             schema.html
 
