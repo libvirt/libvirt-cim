@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
-# Classname Namespace ProviderName ProviderModule ProviderTypes ...
-Xen_ElementSettingData root/virt Xen_ElementSettingDataProvider Virt_ElementSettingData association
-KVM_ElementSettingData root/virt KVM_ElementSettingDataProvider Virt_ElementSettingData association
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_ElementSettingData root/virt Virt_ElementSettingDataProvider Virt_ElementSettingData association
+KVM_ElementSettingData root/virt Virt_ElementSettingDataProvider Virt_ElementSettingData association

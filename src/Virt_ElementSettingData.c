@@ -39,13 +39,14 @@ static CMPIStatus vssd_to_vssd(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
         char *host = NULL;
 
-        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (!parse_instanceid(ref, NULL, &host)) {
                 cu_statusf(_BROKER, &s,
@@ -93,7 +94,8 @@ static CMPIStatus rasd_to_rasd(const CMPIObjectPath *ref,
         const char *id = NULL;
         uint16_t type;
 
-        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -227,8 +229,7 @@ static struct std_assoc *handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Xen_ElementSettingDataProvider, _BROKER, libvirt_cim_init(), handlers);
-STDA_AssocMIStub(, KVM_ElementSettingDataProvider, _BROKER, libvirt_cim_init(), handlers);
+STDA_AssocMIStub(, Virt_ElementSettingDataProvider, _BROKER, libvirt_cim_init(), handlers);
 
 /*
  * Local Variables:
