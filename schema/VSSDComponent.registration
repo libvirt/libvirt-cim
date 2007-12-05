@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
-Xen_VirtualSystemSettingDataComponent root/virt Xen_VSSDComponentProvider Virt_VSSDComponent association
-KVM_VirtualSystemSettingDataComponent root/virt KVM_VSSDComponentProvider Virt_VSSDComponent association
+Xen_VirtualSystemSettingDataComponent root/virt Virt_VSSDComponentProvider Virt_VSSDComponent association
+KVM_VirtualSystemSettingDataComponent root/virt Virt_VSSDComponentProvider Virt_VSSDComponent association
