@@ -42,7 +42,10 @@ static CMPIStatus pool_to_sys(const CMPIObjectPath *ref,
                               struct inst_list *list)
 {
         CMPIInstance *host;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         s = get_host_cs(_BROKER, ref, &host);
         if (s.rc != CMPI_RC_OK)
@@ -57,11 +60,14 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         int i;
         virConnectPtr conn;
         CMPIInstance *host;
         const char *prop;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         s = get_host_cs(_BROKER, ref, &host);
         if (s.rc != CMPI_RC_OK)
