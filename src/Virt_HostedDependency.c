@@ -40,8 +40,11 @@ static CMPIStatus vs_to_host(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         s = get_host_cs(_BROKER, ref, &instance);
         if (s.rc == CMPI_RC_OK)
@@ -56,7 +59,10 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
 {
         int ret;
         virConnectPtr conn;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
