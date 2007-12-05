@@ -61,12 +61,15 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         uint16_t type;
         const char *id = NULL;
         char *poolid = NULL;
         virConnectPtr conn = NULL;
         CMPIInstance *pool = NULL;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         type = class_to_type(ref);
         if (type == 0) {
@@ -196,7 +199,10 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         const char *poolid;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -326,8 +332,7 @@ static struct std_assoc *handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Xen_ElementAllocatedFromPoolProvider, _BROKER, libvirt_cim_init(), handlers);
-STDA_AssocMIStub(, KVM_ElementAllocatedFromPoolProvider, _BROKER, libvirt_cim_init(), handlers);
+STDA_AssocMIStub(, Virt_ElementAllocatedFromPoolProvider, _BROKER, libvirt_cim_init(), handlers);
 
 /*
  * Local Variables:
