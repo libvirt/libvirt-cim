@@ -41,13 +41,16 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         uint16_t type;
         const char *id = NULL;
         char *poolid = NULL;
         virConnectPtr conn = NULL;
         struct inst_list _list;
         CMPIInstance *pool = NULL;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         inst_list_init(&_list);
 
@@ -177,8 +180,11 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *poolid;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -305,8 +311,7 @@ static struct std_assoc *handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Xen_ResourceAllocationFromPoolProvider, _BROKER, libvirt_cim_init(), handlers);
-STDA_AssocMIStub(, KVM_ResourceAllocationFromPoolProvider, _BROKER, libvirt_cim_init(), handlers);
+STDA_AssocMIStub(, Virt_ResourceAllocationFromPoolProvider, _BROKER, libvirt_cim_init(), handlers);
 
 /*
  * Local Variables:
