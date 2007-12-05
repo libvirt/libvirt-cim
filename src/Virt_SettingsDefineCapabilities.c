@@ -781,6 +781,9 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         int ret;
         uint16_t type;
 
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
+
         CU_DEBUG("Getting ResourceType");
 
         ret = cu_get_u16_path(ref, "ResourceType", &type);
@@ -900,8 +903,7 @@ struct std_assoc *assoc_handlers[] = {
 };
 
 
-STDA_AssocMIStub(, Xen_SettingsDefineCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
-STDA_AssocMIStub(, KVM_SettingsDefineCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
+STDA_AssocMIStub(, Virt_SettingsDefineCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 
 /*
  * Local Variables:
