@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
-Xen_SettingsDefineState root/virt Xen_SettingsDefineStateProvider Virt_SettingsDefineState association
-KVM_SettingsDefineState root/virt KVM_SettingsDefineStateProvider Virt_SettingsDefineState association
+Xen_SettingsDefineState root/virt Virt_SettingsDefineStateProvider Virt_SettingsDefineState association
+KVM_SettingsDefineState root/virt Virt_SettingsDefineStateProvider Virt_SettingsDefineState association

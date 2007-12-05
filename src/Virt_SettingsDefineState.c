@@ -66,13 +66,16 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *rasd;
         struct inst_list rasds;
         const char *id = NULL;
         char *name = NULL;
         char *devid = NULL;
         int ret;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         inst_list_init(&rasds);
 
@@ -153,12 +156,13 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *dev = NULL;
         const char *id = NULL;
         uint16_t type;
 
-        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -194,7 +198,10 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
         virDomainPtr dom = NULL;
         const char *name;
         CMPIInstance *vssd;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
@@ -238,8 +245,11 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
         char *name = NULL;
         int ret;
         virConnectPtr conn = NULL;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *cs;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -399,8 +409,7 @@ static struct std_assoc *handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Xen_SettingsDefineStateProvider, _BROKER, libvirt_cim_init(), handlers);
-STDA_AssocMIStub(, KVM_SettingsDefineStateProvider, _BROKER, libvirt_cim_init(), handlers);
+STDA_AssocMIStub(, Virt_SettingsDefineStateProvider, _BROKER, libvirt_cim_init(), handlers);
 
 /*
  * Local Variables:
