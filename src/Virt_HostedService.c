@@ -41,10 +41,11 @@ static CMPIStatus service_to_host(const CMPIObjectPath *ref,
                                   struct std_assoc_info *info,
                                   struct inst_list *list)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
 
-        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         s = get_host_cs(_BROKER, ref, &instance);
         if (s.rc == CMPI_RC_OK)
@@ -60,7 +61,8 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
 
-        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         s = rpcs_instance(ref, &inst, _BROKER);
         if (s.rc != CMPI_RC_OK)
@@ -168,8 +170,7 @@ static struct std_assoc *handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Xen_HostedServiceProvider, _BROKER, libvirt_cim_init(), handlers);
-STDA_AssocMIStub(, KVM_HostedServiceProvider, _BROKER, libvirt_cim_init(), handlers);
+STDA_AssocMIStub(, Virt_HostedServiceProvider, _BROKER, libvirt_cim_init(), handlers);
 
 /*
  * Local Variables:
