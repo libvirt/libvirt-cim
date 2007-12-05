@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
-Xen_ElementCapabilities root/virt Xen_ElementCapabilitiesProvider Virt_ElementCapabilities association
-KVM_ElementCapabilities root/virt KVM_ElementCapabilitiesProvider Virt_ElementCapabilities association
+Xen_ElementCapabilities root/virt Virt_ElementCapabilitiesProvider Virt_ElementCapabilities association
+KVM_ElementCapabilities root/virt Virt_ElementCapabilitiesProvider Virt_ElementCapabilities association

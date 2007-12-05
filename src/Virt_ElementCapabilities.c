@@ -55,6 +55,9 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *prop;
 
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
+
         s = get_host_cs(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
@@ -86,6 +89,9 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
+
         s = get_host_cs(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
@@ -103,6 +109,9 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *sys_name = NULL;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -127,6 +136,9 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         CMPIInstance *inst;
         virConnectPtr conn;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
@@ -166,6 +178,9 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
         uint16_t type;
         CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK};
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
@@ -367,8 +382,7 @@ struct std_assoc *assoc_handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Xen_ElementCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
-STDA_AssocMIStub(, KVM_ElementCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
+STDA_AssocMIStub(, Virt_ElementCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 /*
  * Local Variables:
  * mode: C
