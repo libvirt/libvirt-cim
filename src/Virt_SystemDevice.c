@@ -162,7 +162,8 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret;
 
-        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "Name", &host) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -196,9 +197,10 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
         char *host = NULL;
         char *dev = NULL;
         CMPIInstance *sys;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
 
-        ASSOC_MATCH(info->provider_name, CLASSNAME(ref));
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
 
         if (cu_get_str_path(ref, "DeviceID", &devid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -288,8 +290,7 @@ static struct std_assoc *assoc_handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Xen_SystemDeviceProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
-STDA_AssocMIStub(, KVM_SystemDeviceProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
+STDA_AssocMIStub(, Virt_SystemDeviceProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 
 /*
  * Local Variables:
