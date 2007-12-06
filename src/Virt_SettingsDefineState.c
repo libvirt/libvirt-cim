@@ -365,6 +365,8 @@ static struct std_assoc _vs_to_vssd = {
         .target_class = (char**)&virtual_system_setting_data,
         .target_prop = "SettingData",
 
+        .assoc_class = (char**)&assoc_classname,
+
         .handler = vs_to_vssd,
         .make_ref = make_ref
 };
@@ -375,6 +377,8 @@ static struct std_assoc _vssd_to_vs = {
 
         .target_class = (char**)&computer_system,
         .target_prop = "ManagedElement",
+
+        .assoc_class = (char**)&assoc_classname,
 
         .handler = vssd_to_vs,
         .make_ref = make_ref
