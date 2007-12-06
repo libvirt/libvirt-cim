@@ -532,18 +532,14 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
                                     const char *id,
                                     const CMPIBroker *broker)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         struct disk_pool *pools = NULL;
         int count = 0;
         int i;
 
         count = get_diskpool_config(&pools);
-        if ((id == NULL) && (count == 0)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such pool `%s'", id);
-                goto out;
-        }
+        if ((id == NULL) && (count == 0))
+                return s;
 
         for (i = 0; i < count; i++) {
                 CMPIInstance *pool;
@@ -561,8 +557,6 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
                         inst_list_add(list, pool);
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
- out:
         free_diskpool(pools, count);
 
         return s;
