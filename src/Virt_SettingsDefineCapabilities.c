@@ -812,39 +812,8 @@ static CMPIStatus rasd_to_alloc_cap(const CMPIObjectPath *ref,
         
         return s;
 }
-static CMPIInstance *make_ref(const CMPIObjectPath *ref,
-                              const CMPIInstance *inst,
-                              struct std_assoc_info *info,
-                              struct std_assoc *assoc)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *refinst = NULL;
-        virConnectPtr conn = NULL;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return NULL;
-
-        refinst = get_typed_instance(_BROKER,
-                                     pfx_from_conn(conn),
-                                     "SettingsDefineCapabilities",
-                                     NAMESPACE(ref));
-
-        if (refinst != NULL) {
-                CMPIObjectPath *instop;
-
-                instop = CMGetObjectPath(inst, NULL);
-
-                CMSetProperty(refinst, assoc->source_prop,
-                              (CMPIValue *)&ref, CMPI_ref);
-                CMSetProperty(refinst, assoc->target_prop,
-                              (CMPIValue *)&instop, CMPI_ref);
-        }
-
-        virConnectClose(conn);
-
-        return refinst;
-}
+LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 char* group_component[] = {
         "Xen_AllocationCapabilities",
@@ -901,7 +870,6 @@ struct std_assoc *assoc_handlers[] = {
         &_rasd_to_alloc_cap,
         NULL
 };
-
 
 STDA_AssocMIStub(, Virt_SettingsDefineCapabilitiesProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 

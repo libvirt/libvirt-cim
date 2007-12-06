@@ -247,28 +247,7 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIInstance *make_ref(const CMPIObjectPath *ref,
-                              const CMPIInstance *inst,
-                              struct std_assoc_info *info,
-                              struct std_assoc *assoc)
-{
-        CMPIInstance *refinst = NULL;
-
-        refinst = get_typed_instance(_BROKER,
-                                     CLASSNAME(ref),
-                                     "ElementAllocatedFromPool",
-                                     NAMESPACE(ref));
-
-        if (refinst != NULL) {
-                CMPIObjectPath *instop;
-
-                instop = CMGetObjectPath(inst, NULL);
-
-                set_reference(assoc, refinst, ref, instop);
-        }
-
-        return refinst;
-}
+LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 char* antecedent[] = {
         "Xen_ProcessorPool",

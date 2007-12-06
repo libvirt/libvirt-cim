@@ -109,6 +109,26 @@ bool libvirt_cim_init(void);
 bool match_hypervisor_prefix(const CMPIObjectPath *reference,
                              struct std_assoc_info *info);
 
+CMPIInstance *make_reference(const CMPIBroker *broker,
+                             const CMPIObjectPath *source_ref,
+                             const CMPIInstance *target_inst,
+                             struct std_assoc_info *info,
+                             struct std_assoc *assoc);
+
+
+#define LIBVIRT_CIM_DEFAULT_MAKEREF()                                   \
+        static CMPIInstance* make_ref(const CMPIObjectPath *source_ref, \
+                                      const CMPIInstance *target_inst,  \
+                                      struct std_assoc_info *info,      \
+                                      struct std_assoc *assoc)          \
+        {                                                               \
+                return make_reference(_BROKER,                          \
+                                      source_ref,                       \
+                                      target_inst,                      \
+                                      info,                             \
+                                      assoc);                           \
+        }
+
 /*
  * Local Variables:
  * mode: C

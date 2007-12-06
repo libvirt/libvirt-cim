@@ -152,28 +152,7 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIInstance *make_ref(const CMPIObjectPath *ref,
-                              const CMPIInstance *inst,
-                              struct std_assoc_info *info,
-                              struct std_assoc *assoc)
-{
-        CMPIInstance *refinst = NULL;
-
-        refinst = get_typed_instance(_BROKER,
-                                     CLASSNAME(ref),
-                                     "VirtualSystemSettingDataComponent",
-                                     NAMESPACE(ref));
-
-        if (refinst != NULL) {
-                CMPIObjectPath *instop;
-
-                instop = CMGetObjectPath(inst, NULL);
-
-                set_reference(assoc, refinst, ref, instop);
-        }
-
-        return refinst;
-}
+LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 char* group_component[] = {
         "Xen_VirtualSystemSettingData",
@@ -198,7 +177,6 @@ char* assoc_classname[] = {
         "KVM_VirtualSystemSettingDataComponent",        
         NULL
 };
-
 
 static struct std_assoc forward = {
         .source_class = (char**)&group_component,

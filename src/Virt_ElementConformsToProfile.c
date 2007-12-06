@@ -190,38 +190,7 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIInstance *make_ref(const CMPIObjectPath *source_op,
-                              const CMPIInstance *target_inst,
-                              struct std_assoc_info *info,
-                              struct std_assoc *assoc)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *assoc_inst = NULL;
-        virConnectPtr conn = NULL;
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(source_op), &s);
-        if (conn == NULL)
-                return NULL;
-
-        assoc_inst = get_typed_instance(_BROKER,
-                                        pfx_from_conn(conn),
-                                        "ElementConformsToProfile",
-                                        NAMESPACE(source_op));
-                
-        if (!CMIsNullObject(assoc_inst)) {
-                CMPIObjectPath *target_op;
-                target_op = CMGetObjectPath(target_inst, NULL);
-
-                CMSetProperty(assoc_inst, assoc->source_prop,
-                              (CMPIValue *)&(source_op), CMPI_ref);
-                CMSetProperty(assoc_inst, assoc->target_prop,
-                              (CMPIValue *)&(target_op), CMPI_ref);
-        }
-
-        virConnectClose(conn);
-
-        return assoc_inst;
-}
+LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 char* conformant_standard[] = {
         "Xen_RegisteredProfile",

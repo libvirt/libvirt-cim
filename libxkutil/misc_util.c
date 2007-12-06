@@ -342,7 +342,35 @@ bool match_hypervisor_prefix(const CMPIObjectPath *reference,
         return rc;
 }
 
+CMPIInstance *make_reference(const CMPIBroker *broker,
+                             const CMPIObjectPath *source_ref,
+                             const CMPIInstance *target_inst,
+                             struct std_assoc_info *info,
+                             struct std_assoc *assoc)
+{
+        CMPIInstance *ref_inst = NULL;
+        char* assoc_classname;
 
+        assoc_classname = class_base_name(assoc->assoc_class[0]);
+
+        ref_inst = get_typed_instance(broker,
+                                      CLASSNAME(source_ref),
+                                      assoc_classname,
+                                      NAMESPACE(source_ref));
+        
+        if (ref_inst != NULL) {
+                CMPIObjectPath *target_ref;
+                
+                target_ref = CMGetObjectPath(target_inst, NULL);
+
+                set_reference(assoc, ref_inst, 
+                              source_ref, target_ref);
+        }
+
+        free(assoc_classname);
+
+        return ref_inst;
+}
 
 bool domain_online(virDomainPtr dom)
 {

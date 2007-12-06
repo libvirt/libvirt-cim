@@ -85,36 +85,7 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIInstance *make_ref(const CMPIObjectPath *ref,
-                              const CMPIInstance *inst,
-                              struct std_assoc_info *info,
-                              struct std_assoc *assoc)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *refinst = NULL;
-        virConnectPtr conn = NULL;
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return NULL;
-
-        refinst = get_typed_instance(_BROKER,
-                                     pfx_from_conn(conn),
-                                     "HostedService",
-                                     NAMESPACE(ref));
-
-        if (refinst != NULL) {
-                CMPIObjectPath *instop;
-
-                instop = CMGetObjectPath(inst, NULL);
-
-                set_reference(assoc, refinst, ref, instop);
-        }
-
-        virConnectClose(conn);
-
-        return refinst;
-}
+LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 char* antecedent[] = {  
         "Xen_HostSystem",

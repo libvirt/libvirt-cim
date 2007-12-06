@@ -126,50 +126,37 @@ static CMPIStatus rasd_to_rasd(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIInstance *make_ref(const CMPIObjectPath *ref,
-                              const CMPIInstance *inst,
+static CMPIInstance *make_ref(const CMPIObjectPath *source_ref,
+                              const CMPIInstance *target_inst,
                               struct std_assoc_info *info,
                               struct std_assoc *assoc)
 {
-        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *refinst = NULL;
-        virConnectPtr conn = NULL;
         uint16_t prop_value = 1;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return NULL;
-
-        refinst = get_typed_instance(_BROKER,
-                                     pfx_from_conn(conn),
-                                     "ElementSettingData",
-                                     NAMESPACE(ref));
+        refinst = make_reference(_BROKER, 
+                                 source_ref, 
+                                 target_inst, 
+                                 info,
+                                 assoc);
 
         if (refinst != NULL) {
-                CMPIObjectPath *instop;
-
-                instop = CMGetObjectPath(inst, NULL);
-
-                set_reference(assoc, refinst, ref, instop);
-
                 /* Set additional properties with values
                  * defined in the "Virtual System Profile."
                  */
                 CMSetProperty(refinst, "IsDefault",
-                        (CMPIValue *)&prop_value, CMPI_uint16);
-
+                              (CMPIValue *)&prop_value, CMPI_uint16);
+                
                 CMSetProperty(refinst, "IsNext",
-                        (CMPIValue *)&prop_value, CMPI_uint16);
+                              (CMPIValue *)&prop_value, CMPI_uint16);
 
                 CMSetProperty(refinst, "IsMinimum",
-                        (CMPIValue *)&prop_value, CMPI_uint16);
-
+                              (CMPIValue *)&prop_value, CMPI_uint16);
+                
                 CMSetProperty(refinst, "IsMaximum",
-                        (CMPIValue *)&prop_value, CMPI_uint16);
+                              (CMPIValue *)&prop_value, CMPI_uint16);
         }
-
-        virConnectClose(conn);
-
+        
         return refinst;
 }
 

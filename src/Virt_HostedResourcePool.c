@@ -97,32 +97,7 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIInstance *make_ref(const CMPIObjectPath *ref,
-                              const CMPIInstance *inst,
-                              struct std_assoc_info *info,
-                              struct std_assoc *assoc)
-{
-        CMPIInstance *refinst;
-        char *base;
-
-        base = class_base_name(info->assoc_class);
-
-        refinst = get_typed_instance(_BROKER,
-                                     CLASSNAME(ref),
-                                     base,
-                                     NAMESPACE(ref));
-        if (refinst != NULL) {
-                CMPIObjectPath *instop;
-
-                instop = CMGetObjectPath(inst, NULL);
-
-                set_reference(assoc, refinst, ref, instop);
-        }
-
-        free(base);
-
-        return refinst;
-}
+LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 char* group_component[] = {
         "Xen_HostSystem",
@@ -179,7 +154,6 @@ struct std_assoc *assoc_handlers[] = {
         &backward,
         NULL
 };
-
 
 STDA_AssocMIStub(, Virt_HostedResourcePoolProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
 
