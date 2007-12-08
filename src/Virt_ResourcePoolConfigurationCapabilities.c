@@ -60,6 +60,9 @@ static CMPIStatus get_rpc_cap(const CMPIBroker *broker,
         if (inst == NULL)
                 return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
 
+        CMSetProperty(inst, "InstanceID",
+                      (CMPIValue *)"RPCC", CMPI_chars);
+
         /* No method currently supported */
 
         *_inst = inst;
