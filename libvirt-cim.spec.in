@@ -4,10 +4,10 @@ Summary: A CIM provider for libvirt
 Name: libvirt-cim
 Version: @PACKAGE_VERSION@
 Release: 1%{?dist}%{?extra_release}
-License: LGPL
+License: LGPLv2+
 Group: Development/Libraries
 Source: libvirt-cim-%{version}.tar.gz
-BuildRoot: %{_tmppath}/%{name}-%{version}-root
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 URL: http://libvirt.org/CIM/
 Requires: libxml2
 Requires: libvirt >= 0.2.3
@@ -26,23 +26,23 @@ platforms with a single provider.
 
 %prep
 %setup -q
+chmod -x src/* libxkutil/* schema/*
 
 %build
 %configure --disable-werror
-make
+make %{?_smp_mflags}
 
 %install
-rm -fr %{buildroot}
+rm -fr $RPM_BUILD_ROOT
 
-%makeinstall PROVIDERDIR=%{buildroot}%{_libdir}/cmpi
-cp provider-register.sh %{buildroot}%{_datadir}/libvirt-cim/
+make DESTDIR=$RPM_BUILD_ROOT install
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.a
 
 %clean
-rm -fr %{buildroot}
+rm -fr $RPM_BUILD_ROOT
 
 %pre
 %define REGISTRATION %{_datadir}/%{name}/*.registration
@@ -64,8 +64,7 @@ rm -fr %{buildroot}
 	-n /@CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} || true
 
-%postun
-/sbin/ldconfig
+%postun -p /sbin/ldconfig
 
 %files 
 %defattr(-, root, root)
