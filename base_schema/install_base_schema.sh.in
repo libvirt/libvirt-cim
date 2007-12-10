@@ -1,0 +1,103 @@
+#!/bin/bash
+
+DATA="$1"
+NS=@CIM_VIRT_NS@
+CIMOM=@CIMSERVER@
+
+TMPDIR=$(mktemp -d /tmp/cim_schema.XXXXX)
+
+if [ ! -z "$CIM_DEBUG" ]; then
+    set -x
+    DEBUG="$TMPDIR/log"
+else
+    DEBUG="/dev/null"
+fi
+
+unpack_schema() {
+    cd ${TMPDIR} && unzip ${DATA}/cimv*-MOFs.zip
+}
+
+fix_schema() {
+    (cd ${TMPDIR} && patch -p0 < ${DATA}/fix_schema.patch)
+    cp -a ${DATA}/cimv216-interop_mof ${TMPDIR}/cimv216-interop.mof
+}
+
+detect_peg_repo() {
+    dirs="$PEGASUS_HOME /var/lib/Pegasus /var/lib/pegasus /usr/local/var/lib/pegasus /var/local/lib/pegasus /var/opt/tog-pegasus"
+
+    for d in $dirs; do
+	if [ -d "$d" ]; then
+	    echo $d
+	    return
+	fi
+    done
+}
+
+detect_sfcb_dir() {
+    dirs="SFCB_DIR /usr/local/share/sfcb /usr/share/sfcb"
+
+    for d in $dirs; do
+	if [ -d "$d" ]; then
+	    echo $d;
+	    return
+	    fi
+    done
+}
+
+install_schema_pegasus() {
+    local repo=$(detect_peg_repo)
+
+    if [ -z "$repo" ]; then
+	echo "Unable to determine Pegasus repository path"
+	echo "set PEGASUS_HOME"
+	return
+    fi
+
+    cd ${TMPDIR}
+
+    cimmofl -uc -aEV -R$repo -n $NS cimv???.mof
+    cimmofl -uc -aEV -R$repo -n $NS qualifiers.mof
+    cimmofl -uc -aEV -R$repo -n $NS qualifiers_optional.mof
+    cimmofl -uc -aEV -R$repo -n /root/interop cimv???-interop.mof
+}
+
+install_schema_sfcb() {
+    local dir=$(detect_sfcb_dir)
+
+    mkdir ${dir}/CIM
+    if [ -d "${dir}/CIM" ]; then
+	echo "Unable to determine SFCB directory"
+	echo "set SFCB_DIR"
+	return
+    fi
+
+    mv ${TMPDIR}/cimv???.mof ${TMPDIR}/CIM_Schema.mof
+    cp -ra ${TMPDIR}/* ${dir}/CIM
+    sfcbrepos -f
+}
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 [source_dir]"
+    exit 1
+fi
+
+(unpack_schema) >>$DEBUG 2>&1
+(fix_schema) >>$DEBUG 2>&1
+
+case "$CIMOM" in
+    sfcb)
+	(install_schema_sfcb) >>$DEBUG 2>&1
+	;;
+    pegasus)
+	(install_schema_pegasus) >>$DEBUG 2>&1
+	;;
+    *)
+	echo ERROR: Unknown CIMOM: $CIMOM
+	;;
+esac
+
+if [ -f "$DEBUG" ]; then
+    echo "-- base schema install log begin --"
+    cat $DEBUG
+    echo "-- base schema install log end --"
+fi
