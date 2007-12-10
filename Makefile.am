@@ -1,5 +1,5 @@
 # Copyright IBM Corp. 2007
-SUBDIRS = libxkutil src doc
+SUBDIRS = libxkutil src doc base_schema
 
 MOFS = \
 	schema/ComputerSystem.mof \
@@ -88,6 +88,9 @@ pkgdata_SCRIPTS = provider-register.sh
 EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
              libvirt-cim.spec.in libvirt-cim.spec	\
 	     doc/CodingStyle doc/SubmittingPatches
+
+preinstall:
+	sh -x base_schema/install_base_schema.sh `pwd`/base_schema
 
 # Un/Register the providers and class definitions from/to the current CIMOM.
 # @CIMSERVER@ is set by the configure script

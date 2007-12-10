@@ -55,6 +55,8 @@ rm -fr $RPM_BUILD_ROOT
 %post
 /sbin/ldconfig
 
+%{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
+
 %{_datadir}/%{name}/provider-register.sh -t pegasus \
 	-n /@CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} || true
@@ -76,7 +78,10 @@ rm -fr $RPM_BUILD_ROOT
 %{_libdir}/cmpi/lib*.so*
 %{_datadir}/libvirt-cim/*.sh
 %{_datadir}/libvirt-cim/*.mof
+%{_datadir}/libvirt-cim/cimv*-interop_mof
 %{_datadir}/libvirt-cim/*.registration
+%{_datadir}/libvirt-cim/fix_schema.patch
+%{_datadir}/libvirt-cim/cimv*-MOFs.zip
 
 %changelog
 * Fri Oct 26 2007 Daniel Veillard <veillard@redhat.com> - 0.1-1
