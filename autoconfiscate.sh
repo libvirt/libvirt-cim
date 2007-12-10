@@ -18,5 +18,3 @@ echo "Running autoconf ..." &&
 autoconf --force &&
 
 echo "You may now run ./configure"
-echo "You may now run ./configure LIBVIRTDIR=/usr/local"
-

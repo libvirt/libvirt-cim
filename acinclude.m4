@@ -297,67 +297,12 @@ AC_DEFUN([CHECK_LIBCU],
 	]
 )
 
-dnl
-dnl The check for the libvirt library
-dnl Sets the LIBVIRTDIR variable
-dnl
-
-AC_DEFUN([_CHECK_LIBVIRT],
-[
-   AC_MSG_CHECKING($1)
-   AC_TRY_LINK(
-   [
-      #include <libvirt.h>
-      #include <virterror.h>
-   ],
-   [
-      virConnectPtr connectPtr;
-   ],
-   [
-      have_LIBVIRT=yes
-      dnl AC_MSG_RESULT(yes)
-   ],
-   [
-      have_LIBVIRT=no
-      dnl AC_MSG_RESULT(no)
-   ])
-])
-
 AC_DEFUN([CHECK_LIBVIRT],
 	[
-	AC_MSG_CHECKING(for libvirt package)
-        LIBVIRT_CPP_FLAGS="$CPPFLAGS"
-	dnl The standard include paths worked.
-	_CHECK_LIBVIRT(standard)
-	if test x"$LIBVIRTDIR" == x ; then
-		_DIRS_="/usr/include/libvirt \
-        		/usr/local/include/libvirt"
-	else
-		_DIRS_="$LIBVIRTDIR/include/libvirt"
-	fi
-	for _DIR_ in $_DIRS_
-	do
-		_cppflags=$CPPFLAGS
-		_include_LIBVIRT="$_DIR_"
-		CPPFLAGS="$CPPFLAGS -I$_include_LIBVIRT"
-		_CHECK_LIBVIRT($_DIR_)
-		if test "$have_LIBVIRT" == "yes"; then
-		 	dnl Found it
-		  	AC_MSG_RESULT(yes)
-			dnl Save the new -I parameter  
-			LIBVIRT_CPP_FLAGS="$CPPFLAGS"	
-			LIBLIBVIRT=-lvirt
-			break
-		fi
-		CPPFLAGS=$_cppflags
-	done	
-	CPPFLAGS=$LIBVIRT_CPP_FLAGS
-	AC_SUBST(LIBLIBVIRT)
-	if test "$have_LIBVIRT" == "no"; then
-		AC_MSG_ERROR(no. The required libvirt package is missing.)
-        fi
-	]
-)
+	PKG_CHECK_MODULES([LIBVIRT], [libvirt >= 0.3.2])
+	CPPFLAGS="$CPPFLAGS $LIBVIRT_CFLAGS"
+	LDFLAGS="$LDFLAGS $LIBVIRT_LIBS"
+	])
 
 dnl
 dnl The check for the SBLIM test suite

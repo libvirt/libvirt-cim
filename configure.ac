@@ -31,7 +31,6 @@ AC_ARG_VAR([CIMSERVER],[the target CIM server (pegasus|sfcb|openwbem|sniacimom).
 ])
 AC_ARG_VAR([PROVIDERDIR],[the directory where the CMPI providers will be install
 ed.])
-AC_ARG_VAR([LIBVIRTDIR],[the directory where the libvirt package is installed.])
 AC_ARG_VAR([TESTSUITEDIR],[the directory where the SBLIM testsuite is installed.
 ])
 
@@ -179,7 +178,6 @@ echo ""
 echo "The following configuration options have been selected:"
 echo "   CIMSERVER: " $CIMSERVER
 echo "   PROVIDERDIR: " $PROVIDERDIR
-echo "   LIBVIRTDIR: " $LIBVIRTDIR
 echo "   TESTSUITE_SUPPORT: " $TESTSUITE_SUPPORT
 if test x"$TESTSUITEDIR" != x; then
    echo "   TESTSUITEDIR: " $TESTSUITEDIR
