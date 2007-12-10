@@ -221,43 +221,12 @@ AC_DEFUN([CHECK_CIMSERVER],
 	]
 )
 
-dnl
-dnl The check for the libxml2 library
-dnl Sets the LIBXML2DIR variable
-dnl
-
-AC_DEFUN([_CHECK_LIBXML2],
-[
-   AC_MSG_CHECKING($1)
-   AC_TRY_LINK(
-   [
-      #include <libxml/tree.h>
-   ],
-   [
-      xmlNodePtr nodeptr;
-   ],
-   [
-      have_LIBXML2=yes
-      dnl AC_MSG_RESULT(yes)
-   ],
-   [
-      have_LIBXML2=no
-      dnl AC_MSG_RESULT(no)
-   ])
-])
-
 AC_DEFUN([CHECK_LIBXML2],
 	[
-	AC_MSG_CHECKING(for libxml2 package)
-	CPPFLAGS="$CPPFLAGS `xml2-config --cflags` "
-	LDFLAGS="$LDFLAGS `xml2-config --libs` "
-	dnl The standard include paths worked.
-	_CHECK_LIBXML2(standard)	
-	if test "$have_LIBXML2" == "no"; then
-        	AC_MSG_ERROR(no. The required libxml2 package is missing.)
-	fi 
-	]
-)
+	PKG_CHECK_MODULES([LIBXML], [libxml-2.0])
+	CPPFLAGS="$CPPFLAGS $LIBXML_CFLAGS"
+	LDFLAGS="$LDFLAGS $LIBXML_LDFLAGS"
+	])
 
 AC_DEFUN([CHECK_LIBCU],
 	[
