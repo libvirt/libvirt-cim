@@ -3,7 +3,6 @@
 AC_INIT(libvirt CMPI provider, 0.1, danms@us.ibm.com, libvirt-cim)
 
 AC_CONFIG_SRCDIR([src/Virt_ComputerSystem.c])
-#AC_CONFIG_FILES([xen-kvm-cmpi.spec])
 
 AC_CHECK_HEADERS([stdarg.h errno.h])
 AC_CHECK_FUNCS([popen pclose fgets asprintf vfprintf fprintf snprintf sscanf])
@@ -31,8 +30,6 @@ AC_ARG_VAR([CIMSERVER],[the target CIM server (pegasus|sfcb|openwbem|sniacimom).
 ])
 AC_ARG_VAR([PROVIDERDIR],[the directory where the CMPI providers will be install
 ed.])
-AC_ARG_VAR([TESTSUITEDIR],[the directory where the SBLIM testsuite is installed.
-])
 
 AC_ARG_WITH([kvm-max-nics],
 	    AC_HELP_STRING([--with-kvm-max-nics=X],
@@ -98,38 +95,12 @@ AC_CONFIG_FILES([
 
 AM_INIT_AUTOMAKE
 
-# Check for the required C compiler
 AC_PROG_CC
-
-# Check for LEX/YACC
-AC_PROG_LEX
-AC_PROG_YACC
-
-# Check if the C compiler supports 'const'
 AC_C_CONST
-
-# Check for the required libtool
 AC_PROG_LIBTOOL
-
-# Check for the required install program 
 AC_PROG_INSTALL
-
-# Check for some common required headers
 AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
-
-# Check if the system headers conform to ANSI C
 AC_HEADER_STDC
-
-# Check for specific add on libraries that we know we'll need
-#  - libuuid
-#AC_CHECK_LIB([uuid], [uuid_generate], [have_uuid=yes], [
-#    AC_CHECK_FAIL(libuuid,e2fsprogs-devel)
-#    ])
-
-#  - libxenstore
-#AC_CHECK_LIB([xenstore], [xs_read], [have_xen=yes], [
-#    AC_CHECK_FAIL(libxenstore,xen-devel)
-#    ])
 
 # Check for the required CMPI header files (this macro is defined in acinclude.m4)
 CHECK_CMPI
@@ -141,25 +112,13 @@ CHECK_PROVIDERDIR
 # Check for presense of a CIM server (this macro is defined in acinclude.m4)
 CHECK_CIMSERVER
 
-# Check for presense of libxml2 (this macro defined in acinclude.m4)
-AC_CHECK_PROG([found_xml2_config],[xml2-config],[yes])
-AM_CONDITIONAL([found_xml2_config], [test x$found_xml2_config = xyes])
-CHECK_LIBXML2
-
-# Check for presense of libvirt (this macro is defined in acinclude.m4)
+# Check for presence of libraries
+PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 CHECK_LIBVIRT
-
-# Check for the SBLIM testsuite (this macro is defined in acinclude.m4)
-CHECK_TESTSUITE
-if test x"$TESTSUITEDIR" == x; then
-   TESTSUITE_SUPPORT=Disabled
-else
-   TESTSUITE_SUPPORT=Enabled
-fi
+CHECK_LIBXML2
+CHECK_LIBCU
 
 CFLAGS_STRICT="-Werror"
-
-CHECK_LIBCU
 
 AC_ARG_ENABLE([werror],
     [  --enable-werror         enable werror on builds [[default=yes]]],
@@ -178,10 +137,6 @@ echo ""
 echo "The following configuration options have been selected:"
 echo "   CIMSERVER: " $CIMSERVER
 echo "   PROVIDERDIR: " $PROVIDERDIR
-echo "   TESTSUITE_SUPPORT: " $TESTSUITE_SUPPORT
-if test x"$TESTSUITEDIR" != x; then
-   echo "   TESTSUITEDIR: " $TESTSUITEDIR
-fi
 echo "   CPPFLAGS:" $CPPFLAGS
 echo
 echo "You can override these values by setting the corresponding"
@@ -193,4 +148,3 @@ echo "----------------------------------------------------------"
 AC_OUTPUT(libvirt-cim.spec)
 
 echo "You may now run make"
-
