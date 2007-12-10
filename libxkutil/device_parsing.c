@@ -28,7 +28,7 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
-#include <libcmpiutil.h>
+#include <libcmpiutil/libcmpiutil.h>
 
 #include "device_parsing.h"
 #include "xmlgen.h"

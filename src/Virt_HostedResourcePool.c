@@ -26,11 +26,11 @@
 #include<cmpift.h>
 #include<cmpimacs.h>
 
-#include <libvirt.h>
+#include <libvirt/libvirt.h>
 
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
-#include "std_association.h"
+#include <libcmpiutil/std_association.h>
 
 #include "Virt_HostSystem.h"
 #include "Virt_DevicePool.h"

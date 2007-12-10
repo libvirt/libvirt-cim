@@ -26,7 +26,7 @@
 #include <sys/vfs.h>
 #include <errno.h>
 
-#include <libvirt.h>
+#include <libvirt/libvirt.h>
 
 #include "config.h"
 
@@ -34,9 +34,9 @@
 #include "cmpift.h"
 #include "cmpimacs.h"
 
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
-#include "std_association.h"
+#include <libcmpiutil/std_association.h>
 #include "device_parsing.h"
 #include "svpc_types.h"
 

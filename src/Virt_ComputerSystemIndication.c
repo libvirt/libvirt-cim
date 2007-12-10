@@ -32,9 +32,9 @@
 
 #include <libvirt/libvirt.h>
 
-#include <libcmpiutil.h>
+#include <libcmpiutil/libcmpiutil.h>
 #include <misc_util.h>
-#include <std_indication.h>
+#include <libcmpiutil/std_indication.h>
 #include <cs_util.h>
 
 #include "config.h"

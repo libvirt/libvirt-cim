@@ -28,8 +28,8 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-#include <libcmpiutil.h>
-#include <std_instance.h>
+#include <libcmpiutil/libcmpiutil.h>
+#include <libcmpiutil/std_instance.h>
 
 #include "device_parsing.h"
 #include "misc_util.h"

@@ -32,7 +32,7 @@
 /* Vendor-specific extension; should be documented somewhere */
 #define CIM_VSSD_RECOVERY_PRESERVE 123
 
-#include <libcmpiutil.h>
+#include <libcmpiutil/libcmpiutil.h>
 #include <string.h>
 
 static inline char *vssd_recovery_action_str(int action)

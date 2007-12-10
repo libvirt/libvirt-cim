@@ -32,8 +32,8 @@
 #include "cmpift.h"
 #include "cmpimacs.h"
 
-#include "libcmpiutil.h"
-#include "std_association.h"
+#include <libcmpiutil/libcmpiutil.h>
+#include <libcmpiutil/std_association.h>
 
 #include "misc_util.h"
 #include "cs_util.h"

@@ -22,8 +22,8 @@
 #define __VIRT_DEVICE_POOL_H
 
 #include <cmpidt.h>
-#include <libvirt.h>
-#include <libcmpiutil.h>
+#include <libvirt/libvirt.h>
+#include <libcmpiutil/libcmpiutil.h>
 #include <stdint.h>
 
 extern char *device_pool_names[];

@@ -29,10 +29,10 @@
 #include "cmpift.h"
 #include "cmpimacs.h"
 
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
 #include "profiles.h"
-#include "std_association.h"
+#include <libcmpiutil/std_association.h>
 
 #include "config.h"
 

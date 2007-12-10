@@ -28,9 +28,9 @@
 #include "cmpift.h"
 #include "cmpimacs.h"
 
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
-#include "std_association.h"
+#include <libcmpiutil/std_association.h>
 
 #include "Virt_VirtualSystemManagementCapabilities.h"
 #include "Virt_EnabledLogicalElementCapabilities.h"

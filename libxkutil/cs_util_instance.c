@@ -31,7 +31,7 @@
 #include <cmpimacs.h>
 
 #include "cs_util.h"
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 
 int get_domain_list(virConnectPtr conn, virDomainPtr **_list)
 {

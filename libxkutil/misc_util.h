@@ -31,8 +31,8 @@
 #include "cmpift.h"
 #include "cmpimacs.h"
 
-#include <libcmpiutil.h>
-#include <std_association.h>
+#include <libcmpiutil/libcmpiutil.h>
+#include <libcmpiutil/std_association.h>
 
 /* Check if the provider is reponsible for the given class:
  * e.g. Xen is running on the system and KVM_... is asked for,

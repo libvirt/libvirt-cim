@@ -22,16 +22,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libvirt.h>
+#include <libvirt/libvirt.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
-#include "std_instance.h"
-#include "std_invokemethod.h"
+#include <libcmpiutil/std_instance.h>
+#include <libcmpiutil/std_invokemethod.h>
 
 #include "Virt_VSMigrationService.h"
 

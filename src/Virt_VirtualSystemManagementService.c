@@ -35,10 +35,10 @@
 #include "device_parsing.h"
 #include "xmlgen.h"
 
-#include "libcmpiutil.h"
-#include "std_invokemethod.h"
-#include "std_indication.h"
-#include "std_instance.h"
+#include <libcmpiutil/libcmpiutil.h>
+#include <libcmpiutil/std_invokemethod.h>
+#include <libcmpiutil/std_indication.h>
+#include <libcmpiutil/std_instance.h>
 
 #include "misc_util.h"
 

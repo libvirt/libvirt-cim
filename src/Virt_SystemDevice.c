@@ -29,11 +29,11 @@
 #include "cmpift.h"
 #include "cmpimacs.h"
 
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "device_parsing.h"
 #include "misc_util.h"
 #include "cs_util.h"
-#include "std_association.h"
+#include <libcmpiutil/std_association.h>
 
 #include "Virt_ComputerSystem.h"
 #include "Virt_Device.h"

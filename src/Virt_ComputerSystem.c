@@ -28,13 +28,13 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-#include <libvirt.h>
+#include <libvirt/libvirt.h>
 
 #include "cs_util.h"
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
-#include "std_invokemethod.h"
-#include "std_instance.h"
+#include <libcmpiutil/std_invokemethod.h>
+#include <libcmpiutil/std_instance.h>
 
 #include "Virt_ComputerSystem.h"
 

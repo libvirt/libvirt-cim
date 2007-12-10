@@ -29,7 +29,7 @@
 
 #ifndef TEST
 #include "misc_util.h"
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "cmpimacs.h"
 #endif
 

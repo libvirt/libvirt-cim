@@ -26,9 +26,9 @@
 #include <cmpift.h>
 #include <cmpimacs.h>
 
-#include "libcmpiutil.h"
+#include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
-#include "std_instance.h"
+#include <libcmpiutil/std_instance.h>
 
 #include "Virt_VSMigrationCapabilities.h"
 

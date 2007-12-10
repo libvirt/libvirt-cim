@@ -38,8 +38,8 @@
 #include "hostres.h"
 #include "device_parsing.h"
 
-#include <libcmpiutil.h>
-#include <std_instance.h>
+#include <libcmpiutil/libcmpiutil.h>
+#include <libcmpiutil/std_instance.h>
 
 #include "Virt_DevicePool.h"
 #include "svpc_types.h"
