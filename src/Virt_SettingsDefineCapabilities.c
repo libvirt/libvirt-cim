@@ -778,23 +778,31 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
                                     struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK};
-        int ret;
         uint16_t type;
+        const char *id = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
         CU_DEBUG("Getting ResourceType");
 
-        ret = cu_get_u16_path(ref, "ResourceType", &type);
-        if (ret != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s, 
+        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Could not get ResourceType");
+                           "Missing InstanceID");
                 goto out;
         }
-        
+ 
+        type = device_type_from_poolid(id);
+
         CU_DEBUG("ResourceType: %hi", type);
+
+        if (type == VIRT_DEV_UNKNOWN) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine resource type");
+                goto out;
+        }
 
         s = sdc_rasds_for_type(ref, list, type);
 
