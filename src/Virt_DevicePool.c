@@ -268,6 +268,20 @@ char *pool_member_of(const CMPIBroker *broker,
         return poolid;
 }
 
+int device_type_from_poolid(const char *id)
+{
+        if (strstr(id, "NetworkPool"))
+                return VIRT_DEV_NET;
+        else if (strstr(id, "DiskPool"))
+                return VIRT_DEV_DISK;
+        else if (strstr(id, "Memory"))
+                return VIRT_DEV_MEM;
+        else if (strstr(id, "Processor"))
+                return VIRT_DEV_VCPU;
+        else
+                return VIRT_DEV_UNKNOWN;
+}
+
 static bool mempool_set_total(CMPIInstance *inst, virConnectPtr conn)
 {
         virNodeInfo info;

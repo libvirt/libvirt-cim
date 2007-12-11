@@ -56,6 +56,13 @@ char *pool_member_of(const CMPIBroker *broker,
                      const char *id);
 
 /**
+ *  * Get the device type of a given pool from the pool's InstanceID
+ *   *
+ *    * @param id The InstanceID of the pool
+ *     */
+int device_type_from_poolid(const char *id);
+
+/**
  * Get all device pools on the system for the given connection
  *
  * @param broker The current Broker
