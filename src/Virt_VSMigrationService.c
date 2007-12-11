@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <uuid/uuid.h>
+
 #include <libvirt/libvirt.h>
 
 #include <cmpidt.h>
@@ -35,6 +37,10 @@
 
 #include "Virt_VSMigrationService.h"
 
+#define CIM_JOBSTATE_STARTING 3
+#define CIM_JOBSTATE_RUNNING 4
+#define CIM_JOBSTATE_COMPLETE 7
+
 #define METHOD_RETURN(r, v) do {                                        \
                 uint32_t rc = v;                                        \
                 CMReturnData(r, (CMPIValue *)&rc, CMPI_uint32);         \
@@ -42,12 +48,17 @@
 
 const static CMPIBroker *_BROKER;
 
-static const char *transport_from_ref(const CMPIObjectPath *ref)
+struct migration_job {
+        CMPIContext *context;
+        char *domain;
+        char *host;
+        char *ref_cn;
+        char *ref_ns;
+        char uuid[33];
+};
+
+static const char *transport_from_class(const char *cn)
 {
-        const char *cn;
-
-        cn = CLASSNAME(ref);
-
         if (STARTS_WITH(cn, "Xen"))
                 return "xen+ssh";
         else if (STARTS_WITH(cn, "KVM"))
@@ -56,15 +67,15 @@ static const char *transport_from_ref(const CMPIObjectPath *ref)
                 return NULL;
 }
 
-static char *dest_uri(const CMPIObjectPath *ref,
+static char *dest_uri(const char *cn,
                       const char *dest)
 {
         char *uri;
         const char *tport = NULL;
 
-        tport = transport_from_ref(ref);
+        tport = transport_from_class(cn);
         if (tport == NULL) {
-                CU_DEBUG("Failed to get transport for %s", CLASSNAME(ref));
+                CU_DEBUG("Failed to get transport for %s", cn);
                 return NULL;
         }
 
@@ -127,7 +138,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         virConnectPtr dconn = NULL;
         uint32_t retcode = 1;
 
-        uri = dest_uri(ref, destination);
+        uri = dest_uri(CLASSNAME(ref), destination);
         if (uri == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -230,10 +241,48 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
         return vs_migratable(ref, name, dname, results);
 }
 
-static CMPIStatus migrate_vs(const CMPIObjectPath *ref,
-                             const char *domain,
-                             const char *destination,
-                             const CMPIResult *results)
+static void migrate_job_set_state(struct migration_job *job,
+                                  uint16_t state,
+                                  const char *status)
+{
+        CMPIInstance *inst;
+        CMPIStatus s;
+        CMPIObjectPath *op;
+
+        op = CMNewObjectPath(_BROKER,
+                             job->ref_ns,
+                             "Virt_MigrationJob",
+                             &s);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to create job path for update");
+                return;
+        }
+
+        CMSetNameSpace(op, job->ref_ns);
+        CMAddKey(op, "InstanceID", (CMPIValue *)job->uuid, CMPI_chars);
+
+        CU_DEBUG("Getting job instance %s", job->uuid);
+        CU_DEBUG("  OP: %s", CMGetCharPtr(CMObjectPathToString(op, NULL)));
+        inst = CBGetInstance(_BROKER, job->context, op, NULL, &s);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get job instance for update (%i)", s.rc);
+                return;
+        }
+
+        CMSetProperty(inst, "JobState",
+                      (CMPIValue *)&state, CMPI_uint16);
+        CMSetProperty(inst, "Status",
+                      (CMPIValue *)status, CMPI_chars);
+
+        CU_DEBUG("Modifying job %s (%i:%s)", job->uuid, state, status);
+
+        s = CBModifyInstance(_BROKER, job->context, op, inst, NULL);
+        if (s.rc != CMPI_RC_OK)
+                CU_DEBUG("Failed to update job instance: %s",
+                         CMGetCharPtr(s.msg));
+}
+
+static CMPIStatus migrate_vs(struct migration_job *job)
 {
         CMPIStatus s;
         virConnectPtr conn = NULL;
@@ -241,9 +290,8 @@ static CMPIStatus migrate_vs(const CMPIObjectPath *ref,
         virDomainPtr dom = NULL;
         virDomainPtr ddom = NULL;
         char *uri = NULL;
-        uint32_t retcode = 1;
 
-        uri = dest_uri(ref, destination);
+        uri = dest_uri(job->ref_cn, job->host);
         if (uri == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -251,16 +299,16 @@ static CMPIStatus migrate_vs(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        conn = connect_by_classname(_BROKER, job->ref_cn, &s);
         if (conn == NULL)
                 goto out;
 
-        dom = virDomainLookupByName(conn, domain);
+        dom = virDomainLookupByName(conn, job->domain);
         if (dom == NULL) {
-                CU_DEBUG("Failed to lookup `%s'", domain);
+                CU_DEBUG("Failed to lookup `%s'", job->domain);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Failed to lookup domain `%s'", domain);
+                           "Failed to lookup domain `%s'", job->domain);
                 goto out;
         }
 
@@ -273,7 +321,7 @@ static CMPIStatus migrate_vs(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        CU_DEBUG("Migrating %s -> %s", domain, uri);
+        CU_DEBUG("Migrating %s -> %s", job->domain, uri);
 
         ddom = virDomainMigrate(dom, dconn, VIR_MIGRATE_LIVE, NULL, NULL, 0);
         if (ddom == NULL) {
@@ -285,17 +333,194 @@ static CMPIStatus migrate_vs(const CMPIObjectPath *ref,
         }
 
         CU_DEBUG("Migration succeeded");
-        retcode = 0;
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
-        CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
-
         free(uri);
         virDomainFree(dom);
         virDomainFree(ddom);
         virConnectClose(conn);
         virConnectClose(dconn);
+
+        return s;
+}
+
+static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
+{
+        CMPIStatus s;
+
+        CBAttachThread(_BROKER, job->context);
+
+        CU_DEBUG("Migration Job %s started", job->uuid);
+        migrate_job_set_state(job, CIM_JOBSTATE_RUNNING, "Running");
+
+        s = migrate_vs(job);
+
+        CU_DEBUG("Migration Job %s finished: %i", job->uuid, s.rc);
+        if (s.rc != CMPI_RC_OK)
+                migrate_job_set_state(job,
+                                      CIM_JOBSTATE_COMPLETE,
+                                      CMGetCharPtr(s.msg));
+        else
+                migrate_job_set_state(job,
+                                      CIM_JOBSTATE_COMPLETE,
+                                      "Completed");
+
+        free(job->domain);
+        free(job->host);
+        free(job->ref_cn);
+        free(job->ref_ns);
+        free(job);
+
+        return NULL;
+}
+
+static CMPIInstance *_migrate_job_new_instance(const char *cn,
+                                               const char *ns)
+{
+        CMPIObjectPath *op;
+        CMPIInstance *inst;
+        CMPIStatus s;
+
+        op = CMNewObjectPath(_BROKER, ns, cn, &s);
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(op))) {
+                CU_DEBUG("Failed to create ref: %s:%s", ns, cn);
+                return NULL;
+        }
+
+        inst = CMNewInstance(_BROKER, op, &s);
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(op))) {
+                CU_DEBUG("Failed to create instance from ref: %s",
+                         CMGetCharPtr(CMObjectPathToString(op, NULL)));
+                return NULL;
+        }
+
+        return inst;
+}
+
+static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
+                                              struct migration_job *job,
+                                              CMPIObjectPath **job_op)
+{
+        CMPIStatus s;
+        CMPIInstance *jobinst;
+        CMPIDateTime *start;
+        CMPIBoolean autodelete = true;
+        uint16_t state = CIM_JOBSTATE_STARTING;
+
+        start = CMNewDateTime(_BROKER, &s);
+        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(start)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get job start time");
+                goto out;
+        }
+
+        jobinst = _migrate_job_new_instance("Virt_MigrationJob",
+                                            job->ref_ns);
+        if (jobinst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get instance of MigrationJob");
+                goto out;
+        }
+
+        CMSetProperty(jobinst, "InstanceID",
+                      (CMPIValue *)job->uuid, CMPI_chars);
+        CMSetProperty(jobinst, "Name",
+                      (CMPIValue *)"Migration", CMPI_chars);
+        CMSetProperty(jobinst, "StartTime",
+                      (CMPIValue *)&start, CMPI_dateTime);
+        CMSetProperty(jobinst, "JobState",
+                      (CMPIValue *)&state, CMPI_uint16);
+        CMSetProperty(jobinst, "Status",
+                      (CMPIValue *)"Queued", CMPI_chars);
+        CMSetProperty(jobinst, "DeleteOnCompletion",
+                      (CMPIValue *)&autodelete, CMPI_boolean);
+
+        *job_op = CMGetObjectPath(jobinst, &s);
+        if ((*job_op == NULL) || (s.rc != CMPI_RC_OK)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get path for job instance");
+                goto out;
+        }
+
+        CMSetNameSpace(*job_op, job->ref_ns);
+
+        CU_DEBUG("Creating instance: %s",
+                 CMGetCharPtr(CMObjectPathToString(*job_op, NULL)));
+
+        *job_op = CBCreateInstance(_BROKER, context, *job_op, jobinst, &s);
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(*job_op))) {
+                CU_DEBUG("Failed to create job instance: %i", s.rc);
+                goto out;
+        }
+
+ out:
+        return s;
+}
+
+static struct migration_job *migrate_job_prepare(const CMPIContext *context,
+                                                 const CMPIObjectPath *ref,
+                                                 const char *domain,
+                                                 const char *host)
+{
+        struct migration_job *job;
+        uuid_t uuid;
+
+        job = malloc(sizeof(*job));
+        if (job == NULL)
+                return NULL;
+
+        job->domain = strdup(domain);
+        job->host = strdup(host);
+        job->ref_cn = strdup(CLASSNAME(ref));
+        job->ref_ns = strdup(NAMESPACE(ref));
+
+        uuid_generate(uuid);
+        uuid_unparse(uuid, job->uuid);
+
+        job->context = CBPrepareAttachThread(_BROKER, context);
+
+        return job;
+}
+
+static CMPIStatus migrate_do(const CMPIObjectPath *ref,
+                             const CMPIContext *context,
+                             const char *domain,
+                             const char *host,
+                             const CMPIResult *results,
+                             CMPIArgs *argsout)
+{
+        CMPIStatus s;
+        CMPIObjectPath *job_op;
+        struct migration_job *job;
+        CMPI_THREAD_TYPE thread;
+        uint32_t retcode = 1;
+
+        job = migrate_job_prepare(context, ref, domain, host);
+        if (job == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to prepare migration job");
+                goto out;
+        }
+
+        CU_DEBUG("Prepared migration job %s", job->uuid);
+
+        s = migrate_create_job_instance(context, job, &job_op);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        CMAddArg(argsout, "Job", (CMPIValue *)&job_op, CMPI_ref);
+
+        thread = _BROKER->xft->newThread((void*)migration_thread, job, 0);
+
+        retcode = 0;
+
+ out:
+        CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
 
         return s;
 }
@@ -323,15 +548,15 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
                 return s;
         }
 
-        return migrate_vs(ref, name, dhost, results);
+        return migrate_do(ref, ctx, name, dhost, results, argsout);
 }
 
 static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
-                                  const CMPIContext *ctx,
-                                  const CMPIResult *results,
-                                  const CMPIObjectPath *ref,
-                                  const CMPIArgs *argsin,
-                                  CMPIArgs *argsout)
+                                    const CMPIContext *ctx,
+                                    const CMPIResult *results,
+                                    const CMPIObjectPath *ref,
+                                    const CMPIArgs *argsin,
+                                    CMPIArgs *argsout)
 {
         CMPIStatus s;
         CMPIObjectPath *dsys;
@@ -358,7 +583,7 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
                 return s;
         }
 
-        return migrate_vs(ref, name, dname, results);
+        return migrate_do(ref, ctx, name, dname, results, argsout);
 }
 
 static struct method_handler vsimth = {
