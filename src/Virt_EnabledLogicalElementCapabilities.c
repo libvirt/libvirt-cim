@@ -21,6 +21,7 @@
  */
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>
@@ -135,7 +136,8 @@ CMPIStatus get_ele_cap(const CMPIBroker *broker,
 
 static CMPIStatus return_ele_cap(const CMPIObjectPath *ref,
                                  const CMPIResult *results,
-                                 int names_only)
+                                 int names_only,
+                                 const char *id)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
@@ -162,6 +164,9 @@ static CMPIStatus return_ele_cap(const CMPIObjectPath *ref,
                         goto end;
                 }
 
+                if (id && (!STREQ(name, id)))
+                        goto end;
+
                 s = get_ele_cap(_BROKER, ref, name, &inst);
                 if (s.rc != CMPI_RC_OK)
                         goto end;
@@ -174,7 +179,7 @@ static CMPIStatus return_ele_cap(const CMPIObjectPath *ref,
           end:
                 virDomainFree(list[i]);
 
-                if (s.rc != CMPI_RC_OK)
+                if ((s.rc != CMPI_RC_OK) || (id && (STREQ(name, id))))
                         goto out;
         }
 
@@ -191,7 +196,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_ele_cap(reference, results, 1);
+        return return_ele_cap(reference, results, 1, NULL);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -201,7 +206,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_ele_cap(reference, results, 0);
+        return return_ele_cap(reference, results, 0, NULL);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -210,7 +215,17 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_ele_cap(reference, results, 0);
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char* id;
+
+        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No InstanceID specified");
+                return s;
+        }
+
+        return return_ele_cap(reference, results, 0, id);
 }
 
 DEFAULT_CI();
