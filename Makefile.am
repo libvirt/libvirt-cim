@@ -104,3 +104,8 @@ preuninstall:
 
 rpm: clean
 	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.gz)
+
+clean-local:
+	rm -f $(find . -name "*.orig")
+	rm -f $(find . -name "*.rej")
+	rm -f $(find . -name "*~")
