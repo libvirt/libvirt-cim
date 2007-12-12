@@ -9,10 +9,11 @@ Group: Development/Libraries
 Source: libvirt-cim-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 URL: http://libvirt.org/CIM/
-Requires: libxml2
-Requires: libvirt >= 0.2.3
+Requires: libxml2 >= 2.6.0
+Requires: libvirt >= 0.3.2
+Requires: unzip
 BuildRequires: tog-pegasus-devel
-BuildRequires: libvirt-devel >= 0.2.3
+BuildRequires: libvirt-devel >= 0.3.2
 BuildRequires: e2fsprogs-devel
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
@@ -26,7 +27,8 @@ platforms with a single provider.
 
 %prep
 %setup -q
-chmod -x src/* libxkutil/* schema/*
+chmod -x src/* libxkutil/* schema/* README doc/* base_schema/README*
+chmod +X src/* libxkutil/* schema/*
 
 %build
 %configure --disable-werror
@@ -40,6 +42,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.a
+rm -f $RPM_BUILD_ROOT%{_libdir}/libxkutil.so
 
 %clean
 rm -fr $RPM_BUILD_ROOT
@@ -57,22 +60,24 @@ rm -fr $RPM_BUILD_ROOT
 
 %{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
 
+/etc/init.d/tog-pegasus restart
+
 %{_datadir}/%{name}/provider-register.sh -t pegasus \
 	-n /@CIM_VIRT_NS@ \
-	-r %{REGISTRATION} -m %{SCHEMA} || true
+	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 
 %preun
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
 	-n /@CIM_VIRT_NS@ \
-	-r %{REGISTRATION} -m %{SCHEMA} || true
+	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 
 %postun -p /sbin/ldconfig
 
 %files 
 %defattr(-, root, root)
 
-%doc README doc/CodingStyle doc/SubmittingPatches
-%doc provider-register.sh
+%doc README COPYING doc/CodingStyle doc/SubmittingPatches
+%doc base_schema/README.DMTF
 %doc doc/*.html
 %{_libdir}/lib*.so*
 %{_libdir}/cmpi/lib*.so*
