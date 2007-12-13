@@ -947,6 +947,59 @@ static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
+                                     const CMPIObjectPath *reference,
+                                     CMPIArray *arr,
+                                     struct inst_list *list)
+{
+        CMPIStatus s;
+        int i;
+        int c;
+
+        c = CMGetArrayCount(arr, &s);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+
+        for (i = 0; i < c; i++) {
+                CMPIData d;
+                CMPIObjectPath *ref;
+                CMPIInstance *inst;
+                const char *id;
+                uint16_t type;
+
+                d = CMGetArrayElementAt(arr, i, &s);
+                ref = d.value.ref;
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Unable to get ResourceSettings[%i]", i);
+                        continue;
+                }
+
+                if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
+                        CU_DEBUG("Unable to get InstanceID of `%s'",
+                                 REF2STR(ref));
+                        continue;
+                }
+
+                if (rasd_type_from_classname(CLASSNAME(ref), &type) !=
+                    CMPI_RC_OK) {
+                        CU_DEBUG("Unable to get type of `%s'",
+                                 REF2STR(ref));
+                        continue;
+                }
+
+                inst = get_rasd_instance(ctx, reference, _BROKER, id, type);
+                if (inst != NULL)
+                        inst_list_add(list, inst);
+                else
+                        CU_DEBUG("Failed to get instance for `%s'",
+                                 REF2STR(ref));
+        }
+
+        CMSetStatus(&s, CMPI_RC_OK);
+
+        return s;
+}
+
 static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                                         const CMPIContext *context,
                                         const CMPIResult *results,
@@ -974,7 +1027,32 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
                                        const CMPIArgs *argsin,
                                        CMPIArgs *argsout)
 {
-        return update_resource_settings(reference, argsin, resource_del);
+        /* The RemoveResources case is different from either Add or
+         * Modify, because it takes references instead of instances
+         */
+
+        CMPIArray *arr;
+        CMPIStatus s;
+        struct inst_list list;
+
+        inst_list_init(&list);
+
+        if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing ResourceSettings");
+                goto out;
+        }
+
+        s = rasd_refs_to_insts(context, reference, arr, &list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = _update_resource_settings(reference, &list, resource_del);
+ out:
+        inst_list_free(&list);
+
+        return s;
 }
 
 static struct method_handler DefineSystem = {
@@ -1023,7 +1101,7 @@ static struct method_handler ModifySystemSettings = {
 static struct method_handler RemoveResourceSettings = {
         .name = "RemoveResourceSettings",
         .handler = rm_resource_settings,
-        .args = {{"ResourceSettings", CMPI_stringA},
+        .args = {{"ResourceSettings", CMPI_refA},
                  ARG_END
         }
 };

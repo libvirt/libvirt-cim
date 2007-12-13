@@ -129,6 +129,8 @@ CMPIInstance *make_reference(const CMPIBroker *broker,
                                       assoc);                           \
         }
 
+#define REF2STR(r) CMGetCharPtr(CMObjectPathToString(r, NULL))
+
 /*
  * Local Variables:
  * mode: C
