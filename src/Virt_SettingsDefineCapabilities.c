@@ -814,11 +814,7 @@ static CMPIStatus rasd_to_alloc_cap(const CMPIObjectPath *ref,
                                     struct std_assoc_info *info,
                                     struct inst_list *list)
 {
-        CMPIStatus s = {CMPI_RC_OK};
-        
-        /* This direction of the association currently not supported. */
-        
-        return s;
+        RETURN_UNSUPPORTED();
 }
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
