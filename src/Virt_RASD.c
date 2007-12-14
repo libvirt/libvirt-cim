@@ -239,6 +239,30 @@ CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type)
        return rc;
 }
 
+CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
+{
+        CMPIrc rc = CMPI_RC_OK;
+        
+        switch(type) {
+        case CIM_RASD_TYPE_MEM:
+                *classname = "MemResourceAllocationSettingData";
+                break;
+        case CIM_RASD_TYPE_PROC:
+                *classname = "ProcResourceAllocationSettingData";
+                break;
+        case CIM_RASD_TYPE_NET:
+                *classname = "NetResourceAllocationSettingData";
+                break;
+        case CIM_RASD_TYPE_DISK: 
+                *classname = "DiskResourceAllocationSettingData";
+                break;
+        default:
+                rc = CMPI_RC_ERR_FAILED;
+        }
+        
+        return rc;
+}
+
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIContext *context,
                               const CMPIResult *results,
