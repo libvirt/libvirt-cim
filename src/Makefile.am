@@ -2,7 +2,6 @@
 SUBDIRS = tests
 
 noinst_HEADERS = profiles.h svpc_types.h	\
-    Virt_AllocationCapabilities.h		\
     Virt_ComputerSystem.h			\
     Virt_ComputerSystemIndication.h		\
     Virt_Device.h				\
@@ -98,9 +97,9 @@ libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabiliti
                                         -lVirt_HostSystem \
                                         -lVirt_VSMigrationCapabilities
 
-libVirt_AllocationCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la
+libVirt_AllocationCapabilities_la_DEPENDENCIES = libVirt_DevicePool.la
 libVirt_AllocationCapabilities_la_SOURCES = Virt_AllocationCapabilities.c
-libVirt_AllocationCapabilities_la_LIBADD = -lVirt_RASD -lVirt_DevicePool
+libVirt_AllocationCapabilities_la_LIBADD = -lVirt_DevicePool
 
 libVirt_SettingsDefineCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la
 libVirt_SettingsDefineCapabilities_la_SOURCES = Virt_SettingsDefineCapabilities.c
