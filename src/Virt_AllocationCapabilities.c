@@ -31,66 +31,9 @@
 
 #include "misc_util.h"
 
-#include "Virt_AllocationCapabilities.h"
-#include "Virt_RASD.h"
 #include "Virt_DevicePool.h"
 
 const static CMPIBroker *_BROKER;
-
-CMPIStatus get_alloc_cap(const CMPIBroker *broker,
-                         const CMPIObjectPath *ref,
-                         CMPIInstance **inst)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        char *inst_id;
-        uint16_t type;
-        int ret;
-
-        *inst = get_typed_instance(broker,
-                                   CLASSNAME(ref),
-                                   "AllocationCapabilities",
-                                   NAMESPACE(ref));
-
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
-                cu_statusf(broker, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get ResourceType");
-                goto out;
-        }
-
-        ret = asprintf(&inst_id, "%hi/%s", type, "0");
-        if (ret == -1) {
-                cu_statusf(broker, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get InstanceID");
-                goto out;
-        }
-
-        CMSetProperty(*inst, "InstanceID", inst_id, CMPI_chars);
-        CMSetProperty(*inst, "ResourceType", &type, CMPI_uint16);
-
- out:
-        return s;
-}
-
-static CMPIStatus return_alloc_cap(const CMPIObjectPath *ref, 
-                                   const CMPIResult *results, 
-                                   int names_only)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst = NULL;
-
-        s = get_alloc_cap(_BROKER, ref, &inst);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-
-        if (names_only)
-                cu_return_instance_name(results, inst);
-        else
-                CMReturnInstance(results, inst);
- out:
-        return s;
-}
 
 static CMPIStatus ac_from_pool(const CMPIBroker *broker, 
                                const CMPIObjectPath *ref,
@@ -240,7 +183,12 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return alloc_cap_instances(_BROKER, reference, results, true, NULL, NULL);
+        return alloc_cap_instances(_BROKER, 
+                                   reference, 
+                                   results, 
+                                   true, 
+                                   NULL, 
+                                   NULL);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -249,7 +197,12 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return alloc_cap_instances(_BROKER, reference, results, false, properties, NULL);
+        return alloc_cap_instances(_BROKER, 
+                                   reference, 
+                                   results, 
+                                   false, 
+                                   properties, 
+                                   NULL);
 }
 
 DEFAULT_CI();
