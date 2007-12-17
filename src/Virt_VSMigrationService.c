@@ -36,6 +36,7 @@
 #include <libcmpiutil/std_invokemethod.h>
 
 #include "Virt_VSMigrationService.h"
+#include "Virt_HostSystem.h"
 
 #define CIM_JOBSTATE_STARTING 3
 #define CIM_JOBSTATE_RUNNING 4
@@ -639,6 +640,8 @@ CMPIStatus get_migration_service(const CMPIObjectPath *ref,
 {
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *name = NULL;
+        const char *ccname = NULL;
 
         inst = get_typed_instance(broker,
                                   CLASSNAME(ref),
@@ -648,14 +651,34 @@ CMPIStatus get_migration_service(const CMPIObjectPath *ref,
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get instance for %s", CLASSNAME(ref));
-                return s;
+                goto out;
+        }
+
+        s = get_host_system_properties(&name, 
+                                       &ccname, 
+                                       ref, 
+                                       broker);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get host attributes");
+                goto out;
         }
 
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"MigrationService", CMPI_chars);
 
+        CMSetProperty(inst, "SystemName",
+                      (CMPIValue *)name, CMPI_chars);
+
+        CMSetProperty(inst, "SystemCreationClassName",
+                      (CMPIValue *)ccname, CMPI_chars);
+
+        CMSetStatus(&s, CMPI_RC_OK);
+ 
         *_inst = inst;
 
+ out:
         return s;
 }
 
