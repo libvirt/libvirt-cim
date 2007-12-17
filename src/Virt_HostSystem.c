@@ -110,6 +110,36 @@ static CMPIStatus return_host_cs(const CMPIObjectPath *reference,
         return s;
 }
 
+CMPIStatus get_host_system_properties(const char **name,
+                                      const char **ccname,
+                                      const CMPIObjectPath *ref,
+                                      const CMPIBroker *broker)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *host = NULL;
+
+        s = get_host_cs(broker, ref, &host);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        if (cu_get_str_prop(host, "Name", name) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get name of HostSystem");
+                goto out;
+        }
+
+        if (cu_get_str_prop(host, "CreationClassName", ccname) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get creation class of HostSystem");
+                goto out;
+        }
+
+ out:
+        return s;
+}
+
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIContext *context,
                                     const CMPIResult *results,

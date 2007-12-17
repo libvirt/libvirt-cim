@@ -25,4 +25,8 @@ CMPIStatus get_host_cs(const CMPIBroker *broker,
                        const CMPIObjectPath *reference,
                        CMPIInstance **instance);
 
+CMPIStatus get_host_system_properties(const char **name,
+                                      const char **ccname,
+                                      const CMPIObjectPath *ref,
+                                      const CMPIBroker *broker);
 #endif
