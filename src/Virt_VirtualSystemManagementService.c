@@ -1125,18 +1125,14 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
 { 
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        CMPIInstance *host = NULL;
-        const char *val = NULL;
+        const char *name = NULL;
+        const char *ccname = NULL;
         virConnectPtr conn = NULL;
 
         *_inst = NULL;
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL)
                 return s;
-
-        s = get_host_cs(broker, reference, &host);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
 
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
@@ -1151,28 +1147,25 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                 goto out;
         }
 
+        s = get_host_system_properties(&name, 
+                                       &ccname, 
+                                       reference,
+                                       broker);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get host attributes");
+                goto out;
+        }
+
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"Management Service", CMPI_chars);
 
-        if (cu_get_str_prop(host, "Name", &val) != CMPI_RC_OK) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get name of HostSystem");
-                goto out;
-        }
-
         CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)val, CMPI_chars);
-
-        if (cu_get_str_prop(host, "CreationClassName", &val) != CMPI_RC_OK) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get creation class of HostSystem");
-                goto out;
-        }
+                      (CMPIValue *)name, CMPI_chars);
 
         CMSetProperty(inst, "SystemCreationClassName",
-                      (CMPIValue *)val, CMPI_chars);
+                      (CMPIValue *)ccname, CMPI_chars);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
