@@ -1076,7 +1076,7 @@ static struct method_handler DestroySystem = {
 static struct method_handler AddResourceSettings = {
         .name = "AddResourceSettings",
         .handler = add_resource_settings,
-        .args = {{"AffectedConfiguration", CMPI_string},
+        .args = {{"AffectedConfiguration", CMPI_ref},
                  {"ResourceSettings", CMPI_stringA},
                  ARG_END
         }
