@@ -89,17 +89,19 @@ static bool dup_rasd_prop_list(struct sdc_rasd_prop *src,
         return true;
 }
 
-static bool free_rasd_prop_list(struct sdc_rasd_prop *prop_list)
+static void free_rasd_prop_list(struct sdc_rasd_prop *prop_list)
 {
         int i;
+        
+        if (!prop_list)
+                return;
 
         for (i = 0; prop_list[i].field != NULL; i++) {
                 free(prop_list[i].field);
                 free(prop_list[i].value);
         }
-
+        
         free (prop_list);
-        return true;
 }
 
 static struct sdc_rasd_prop *mem_max(const CMPIObjectPath *ref,
