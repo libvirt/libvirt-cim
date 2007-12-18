@@ -662,7 +662,7 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         const char *name = NULL;
 
         ret = cu_get_u16_arg(argsin, "RequestedState", &state);
-        if (!ret) {
+        if (ret != CMPI_RC_OK) {
                 CMSetStatus(&s, CMPI_RC_ERR_INVALID_PARAMETER);
                 goto out;
         }
