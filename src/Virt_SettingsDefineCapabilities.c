@@ -42,6 +42,7 @@
 
 #include "Virt_SettingsDefineCapabilities.h"
 #include "Virt_DevicePool.h"
+#include "Virt_RASD.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -657,9 +658,10 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
                                    sdc_rasd_type type)
 {
         CMPIInstance *inst = NULL;
-        struct sdc_rasd_prop *prop_list;
+        struct sdc_rasd_prop *prop_list = NULL;
         int i;
-        char *inst_id;
+        const char *inst_id = NULL;
+        const char *base = NULL;
         uint16_t resource_type;
         /* Defaults for the following are from 
            CIM_SettingsDefineCapabilities.mof. */
@@ -700,15 +702,21 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
                 cu_statusf(broker, s, 
                            CMPI_RC_ERR_FAILED,
                            "Unsupported sdc_rasd type");
-                goto out;
         }
 
         if (s->rc != CMPI_RC_OK) 
                 goto out;
 
+        if (rasd_classname_from_type(rasd->resource_type, &base) != CMPI_RC_OK) {
+                cu_statusf(broker, s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Resource type not known");
+                goto out;
+        }
+
         inst = get_typed_instance(broker,
                                   CLASSNAME(ref),
-                                  "ResourceAllocationSettingData",
+                                  base,
                                   NAMESPACE(ref));
         
         CMSetProperty(inst, "InstanceID", inst_id, CMPI_chars);
@@ -725,10 +733,8 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
                               prop_list[i].value, prop_list[i].type);
         }
 
-        CU_DEBUG("freeing prop_list");
-        free_rasd_prop_list(prop_list);
  out:
-        CU_DEBUG("Returning inst");
+        free_rasd_prop_list(prop_list);
         return inst;
 }
 
