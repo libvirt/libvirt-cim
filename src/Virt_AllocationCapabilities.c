@@ -20,6 +20,7 @@
  */
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>
@@ -131,7 +132,8 @@ static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
                                       const CMPIObjectPath *ref,
                                       const CMPIResult *results,
                                       bool names_only,
-                                      const char **properties)
+                                      const char **properties,
+                                      const char *id)
 {
         int i;
         virConnectPtr conn = NULL;
@@ -139,6 +141,7 @@ static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
         struct inst_list alloc_cap_list;
         struct inst_list device_pool_list;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *inst_id;
 
         CU_DEBUG("In alloc_cap_instances()");
 
@@ -165,6 +168,18 @@ static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
         }
 
         for (i = 0; i < device_pool_list.cur; i++) {
+                if (cu_get_str_prop(device_pool_list.list[i],
+                                    "InstanceID", &inst_id) != CMPI_RC_OK) {
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Error fetching device pool InstanceID");
+                        goto out;
+                }
+                if (id && (!STREQ(inst_id, id))) {
+                        inst_id = NULL;
+                        continue;
+                }
+
                 s = ac_from_pool(broker, ref, 
                                  device_pool_list.list[i], 
                                  &alloc_cap_inst);
@@ -172,6 +187,16 @@ static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
                         goto out;
 
                 inst_list_add(&alloc_cap_list, alloc_cap_inst);
+
+                if (id && (STREQ(inst_id, id)))
+                        break;
+        }
+
+        if (id && !inst_id) {
+            cu_statusf(broker, &s,
+                       CMPI_RC_ERR_NOT_FOUND,
+                       "Requested Object could not be found.");
+            goto out; 
         }
 
         if (names_only)
@@ -192,7 +217,22 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_alloc_cap(reference, results, 0);
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char* id;
+
+        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No InstanceID specified");
+                return s;
+        }
+
+        return alloc_cap_instances(_BROKER,
+                                   reference,
+                                   results,
+                                   false,
+                                   properties,
+                                   id);
 }
 
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
@@ -200,7 +240,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return alloc_cap_instances(_BROKER, reference, results, true, NULL);
+        return alloc_cap_instances(_BROKER, reference, results, true, NULL, NULL);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -209,7 +249,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return alloc_cap_instances(_BROKER, reference, results, false, properties);
+        return alloc_cap_instances(_BROKER, reference, results, false, properties, NULL);
 }
 
 DEFAULT_CI();
