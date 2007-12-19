@@ -14,7 +14,7 @@ noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_SettingsDefineCapabilities.h		\
     Virt_VirtualSystemManagementCapabilities.h	\
     Virt_VirtualSystemManagementService.h       \
-    Virt_VSSD.h	                                \	
+    Virt_VSSD.h					\
     Virt_VSMigrationCapabilities.h              \
     Virt_VSMigrationService.h
 
