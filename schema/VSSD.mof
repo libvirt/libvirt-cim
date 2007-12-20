@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_VirtualSystemSettingData to represent "
-	"the config of Xen virtual machines/domains running on the system.")
+	"the config of Xen virtual machines/domains running on the system."),
+ Provider("cmpi::Virt_VSSD")
 ]
 class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
 {
@@ -14,7 +15,8 @@ class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
 
 [Description (
 	"A class derived from CIM_VirtualSystemSettingData to represent "
-	"the config of KVM virtual machines/domains running on the system.")
+	"the config of KVM virtual machines/domains running on the system."),
+ Provider("cmpi::Virt_VSSD")
 ]
 class KVM_VirtualSystemSettingData : CIM_VirtualSystemSettingData
 {
