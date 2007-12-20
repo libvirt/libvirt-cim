@@ -1,11 +1,15 @@
 // Copyright IBM Corp. 2007
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_HostedService")
+]
 class Xen_HostedService : CIM_HostedService
 {
 };
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_HostedService")
+]
 class KVM_HostedService : CIM_HostedService
 {
 };
