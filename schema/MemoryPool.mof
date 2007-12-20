@@ -1,9 +1,11 @@
 // Copyright IBM Corp. 2007
 
+[Provider("cmpi::Virt_DevicePool")]
 class Xen_MemoryPool : CIM_ResourcePool
 {
 };
 
+[Provider("cmpi::Virt_DevicePool")]
 class KVM_MemoryPool : CIM_ResourcePool
 {
 };
