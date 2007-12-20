@@ -2,7 +2,8 @@
 
 [Association,
  Description (
-        "A class to associate a ManagedElement with its Capabilities.")
+        "A class to associate a ManagedElement with its Capabilities."),
+ Provider("cmpi::Virt_ElementCapabilities")
 ]
 class Xen_ElementCapabilities : CIM_ElementCapabilities
 {
@@ -10,7 +11,8 @@ class Xen_ElementCapabilities : CIM_ElementCapabilities
 
 [Association,
  Description (
-        "A class to associate a ManagedElement with its Capabilities.")
+        "A class to associate a ManagedElement with its Capabilities."),
+ Provider("cmpi::Virt_ElementCapabilities")
 ]
 class KVM_ElementCapabilities : CIM_ElementCapabilities
 {
