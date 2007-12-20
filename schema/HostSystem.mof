@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_ComputerSystem to represent "
-	"the Xen host system.")
+	"the Xen host system."),
+ Provider("cmpi::Virt_HostSystem")
 ]
 class Xen_HostSystem : CIM_ComputerSystem
 {
@@ -10,7 +11,8 @@ class Xen_HostSystem : CIM_ComputerSystem
 
 [Description (
 	"A class derived from CIM_ComputerSystem to represent "
-	"the KVM host system.")
+	"the KVM host system."),
+ Provider("cmpi::Virt_HostSystem")
 ]
 class KVM_HostSystem : CIM_ComputerSystem
 {

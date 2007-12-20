@@ -173,7 +173,10 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-STD_InstanceMIStub(, Virt_HostSystemProvider, _BROKER, libvirt_cim_init());
+STD_InstanceMIStub(, 
+                   Virt_HostSystem,
+                   _BROKER, 
+                   libvirt_cim_init());
 
 /*
  * Local Variables:
