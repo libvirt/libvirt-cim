@@ -342,7 +342,10 @@ DEFAULT_EIN();
 DEFAULT_INST_CLEANUP();
 DEFAULT_EQ();
 
-STD_InstanceMIStub(, Virt_RASDProvider, _BROKER, libvirt_cim_init());
+STD_InstanceMIStub(, 
+                   Virt_RASD,
+                   _BROKER, 
+                   libvirt_cim_init());
 
 /*
  * Local Variables:

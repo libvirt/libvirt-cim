@@ -8,7 +8,9 @@ class KVM_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData
 {
 };
 
-[Description ("Xen virtual disk configuration")]
+[Description ("Xen virtual disk configuration"),
+ Provider("cmpi::Virt_RASD")
+]
 class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
 
@@ -17,7 +19,9 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 
 };
 
-[Description ("KVM virtual disk configuration")]
+[Description ("KVM virtual disk configuration"),
+ Provider("cmpi::Virt_RASD")
+]
 class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
 
@@ -26,7 +30,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
 };
 
-[Description ("Xen virtual network configuration")]
+[Description ("Xen virtual network configuration"),
+ Provider("cmpi::Virt_RASD")
+]
 class Xen_NetResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
 
@@ -35,7 +41,9 @@ class Xen_NetResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 
 };
 
-[Description ("KVM virtual network configuration")]
+[Description ("KVM virtual network configuration"),
+ Provider("cmpi::Virt_RASD")
+]
 class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
 
@@ -44,22 +52,30 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
 };
 
-[Description ("Xen virtual processor")]
+[Description ("Xen virtual processor"),
+ Provider("cmpi::Virt_RASD")
+]
 class Xen_ProcResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
 };
 
-[Description ("KVM virtual processor")]
+[Description ("KVM virtual processor"),
+ Provider("cmpi::Virt_RASD")
+]
 class KVM_ProcResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
 };
 
-[Description ("Xen virtual memory")]
+[Description ("Xen virtual memory"),
+ Provider("cmpi::Virt_RASD")
+]
 class Xen_MemResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
 };
 
-[Description ("KVM virtual memory")]
+[Description ("KVM virtual memory"),
+ Provider("cmpi::Virt_RASD")
+]
 class KVM_MemResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
 };
