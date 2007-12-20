@@ -2,7 +2,8 @@
 
 [Association,
  Description (
-   "Associates a host system to its resource pools")
+   "Associates a host system to its resource pools"),
+ Provider("cmpi::Virt_HostedResourcePool")
 ]
 class Xen_HostedResourcePool : CIM_HostedResourcePool
 {
@@ -10,7 +11,8 @@ class Xen_HostedResourcePool : CIM_HostedResourcePool
 
 [Association,
  Description (
-    "Associates a host system to its resource pools")
+    "Associates a host system to its resource pools"),
+ Provider("cmpi::Virt_HostedResourcePool")
 ]
 class KVM_HostedResourcePool : CIM_HostedResourcePool
 {

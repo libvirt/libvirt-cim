@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
-Xen_HostedResourcePool root/virt Virt_HostedResourcePoolProvider Virt_HostedResourcePool association
-KVM_HostedResourcePool root/virt Virt_HostedResourcePoolProvider Virt_HostedResourcePool association
+Xen_HostedResourcePool root/virt Virt_HostedResourcePool Virt_HostedResourcePool association
+KVM_HostedResourcePool root/virt Virt_HostedResourcePool Virt_HostedResourcePool association
