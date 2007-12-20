@@ -1,9 +1,11 @@
 // Copyright IBM Corp. 2007
 
+[Provider("cmpi::Virt_VirtualSystemManagementService")]
 class Xen_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 {
 };
 
+[Provider("cmpi::Virt_VirtualSystemManagementService")]
 class KVM_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 {
 };
