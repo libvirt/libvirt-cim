@@ -477,7 +477,7 @@ openwbem_transform()
     then
 	for _f in $moffiles
 	do
-	  sed "s/Provider *( *\"cmpi:/Provider(\"cmpi::/g" < $_f >> $OUTFILE
+	  cat $_f >> $OUTFILE
 	done
     fi
 }
@@ -497,6 +497,9 @@ openwbem_repository()
 
 openwbem_install()
 {
+    namespace=$1
+    shift
+
     CIMMOF=`which owmofc 2> /dev/null`
     if test $? != 0
     then
@@ -531,7 +534,7 @@ openwbem_install()
     if openwbem_transform $_REGFILENAME $*
     then
 	chatter Registering providers with $state owcimomd
-	$CIMMOF $_REGFILENAME > /dev/null
+	$CIMMOF -u http://localhost/cimom -n $namespace $_REGFILENAME > /dev/null
     else
 	echo "Failed to build OpenWBEM registration MOF." >&2
 	return 1
@@ -540,6 +543,9 @@ openwbem_install()
 
 openwbem_uninstall()
 {
+    namespace=$1
+    shift
+
     CIMMOF=`which owmofc 2> /dev/null`
     if test $? != 0
     then
@@ -728,7 +734,7 @@ then
     case $cimserver in
 	pegasus) pegasus_install $namespace $mofs ":" $regs;;
 	sfcb)    sfcb_install $namespace $mofs ":" $regs;;
-	openwbem) openwbem_install $mofs ;;
+	openwbem) openwbem_install $namespace $mofs ;;
 	sniacimom) echo sniacimom not yet supported && exit 1 ;;
 	**)	echo "Invalid CIM Server Type " $cimserver && exit 1;;
     esac
@@ -736,7 +742,7 @@ else
     case $cimserver in
 	pegasus) pegasus_uninstall $namespace $mofs ":" $regs;;
 	sfcb)    sfcb_uninstall $namespace $mofs ":" $regs;;
-	openwbem) openwbem_uninstall $mofs ;;
+	openwbem) openwbem_uninstall $namespace $mofs ;;
 	sniacimom) echo sniacimom not yet supported && exit 1 ;;
 	**)	echo "Invalid CIM Server Type " $cimserver && exit 1;;
     esac

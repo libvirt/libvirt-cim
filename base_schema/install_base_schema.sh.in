@@ -3,6 +3,7 @@
 DATA="$1"
 NS=@CIM_VIRT_NS@
 CIMOM=@CIMSERVER@
+SCHEMA_VERSION="2.16"
 
 TMPDIR=$(mktemp -d /tmp/cim_schema.XXXXX)
 
@@ -44,6 +45,17 @@ detect_sfcb_dir() {
     done
 }
 
+detect_openwbem_dir() {
+    dirs="/usr/share/mof"
+
+    for d in $dirs; do
+	if [ -d "$d" ]; then
+	    echo $d
+	    return
+	fi
+    done
+}
+
 install_schema_pegasus() {
     local repo=$(detect_peg_repo)
 
@@ -76,6 +88,26 @@ install_schema_sfcb() {
     sfcbrepos -f
 }
 
+install_schema_openwbem() {
+    local dir=$(detect_openwbem_dir)
+    local schema_dir=$dir/cimv$SCHEMA_VERSION
+
+    mkdir $schema_dir
+    if [ -d "$schema_dir" ]; then
+	echo "Unable to determine openwbem schema directory"
+	return
+    fi
+
+    cp ${TMPDIR}/cimv???.mof ${TMPDIR}/CIM_Schema.mof
+    cp -ra ${TMPDIR}/* $schema_dir
+
+    owcreatenamespace -u http://localhost/ -n root/virt
+    owmofc -u http://localhost/cimom -n root/virt $schema_dir/CIM_Schema.mof
+
+    owcreatenamespace -u http://localhost/ -n root/interop
+    owmofc -u http://localhost/cimom -n root/interop $schema_dir/cimv???-interop.mof
+}
+
 if [ -z "$1" ]; then
     echo "Usage: $0 [source_dir]"
     exit 1
@@ -90,6 +122,9 @@ case "$CIMOM" in
 	;;
     pegasus)
 	(install_schema_pegasus) >>$DEBUG 2>&1
+	;;
+    openwbem)
+	(install_schema_openwbem) >>$DEBUG 2>&1
 	;;
     *)
 	echo ERROR: Unknown CIMOM: $CIMOM
