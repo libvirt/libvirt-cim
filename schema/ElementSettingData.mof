@@ -1,11 +1,15 @@
 // Copyright IBM Corp. 2007
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_ElementSettingData")
+]
 class Xen_ElementSettingData : CIM_ElementSettingData
 {
 };
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_ElementSettingData")
+]
 class KVM_ElementSettingData : CIM_ElementSettingData
 {
 };

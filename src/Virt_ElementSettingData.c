@@ -216,7 +216,11 @@ static struct std_assoc *handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Virt_ElementSettingDataProvider, _BROKER, libvirt_cim_init(), handlers);
+STDA_AssocMIStub(, 
+                 Virt_ElementSettingData, 
+                 _BROKER,
+                 libvirt_cim_init(),
+                 handlers);
 
 /*
  * Local Variables:
