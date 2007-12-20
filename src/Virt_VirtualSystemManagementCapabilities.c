@@ -181,8 +181,10 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-STD_InstanceMIStub(, Virt_VirtualSystemManagementCapabilitiesProvider, _BROKER,
-                 libvirt_cim_init());
+STD_InstanceMIStub(,
+                   Virt_VirtualSystemManagementCapabilities, 
+                   _BROKER,
+                   libvirt_cim_init());
 
 /*
  * Local Variables:

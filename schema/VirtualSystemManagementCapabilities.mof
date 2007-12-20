@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_Capabilities to represent "
-	"the management capabilities of a Xen virtual system")
+	"the management capabilities of a Xen virtual system"),
+ Provider("cmpi::Virt_VirtualSystemManagementCapabilities")
 ]
 class Xen_VirtualSystemManagementCapabilities : CIM_VirtualSystemManagementCapabilities
 {
@@ -10,7 +11,8 @@ class Xen_VirtualSystemManagementCapabilities : CIM_VirtualSystemManagementCapab
 
 [Description (
 	"A class derived from CIM_Capabilities to represent "
-	"the management capabilities of a KVM virtual system.")
+	"the management capabilities of a KVM virtual system."),
+ Provider("cmpi::Virt_VirtualSystemManagementCapabilities")
 ]
 class KVM_VirtualSystemManagementCapabilities : CIM_VirtualSystemManagementCapabilities
 {
