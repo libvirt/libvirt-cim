@@ -2,7 +2,8 @@
 
 [Association,
  Description (
-        "A class to associate a ManagedElement with its RegisteredProfile.")
+        "A class to associate a ManagedElement with its RegisteredProfile."),
+ Provider("cmpi::Virt_ElementConformsToProfile")
 ]
 class Xen_ElementConformsToProfile : CIM_ElementConformsToProfile
 {
@@ -14,7 +15,8 @@ class Xen_ElementConformsToProfile : CIM_ElementConformsToProfile
 
 [Association,
  Description (
-        "A class to associate a ManagedElement with its RegisteredProfile.")
+        "A class to associate a ManagedElement with its RegisteredProfile."),
+ Provider("cmpi::Virt_ElementConformsToProfile")
 ]
 class KVM_ElementConformsToProfile : CIM_ElementConformsToProfile
 {

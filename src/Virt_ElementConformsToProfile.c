@@ -244,7 +244,11 @@ struct std_assoc *assoc_handlers[] = {
         NULL
 };
 
-STDA_AssocMIStub(, Virt_ElementConformsToProfileProvider, _BROKER, libvirt_cim_init(), assoc_handlers);
+STDA_AssocMIStub(,
+                 Virt_ElementConformsToProfile,
+                 _BROKER, 
+                 libvirt_cim_init(), 
+                 assoc_handlers);
 /*
  * Local Variables:
  * mode: C
