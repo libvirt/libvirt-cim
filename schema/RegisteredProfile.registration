@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
-Xen_RegisteredProfile root/interop Virt_RegisteredProfileProvider Virt_RegisteredProfile instance
-KVM_RegisteredProfile root/interop Virt_RegisteredProfileProvider Virt_RegisteredProfile instance
+Xen_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance
+KVM_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance
