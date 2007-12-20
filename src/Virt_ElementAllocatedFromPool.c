@@ -31,6 +31,7 @@
 #include <libcmpiutil/std_association.h>
 #include "misc_util.h"
 #include "cs_util.h"
+#include "device_parsing.h"
 
 #include "Virt_DevicePool.h"
 #include "Virt_Device.h"
@@ -200,6 +201,7 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
 {
         const char *poolid;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        uint16_t type;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -211,35 +213,18 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        printf("Got %s\n", poolid);
+        CU_DEBUG("Got %s\n", poolid);
 
-        /* FIXME, make this shared with the RAFP version */
-        if (STARTS_WITH(poolid, "ProcessorPool"))
-                devs_from_pool(CIM_RASD_TYPE_PROC,
-                               ref,
-                               poolid,
-                               list);
-        else if (STARTS_WITH(poolid, "MemoryPool"))
-                devs_from_pool(CIM_RASD_TYPE_MEM,
-                               ref,
-                               poolid,
-                               list);
-        else if (STARTS_WITH(poolid, "NetworkPool"))
-                devs_from_pool(CIM_RASD_TYPE_NET,
-                               ref,
-                               poolid,
-                               list);
-        else if (STARTS_WITH(poolid, "DiskPool"))
-                devs_from_pool(CIM_RASD_TYPE_DISK,
-                               ref,
-                               poolid,
-                               list);
-        else {
+        type = device_type_from_poolid(poolid);
+        if (type == VIRT_DEV_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid InstanceID or unsupported pool type");
                 goto out;
         }
+
+
+        devs_from_pool(type, ref, poolid, list);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
