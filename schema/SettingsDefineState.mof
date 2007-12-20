@@ -1,11 +1,15 @@
 // Copyright IBM Corp. 2007
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_SettingsDefineState")
+]
 class Xen_SettingsDefineState : CIM_SettingsDefineState
 {
 };
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_SettingsDefineState")
+]
 class KVM_SettingsDefineState : CIM_SettingsDefineState
 {
 };
