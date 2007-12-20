@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_NetworkPort to represent "
-	"the Xen virtual network interfaces on the system.")
+	"the Xen virtual network interfaces on the system."),
+ Provider("cmpi::Virt_Device")
 ]
 class Xen_NetworkPort : CIM_NetworkPort
 {
@@ -10,7 +11,8 @@ class Xen_NetworkPort : CIM_NetworkPort
 
 [Description (
 	"A class derived from CIM_NetworkPort to represent "
-	"the KVM virtual network interfaces on the system.")
+	"the KVM virtual network interfaces on the system."),
+ Provider("cmpi::Virt_Device")
 ]
 class KVM_NetworkPort : CIM_NetworkPort
 {

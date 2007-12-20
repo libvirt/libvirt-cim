@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_LogicalDisk to represent "
-	"the Xen virtual disks on the system.")
+	"the Xen virtual disks on the system."),
+ Provider("cmpi::Virt_Device")
 ]
 class Xen_LogicalDisk : CIM_LogicalDisk
 {
@@ -10,7 +11,8 @@ class Xen_LogicalDisk : CIM_LogicalDisk
 
 [Description (
 	"A class derived from CIM_LogicalDisk to represent "
-	"the KVM virtual disks on the system.")
+	"the KVM virtual disks on the system."),
+ Provider("cmpi::Virt_Device")
 ]
 class KVM_LogicalDisk : CIM_LogicalDisk
 {

@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_Processor to represent "
-	"the Xen virtual processors.")
+	"the Xen virtual processors."),
+ Provider("cmpi::Virt_Device")
 ]
 class Xen_Processor : CIM_Processor
 {
@@ -10,7 +11,8 @@ class Xen_Processor : CIM_Processor
 
 [Description (
 	"A class derived from CIM_Processor to represent "
-	"the KVM virtual processors.")
+	"the KVM virtual processors."),
+ Provider("cmpi::Virt_Device")
 ]
 class KVM_Processor : CIM_Processor
 {
