@@ -234,8 +234,10 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-STD_InstanceMIStub(, Virt_EnabledLogicalElementCapabilitiesProvider, _BROKER,
-                 libvirt_cim_init());
+STD_InstanceMIStub(,
+                   Virt_EnabledLogicalElementCapabilities,
+                   _BROKER,
+                   libvirt_cim_init());
 
 /*
  * Local Variables:

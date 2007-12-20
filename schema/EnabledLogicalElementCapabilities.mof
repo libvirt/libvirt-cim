@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_Capabilities to represent "
-	"the changes that can be made to a started Xen virtual system")
+	"the changes that can be made to a started Xen virtual system"),
+ Provider("cmpi::Virt_EnabledLogicalElementCapabilities")
 ]
 class Xen_EnabledLogicalElementCapabilities : CIM_EnabledLogicalElementCapabilities
 {
@@ -10,7 +11,8 @@ class Xen_EnabledLogicalElementCapabilities : CIM_EnabledLogicalElementCapabilit
 
 [Description (
 	"A class derived from CIM_Capabilities to represent "
-	"the changes that can be made to a started KVM virtual system")
+	"the changes that can be made to a started KVM virtual system"),
+ Provider("cmpi::Virt_EnabledLogicalElementCapabilities")
 ]
 class KVM_EnabledLogicalElementCapabilities : CIM_EnabledLogicalElementCapabilities
 {
