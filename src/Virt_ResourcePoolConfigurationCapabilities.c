@@ -118,8 +118,10 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 }
 
 
-STD_InstanceMIStub(, Virt_ResourcePoolConfigurationCapabilitiesProvider,
-                   _BROKER, libvirt_cim_init());
+STD_InstanceMIStub(,
+                   Virt_ResourcePoolConfigurationCapabilities,
+                   _BROKER,
+                   libvirt_cim_init());
 
 /*
  * Local Variables:
