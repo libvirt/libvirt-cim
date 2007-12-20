@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
-Xen_VirtualSystemMigrationCapabilities root/virt Virt_VSMC Virt_VSMigrationCapabilities instance
-KVM_VirtualSystemMigrationCapabilities root/virt Virt_VSMC Virt_VSMigrationCapabilities instance
+Xen_VirtualSystemMigrationCapabilities root/virt Virt_VSMigrationCapabilities Virt_VSMigrationCapabilities instance
+KVM_VirtualSystemMigrationCapabilities root/virt Virt_VSMigrationCapabilities Virt_VSMigrationCapabilities instance

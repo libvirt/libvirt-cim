@@ -177,7 +177,8 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-STD_InstanceMIStub(, Virt_VSMC,
+STD_InstanceMIStub(, 
+                   Virt_VSMigrationCapabilities,
                    _BROKER,
                    libvirt_cim_init());
 
