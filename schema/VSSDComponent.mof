@@ -1,11 +1,15 @@
 // Copyright IBM Corp. 2007
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_VSSDComponent")
+]
 class Xen_VirtualSystemSettingDataComponent : CIM_Component
 {
 };
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_VSSDComponent")
+]
 class KVM_VirtualSystemSettingDataComponent : CIM_Component
 {
 };
