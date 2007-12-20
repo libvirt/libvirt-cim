@@ -82,8 +82,11 @@ static struct method_handler *my_handlers[] = {
         NULL,
 };
 
-STDIM_MethodMIStub(, Virt_ResourcePoolConfigurationServiceProvider,
-                   _BROKER, libvirt_cim_init(), my_handlers);
+STDIM_MethodMIStub(, 
+                   Virt_ResourcePoolConfigurationService,
+                   _BROKER, 
+                   libvirt_cim_init(),
+                   my_handlers);
 
 DEFAULT_CI();
 DEFAULT_MI();
@@ -205,8 +208,10 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
 }
 
 
-STD_InstanceMIStub(, Virt_ResourcePoolConfigurationServiceProvider,
-                   _BROKER, libvirt_cim_init());
+STD_InstanceMIStub(,
+                   Virt_ResourcePoolConfigurationService,
+                   _BROKER, 
+                   libvirt_cim_init());
 
 
 /*
