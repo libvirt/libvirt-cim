@@ -182,6 +182,7 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *poolid;
+        uint16_t type;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -193,32 +194,19 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        if (STARTS_WITH(poolid, "ProcessorPool"))
-                rasds_from_pool(CIM_RASD_TYPE_PROC,
-                                ref,
-                                poolid,
-                                list);
-        else if (STARTS_WITH(poolid, "MemoryPool"))
-                rasds_from_pool(CIM_RASD_TYPE_MEM,
-                                ref,
-                                poolid,
-                                list);
-        else if (STARTS_WITH(poolid, "NetworkPool"))
-                rasds_from_pool(CIM_RASD_TYPE_NET,
-                                ref,
-                                poolid,
-                                list);
-        else if (STARTS_WITH(poolid, "DiskPool"))
-                rasds_from_pool(CIM_RASD_TYPE_DISK,
-                                ref,
-                                poolid,
-                                list);
-        else {
+        type = device_type_from_poolid(poolid);
+        if (type == VIRT_DEV_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid InstanceID or unsupported pool type");
                 goto out;
         }
+
+
+        rasds_from_pool(type, 
+                        ref,
+                        poolid,
+                        list);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
