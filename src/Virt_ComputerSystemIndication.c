@@ -303,8 +303,11 @@ DEFAULT_IND_CLEANUP();
 DEFAULT_AF();
 DEFAULT_MP();
 
-STDI_IndicationMIStub(, Virt_ComputerSystemIndicationProvider,
-                      _BROKER, libvirt_cim_init(), &csi);
+STDI_IndicationMIStub(, 
+                      Virt_ComputerSystemIndication,
+                      _BROKER,
+                      libvirt_cim_init(), 
+                      &csi);
 
 /*
  * Local Variables:

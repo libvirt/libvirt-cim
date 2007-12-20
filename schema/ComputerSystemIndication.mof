@@ -1,21 +1,29 @@
 // Copyright IBM Corp. 2007
 
-[Description ("Xen_ComputerSystem created")]
+[Description ("Xen_ComputerSystem created"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
 class Xen_ComputerSystemCreatedIndication : CIM_InstCreation
 {
 };
 
-[Description ("Xen_ComputerSystem deleted")]
+[Description ("Xen_ComputerSystem deleted"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
 class Xen_ComputerSystemDeletedIndication : CIM_InstDeletion
 {
 };
 
-[Description ("KVM_ComputerSystem lifecycle")]
+[Description ("KVM_ComputerSystem lifecycle"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
 class KVM_ComputerSystemCreatedIndication : CIM_InstCreation
 {
 };
 
-[Description ("KVM_ComputerSystem lifecycle")]
+[Description ("KVM_ComputerSystem lifecycle"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
 class KVM_ComputerSystemDeletedIndication : CIM_InstDeletion
 {
 };
