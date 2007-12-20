@@ -1,11 +1,15 @@
 // Copyright IBM Corp. 2007
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_ResourceAllocationFromPool")
+]
 class Xen_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool
 {
 };
 
-[Association]
+[Association,
+ Provider("cmpi::Virt_ResourceAllocationFromPool")
+]
 class KVM_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool
 {
 };
