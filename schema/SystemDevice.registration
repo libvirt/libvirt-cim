@@ -1,4 +1,4 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
-Xen_SystemDevice root/virt Virt_SystemDeviceProvider Virt_SystemDevice association
-KVM_SystemDevice root/virt Virt_SystemDeviceProvider Virt_SystemDevice association
+Xen_SystemDevice root/virt Virt_SystemDevice Virt_SystemDevice association
+KVM_SystemDevice root/virt Virt_SystemDevice Virt_SystemDevice association

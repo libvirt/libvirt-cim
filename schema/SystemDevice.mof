@@ -2,7 +2,8 @@
 
 [Association,
  Description (
-        "A class to associate a Xen_ComputerSystem with its devices." )
+        "A class to associate a Xen_ComputerSystem with its devices." ),
+ Provider("cmpi::Virt_SystemDevice")
 ]
 class Xen_SystemDevice : CIM_SystemDevice
 {
@@ -17,7 +18,8 @@ class Xen_SystemDevice : CIM_SystemDevice
 
 [Association,
  Description (
-        "A class to associate a KVM_ComputerSystem with its devices." )
+        "A class to associate a KVM_ComputerSystem with its devices." ),
+ Provider("cmpi::Virt_SystemDevice")
 ]
 class KVM_SystemDevice : CIM_SystemDevice
 {
