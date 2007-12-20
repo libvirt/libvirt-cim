@@ -1,9 +1,11 @@
 // Copyright IBM Corp. 2007
 
+[Provider("cmpi::Virt_AllocationCapabilities")]
 class Xen_AllocationCapabilities : CIM_AllocationCapabilities
 {
 };
 
+[Provider("cmpi::Virt_AllocationCapabilities")]
 class KVM_AllocationCapabilities : CIM_AllocationCapabilities
 {
 };
