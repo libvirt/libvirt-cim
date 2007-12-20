@@ -751,7 +751,8 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-STD_InstanceMIStub(, Virt_VSMigrationService,
+STD_InstanceMIStub(, 
+                   Virt_VSMigrationService,
                    _BROKER,
                    libvirt_cim_init());
 /*
