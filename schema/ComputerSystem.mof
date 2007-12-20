@@ -2,7 +2,8 @@
 
 [Description (
 	"A class derived from CIM_ComputerSystem to represent "
-	"the Xen virtual machines/domains running on the system.")
+	"the Xen virtual machines/domains running on the system."),
+ Provider("cmpi::Virt_ComputerSystem")
 ]
 class Xen_ComputerSystem : CIM_ComputerSystem
 {
@@ -14,7 +15,8 @@ class Xen_ComputerSystem : CIM_ComputerSystem
 
 [Description (
 	"A class derived from CIM_ComputerSystem to represent "
-	"the KVM virtual machines running on the system.")
+	"the KVM virtual machines running on the system."),
+ Provider("cmpi::Virt_ComputerSystem")
 ]
 class KVM_ComputerSystem : CIM_ComputerSystem
 {

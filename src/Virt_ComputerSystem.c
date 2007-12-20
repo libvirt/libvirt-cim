@@ -680,7 +680,10 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         return s;
 }
 
-STD_InstanceMIStub(, Virt_ComputerSystemProvider, _BROKER, libvirt_cim_init());
+STD_InstanceMIStub(, 
+                   Virt_ComputerSystem, 
+                   _BROKER, 
+                   libvirt_cim_init());
 
 static struct method_handler RequestStateChange = {
         .name = "RequestStateChange",
@@ -697,7 +700,7 @@ static struct method_handler *my_handlers[] = {
 };
 
 STDIM_MethodMIStub(,
-                   Virt_ComputerSystemProvider,
+                   Virt_ComputerSystem,
                    _BROKER,
                    libvirt_cim_init(),
                    my_handlers);
