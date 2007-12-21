@@ -712,6 +712,48 @@ static CMPIStatus return_pool(const CMPIObjectPath *ref,
         return s;
 }
 
+CMPIStatus get_pool_inst(const CMPIBroker *broker,
+                         const CMPIObjectPath *reference,
+                         CMPIInstance **instance)
+{
+        CMPIStatus s;
+        CMPIInstance *inst = NULL;
+        virConnectPtr conn = NULL;
+        const char *id = NULL;
+        const char *prop;
+
+        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }
+
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
+        inst = get_pool_by_id(broker, conn, id, NAMESPACE(reference));
+        if (inst) {
+                prop = cu_compare_ref(reference, inst);
+                if (prop != NULL) {
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "No such ResourcePool instance (%s)", prop);
+                }
+        } else {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No such instance `%s'", id);
+        }
+
+ out:
+        virConnectClose(conn);
+        *instance = inst;
+
+        return s;
+}
+
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIContext *context,
                                     const CMPIResult *results,
@@ -736,41 +778,11 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const char **properties)
 {
         CMPIStatus s;
-        CMPIInstance *inst;
-        virConnectPtr conn = NULL;
-        const char *id = NULL;
-        const char *prop;
+        CMPIInstance *inst = NULL;
 
-        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
-                goto out;
-        }
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
-        if (conn == NULL)
-                goto out;
-
-        inst = get_pool_by_id(_BROKER, conn, id, NAMESPACE(reference));
-        if (inst) {
-                prop = cu_compare_ref(reference, inst);
-                if (prop != NULL) {
-                        cu_statusf(broker, &s,
-                                   CMPI_RC_ERR_NOT_FOUND,
-                                   "No such ResourcePool instance (%s)", prop);
-                }
+        s = get_pool_inst(_BROKER, reference, &inst);
+        if ((s.rc == CMPI_RC_OK) && (inst != NULL))
                 CMReturnInstance(results, inst);
-                CMSetStatus(&s, CMPI_RC_OK);
-        } else {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such instance `%s'", id);
-        }
-
-
- out:
-        virConnectClose(conn);
 
         return s;
 }

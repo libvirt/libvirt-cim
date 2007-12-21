@@ -74,6 +74,18 @@ CMPIStatus get_all_pools(const CMPIBroker *broker,
                          virConnectPtr conn,
                          const char *ns,
                          struct inst_list *list);
+
+/**
+ * Get a device pools instance for the given reference 
+ *
+ * @param broker The current Broker
+ * @param reference The reference passed to the CIMOM 
+ * @param instance Return corresponding instance 
+ */
+CMPIStatus get_pool_inst(const CMPIBroker *broker,
+                         const CMPIObjectPath *reference,
+                         CMPIInstance **instance);
+
 #endif
 
 /*
