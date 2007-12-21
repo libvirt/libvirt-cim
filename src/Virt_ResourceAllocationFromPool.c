@@ -183,6 +183,7 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *poolid;
         uint16_t type;
+        CMPIInstance *inst;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -202,6 +203,9 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        s = get_pool_inst(_BROKER, ref, &inst);
+        if ((s.rc != CMPI_RC_OK) || (inst == NULL))
+                goto out;
 
         rasds_from_pool(type, 
                         ref,
