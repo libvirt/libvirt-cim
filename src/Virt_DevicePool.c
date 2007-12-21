@@ -268,15 +268,15 @@ char *pool_member_of(const CMPIBroker *broker,
         return poolid;
 }
 
-int device_type_from_poolid(const char *id)
+uint16_t device_type_from_poolid(const char *id)
 {
-        if (strstr(id, "NetworkPool"))
+        if (STARTS_WITH(id, "NetworkPool"))
                 return VIRT_DEV_NET;
-        else if (strstr(id, "DiskPool"))
+        else if (STARTS_WITH(id, "DiskPool"))
                 return VIRT_DEV_DISK;
-        else if (strstr(id, "Memory"))
+        else if (STARTS_WITH(id, "MemoryPool"))
                 return VIRT_DEV_MEM;
-        else if (strstr(id, "Processor"))
+        else if (STARTS_WITH(id, "ProcessorPool"))
                 return VIRT_DEV_VCPU;
         else
                 return VIRT_DEV_UNKNOWN;
