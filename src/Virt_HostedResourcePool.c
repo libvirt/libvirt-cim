@@ -43,8 +43,13 @@ static CMPIStatus pool_to_sys(const CMPIObjectPath *ref,
 {
         CMPIInstance *host;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
 
         if (!match_hypervisor_prefix(ref, info))
+                return s;
+
+        s = get_pool_inst(_BROKER, ref, &inst);
+        if ((s.rc != CMPI_RC_OK) || (inst == NULL))
                 return s;
 
         s = get_host_cs(_BROKER, ref, &host);
