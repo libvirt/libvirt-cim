@@ -172,7 +172,24 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_vsm_cap(reference, results, 0);
+        CMPIInstance *inst;
+        CMPIStatus s;
+        const char *prop;
+
+        s = get_vsm_cap(_BROKER, reference, &inst);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+
+        prop = cu_compare_ref(reference, inst);
+        if (prop != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", prop);
+        } else {
+                CMReturnInstance(results, inst);
+        }
+
+        return s;
 }
 
 DEFAULT_CI();
