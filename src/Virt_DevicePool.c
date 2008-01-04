@@ -35,7 +35,6 @@
 #include "config.h"
 
 #include "misc_util.h"
-#include "hostres.h"
 #include "device_parsing.h"
 
 #include <libcmpiutil/libcmpiutil.h>
@@ -196,6 +195,74 @@ static char *diskpool_member_of(const CMPIBroker *broker,
         return pool;
 }
 
+static virNetworkPtr bridge_to_network(virConnectPtr conn,
+                                       const char *bridge)
+{
+        char **networks = NULL;
+        virNetworkPtr network = NULL;
+        int num;
+        int i;
+
+        num = virConnectNumOfNetworks(conn);
+        if (num < 0)
+                return NULL;
+
+        networks = calloc(num, sizeof(*networks));
+        if (networks == NULL)
+                return NULL;
+
+        num = virConnectListNetworks(conn, networks, num);
+
+        for (i = 0; i < num; i++) {
+                char *_bridge;
+
+                network = virNetworkLookupByName(conn, networks[i]);
+                if (network == NULL)
+                        continue;
+
+                _bridge = virNetworkGetBridgeName(network);
+                CU_DEBUG("Network `%s' has bridge `%s'", networks[i], _bridge);
+                if (STREQ(bridge, _bridge)) {
+                        i = num;
+                } else {
+                        virNetworkFree(network);
+                        network = NULL;
+                }
+
+                free(_bridge);
+        }
+
+        free(networks);
+
+        return network;
+}
+
+static char *_netpool_member_of(virConnectPtr conn,
+                                const char *bridge)
+{
+        virNetworkPtr net = NULL;
+        const char *netname;
+        char *pool = NULL;
+
+        net = bridge_to_network(conn, bridge);
+        if (net == NULL)
+                goto out;
+
+        netname = virNetworkGetName(net);
+        if (netname == NULL)
+                goto out;
+
+        if (asprintf(&pool, "NetworkPool/%s", netname) == -1)
+                pool = NULL;
+
+        CU_DEBUG("Determined pool: %s (%s, %s)", pool, bridge, netname);
+
+ out:
+        virNetworkFree(net);
+
+        return pool;
+}
+
 static char *netpool_member_of(const CMPIBroker *broker,
                                const char *rasd_id,
                                const char *refcn)
@@ -227,11 +294,8 @@ static char *netpool_member_of(const CMPIBroker *broker,
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].id), dev)) {
-                        ret = asprintf(&result,
-                                       "NetworkPool/%s",
-                                       devs[i].dev.net.bridge);
-                        if (ret == -1)
-                                result = NULL;
+                        result = _netpool_member_of(conn,
+                                                    devs[i].dev.net.bridge);
                         break;
                 }
         }
@@ -416,31 +480,54 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
         return s;
 }
 
-static CMPIStatus _netpool_for_bridge(struct inst_list *list,
-                                      const char *ns,
-                                      const char *bridge,
-                                      const char *refcn,
-                                      const CMPIBroker *broker)
+static CMPIStatus _netpool_for_network(struct inst_list *list,
+                                       const char *ns,
+                                       virConnectPtr conn,
+                                       const char *netname,
+                                       const char *refcn,
+                                       const CMPIBroker *broker)
 {
-        char *id = NULL;
+        char *str = NULL;
+        char *bridge = NULL;
         uint16_t type = CIM_RASD_TYPE_NET;
         CMPIInstance *inst;
+        virNetworkPtr network = NULL;
+
+        CU_DEBUG("Looking up network `%s'", netname);
+        network = virNetworkLookupByName(conn, netname);
+        if (network == NULL) {
+                CMPIStatus s;
+
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No such NetworkPool: %s", netname);
+                return s;
+        }
 
         inst = get_typed_instance(broker,
                                   refcn,
                                   "NetworkPool",
                                   ns);
 
-        if (asprintf(&id, "NetworkPool/%s", bridge) == -1)
+        if (asprintf(&str, "NetworkPool/%s", netname) == -1)
                 return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
 
         CMSetProperty(inst, "InstanceID",
-                      (CMPIValue *)id, CMPI_chars);
+                      (CMPIValue *)str, CMPI_chars);
+        free(str);
+
+        bridge = virNetworkGetBridgeName(network);
+        if (asprintf(&str, "Bridge: %s", bridge) == -1)
+                return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
+
+        CMSetProperty(inst, "Caption",
+                      (CMPIValue *)str, CMPI_chars);
+        free(str);
+        free(bridge);
 
         CMSetProperty(inst, "ResourceType",
                       (CMPIValue *)&type, CMPI_uint16);
 
-        free(id);
 
         inst_list_add(list, inst);
 
@@ -454,39 +541,49 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
                                    const CMPIBroker *broker)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        char **bridges;
+        char **netnames = NULL;
         int i;
+        int nets;
 
         if (id != NULL) {
-                if (!is_bridge(id)) {
-                        cu_statusf(broker, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "No such network pool `%s'", id);
-                        goto out;
-                }
-                return _netpool_for_bridge(list,
-                                           ns,
-                                           id,
-                                           pfx_from_conn(conn),
-                                           broker);
+                return _netpool_for_network(list,
+                                            ns,
+                                            conn,
+                                            id,
+                                            pfx_from_conn(conn),
+                                            broker);
         }
 
-        bridges = list_bridges();
-        if (bridges == NULL)
-                return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
-
-        for (i = 0; bridges[i]; i++) {
-                _netpool_for_bridge(list,
-                                    ns,
-                                    bridges[i],
-                                    pfx_from_conn(conn),
-                                    broker);
-                free(bridges[i]);
+        nets = virConnectNumOfNetworks(conn);
+        if (nets < 0) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to list networks");
+                goto out;
         }
 
-        free(bridges);
+        netnames = calloc(nets, sizeof(*netnames));
+        if (netnames == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to allocate memory for %i net names", nets);
+                goto out;
+        }
+
+        nets = virConnectListNetworks(conn, netnames, nets);
+
+        for (i = 0; i < nets; i++) {
+                _netpool_for_network(list,
+                                     ns,
+                                     conn,
+                                     netnames[i],
+                                     pfx_from_conn(conn),
+                                     broker);
+        }
 
  out:
+        free(netnames);
+
         return s;
 }
 
