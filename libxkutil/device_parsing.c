@@ -161,7 +161,7 @@ static int parse_disk_device(xmlNode *dnode, struct virt_device *vdev)
                                 goto err;
                 }
         }
-        if (! (ddev->driver && ddev->source && ddev->virtual_dev)) 
+        if (! (ddev->source && ddev->virtual_dev)) 
                 goto err;
         vdev->type = VIRT_DEV_DISK;
         vdev->id = strdup(ddev->virtual_dev);
