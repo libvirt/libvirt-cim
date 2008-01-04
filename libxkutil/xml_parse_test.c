@@ -3,6 +3,7 @@
 #include <libvirt/libvirt.h>
 
 #include "device_parsing.h"
+#include "xmlgen.h"
 
 static void print_value(FILE *d, const char *name, const char *val)
 {
@@ -130,6 +131,18 @@ static void print_devices(struct domain *dominfo,
         }
 }
 
+static void print_domxml(struct domain *dominfo,
+                         FILE *d)
+{
+        char *xml;
+
+        xml = system_to_xml(dominfo);
+        if (xml == NULL)
+                printf("Failed to create system XML\n");
+        else
+                printf("%s\n", xml);
+}
+
 int main(int argc, char **argv)
 {
         virConnectPtr conn;
@@ -137,7 +150,7 @@ int main(int argc, char **argv)
         struct domain *dominfo;
 
         if (argc < 2) {
-                printf("Usage: %s domain\n", argv[0]);
+                printf("Usage: %s domain [URI] [xml]\n", argv[0]);
                 return 1;
         }
 
@@ -163,8 +176,12 @@ int main(int argc, char **argv)
 
         printf("Parsed domain info\n");
 
-        print_dominfo(dominfo, stdout);
-        print_devices(dominfo, stdout);
+        if ((argc > 3) && (argv[3][0] == 'x'))
+                print_domxml(dominfo, stdout);
+        else {
+                print_dominfo(dominfo, stdout);
+                print_devices(dominfo, stdout);
+        }
 
         return 0;
 }
