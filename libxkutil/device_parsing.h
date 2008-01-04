@@ -48,38 +48,68 @@ struct mem_device {
         uint64_t maxsize;
 };
 
+struct emu_device {
+        char *path;
+};
+
+struct graphics_device {
+        char *type;
+        char *port;
+};
+
 struct virt_device {
-        enum {VIRT_DEV_UNKNOWN,
+        enum {
               VIRT_DEV_NET = CIM_RASD_TYPE_NET,
               VIRT_DEV_DISK = CIM_RASD_TYPE_DISK,
               VIRT_DEV_MEM = CIM_RASD_TYPE_MEM,
               VIRT_DEV_VCPU = CIM_RASD_TYPE_PROC,
+              VIRT_DEV_UNKNOWN = 1000,
+              VIRT_DEV_EMU,
+              VIRT_DEV_GRAPHICS,
         } type;
         union {
                 struct disk_device disk;
                 struct net_device net;
                 struct mem_device mem;
                 struct _virVcpuInfo vcpu;
+                struct emu_device emu;
+                struct graphics_device graphics;
         } dev;
         char *id;
 };
 
-struct os_info {
+struct pv_os_info {
         char *type;
         char *kernel;
         char *initrd;
         char *cmdline;
 };
 
+struct fv_os_info {
+        char *type; /* Should always be 'hvm' */
+        char *loader;
+        char *boot;
+};
+
 struct domain {
+        enum { DOMAIN_XENPV, DOMAIN_XENFV, DOMAIN_KVM } type;
         char *name;
+        char *typestr; /*xen, kvm, etc */
         char *uuid;
         char *bootloader;
         char *bootloader_args;
-        struct os_info os_info;
+
+        union {
+                struct pv_os_info pv;
+                struct fv_os_info fv;
+        } os_info;
+
         int on_poweroff;
         int on_reboot;
         int on_crash;
+
+        struct virt_device *dev_graphics;
+        struct virt_device *dev_emu;
 
         struct virt_device *dev_mem;
         int dev_mem_ct;

@@ -36,6 +36,8 @@
 
 #define DISK_XPATH      (xmlChar *)"/domain/devices/disk"
 #define NET_XPATH       (xmlChar *)"/domain/devices/interface"
+#define EMU_XPATH       (xmlChar *)"/domain/devices/emulator"
+#define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics"
 
 #define DEFAULT_BRIDGE "xenbr0"
 
@@ -55,6 +57,17 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->bridge);
 }
 
+static void cleanup_emu_device(struct emu_device *dev)
+{
+        free(dev->path);
+}
+
+static void cleanup_graphics_device(struct graphics_device *dev)
+{
+        free(dev->type);
+        free(dev->port);
+}
+
 void cleanup_virt_device(struct virt_device *dev)
 {
         if (dev == NULL)
@@ -64,6 +77,10 @@ void cleanup_virt_device(struct virt_device *dev)
                 cleanup_disk_device(&dev->dev.disk);
         else if (dev->type == VIRT_DEV_NET)
                 cleanup_net_device(&dev->dev.net);
+        else if (dev->type == VIRT_DEV_EMU)
+                cleanup_emu_device(&dev->dev.emu);
+        else if (dev->type == VIRT_DEV_GRAPHICS)
+                cleanup_graphics_device(&dev->dev.graphics);
 
         free(dev->id);
 
@@ -195,6 +212,29 @@ static int parse_net_device(xmlNode *inode, struct virt_device *vdev)
         return 0;
 }
 
+static int parse_emu_device(xmlNode *node, struct virt_device *vdev)
+{
+        struct emu_device *edev = &(vdev->dev.emu);
+
+        edev->path = get_node_content(node);
+
+        vdev->type = VIRT_DEV_EMU;
+
+        return 1;
+}
+
+static int parse_graphics_device(xmlNode *node, struct virt_device *vdev)
+{
+        struct graphics_device *gdev = &(vdev->dev.graphics);
+
+        gdev->type = get_attr_value(node, "type");
+        gdev->port = get_attr_value(node, "port");
+
+        vdev->type = VIRT_DEV_GRAPHICS;
+
+        return 1;
+}
+
 static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
 {
         int i = 0;
@@ -209,6 +249,10 @@ static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
                 do_real_parse = &parse_net_device; 
         else if (type == VIRT_DEV_DISK)        
                 do_real_parse = &parse_disk_device; 
+        else if (type == VIRT_DEV_EMU)
+                do_real_parse = parse_emu_device;
+        else if (type == VIRT_DEV_GRAPHICS)
+                do_real_parse = parse_graphics_device;
         else
                 goto err;                      
 
@@ -260,6 +304,10 @@ static int parse_devices(char *xml, struct virt_device **_list, int type)
                 xpathstr = NET_XPATH;
         else if (type == VIRT_DEV_DISK)
                 xpathstr = DISK_XPATH;
+        else if (type == VIRT_DEV_EMU)
+                xpathstr = EMU_XPATH;
+        else if (type == VIRT_DEV_GRAPHICS)
+                xpathstr = GRAPHICS_XPATH;
         else
                 goto err1;
         
@@ -322,6 +370,48 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         }                          
 
         return dev;
+}
+
+static int get_emu_device(virDomainPtr dom, struct virt_device **dev)
+{
+        char *xml;
+        int ret;
+        struct virt_device *list = NULL;
+
+        xml = virDomainGetXMLDesc(dom, 0);
+        if (!xml)
+                return 0;
+
+        ret = parse_devices(xml, &list, VIRT_DEV_EMU);
+        if (ret == 1)
+                *dev = &list[0];
+        else
+                *dev = NULL;
+
+        free(xml);
+
+        return ret;
+}
+
+static int get_graphics_device(virDomainPtr dom, struct virt_device **dev)
+{
+        char *xml;
+        int ret;
+        struct virt_device *list = NULL;
+
+        xml = virDomainGetXMLDesc(dom, 0);
+        if (!xml)
+                return 0;
+
+        ret = parse_devices(xml, &list, VIRT_DEV_GRAPHICS);
+        if (ret == 1)
+                *dev = &list[0];
+        else
+                *dev = NULL;
+
+        free(xml);
+
+        return ret;
 }
 
 int get_disk_devices(virDomainPtr dom, struct virt_device **list)
@@ -474,14 +564,30 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
 
         for (child = os->children; child != NULL; child = child->next) {
                 if (XSTREQ(child->name, "type"))
-                        STRPROP(dominfo, os_info.type, child);
+                        STRPROP(dominfo, os_info.pv.type, child);
                 else if (XSTREQ(child->name, "kernel"))
-                        STRPROP(dominfo, os_info.kernel, child);
+                        STRPROP(dominfo, os_info.pv.kernel, child);
                 else if (XSTREQ(child->name, "initrd"))
-                        STRPROP(dominfo, os_info.initrd, child);
+                        STRPROP(dominfo, os_info.pv.initrd, child);
                 else if (XSTREQ(child->name, "cmdline"))
-                        STRPROP(dominfo, os_info.cmdline, child);
+                        STRPROP(dominfo, os_info.pv.cmdline, child);
+                else if (XSTREQ(child->name, "loader"))
+                        STRPROP(dominfo, os_info.fv.loader, child);
+                else if (XSTREQ(child->name, "boot"))
+                        dominfo->os_info.fv.boot = get_attr_value(child,
+                                                                     "dev");
         }
+
+        if ((STREQC(dominfo->os_info.fv.type, "hvm")) &&
+            (STREQC(dominfo->typestr, "xen")))
+                dominfo->type = DOMAIN_XENFV;
+        else if ((STREQC(dominfo->os_info.fv.type, "hvm")) &&
+                 (STREQC(dominfo->typestr, "kvm")))
+                dominfo->type = DOMAIN_KVM;
+        else if (STREQC(dominfo->os_info.pv.type, "linux"))
+                dominfo->type = DOMAIN_XENPV;
+        else
+                dominfo->type = -1;
 
         return 1;
 }
@@ -508,6 +614,8 @@ static int parse_domain(xmlNodeSet *nsv, struct domain *dominfo)
         xmlNode *child;
 
         memset(dominfo, 0, sizeof(*dominfo));
+
+        dominfo->typestr = get_attr_value(nodes[0], "type");
 
         for (child = nodes[0]->children; child != NULL; child = child->next) {
                 if (XSTREQ(child->name, "name"))
@@ -586,6 +694,9 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
                 goto out;
         }
 
+        ret = get_emu_device(dom, &(*dominfo)->dev_emu);
+        ret = get_graphics_device(dom, &(*dominfo)->dev_graphics);
+
         (*dominfo)->dev_mem_ct = get_mem_devices(dom, &(*dominfo)->dev_mem);
         (*dominfo)->dev_net_ct = get_net_devices(dom, &(*dominfo)->dev_net);
         (*dominfo)->dev_disk_ct = get_disk_devices(dom, &(*dominfo)->dev_disk);
@@ -608,10 +719,19 @@ void cleanup_dominfo(struct domain **dominfo)
         free(dom->uuid);
         free(dom->bootloader);
         free(dom->bootloader_args);
-        free(dom->os_info.type);
-        free(dom->os_info.kernel);
-        free(dom->os_info.initrd);
-        free(dom->os_info.cmdline);
+
+        if (dom->type == DOMAIN_XENPV) {
+                free(dom->os_info.pv.type);
+                free(dom->os_info.pv.kernel);
+                free(dom->os_info.pv.initrd);
+                free(dom->os_info.pv.cmdline);
+        } else if (dom->type == DOMAIN_XENFV) {
+                free(dom->os_info.fv.type);
+                free(dom->os_info.fv.loader);
+                free(dom->os_info.fv.boot);
+        } else {
+                CU_DEBUG("Unknown domain type %i", dom->type);
+        }
 
         cleanup_virt_devices(&dom->dev_mem, dom->dev_mem_ct);
         cleanup_virt_devices(&dom->dev_net, dom->dev_net_ct);

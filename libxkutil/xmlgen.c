@@ -271,9 +271,9 @@ static char *system_xml(struct domain *domain)
         return xml;
 }
 
-static char *os_xml(struct domain *domain)
+static char *_xenpv_os_xml(struct domain *domain)
 {
-        struct os_info *os = &domain->os_info;
+        struct pv_os_info *os = &domain->os_info.pv;
         int ret;
         char *xml;
         char *type = NULL;
@@ -312,6 +312,60 @@ static char *os_xml(struct domain *domain)
         free(cmdline);
 
         return xml;
+}
+
+static char *_xenfv_os_xml(struct domain *domain)
+{
+        struct fv_os_info *os = &domain->os_info.fv;
+        int ret;
+        char *xml;
+        char *type;
+        char *loader;
+        char *boot;
+        struct kv bootattr = {"dev", NULL};
+
+        if (os->type == NULL)
+                os->type = strdup("hvm");
+
+        if (os->loader == NULL)
+                os->loader = strdup("/usr/lib/xen/boot/hvmloader");
+
+        if (os->boot == NULL)
+                os->boot = strdup("hd");
+
+        type = tagify("type", os->type, NULL, 0);
+        loader = tagify("loader", os->loader, NULL, 0);
+
+        bootattr.val = os->boot;
+        boot = tagify("boot", NULL, &bootattr, 1);
+
+        ret = asprintf(&xml,
+                       "<os>\n"
+                       "  %s\n"
+                       "  %s\n"
+                       "  %s\n"
+                       "</os>\n",
+                       type,
+                       loader,
+                       boot);
+        if (ret == -1)
+                xml = NULL;
+
+        free(type);
+        free(loader);
+        free(boot);
+
+        return xml;
+}
+
+static char *os_xml(struct domain *domain)
+{
+        if (domain->type == DOMAIN_XENPV)
+                return _xenpv_os_xml(domain);
+        else if (domain->type == DOMAIN_XENFV)
+                return _xenfv_os_xml(domain);
+        else
+                return strdup("<!-- unsupported domain type -->\n");
 }
 
 char *system_to_xml(struct domain *dominfo)
