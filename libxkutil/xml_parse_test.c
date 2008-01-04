@@ -29,6 +29,12 @@ static void print_os(struct domain *dom,
                 print_value(d, "Type", dom->os_info.fv.type);
                 print_value(d, "Loader", dom->os_info.fv.loader);
                 print_value(d, "Boot", dom->os_info.fv.boot);
+
+        } else if (dom->type == DOMAIN_KVM) {
+                print_value(d, "Domain Type", "KVM/QEMU");
+                print_value(d, "Type", dom->os_info.fv.type);
+                print_value(d, "Loader", dom->os_info.fv.loader);
+                print_value(d, "Boot", dom->os_info.fv.boot);
         } else {
                 fprintf(d, "[ Unknown domain type %i ]\n", dom->type);
         }
@@ -130,12 +136,15 @@ int main(int argc, char **argv)
         virDomainPtr dom;
         struct domain *dominfo;
 
-        if (argc != 2) {
+        if (argc < 2) {
                 printf("Usage: %s domain\n", argv[0]);
                 return 1;
         }
 
-        conn = virConnectOpen("xen:///");
+        if (argc > 2)
+                conn = virConnectOpen(argv[2]);
+        else
+                conn = virConnectOpen("xen:///");
         if (conn == NULL) {
                 printf("Unable to connect to libvirt\n");
                 return 2;
