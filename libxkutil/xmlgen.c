@@ -186,6 +186,35 @@ static char *mem_to_xml(struct mem_device *mem)
         return xml;
 }
 
+static char *emu_to_xml(struct emu_device *emu)
+{
+        int ret;
+        char *xml;
+
+        ret = asprintf(&xml,
+                       "<emulator>%s</emulator>\n",
+                       emu->path);
+        if (ret == -1)
+                xml = NULL;
+
+        return xml;
+}
+
+static char *graphics_to_xml(struct graphics_device *graphics)
+{
+        int ret;
+        char *xml;
+
+        ret = asprintf(&xml,
+                       "<graphics type='%s' port='%s'/>\n",
+                       graphics->type,
+                       graphics->port);
+        if (ret == -1)
+                xml = NULL;
+
+        return xml;
+}
+
 char *device_to_xml(struct virt_device *dev)
 {
         switch (dev->type) {
@@ -197,6 +226,10 @@ char *device_to_xml(struct virt_device *dev)
                 return mem_to_xml(&dev->dev.mem);
         case VIRT_DEV_VCPU:
                 return proc_to_xml(&dev->dev.vcpu);
+        case VIRT_DEV_EMU:
+                return emu_to_xml(&dev->dev.emu);
+        case VIRT_DEV_GRAPHICS:
+                return graphics_to_xml(&dev->dev.graphics);
         default:
                 return NULL;
         };
@@ -242,8 +275,16 @@ static char *system_xml(struct domain *domain)
         char *bl_args = NULL;
         char *xml;
 
-        bl = tagify("bootloader", domain->bootloader, NULL, 0);
-        bl_args = tagify("bootloader_args", domain->bootloader_args, NULL, 0);
+        if (domain->bootloader)
+                bl = tagify("bootloader",
+                            domain->bootloader,
+                            NULL,
+                            0);
+        if (domain->bootloader_args)
+                bl_args = tagify("bootloader_args",
+                                 domain->bootloader_args,
+                                 NULL,
+                                 0);
 
         ret = asprintf(&xml,
                        "<name>%s</name>\n"
@@ -252,8 +293,8 @@ static char *system_xml(struct domain *domain)
                        "<on_poweroff>%s</on_poweroff>\n"
                        "<on_crash>%s</on_crash>\n",
                        domain->name,
-                       bl,
-                       bl_args,
+                       bl ? bl : "",
+                       bl_args ? bl_args : "",
                        vssd_recovery_action_str(domain->on_poweroff),
                        vssd_recovery_action_str(domain->on_crash));
         if (ret == -1)
@@ -352,12 +393,39 @@ static char *_xenfv_os_xml(struct domain *domain)
         return xml;
 }
 
+static char *_kvm_os_xml(struct domain *domain)
+{
+        struct fv_os_info *os = &domain->os_info.fv;
+        int ret;
+        char *xml;
+        char *type;
+
+        if (os->type == NULL)
+                os->type = strdup("hvm");
+
+        type = tagify("type", os->type, NULL, 0);
+
+        ret = asprintf(&xml,
+                       "<os>\n"
+                       "  %s\n"
+                       "</os>\n",
+                       type);
+        if (ret == -1)
+                xml = NULL;
+
+        free(type);
+
+        return xml;
+}
+
 static char *os_xml(struct domain *domain)
 {
         if (domain->type == DOMAIN_XENPV)
                 return _xenpv_os_xml(domain);
         else if (domain->type == DOMAIN_XENFV)
                 return _xenfv_os_xml(domain);
+        else if (domain->type == DOMAIN_KVM)
+                return _kvm_os_xml(domain);
         else
                 return strdup("<!-- unsupported domain type -->\n");
 }
@@ -372,6 +440,14 @@ char *system_to_xml(struct domain *dominfo)
         int ret;
         uint8_t uuid[16];
         char uuidstr[37];
+        const char *domtype;
+
+        if ((dominfo->type == DOMAIN_XENPV) || (dominfo->type == DOMAIN_XENFV))
+                domtype = "xen";
+        else if (dominfo->type == DOMAIN_KVM)
+                domtype = "kvm";
+        else
+                domtype = "unknown";
 
         if (dominfo->uuid) {
                 strcpy(uuidstr, dominfo->uuid);
@@ -385,6 +461,12 @@ char *system_to_xml(struct domain *dominfo)
         concat_devxml(&devxml, dominfo->dev_net, dominfo->dev_net_ct);
         concat_devxml(&devxml, dominfo->dev_disk, dominfo->dev_disk_ct);
 
+        if (dominfo->dev_emu)
+                concat_devxml(&devxml, dominfo->dev_emu, 1);
+
+        if (dominfo->dev_graphics)
+                concat_devxml(&devxml, dominfo->dev_graphics, 1);
+
         concat_devxml(&sysdevxml, dominfo->dev_mem, dominfo->dev_mem_ct);
         concat_devxml(&sysdevxml, dominfo->dev_vcpu, dominfo->dev_vcpu_ct);
 
@@ -392,7 +474,7 @@ char *system_to_xml(struct domain *dominfo)
         osxml = os_xml(dominfo);
 
         ret = asprintf(&xml,
-                       "<domain type='xen'>\n"
+                       "<domain type='%s'>\n"
                        "<uuid>%s</uuid>\n"
                        "%s"
                        "%s"
@@ -401,6 +483,7 @@ char *system_to_xml(struct domain *dominfo)
                        "%s"
                        "</devices>\n"
                        "</domain>\n",
+                       domtype,
                        uuidstr,
                        sysxml,
                        osxml,
