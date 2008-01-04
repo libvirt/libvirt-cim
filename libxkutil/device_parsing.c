@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
@@ -149,11 +150,15 @@ static int parse_disk_device(xmlNode *dnode, struct virt_device *vdev)
                                 goto err;
                 } else if (STREQ((char*)child->name, "source")) {
                         ddev->source = get_attr_value(child, "file");
-                        if (ddev->source)
+                        if (ddev->source) {
+                                ddev->disk_type = DISK_FILE;
                                 continue;
+                        }
                         ddev->source = get_attr_value(child, "dev");
-                        if (ddev->source)
+                        if (ddev->source) {
+                                ddev->disk_type = DISK_PHY;
                                 continue;
+                        }
                         goto err;
                 } else if (STREQ((char*)child->name, "target")) {
                         ddev->virtual_dev = get_attr_value(child, "dev");
@@ -823,6 +828,21 @@ int change_device(virDomainPtr dom, struct virt_device *dev)
         CU_DEBUG("Unhandled device type %i", dev->type);
 
         return 0;
+}
+
+int disk_type_from_file(const char *path)
+{
+        struct stat s;
+
+        if (stat(path, &s) < 0)
+                return DISK_UNKNOWN;
+
+        if (S_ISBLK(s.st_mode))
+                return DISK_PHY;
+        else if (S_ISREG(s.st_mode))
+                return DISK_FILE;
+        else
+                return DISK_UNKNOWN;
 }
 
 /*

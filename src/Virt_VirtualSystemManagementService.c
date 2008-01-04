@@ -206,6 +206,7 @@ static int rasd_to_vdev(CMPIInstance *inst,
 
                 free(dev->dev.disk.source);
                 dev->dev.disk.source = strdup(val);
+                dev->dev.disk.disk_type = disk_type_from_file(val);
         } else if (type == VIRT_DEV_NET) {
                 free(dev->dev.net.mac);
                 dev->dev.net.mac = devid;

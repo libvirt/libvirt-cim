@@ -22,7 +22,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <sys/stat.h>
 #include <uuid/uuid.h>
 
 #include "xmlgen.h"
@@ -101,7 +100,6 @@ static char *disk_block_xml(const char *path, const char *vdev)
 
         ret = asprintf(&xml,
                        "<disk type='block' device='disk'>\n"
-                       "  <driver name='phy'/>\n"
                        "  <source dev='%s'/>\n"
                        "  <target dev='%s'/>\n"
                        "</disk>\n",
@@ -120,7 +118,6 @@ static char *disk_file_xml(const char *path, const char *vdev)
 
         ret = asprintf(&xml,
                        "<disk type='file' device='disk'>\n"
-                       "  <driver name='tap' type='aio'/>\n"
                        "  <source file='%s'/>\n"
                        "  <target dev='%s'/>\n"
                        "</disk>\n",
@@ -134,17 +131,14 @@ static char *disk_file_xml(const char *path, const char *vdev)
 
 static char *disk_to_xml(struct disk_device *disk)
 {
-        struct stat s;
-
-        if (stat(disk->source, &s) < 0)
-                return NULL;
-
-        if (S_ISBLK(s.st_mode))
+        if (disk->disk_type == DISK_PHY)
                 return disk_block_xml(disk->source, disk->virtual_dev);
-        else
+        else if (disk->disk_type == DISK_FILE)
                 /* If it's not a block device, we assume a file,
                    which should be a reasonable fail-safe */
                 return disk_file_xml(disk->source, disk->virtual_dev);
+        else
+                return strdup("<!-- Unknown disk type -->\n");
 }
 
 static char *net_to_xml(struct net_device *net)

@@ -35,6 +35,7 @@ struct disk_device {
         char *driver;
         char *source;
         char *virtual_dev;
+        enum {DISK_UNKNOWN, DISK_PHY, DISK_FILE} disk_type;
 };
 
 struct net_device {
@@ -125,6 +126,8 @@ struct domain {
 };
 
 struct virt_device *virt_device_dup(struct virt_device *dev);
+
+int disk_type_from_file(const char *path);
 
 int get_dominfo(virDomainPtr dom, struct domain **dominfo);
 
