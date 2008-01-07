@@ -513,7 +513,7 @@ static CMPIStatus update_system_settings(const CMPIObjectPath *ref,
 
         xml = system_to_xml(dominfo);
         if (xml != NULL) {
-                printf("New XML is:\n%s\n", xml);
+                CU_DEBUG("New XML is:\n%s", xml);
                 connect_and_create(xml, ref, &s);
         }
 
@@ -848,7 +848,7 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
 
         xml = system_to_xml(dominfo);
         if (xml != NULL) {
-                printf("New XML:\n%s\n", xml);
+                CU_DEBUG("New XML:\n%s", xml);
                 connect_and_create(xml, ref, &s);
         } else {
                 cu_statusf(_BROKER, &s,
