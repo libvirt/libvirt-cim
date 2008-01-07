@@ -21,7 +21,7 @@ Building
 Requirements:
 
   - Pegasus or SFCB development headers
-  - libvirt 0.2.3 or greater
+  - libvirt 0.3.2 or greater
   - e2fsprogs-devel
   - libxml2
   - libcmpiutil (http://libvirt.org/hg/libcmpiutil)
