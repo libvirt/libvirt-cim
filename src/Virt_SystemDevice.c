@@ -56,8 +56,6 @@ const static int device_types[DEV_TYPE_COUNT] =
          VIRT_DEV_VCPU,
         };
 
-#define TRACE(l, f, arg...) printf(f "\n", ##arg)
-
 static int get_dom_devices(const char *name,
                            struct inst_list *list,
                            int type,
