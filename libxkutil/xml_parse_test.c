@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <inttypes.h>
 
 #include <libvirt/libvirt.h>
 
@@ -12,7 +13,7 @@ static void print_value(FILE *d, const char *name, const char *val)
 
 static void print_u64(FILE *d, const char *name, uint64_t val)
 {
-        fprintf(d, "%-15s: %lu\n", name, val);
+        fprintf(d, "%-15s: %" PRIu64 "\n", name, val);
 }
 
 static void print_os(struct domain *dom,
