@@ -76,20 +76,20 @@ static bool _lifecycle_indication(const CMPIBroker *broker,
                                  type,
                                  NAMESPACE(newsystem));
         if (ind == NULL) {
-                printf("Failed to create ind\n");
+                CU_DEBUG("Failed to create ind");
                 return false;
         }
 
         ind_op = CMGetObjectPath(ind, &s);
         if (s.rc != CMPI_RC_OK) {
-                printf("Failed to get ind_op\n");
+                CU_DEBUG("Failed to get ind_op");
                 return false;
         }
 
         CMSetProperty(ind, "AffectedSystem",
                       (CMPIValue *)&newsystem, CMPI_ref);
 
-        printf("Delivering Indication: %s\n",
+        CU_DEBUG("Delivering Indication: %s",
                CMGetCharPtr(CMObjectPathToString(ind_op, NULL)));
 
         CBDeliverIndication(_BROKER,
@@ -160,7 +160,7 @@ static bool async_ind(CMPIContext *context,
 
                 op = CMNewObjectPath(_BROKER, ns, type_cn, &s);
         } else {
-                printf("Unknown event type: %i\n", type);
+                CU_DEBUG("Unknown event type: %i", type);
                 return false;
         }
 
@@ -189,7 +189,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
 
         conn = lv_connect(_BROKER, &s);
         if (conn == NULL) {
-                printf("Failed to connect: %s\n", CMGetCharPtr(s.msg));
+                CU_DEBUG("Failed to connect: %s", CMGetCharPtr(s.msg));
                 return NULL;
         }
 
@@ -271,7 +271,7 @@ static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
         lifecycle_enabled = true;
         pthread_mutex_unlock(&lifecycle_mutex);
 
-        printf("ComputerSystemIndication enabled\n");
+        CU_DEBUG("ComputerSystemIndication enabled");
 
         _EI_RET();
 }
@@ -283,7 +283,7 @@ static _EI_RTYPE DisableIndications(CMPIIndicationMI* mi,
         lifecycle_enabled = false;
         pthread_mutex_unlock(&lifecycle_mutex);
 
-        printf("ComputerSystemIndication disabled\n");
+        CU_DEBUG("ComputerSystemIndication disabled");
 
         _EI_RET();
 }
