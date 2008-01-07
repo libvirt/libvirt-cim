@@ -482,15 +482,15 @@ static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_SHUTOFF:
-                printf("Start domain\n");
+                CU_DEBUG("Start domain");
                 ret = virDomainCreate(dom);
                 break;
         case VIR_DOMAIN_PAUSED:
-                printf("Unpause domain\n");
+                CU_DEBUG("Unpause domain");
                 ret = virDomainResume(dom);
                 break;
         default:
-                printf("Cannot go to enabled state from %i\n", info->state);
+                CU_DEBUG("Cannot go to enabled state from %i", info->state);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid state transition");
@@ -511,11 +511,11 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
-                printf("Stop domain\n");
+                CU_DEBUG("Stop domain");
                 ret = virDomainShutdown(dom);
                 break;
         default:
-                printf("Cannot go to disabled state from %i\n", info->state);
+                CU_DEBUG("Cannot go to disabled state from %i", info->state);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid state transition");
@@ -536,7 +536,7 @@ static CMPIStatus state_change_pause(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
-                printf("Pause domain\n");
+                CU_DEBUG("Pause domain");
                 ret = virDomainSuspend(dom);
                 break;
         default:
@@ -560,7 +560,7 @@ static CMPIStatus state_change_reboot(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
-                printf("Reboot domain\n");
+                CU_DEBUG("Reboot domain");
                 ret = virDomainReboot(dom, 0);
                 break;
         default:
@@ -584,7 +584,7 @@ static CMPIStatus state_change_reset(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
-                printf("Reset domain\n");
+                CU_DEBUG("Reset domain");
                 ret = domain_reset(dom);
                 break;
         default:
