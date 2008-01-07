@@ -42,6 +42,8 @@
 
 #define DEFAULT_BRIDGE "xenbr0"
 
+#define XSTREQ(x, y) (STREQ((char *)x, y))
+
 static void cleanup_disk_device(struct disk_device *dev)
 {
         free(dev->type);
@@ -100,7 +102,7 @@ void cleanup_virt_devices(struct virt_device **_devs, int count)
         *_devs = NULL;
 }
 
-static char * get_attr_value(xmlNode *node, char *attrname)
+static char *get_attr_value(xmlNode *node, char *attrname)
 {
         char *buf = NULL;
         char *ret = NULL;
@@ -110,6 +112,7 @@ static char * get_attr_value(xmlNode *node, char *attrname)
                 ret = strdup(buf);
                 xmlFree(buf);
         }
+
         return ret;
 }
 
@@ -127,28 +130,27 @@ static char *get_node_content(xmlNode *node)
         return buf;
 }
 
-static int parse_disk_device(xmlNode *dnode, struct virt_device *vdev)
+static bool parse_disk_device(xmlNode *dnode, struct virt_device *vdev)
 {
         struct disk_device *ddev = &(vdev->dev.disk);
+        xmlNode * child = NULL;
+
+        memset(ddev, 0, sizeof(*ddev));
+
         ddev->type = get_attr_value(dnode, "type");
-        if (!ddev->type)
+        if (ddev->type == NULL)
                 goto err;
 
         ddev->device = get_attr_value(dnode, "device");
-        if (!ddev->device)
+        if (ddev->device == NULL)
                 goto err;
-        
-        xmlNode * child = NULL;
-        ddev->driver = NULL;
-        ddev->source = NULL;
-        ddev->virtual_dev = NULL;
-        for (child = dnode->children; child != NULL; 
-                        child = child->next) {
-                if (STREQ((char*)child->name, "driver")) {
+
+        for (child = dnode->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "driver")) {
                         ddev->driver = get_attr_value(child, "name");
-                        if (!ddev->driver)
+                        if (ddev->driver == NULL)
                                 goto err;
-                } else if (STREQ((char*)child->name, "source")) {
+                } else if (XSTREQ(child->name, "source")) {
                         ddev->source = get_attr_value(child, "file");
                         if (ddev->source) {
                                 ddev->disk_type = DISK_FILE;
@@ -160,131 +162,152 @@ static int parse_disk_device(xmlNode *dnode, struct virt_device *vdev)
                                 continue;
                         }
                         goto err;
-                } else if (STREQ((char*)child->name, "target")) {
+                } else if (XSTREQ(child->name, "target")) {
                         ddev->virtual_dev = get_attr_value(child, "dev");
-                        if (!ddev->virtual_dev)
+                        if (ddev->virtual_dev == NULL)
                                 goto err;
                 }
         }
-        if (! (ddev->source && ddev->virtual_dev)) 
+        if ((ddev->source == NULL) || (ddev->virtual_dev == NULL))
                 goto err;
+
         vdev->type = VIRT_DEV_DISK;
         vdev->id = strdup(ddev->virtual_dev);
 
-        return 1;
+        return true;
 
  err:
         cleanup_disk_device(ddev);
 
-        return 0;        
+        return false;
 }
 
-static int parse_net_device(xmlNode *inode, struct virt_device *vdev)
+static bool parse_net_device(xmlNode *inode, struct virt_device *vdev)
 {
         struct net_device *ndev = &(vdev->dev.net);
+        xmlNode *child = NULL;
+
+        memset(ndev, 0, sizeof(*ndev));
+
         ndev->type = get_attr_value(inode, "type");
-        if (!ndev->type)
+        if (ndev->type == NULL)
                 goto err;
 
-        xmlNode *child = NULL;
-        ndev->mac = NULL;
-        ndev->bridge = NULL;
-        for (child = inode->children; child != NULL;
-                        child = child->next) {
-                if (STREQ((char *)child->name, "mac")) {
+        for (child = inode->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "mac")) {
                         ndev->mac = get_attr_value(child, "address");
-                        if (!ndev->mac)
+                        if (ndev->mac == NULL)
                                 goto err;
-                } else if (STREQ((char *)child->name, "source")) {
+                } else if (XSTREQ(child->name, "source")) {
                         ndev->bridge = get_attr_value(child, "bridge");
-                        if (!ndev->bridge)
+                        if (ndev->bridge == NULL)
                                 goto err;
                 }
         }
-        if (!ndev->mac)
+
+        if (ndev->mac == NULL)
                 goto err;
-        if (!ndev->bridge) {
+
+        if (ndev->bridge == NULL) {
                 ndev->bridge = strdup(DEFAULT_BRIDGE);
                 printf("No bridge, taking default of `%s'\n", ndev->bridge);
         }
+
         vdev->type = VIRT_DEV_NET;
         vdev->id = strdup(ndev->mac);
 
-        return 1;
+        return true;
   err:
         cleanup_net_device(ndev);
-        
-        return 0;
+
+        return false;
 }
 
-static int parse_emu_device(xmlNode *node, struct virt_device *vdev)
+static bool parse_emu_device(xmlNode *node, struct virt_device *vdev)
 {
         struct emu_device *edev = &(vdev->dev.emu);
 
         edev->path = get_node_content(node);
+        if (edev->path != NULL)
+                goto err;
 
         vdev->type = VIRT_DEV_EMU;
 
-        return 1;
+        return true;
+ err:
+        cleanup_emu_device(edev);
+
+        return false;
 }
 
-static int parse_graphics_device(xmlNode *node, struct virt_device *vdev)
+static bool parse_graphics_device(xmlNode *node, struct virt_device *vdev)
 {
         struct graphics_device *gdev = &(vdev->dev.graphics);
 
         gdev->type = get_attr_value(node, "type");
         gdev->port = get_attr_value(node, "port");
 
+        if ((gdev->type == NULL) || (gdev->port == NULL))
+                goto err;
+
         vdev->type = VIRT_DEV_GRAPHICS;
 
-        return 1;
+        return true;
+ err:
+        cleanup_graphics_device(gdev);
+
+        return false;
 }
 
 static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
 {
-        int i = 0;
-        int j = 0;
+        int devidx;
+        int lstidx;
         int count = 0;
         struct virt_device *list = NULL;
         xmlNode **dev_nodes = NULL;
-        int (*do_real_parse)(xmlNode *, struct virt_device *) = NULL;
-        
+        bool (*do_real_parse)(xmlNode *, struct virt_device *) = NULL;
+
         /* point to correct parser function according to type */
-        if (type == VIRT_DEV_NET) 
-                do_real_parse = &parse_net_device; 
-        else if (type == VIRT_DEV_DISK)        
-                do_real_parse = &parse_disk_device; 
+        if (type == VIRT_DEV_NET)
+                do_real_parse = &parse_net_device;
+        else if (type == VIRT_DEV_DISK)
+                do_real_parse = &parse_disk_device;
         else if (type == VIRT_DEV_EMU)
                 do_real_parse = parse_emu_device;
         else if (type == VIRT_DEV_GRAPHICS)
                 do_real_parse = parse_graphics_device;
         else
-                goto err;                      
+                goto out;
 
-        if (!nsv)
-                goto err;
+        if (nsv == NULL)
+                goto out;
+
         dev_nodes = nsv->nodeTab;
         count = nsv ? nsv->nodeNr : 0;
-        
-        if (count > 0) {
-                list = (struct virt_device *)malloc(
-                                count * sizeof(struct virt_device));
-                if (!list) {
-                        count = 0;
-                        goto err;
-                }
-                /* walk thru the array, do real parsing on each node */
-                while (i <= count-1) {
-                        if (do_real_parse(dev_nodes[i], &list[j]))
-                                j++;
-                        i++;
-                }
-                if (j < i) {
-                        list = realloc(list, j * sizeof(struct virt_device));
-                        count = j;
-                }
+
+        if (count <= 0)
+                goto out;
+
+        list = (struct virt_device *)malloc(count * sizeof(struct virt_device));
+        if (list == NULL) {
+                count = 0;
+                goto out;
         }
-  err:
+
+        /* walk thru the array, do real parsing on each node */
+        lstidx = 0;
+        for (devidx = 0; devidx < count; devidx++) {
+                if (do_real_parse(dev_nodes[devidx], &list[lstidx]))
+                        lstidx++;
+        }
+
+        if (lstidx < devidx) {
+                list = realloc(list, lstidx * sizeof(struct virt_device));
+                count = lstidx;
+        }
+
+  out:
         *l = list;
         return count;
 }
@@ -297,13 +320,13 @@ static void swallow_err_msg(void *ctx, const char *msg, ...)
 
 static int parse_devices(char *xml, struct virt_device **_list, int type)
 {
-        int i = 0;
+        int len = 0;
         int count = 0;
 
         xmlDoc *xmldoc;
         xmlXPathContext *xpathCtx;
         xmlXPathObject *xpathObj;
-        xmlChar *xpathstr; 
+        xmlChar *xpathstr;
 
         if (type == VIRT_DEV_NET)
                 xpathstr = NET_XPATH;
@@ -315,22 +338,22 @@ static int parse_devices(char *xml, struct virt_device **_list, int type)
                 xpathstr = GRAPHICS_XPATH;
         else
                 goto err1;
-        
-        i = strlen(xml) + 1;
+
+        len = strlen(xml) + 1;
 
         xmlSetGenericErrorFunc(NULL, swallow_err_msg);
-        if ((xmldoc = xmlParseMemory(xml, i)) == NULL)
+        if ((xmldoc = xmlParseMemory(xml, len)) == NULL)
                 goto err1;
 
         if ((xpathCtx = xmlXPathNewContext(xmldoc)) == NULL)
                 goto err2;
-        
+
         if ((xpathObj = xmlXPathEvalExpression(xpathstr, xpathCtx))
                         == NULL)
                 goto err3;
 
         count = do_parse(xpathObj->nodesetval, type, _list);
-        
+
         xmlSetGenericErrorFunc(NULL, NULL);
         xmlXPathFreeObject(xpathObj);
   err3:
@@ -348,7 +371,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         struct virt_device *dev;
 
         dev = malloc(sizeof(*dev));
-        if (!dev)
+        if (dev == NULL)
                 return NULL;
 
         dev->type = _dev->type;
@@ -372,7 +395,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 dev->dev.vcpu.state = _dev->dev.vcpu.state;
                 dev->dev.vcpu.cpuTime = _dev->dev.vcpu.cpuTime;
                 dev->dev.vcpu.cpu = _dev->dev.vcpu.cpu;
-        }                          
+        }
 
         return dev;
 }
@@ -384,7 +407,7 @@ static int get_emu_device(virDomainPtr dom, struct virt_device **dev)
         struct virt_device *list = NULL;
 
         xml = virDomainGetXMLDesc(dom, 0);
-        if (!xml)
+        if (xml == NULL)
                 return 0;
 
         ret = parse_devices(xml, &list, VIRT_DEV_EMU);
@@ -405,7 +428,7 @@ static int get_graphics_device(virDomainPtr dom, struct virt_device **dev)
         struct virt_device *list = NULL;
 
         xml = virDomainGetXMLDesc(dom, 0);
-        if (!xml)
+        if (xml == NULL)
                 return 0;
 
         ret = parse_devices(xml, &list, VIRT_DEV_GRAPHICS);
@@ -425,7 +448,7 @@ int get_disk_devices(virDomainPtr dom, struct virt_device **list)
         int ret;
 
         xml = virDomainGetXMLDesc(dom, 0);
-        if (!xml)
+        if (xml == NULL)
                 return 0;
 
         ret = parse_devices(xml, list, VIRT_DEV_DISK);
@@ -441,7 +464,7 @@ int get_net_devices(virDomainPtr dom, struct virt_device **list)
         int ret;
 
         xml = virDomainGetXMLDesc(dom, 0);
-        if (!xml)
+        if (xml == NULL)
                 return 0;
 
         ret = parse_devices(xml, list, VIRT_DEV_NET);
@@ -459,25 +482,25 @@ int get_mem_devices(virDomainPtr dom, struct virt_device **list)
         struct virt_device *ret_list = NULL;
 
         rc = virDomainGetInfo(dom, &dom_info);
-        if (rc == -1){
+        if (rc == -1) {
                 ret = -1;
-                goto err;
+                goto out;
         }
 
         mem_size = (uint64_t)dom_info.memory;
         mem_maxsize = (uint64_t)dom_info.maxMem;
         if (mem_size > mem_maxsize) {
                 ret = -1;
-                goto err;
+                goto out;
         }
-        
+
         ret_list = malloc(sizeof(struct virt_device));
-        if (!ret_list) {
+        if (ret_list == NULL) {
                 ret = -1;
                 free (ret_list);
-                goto err;
+                goto out;
         }
-                
+
         ret_list->type = VIRT_DEV_MEM;
         ret_list->dev.mem.size = mem_size;
         ret_list->dev.mem.maxsize = mem_maxsize;
@@ -485,8 +508,7 @@ int get_mem_devices(virDomainPtr dom, struct virt_device **list)
 
         ret = 1;
         *list = ret_list;
-
- err:
+ out:
         return ret;
 }
 
@@ -500,7 +522,7 @@ int get_vcpu_devices(virDomainPtr dom, struct virt_device **list)
         rc = virDomainGetInfo(dom, &dom_info);
         if (rc == -1) {
                 ret = -1;
-                goto error1;
+                goto out1;
         }
 
         num_vcpus = dom_info.nrVirtCpu;
@@ -508,7 +530,7 @@ int get_vcpu_devices(virDomainPtr dom, struct virt_device **list)
         num_filled = virDomainGetVcpus(dom, vcpu_info, num_vcpus, NULL, 0);
         if (num_vcpus != num_filled) {
                 ret = -1;
-                goto error2;
+                goto out2;
         }
 
         ret_list = calloc(num_vcpus, sizeof(struct virt_device));
@@ -519,15 +541,15 @@ int get_vcpu_devices(virDomainPtr dom, struct virt_device **list)
                              vcpu_info[i].number) == -1) {
                         ret = -1;
                         free(ret_list);
-                        goto error2;
+                        goto out2;
                 }
         }
 
         ret = num_vcpus;
         *list = ret_list;
- error2:
+ out2:
         free(vcpu_info);
- error1:
+ out1:
         return ret;
 }
 
@@ -537,7 +559,6 @@ char *get_fq_devid(char *host, char *_devid)
 
         if (asprintf(&devid, "%s/%s", host, _devid) == -1)
                 return NULL;
-
         else
                 return devid;
 }
@@ -560,7 +581,6 @@ int parse_fq_devid(const char *devid, char **host, char **device)
         return 1;
 }
 
-#define XSTREQ(x, y) (STREQ((char *)x, y))
 #define STRPROP(d, p, n) (d->p = get_node_content(n))
 
 static int parse_os(struct domain *dominfo, xmlNode *os)
@@ -686,14 +706,14 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
                 return 0;
 
         xml = virDomainGetXMLDesc(dom, 0);
-        if (!xml) {
+        if (xml == NULL) {
                 free(*dominfo);
                 *dominfo = NULL;
                 return 0;
         }
 
         ret = _get_dominfo(xml, *dominfo);
-        if (!ret) {
+        if (ret == 0) {
                 free(*dominfo);
                 *dominfo = NULL;
                 goto out;
@@ -717,7 +737,7 @@ void cleanup_dominfo(struct domain **dominfo)
 {
         struct domain *dom = *dominfo;
 
-        if (!dominfo || !(*dominfo))
+        if ((dominfo == NULL) || (*dominfo == NULL))
                 return;
 
         free(dom->name);
