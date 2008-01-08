@@ -395,6 +395,11 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 dev->dev.vcpu.state = _dev->dev.vcpu.state;
                 dev->dev.vcpu.cpuTime = _dev->dev.vcpu.cpuTime;
                 dev->dev.vcpu.cpu = _dev->dev.vcpu.cpu;
+        } else if (dev->type == VIRT_DEV_EMU) {
+                DUP_FIELD(dev, _dev, dev.emu.path);
+        } else if (dev->type == VIRT_DEV_GRAPHICS) {
+                DUP_FIELD(dev, _dev, dev.graphics.type);
+                DUP_FIELD(dev, _dev, dev.graphics.port);
         }
 
         return dev;
