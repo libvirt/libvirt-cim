@@ -135,8 +135,6 @@ static int filter_by_pool(struct inst_list *dest,
                 if ((dev_id == NULL) || (cn == NULL))
                         continue;
 
-                printf("Device %hhi:%s", type, dev_id);
-
                 poolid = pool_member_of(_BROKER, cn, type, dev_id);
                 if (poolid && STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
@@ -162,12 +160,8 @@ static int devs_from_pool(uint16_t type,
         if (conn == NULL)
                 return 0;
 
-        printf("Connected\n");
-
         count = get_domain_list(conn, &doms);
 
-        printf("Got %i domains\n", count);
-        
         for (i = 0; i < count; i++) {
                 const char *name;
                 struct inst_list tmp;
@@ -179,11 +173,7 @@ static int devs_from_pool(uint16_t type,
                 /* FIXME: Get VIRT_DEV_ type here */
                 dom_devices(_BROKER, doms[i], ns, type, &tmp);
 
-                printf("Got devices\n");
-
                 filter_by_pool(list, &tmp, type, poolid);
-
-                printf("Filtered\n");
 
                 inst_list_free(&tmp);
                 virDomainFree(doms[i]);
