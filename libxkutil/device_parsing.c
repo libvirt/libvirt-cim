@@ -719,8 +719,8 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
                 goto out;
         }
 
-        ret = get_emu_device(dom, &(*dominfo)->dev_emu);
-        ret = get_graphics_device(dom, &(*dominfo)->dev_graphics);
+        get_emu_device(dom, &(*dominfo)->dev_emu);
+        get_graphics_device(dom, &(*dominfo)->dev_graphics);
 
         (*dominfo)->dev_mem_ct = get_mem_devices(dom, &(*dominfo)->dev_mem);
         (*dominfo)->dev_net_ct = get_net_devices(dom, &(*dominfo)->dev_net);
