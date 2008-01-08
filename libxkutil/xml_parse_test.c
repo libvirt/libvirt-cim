@@ -121,7 +121,7 @@ static void print_devices(struct domain *dominfo,
         for (i = 0; i < dominfo->dev_vcpu_ct; i++)
                 print_dev_vcpu(&dominfo->dev_vcpu[i], d);
 
-        if (dominfo->type != DOMAIN_XENPV) {
+        if ((dominfo->type != DOMAIN_XENPV) && (dominfo->dev_emu)) {
                 fprintf(d, "\n-- Emulator --\n");
                 print_dev_emu(dominfo->dev_emu, d);
         }
