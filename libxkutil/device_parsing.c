@@ -130,12 +130,17 @@ static char *get_node_content(xmlNode *node)
         return buf;
 }
 
-static bool parse_disk_device(xmlNode *dnode, struct virt_device *vdev)
+static int parse_disk_device(xmlNode *dnode, struct virt_device **vdevs)
 {
-        struct disk_device *ddev = &(vdev->dev.disk);
+        struct virt_device *vdev = NULL;
+        struct disk_device *ddev = NULL;
         xmlNode * child = NULL;
 
-        memset(ddev, 0, sizeof(*ddev));
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        ddev = &(vdev->dev.disk);
 
         ddev->type = get_attr_value(dnode, "type");
         if (ddev->type == NULL)
@@ -174,20 +179,28 @@ static bool parse_disk_device(xmlNode *dnode, struct virt_device *vdev)
         vdev->type = VIRT_DEV_DISK;
         vdev->id = strdup(ddev->virtual_dev);
 
-        return true;
+        *vdevs = vdev;
+
+        return 1;
 
  err:
         cleanup_disk_device(ddev);
+        free(vdev);
 
-        return false;
+        return 0;
 }
 
-static bool parse_net_device(xmlNode *inode, struct virt_device *vdev)
+static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
 {
-        struct net_device *ndev = &(vdev->dev.net);
+        struct virt_device *vdev = NULL;
+        struct net_device *ndev = NULL;
         xmlNode *child = NULL;
 
-        memset(ndev, 0, sizeof(*ndev));
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        ndev = &(vdev->dev.net);
 
         ndev->type = get_attr_value(inode, "type");
         if (ndev->type == NULL)
@@ -216,16 +229,26 @@ static bool parse_net_device(xmlNode *inode, struct virt_device *vdev)
         vdev->type = VIRT_DEV_NET;
         vdev->id = strdup(ndev->mac);
 
-        return true;
+        *vdevs = vdev;
+
+        return 1;
   err:
         cleanup_net_device(ndev);
+        free(vdev);
 
-        return false;
+        return 0;
 }
 
-static bool parse_emu_device(xmlNode *node, struct virt_device *vdev)
+static int parse_emu_device(xmlNode *node, struct virt_device **vdevs)
 {
-        struct emu_device *edev = &(vdev->dev.emu);
+        struct virt_device *vdev = NULL;
+        struct emu_device *edev = NULL;
+
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        edev = &(vdev->dev.emu);
 
         edev->path = get_node_content(node);
         if (edev->path != NULL)
@@ -233,16 +256,26 @@ static bool parse_emu_device(xmlNode *node, struct virt_device *vdev)
 
         vdev->type = VIRT_DEV_EMU;
 
-        return true;
+        *vdevs = vdev;
+
+        return 1;
  err:
         cleanup_emu_device(edev);
+        free(vdev);
 
-        return false;
+        return 0;
 }
 
-static bool parse_graphics_device(xmlNode *node, struct virt_device *vdev)
+static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
 {
-        struct graphics_device *gdev = &(vdev->dev.graphics);
+        struct virt_device *vdev = NULL;
+        struct graphics_device *gdev = NULL;
+
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        gdev = &(vdev->dev.graphics);
 
         gdev->type = get_attr_value(node, "type");
         gdev->port = get_attr_value(node, "port");
@@ -252,21 +285,37 @@ static bool parse_graphics_device(xmlNode *node, struct virt_device *vdev)
 
         vdev->type = VIRT_DEV_GRAPHICS;
 
-        return true;
+        *vdevs = vdev;
+
+        return 1;
  err:
         cleanup_graphics_device(gdev);
+        free(vdev);
 
-        return false;
+        return 0;
+}
+
+static bool resize_devlist(struct virt_device **list, int newsize)
+{
+        struct virt_device *_list;
+
+        _list = realloc(*list, newsize * sizeof(struct virt_device));
+        if (_list == NULL)
+                return false;
+
+        *list = _list;
+
+        return true;
 }
 
 static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
 {
         int devidx;
-        int lstidx;
+        int lstidx = 0;
         int count = 0;
         struct virt_device *list = NULL;
         xmlNode **dev_nodes = NULL;
-        bool (*do_real_parse)(xmlNode *, struct virt_device *) = NULL;
+        int (*do_real_parse)(xmlNode *, struct virt_device **) = NULL;
 
         /* point to correct parser function according to type */
         if (type == VIRT_DEV_NET)
@@ -289,27 +338,32 @@ static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
         if (count <= 0)
                 goto out;
 
-        list = (struct virt_device *)malloc(count * sizeof(struct virt_device));
-        if (list == NULL) {
-                count = 0;
-                goto out;
-        }
-
         /* walk thru the array, do real parsing on each node */
-        lstidx = 0;
         for (devidx = 0; devidx < count; devidx++) {
-                if (do_real_parse(dev_nodes[devidx], &list[lstidx]))
-                        lstidx++;
-        }
+                struct virt_device *tmp_list = NULL;
+                int devices = 0;
 
-        if (lstidx < devidx) {
-                list = realloc(list, lstidx * sizeof(struct virt_device));
-                count = lstidx;
+                devices = do_real_parse(dev_nodes[devidx], &tmp_list);
+                if (devices <= 0)
+                        continue;
+
+                if (!resize_devlist(&list, lstidx + devices)) {
+                        /* Skip these devices and try again for the
+                         * next cycle, which will probably fail, but
+                         * what else can you do?
+                         */
+                        goto end;
+                }
+
+                memcpy(&list[lstidx], tmp_list, devices * sizeof(*tmp_list));
+                lstidx += devices;
+        end:
+                free(tmp_list);
         }
 
   out:
         *l = list;
-        return count;
+        return lstidx;
 }
 
 /* Dummy function to suppress error message from libxml2 */
