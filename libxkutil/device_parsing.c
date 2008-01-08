@@ -36,6 +36,7 @@
 #include "../src/svpc_types.h"
 
 #define DISK_XPATH      (xmlChar *)"/domain/devices/disk"
+#define VCPU_XPATH      (xmlChar *)"/domain/vcpu"
 #define NET_XPATH       (xmlChar *)"/domain/devices/interface"
 #define EMU_XPATH       (xmlChar *)"/domain/devices/emulator"
 #define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics"
@@ -239,6 +240,45 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
         return 0;
 }
 
+static int parse_vcpu_device(xmlNode *node, struct virt_device **vdevs)
+{
+        struct virt_device *list = NULL;
+        char *count_str;
+        int count;
+        int i;
+
+        count_str = get_node_content(node);
+        if (count_str == NULL)
+                count = 1; /* Default to 1 VCPU if non specified */
+        else if (sscanf(count_str, "%i", &count) != 1)
+                count = 1; /* Default to 1 VCPU if garbage */
+
+        free(count_str);
+
+        list = calloc(count, sizeof(*list));
+        if (list == NULL)
+                goto err;
+
+        for (i = 0; i < count; i++) {
+                struct virt_device *vdev = &list[i];
+                struct vcpu_device *cdev = &vdev->dev.vcpu;
+
+                cdev->number = i;
+
+                vdev->type = VIRT_DEV_VCPU;
+                if (asprintf(&vdev->id, "%i", i) == -1)
+                        vdev->id = NULL;
+        }
+
+        *vdevs = list;
+
+        return count;
+ err:
+        free(list);
+
+        return 0;
+}
+
 static int parse_emu_device(xmlNode *node, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
@@ -322,6 +362,8 @@ static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
                 do_real_parse = &parse_net_device;
         else if (type == VIRT_DEV_DISK)
                 do_real_parse = &parse_disk_device;
+        else if (type == VIRT_DEV_VCPU)
+                do_real_parse = parse_vcpu_device;
         else if (type == VIRT_DEV_EMU)
                 do_real_parse = parse_emu_device;
         else if (type == VIRT_DEV_GRAPHICS)
@@ -386,6 +428,8 @@ static int parse_devices(char *xml, struct virt_device **_list, int type)
                 xpathstr = NET_XPATH;
         else if (type == VIRT_DEV_DISK)
                 xpathstr = DISK_XPATH;
+        else if (type == VIRT_DEV_VCPU)
+                xpathstr = VCPU_XPATH;
         else if (type == VIRT_DEV_EMU)
                 xpathstr = EMU_XPATH;
         else if (type == VIRT_DEV_GRAPHICS)
@@ -446,9 +490,6 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 dev->dev.mem.maxsize = _dev->dev.mem.maxsize;
         } else if (dev->type == VIRT_DEV_VCPU) {
                 dev->dev.vcpu.number = _dev->dev.vcpu.number;
-                dev->dev.vcpu.state = _dev->dev.vcpu.state;
-                dev->dev.vcpu.cpuTime = _dev->dev.vcpu.cpuTime;
-                dev->dev.vcpu.cpu = _dev->dev.vcpu.cpu;
         } else if (dev->type == VIRT_DEV_EMU) {
                 DUP_FIELD(dev, _dev, dev.emu.path);
         } else if (dev->type == VIRT_DEV_GRAPHICS) {
@@ -573,42 +614,17 @@ int get_mem_devices(virDomainPtr dom, struct virt_device **list)
 
 int get_vcpu_devices(virDomainPtr dom, struct virt_device **list)
 {
-        int i, rc, ret, num_filled, num_vcpus;
-        virDomainInfo dom_info;
-        virVcpuInfoPtr vcpu_info = NULL;
-        struct virt_device *ret_list = NULL;
+        char *xml;
+        int ret;
 
-        rc = virDomainGetInfo(dom, &dom_info);
-        if (rc == -1) {
-                ret = -1;
-                goto out1;
-        }
+        xml = virDomainGetXMLDesc(dom, 0);
+        if (xml == NULL)
+                return 0;
 
-        num_vcpus = dom_info.nrVirtCpu;
-        vcpu_info = calloc(num_vcpus, sizeof(virVcpuInfo));
-        num_filled = virDomainGetVcpus(dom, vcpu_info, num_vcpus, NULL, 0);
-        if (num_vcpus != num_filled) {
-                ret = -1;
-                goto out2;
-        }
+        ret = parse_devices(xml, list, VIRT_DEV_VCPU);
 
-        ret_list = calloc(num_vcpus, sizeof(struct virt_device));
-        for (i = 0; i < num_vcpus; i++) {
-                ret_list[i].type = VIRT_DEV_VCPU;
-                ret_list[i].dev.vcpu = vcpu_info[i];
-                if (asprintf(&ret_list[i].id, "%d", 
-                             vcpu_info[i].number) == -1) {
-                        ret = -1;
-                        free(ret_list);
-                        goto out2;
-                }
-        }
+        free(xml);
 
-        ret = num_vcpus;
-        *list = ret_list;
- out2:
-        free(vcpu_info);
- out1:
         return ret;
 }
 

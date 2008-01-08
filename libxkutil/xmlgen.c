@@ -163,7 +163,7 @@ static char *net_to_xml(struct net_device *net)
         return xml;
 }
 
-static char *proc_to_xml(struct _virVcpuInfo *proc)
+static char *proc_to_xml(struct vcpu_device *proc)
 {
         return strdup("");
 }

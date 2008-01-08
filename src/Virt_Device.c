@@ -187,7 +187,7 @@ static CMPIInstance *mem_instance(const CMPIBroker *broker,
 }
 
 static CMPIInstance *vcpu_instance(const CMPIBroker *broker,
-                                   struct _virVcpuInfo *dev,
+                                   struct vcpu_device *dev,
                                    const virDomainPtr dom,
                                    const char *ns)
 {

@@ -49,6 +49,10 @@ struct mem_device {
         uint64_t maxsize;
 };
 
+struct vcpu_device {
+        uint32_t number;
+};
+
 struct emu_device {
         char *path;
 };
@@ -72,7 +76,7 @@ struct virt_device {
                 struct disk_device disk;
                 struct net_device net;
                 struct mem_device mem;
-                struct _virVcpuInfo vcpu;
+                struct vcpu_device vcpu;
                 struct emu_device emu;
                 struct graphics_device graphics;
         } dev;
