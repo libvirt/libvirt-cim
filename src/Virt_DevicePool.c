@@ -817,7 +817,6 @@ CMPIStatus get_pool_inst(const CMPIBroker *broker,
         CMPIInstance *inst = NULL;
         virConnectPtr conn = NULL;
         const char *id = NULL;
-        const char *prop;
 
         if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
@@ -831,19 +830,11 @@ CMPIStatus get_pool_inst(const CMPIBroker *broker,
                 goto out;
 
         inst = get_pool_by_id(broker, conn, id, NAMESPACE(reference));
-        if (inst) {
-                prop = cu_compare_ref(reference, inst);
-                if (prop != NULL) {
-                        cu_statusf(broker, &s,
-                                   CMPI_RC_ERR_NOT_FOUND,
-                                   "No such ResourcePool instance (%s)", prop);
-                }
-        } else {
+        if (inst == NULL)
                 cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such instance `%s'", id);
-        }
-
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", id);
+        
  out:
         virConnectClose(conn);
         *instance = inst;
