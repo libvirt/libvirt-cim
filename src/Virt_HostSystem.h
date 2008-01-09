@@ -29,4 +29,8 @@ CMPIStatus get_host_system_properties(const char **name,
                                       const char **ccname,
                                       const CMPIObjectPath *ref,
                                       const CMPIBroker *broker);
+
+CMPIStatus validate_host_ref(const CMPIBroker *broker,
+                             const CMPIObjectPath *ref);
+
 #endif

@@ -36,6 +36,25 @@
 
 const static CMPIBroker *_BROKER;
 
+CMPIStatus validate_host_ref(const CMPIBroker *broker,
+                             const CMPIObjectPath *ref)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *prop;
+        
+        s = get_host_cs(broker, ref, &inst);
+        
+        prop = cu_compare_ref(ref, inst);
+        if (prop != NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", prop);
+        }
+        
+        return s;
+}
+
 static int set_host_system_properties(CMPIInstance *instance)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
