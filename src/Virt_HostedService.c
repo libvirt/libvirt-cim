@@ -37,6 +37,39 @@
 
 const static CMPIBroker *_BROKER;
 
+static CMPIStatus validate_service_ref(const CMPIObjectPath *ref)
+{      
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *prop;
+        char* classname;
+
+        classname = class_base_name(CLASSNAME(ref));
+
+        if (STREQC(classname, "VirtualSystemManagementService")) {
+                s = get_vsms(ref, &inst, _BROKER);
+        } else if (STREQC(classname, "ResourcePoolConfigurationService")) {
+                s = rpcs_instance(ref, &inst, _BROKER);
+        } else if (STREQC(classname, "VirtualSystemMigrationService")) {
+                s = get_migration_service(ref, &inst, _BROKER);
+        }
+        
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        prop = cu_compare_ref(ref, inst);
+        if (prop != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", prop);
+        }
+        
+ out:
+        free(classname);
+
+        return s;
+}
+
 static CMPIStatus service_to_host(const CMPIObjectPath *ref,
                                   struct std_assoc_info *info,
                                   struct inst_list *list)
@@ -45,6 +78,10 @@ static CMPIStatus service_to_host(const CMPIObjectPath *ref,
         CMPIInstance *instance;
 
         if (!match_hypervisor_prefix(ref, info))
+                return s;
+
+        s = validate_service_ref(ref);
+        if (s.rc != CMPI_RC_OK)
                 return s;
 
         s = get_host_cs(_BROKER, ref, &instance);
@@ -62,6 +99,10 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         CMPIInstance *inst;
 
         if (!match_hypervisor_prefix(ref, info))
+                return s;
+
+        s = validate_host_ref(_BROKER, ref);
+        if (s.rc != CMPI_RC_OK)
                 return s;
 
         s = rpcs_instance(ref, &inst, _BROKER);
