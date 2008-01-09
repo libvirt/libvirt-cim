@@ -294,8 +294,8 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                 CMReturnInstance(results, inst);
         else
                 cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unknown instance");
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", id);
  out:
         return s;
 }
