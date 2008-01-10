@@ -68,23 +68,13 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int i;
         virConnectPtr conn;
-        CMPIInstance *host;
-        const char *prop;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        s = get_host_cs(_BROKER, ref, &host);
+        s = validate_host_ref(_BROKER, ref);
         if (s.rc != CMPI_RC_OK)
                 return s;
-
-        prop = cu_compare_ref(ref, host);
-        if (prop != NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such HostSystem instance (%s)", prop);
-                return s;
-        }
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
