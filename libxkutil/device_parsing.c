@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include <sys/stat.h>
 #include <libxml/tree.h>
 #include <libxml/parser.h>
@@ -39,11 +40,13 @@
 #define VCPU_XPATH      (xmlChar *)"/domain/vcpu"
 #define NET_XPATH       (xmlChar *)"/domain/devices/interface"
 #define EMU_XPATH       (xmlChar *)"/domain/devices/emulator"
+#define MEM_XPATH       (xmlChar *)"/domain/memory | /domain/currentMemory"
 #define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics"
 
 #define DEFAULT_BRIDGE "xenbr0"
 
 #define XSTREQ(x, y) (STREQ((char *)x, y))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 static void cleanup_disk_device(struct disk_device *dev)
 {
@@ -306,6 +309,38 @@ static int parse_emu_device(xmlNode *node, struct virt_device **vdevs)
         return 0;
 }
 
+static int parse_mem_device(xmlNode *node, struct virt_device **vdevs)
+{
+        struct virt_device *vdev = NULL;
+        struct mem_device *mdev = NULL;
+        char *content = NULL;
+
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        mdev = &(vdev->dev.mem);
+
+        content = get_node_content(node);
+
+        if (XSTREQ(node->name, "memory"))
+                sscanf(content, "%" PRIu64, &mdev->size);
+        else if (XSTREQ(node->name, "currentMemory"))
+                sscanf(content, "%" PRIu64, &mdev->maxsize);
+
+        free(content);
+
+        *vdevs = vdev;
+
+        return 1;
+
+ err:
+        free(content);
+        free(vdev);
+
+        return 0;
+}
+
 static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
@@ -366,6 +401,8 @@ static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
                 do_real_parse = parse_vcpu_device;
         else if (type == VIRT_DEV_EMU)
                 do_real_parse = parse_emu_device;
+        else if (type == VIRT_DEV_MEM)
+                do_real_parse = parse_mem_device;
         else if (type == VIRT_DEV_GRAPHICS)
                 do_real_parse = parse_graphics_device;
         else
@@ -414,7 +451,7 @@ static void swallow_err_msg(void *ctx, const char *msg, ...)
         /* do nothing, just swallow the message. */
 }
 
-static int parse_devices(char *xml, struct virt_device **_list, int type)
+static int parse_devices(const char *xml, struct virt_device **_list, int type)
 {
         int len = 0;
         int count = 0;
@@ -432,6 +469,8 @@ static int parse_devices(char *xml, struct virt_device **_list, int type)
                 xpathstr = VCPU_XPATH;
         else if (type == VIRT_DEV_EMU)
                 xpathstr = EMU_XPATH;
+        else if (type == VIRT_DEV_MEM)
+                xpathstr = MEM_XPATH;
         else if (type == VIRT_DEV_GRAPHICS)
                 xpathstr = GRAPHICS_XPATH;
         else
@@ -500,128 +539,60 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         return dev;
 }
 
-static int get_emu_device(virDomainPtr dom, struct virt_device **dev)
+static int _get_mem_device(const char *xml, struct virt_device **list)
+{
+        struct virt_device *mdevs = NULL;
+        struct virt_device *mdev = NULL;
+        int ret;
+
+        ret = parse_devices(xml, &mdevs, VIRT_DEV_MEM);
+        if (ret <= 0)
+                return ret;
+
+        mdev = malloc(sizeof(*mdev));
+        if (mdev == NULL)
+                return 0;
+
+        memset(mdev, 0, sizeof(*mdev));
+
+        /* We could get one or two memory devices back, depending on
+         * if there is a currentMemory tag or not.  Coalesce these
+         * into a single device to return
+         */
+
+        if (ret == 2) {
+                mdev->dev.mem.size = MAX(mdevs[0].dev.mem.size,
+                                         mdevs[1].dev.mem.size);
+                mdev->dev.mem.maxsize = MAX(mdevs[0].dev.mem.maxsize,
+                                            mdevs[1].dev.mem.maxsize);
+        } else {
+                mdev->dev.mem.size = MAX(mdevs[0].dev.mem.size,
+                                         mdevs[0].dev.mem.maxsize);
+                mdev->dev.mem.maxsize = mdev->dev.mem.size;
+        }
+
+        mdev->type = VIRT_DEV_MEM;
+        mdev->id = strdup("mem");
+        *list = mdev;
+
+        cleanup_virt_devices(&mdevs, ret);
+
+        return 1;
+}
+
+int get_devices(virDomainPtr dom, struct virt_device **list, int type)
 {
         char *xml;
         int ret;
-        struct virt_device *list = NULL;
 
         xml = virDomainGetXMLDesc(dom, 0);
         if (xml == NULL)
                 return 0;
 
-        ret = parse_devices(xml, &list, VIRT_DEV_EMU);
-        if (ret == 1)
-                *dev = &list[0];
+        if (type == VIRT_DEV_MEM)
+                ret = _get_mem_device(xml, list);
         else
-                *dev = NULL;
-
-        free(xml);
-
-        return ret;
-}
-
-static int get_graphics_device(virDomainPtr dom, struct virt_device **dev)
-{
-        char *xml;
-        int ret;
-        struct virt_device *list = NULL;
-
-        xml = virDomainGetXMLDesc(dom, 0);
-        if (xml == NULL)
-                return 0;
-
-        ret = parse_devices(xml, &list, VIRT_DEV_GRAPHICS);
-        if (ret == 1)
-                *dev = &list[0];
-        else
-                *dev = NULL;
-
-        free(xml);
-
-        return ret;
-}
-
-int get_disk_devices(virDomainPtr dom, struct virt_device **list)
-{
-        char *xml;
-        int ret;
-
-        xml = virDomainGetXMLDesc(dom, 0);
-        if (xml == NULL)
-                return 0;
-
-        ret = parse_devices(xml, list, VIRT_DEV_DISK);
-
-        free(xml);
-
-        return ret;
-}
-
-int get_net_devices(virDomainPtr dom, struct virt_device **list)
-{
-        char *xml;
-        int ret;
-
-        xml = virDomainGetXMLDesc(dom, 0);
-        if (xml == NULL)
-                return 0;
-
-        ret = parse_devices(xml, list, VIRT_DEV_NET);
-
-        free(xml);
-
-        return ret;
-}
-
-int get_mem_devices(virDomainPtr dom, struct virt_device **list)
-{
-        int rc, ret;
-        uint64_t mem_size, mem_maxsize;
-        virDomainInfo dom_info;
-        struct virt_device *ret_list = NULL;
-
-        rc = virDomainGetInfo(dom, &dom_info);
-        if (rc == -1) {
-                ret = -1;
-                goto out;
-        }
-
-        mem_size = (uint64_t)dom_info.memory;
-        mem_maxsize = (uint64_t)dom_info.maxMem;
-        if (mem_size > mem_maxsize) {
-                ret = -1;
-                goto out;
-        }
-
-        ret_list = malloc(sizeof(struct virt_device));
-        if (ret_list == NULL) {
-                ret = -1;
-                free (ret_list);
-                goto out;
-        }
-
-        ret_list->type = VIRT_DEV_MEM;
-        ret_list->dev.mem.size = mem_size;
-        ret_list->dev.mem.maxsize = mem_maxsize;
-        ret_list->id = strdup("mem");
-
-        ret = 1;
-        *list = ret_list;
- out:
-        return ret;
-}
-
-int get_vcpu_devices(virDomainPtr dom, struct virt_device **list)
-{
-        char *xml;
-        int ret;
-
-        xml = virDomainGetXMLDesc(dom, 0);
-        if (xml == NULL)
-                return 0;
-
-        ret = parse_devices(xml, list, VIRT_DEV_VCPU);
+                ret = parse_devices(xml, list, type);
 
         free(xml);
 
@@ -794,14 +765,19 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
                 goto out;
         }
 
-        get_emu_device(dom, &(*dominfo)->dev_emu);
-        get_graphics_device(dom, &(*dominfo)->dev_graphics);
+        parse_devices(xml, &(*dominfo)->dev_emu, VIRT_DEV_EMU);
+        parse_devices(xml, &(*dominfo)->dev_graphics, VIRT_DEV_GRAPHICS);
 
-        (*dominfo)->dev_mem_ct = get_mem_devices(dom, &(*dominfo)->dev_mem);
-        (*dominfo)->dev_net_ct = get_net_devices(dom, &(*dominfo)->dev_net);
-        (*dominfo)->dev_disk_ct = get_disk_devices(dom, &(*dominfo)->dev_disk);
-        (*dominfo)->dev_vcpu_ct = get_vcpu_devices(dom, &(*dominfo)->dev_vcpu);
-
+        (*dominfo)->dev_mem_ct = _get_mem_device(xml, &(*dominfo)->dev_mem);
+        (*dominfo)->dev_net_ct = parse_devices(xml,
+                                               &(*dominfo)->dev_net,
+                                               VIRT_DEV_NET);
+        (*dominfo)->dev_disk_ct = parse_devices(xml,
+                                                &(*dominfo)->dev_disk,
+                                                VIRT_DEV_DISK);
+        (*dominfo)->dev_vcpu_ct = parse_devices(xml,
+                                                &(*dominfo)->dev_vcpu,
+                                                VIRT_DEV_VCPU);
 out:
         free(xml);
 

@@ -66,16 +66,7 @@ static int list_devs(virConnectPtr conn,
         if (dom == NULL)
                 return 0;
 
-        if (type == CIM_RASD_TYPE_DISK)
-                return  get_disk_devices(dom, list);
-        else if (type == CIM_RASD_TYPE_NET)
-                return get_net_devices(dom, list);
-        else if (type == CIM_RASD_TYPE_PROC)
-                return get_vcpu_devices(dom, list);
-        else if (type == CIM_RASD_TYPE_MEM)
-                return get_mem_devices(dom, list);
-        else
-                return 0;
+        return get_devices(dom, list, type);
 }
 
 static struct virt_device *find_dev(virConnectPtr conn,

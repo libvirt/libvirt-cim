@@ -174,7 +174,7 @@ static char *diskpool_member_of(const CMPIBroker *broker,
         if (dom == NULL)
                 goto out;
 
-        count = get_disk_devices(dom, &devs);
+        count = get_devices(dom, &devs, VIRT_DEV_DISK);
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].dev.disk.virtual_dev), dev)) {
@@ -290,7 +290,7 @@ static char *netpool_member_of(const CMPIBroker *broker,
         if (dom == NULL)
                 goto out;
 
-        count = get_net_devices(dom, &devs);
+        count = get_devices(dom, &devs, VIRT_DEV_NET);
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].id), dev)) {

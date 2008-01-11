@@ -283,22 +283,6 @@ int device_type_from_classname(const char *classname)
                 return VIRT_DEV_UNKNOWN;
 }
 
-static int get_devices(virDomainPtr dom, 
-                       struct virt_device **devs,
-                       int type)
-{
-        if (type == VIRT_DEV_NET)
-                return get_net_devices(dom, devs);
-        else if (type == VIRT_DEV_DISK)
-                return get_disk_devices(dom, devs);
-        else if (type == VIRT_DEV_MEM)
-                return get_mem_devices(dom, devs);
-        else if (type == VIRT_DEV_VCPU)
-                return get_vcpu_devices(dom, devs);
-        else
-                return -1;
-}
-
 int dom_devices(const CMPIBroker *broker,
                 virDomainPtr dom,
                 const char *ns,

@@ -137,10 +137,7 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo);
 
 void cleanup_dominfo(struct domain **dominfo);
 
-int get_disk_devices(virDomainPtr dom, struct virt_device **list);
-int get_net_devices(virDomainPtr dom, struct virt_device **list);
-int get_vcpu_devices(virDomainPtr dom, struct virt_device **list);
-int get_mem_devices(virDomainPtr dom, struct virt_device **list);
+int get_devices(virDomainPtr dom, struct virt_device **list, int type);
 
 void cleanup_virt_device(struct virt_device *dev);
 void cleanup_virt_devices(struct virt_device **devs, int count);
