@@ -1,6 +1,64 @@
+
+The CodingStyle for libvirt-cim (and libcmpiutil) is mostly kernel
+style, but with the following "clarifications":
+
 - Eight-space indents
-- No single-line if statements
+
+- No single-line if statements.  This means none of this:
+
+    if (foo) bar;
+
 - Keywords and parens separated by one space (i.e. "if (" not "if(")
-- 80-char width limit
-- Identifier style: use_underbars_and_lowercase
-- Macro style: ALL_UPPERCASE
+
+- 80-char width limit.  Break long function calls by putting *every*
+  parameter of the call on its own line.  There are a few exceptions
+  to the "every parameter" rule, such as for cu_statusf() calls.
+  Unless you've seen another example in the code, put each parameter
+  on a line.
+
+- Identifiers should be named with underbars_and_lowercase.  The
+  libvirt style is to use CamelCase, but try to limit that to
+  operations directly related to libvirt and don't spread it to the
+  rest of the code.
+
+- Macros should be ALL_UPPERCASE
+
+- Braces around blocks should look like this:
+
+  if (foo) {
+    . . .
+  } else if (bar) {
+    . . .
+  } else {
+    . . .
+  }
+
+- Absolutely all files should contain the following block at the end:
+
+  /*
+   * Local Variables:
+   * mode: C
+   * c-set-style: "K&R"
+   * tab-width: 8
+   * c-basic-offset: 8
+   * indent-tabs-mode: nil
+   * End:
+   */
+
+  This ensures that emacs folks will have the style correct (they're
+  already halfway there by their choice in editor anyway).
+
+- Pointer and integer comparisons should be against something
+  concrete.  The only time the following style should be used is if
+  foo is a bool:
+
+    if (!foo) /* ONLY if foo is a bool */
+      bar;
+
+  For pointers and integers, do this:
+
+    if (foo == NULL) /* if foo is a pointer */
+      bar;
+
+    if (foo == -1) /* if foo is an integer */
+      bar;
