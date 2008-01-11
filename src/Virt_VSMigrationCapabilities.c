@@ -46,7 +46,7 @@ static CMPIStatus set_method_properties(const CMPIBroker *broker,
         CMPIStatus s;
         uint16_t val;
 
-        array = CMNewArray(broker, 2, CMPI_INTEGER, &s);
+        array = CMNewArray(broker, 2, CMPI_uint16, &s);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
@@ -57,10 +57,10 @@ static CMPIStatus set_method_properties(const CMPIBroker *broker,
         CMSetArrayElementAt(array, 1, (CMPIValue *)&val, CMPI_uint16);
 
         CMSetProperty(inst, "AsynchronousMethodsSupported",
-                      (CMPIValue *)&array, CMPI_ARRAY);
+                      (CMPIValue *)&array, CMPI_uint16A);
 
 
-        array = CMNewArray(broker, 2, CMPI_INTEGER, &s);
+        array = CMNewArray(broker, 2, CMPI_uint16, &s);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
@@ -71,7 +71,7 @@ static CMPIStatus set_method_properties(const CMPIBroker *broker,
         CMSetArrayElementAt(array, 1, (CMPIValue *)&val, CMPI_uint16);
 
         CMSetProperty(inst, "SynchronousMethodsSupported",
-                      (CMPIValue *)&array, CMPI_ARRAY);
+                      (CMPIValue *)&array, CMPI_uint16A);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
