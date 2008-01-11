@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include <getopt.h>
+
 #include <libvirt/libvirt.h>
 
 #include "device_parsing.h"
@@ -149,40 +151,164 @@ static void print_domxml(struct domain *dominfo,
                 printf("%s\n", xml);
 }
 
+static char *read_from_file(FILE *file)
+{
+        char *xml = NULL;
+        char buf[256];
+        int size = 0;
+
+        while (fgets(buf, sizeof(buf) - 1, file) != NULL) {
+                xml = realloc(xml, size + strlen(buf) + 1);
+                if (xml == NULL) {
+                        printf("Out of memory\n");
+                        return NULL;
+                }
+
+                strcat(xml, buf);
+                size += strlen(buf);
+        }
+
+        return xml;
+}
+
+static int dominfo_from_dom(const char *uri,
+                            const char *domain,
+                            struct domain **d)
+{
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
+        int ret = 0;
+
+        conn = virConnectOpen(uri);
+        if (conn == NULL) {
+                printf("Unable to connect to libvirt\n");
+                goto out;
+        }
+
+        dom = virDomainLookupByName(conn, domain);
+        if (dom == NULL) {
+                printf("Unable to find domain `%s'\n", domain);
+                goto out;
+        }
+
+        ret = get_dominfo(dom, d);
+
+ out:
+        virDomainFree(dom);
+        virConnectClose(conn);
+
+        return ret;
+}
+
+static int dominfo_from_file(const char *fname, struct domain **d)
+{
+        char *xml;
+        FILE *file;
+        int ret;
+
+        if (fname[0] == '-')
+                file = stdin;
+        else
+                file = fopen(fname, "r");
+
+        if (file == NULL) {
+                printf("Unable to open `%s'\n", fname);
+                return 0;
+        }
+
+        xml = read_from_file(file);
+        if (xml == NULL) {
+                printf("Unable to read from `%s'\n", fname);
+                return 0;
+        }
+
+        ret = get_dominfo_from_xml(xml, d);
+
+        free(xml);
+        fclose(file);
+
+        printf("XML:\n%s", xml);
+
+        return ret;
+}
+
+static void usage(void)
+{
+        printf("xml_parse_test -f [FILE | -] [--xml]\n"
+               "xml_parse_test -d domain [--uri URI] [--xml]\n"
+               "\n"
+               "-f,--file FILE    Parse domain XML from file (or stdin if -)\n"
+               "-d,--domain DOM   Display dominfo for a domain from libvirt\n"
+               "-u,--uri URI      Connect to libvirt with URI\n"
+               "-x,--xml          Dump generated XML instead of summary\n"
+               "-h,--help         Display this help message\n");
+}
+
 int main(int argc, char **argv)
 {
-        virConnectPtr conn;
-        virDomainPtr dom;
-        struct domain *dominfo;
+        int c;
+        char *domain = NULL;
+        char *uri = "xen";
+        char *file = NULL;
+        bool xml = false;
+        struct domain *dominfo = NULL;
+        int ret;
 
-        if (argc < 2) {
-                printf("Usage: %s domain [URI] [xml]\n", argv[0]);
+        static struct option lopts[] = {
+                {"domain", 1, 0, 'd'},
+                {"uri",    1, 0, 'u'},
+                {"xml",    0, 0, 'x'},
+                {"file",   1, 0, 'f'},
+                {"help",   0, 0, 'h'},
+                {0,        0, 0, 0}};
+
+        while (1) {
+                int optidx = 0;
+
+                c = getopt_long(argc, argv, "d:u:f:xh", lopts, &optidx);
+                if (c == -1)
+                        break;
+
+                switch (c) {
+                case 'd':
+                        domain = optarg;
+                        break;
+
+                case 'u':
+                        uri = optarg;
+                        break;
+
+                case 'f':
+                        file = optarg;
+                        break;
+
+                case 'x':
+                        xml = true;
+                        break;
+
+                case '?':
+                case 'h':
+                        usage();
+                        return c == '?';
+
+                };
+        }
+
+        if (file != NULL)
+                ret = dominfo_from_file(file, &dominfo);
+        else if (domain != NULL)
+                ret = dominfo_from_dom(uri, domain, &dominfo);
+        else {
+                printf("Need a data source (--domain or --file)\n");
                 return 1;
         }
 
-        if (argc > 2)
-                conn = virConnectOpen(argv[2]);
-        else
-                conn = virConnectOpen("xen:///");
-        if (conn == NULL) {
-                printf("Unable to connect to libvirt\n");
+        if (ret == 0) {
+                printf("Unable to get dominfo\n");
                 return 2;
         }
 
-        dom = virDomainLookupByName(conn, argv[1]);
-        if (dom == NULL) {
-                printf("Unable to lookup domain `%s'\n", argv[1]);
-                return 3;
-        }
-
-        if (get_dominfo(dom, &dominfo) == 0) {
-                printf("Failed to parse domain info\n");
-                return 4;
-        }
-
-        printf("Parsed domain info\n");
-
-        if ((argc > 3) && (argv[3][0] == 'x'))
+        if (xml)
                 print_domxml(dominfo, stdout);
         else {
                 print_dominfo(dominfo, stdout);
