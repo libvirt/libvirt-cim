@@ -134,6 +134,7 @@ struct virt_device *virt_device_dup(struct virt_device *dev);
 int disk_type_from_file(const char *path);
 
 int get_dominfo(virDomainPtr dom, struct domain **dominfo);
+int get_dominfo_from_xml(const char *xml, struct domain **dominfo);
 
 void cleanup_dominfo(struct domain **dominfo);
 

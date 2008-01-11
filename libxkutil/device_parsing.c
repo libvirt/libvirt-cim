@@ -742,28 +742,17 @@ static int _get_dominfo(const char *xml, struct domain *dominfo)
         return ret;
 }
 
-int get_dominfo(virDomainPtr dom, struct domain **dominfo)
+int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
 {
-        char *xml;
         int ret;
 
         *dominfo = malloc(sizeof(**dominfo));
         if (*dominfo == NULL)
                 return 0;
 
-        xml = virDomainGetXMLDesc(dom, 0);
-        if (xml == NULL) {
-                free(*dominfo);
-                *dominfo = NULL;
-                return 0;
-        }
-
         ret = _get_dominfo(xml, *dominfo);
-        if (ret == 0) {
-                free(*dominfo);
-                *dominfo = NULL;
-                goto out;
-        }
+        if (ret == 0)
+                goto err;
 
         parse_devices(xml, &(*dominfo)->dev_emu, VIRT_DEV_EMU);
         parse_devices(xml, &(*dominfo)->dev_graphics, VIRT_DEV_GRAPHICS);
@@ -778,7 +767,27 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
         (*dominfo)->dev_vcpu_ct = parse_devices(xml,
                                                 &(*dominfo)->dev_vcpu,
                                                 VIRT_DEV_VCPU);
-out:
+
+        return ret;
+
+ err:
+        free(*dominfo);
+        *dominfo = NULL;
+
+        return 0;
+}
+
+int get_dominfo(virDomainPtr dom, struct domain **dominfo)
+{
+        char *xml;
+        int ret;
+
+        xml = virDomainGetXMLDesc(dom, 0);
+        if (xml == NULL)
+                return 0;
+
+        ret = get_dominfo_from_xml(xml, dominfo);
+
         free(xml);
 
         return ret;
