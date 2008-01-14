@@ -810,7 +810,8 @@ void cleanup_dominfo(struct domain **dominfo)
                 free(dom->os_info.pv.kernel);
                 free(dom->os_info.pv.initrd);
                 free(dom->os_info.pv.cmdline);
-        } else if (dom->type == DOMAIN_XENFV) {
+        } else if ((dom->type == DOMAIN_XENFV) ||
+                   (dom->type == DOMAIN_KVM)) {
                 free(dom->os_info.fv.type);
                 free(dom->os_info.fv.loader);
                 free(dom->os_info.fv.boot);
