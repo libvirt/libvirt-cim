@@ -7,3 +7,5 @@ dist_pkgdata_SCRIPTS = install_base_schema.sh
 
 $(CIM_SCHEMA_ZIP):
 	wget http://www.dmtf.org/standards/cim/cim_schema_v$(CIM_SCHEMA_VER)/$(CIM_SCHEMA_ZIP)
+
+EXTRA_DIST = README.DMTF

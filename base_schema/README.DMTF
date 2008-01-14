@@ -1,0 +1,9 @@
+The DMTF CIM schema files included here are required for proper
+initialization of the CIM server environment.  They are permitted for
+distribution per the guidelines at the top of the main MOF file:
+
+// DMTF is a not-for-profit association of industry members dedicated
+// to promoting enterprise and systems management and interoperability.
+// DMTF specifications and documents may be reproduced for uses
+// consistent with this purpose by members and non-members,
+// provided that correct attribution is given.
