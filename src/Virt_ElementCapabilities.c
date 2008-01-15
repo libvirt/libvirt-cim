@@ -37,6 +37,7 @@
 #include "Virt_ComputerSystem.h"
 #include "Virt_HostSystem.h"
 #include "Virt_VSMigrationCapabilities.h"
+#include "Virt_AllocationCapabilities.h"
 
 /* Associate an XXX_Capabilities to the proper XXX_ManagedElement.
  *
@@ -47,28 +48,50 @@
 
 const static CMPIBroker *_BROKER;
 
+static CMPIStatus validate_host_caps_ref(const CMPIObjectPath *ref)
+{ 
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *prop;
+        char* classname;   
+        
+        classname = class_base_name(CLASSNAME(ref));
+
+        if (STREQC(classname, "VirtualSystemManagementCapabilities")) {
+                s = get_vsm_cap(_BROKER, ref, &inst);
+        } else if (STREQC(classname, "VirtualSystemMigrationCapabilities")) {
+                s = get_migration_caps(ref, &inst, _BROKER);
+        }
+        
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        prop = cu_compare_ref(ref, inst);
+        if (prop != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", prop);
+        }
+        
+ out:
+        free(classname);
+
+        return s;
+}
+
 static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        const char *prop;
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
 
-        s = get_host_cs(_BROKER, ref, &inst);
+        s = validate_host_ref(_BROKER, ref);
         if (s.rc != CMPI_RC_OK)
                 goto out;
-
-        prop = cu_compare_ref(ref, inst);
-        if (prop != NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such HostSystem (%s)", prop);
-                goto out;
-        }
 
         s = get_vsm_cap(_BROKER, ref, &inst);
         if (s.rc == CMPI_RC_OK)
@@ -90,7 +113,11 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
+
+        s = validate_host_caps_ref(ref);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         s = get_host_cs(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
@@ -111,7 +138,11 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
         const char *sys_name = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
+
+        s = get_domain(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "Name", &sys_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -138,26 +169,30 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
 
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
                            "Could not get InstanceID");
-                goto error1;
+                goto out;
         }
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (s.rc != CMPI_RC_OK)
-                goto error1;
+        if (conn == NULL)
+                goto out;
 
         inst = instance_from_name(_BROKER, conn, inst_id, ref);
         if (inst)
                 inst_list_add(list, inst);
-
+        else
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", inst_id);
+        
         virConnectClose(conn);
- error1:
 
+ out:
         return s;
 }
 
@@ -173,14 +208,11 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
                                 struct std_assoc_info *info,
                                 struct inst_list *list)
 {
-        int ret;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *inst_id;
-        uint16_t type;
-        CMPIInstance *inst = NULL;
-        CMPIStatus s = {CMPI_RC_OK};
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
 
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s, 
@@ -189,22 +221,11 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = get_typed_instance(_BROKER,
-                                  CLASSNAME(ref),
-                                  "AllocationCapabilities",
-                                  NAMESPACE(ref));
-        CMSetProperty(inst, "InstanceID", inst_id, CMPI_chars);
-        
-        ret = cu_get_u16_path(ref, "ResourceType", &type);
-        if (ret != 1) {
-                cu_statusf(_BROKER, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get ResourceType");
-                goto out;
-        }
-        CMSetProperty(inst, "ResourceType", &type, CMPI_uint16);
-
-        inst_list_add(list, inst);
+        s = enum_alloc_cap_instances(_BROKER,
+                                     ref,
+                                     NULL,
+                                     inst_id,
+                                     list);
         
  out:
         return s;
