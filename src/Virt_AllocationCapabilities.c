@@ -31,6 +31,7 @@
 
 #include "misc_util.h"
 
+#include "Virt_AllocationCapabilities.h"
 #include "Virt_DevicePool.h"
 
 const static CMPIBroker *_BROKER;
@@ -71,30 +72,25 @@ static CMPIStatus ac_from_pool(const CMPIBroker *broker,
         return s;
 }
 
-static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
-                                      const CMPIObjectPath *ref,
-                                      const CMPIResult *results,
-                                      bool names_only,
-                                      const char **properties,
-                                      const char *id)
+CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
+                                    const CMPIObjectPath *ref,
+                                    const char **properties,
+                                    const char *id,
+                                    struct inst_list *list)
 {
-        int i;
         virConnectPtr conn = NULL;
         CMPIInstance *alloc_cap_inst;
-        struct inst_list alloc_cap_list;
         struct inst_list device_pool_list;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *inst_id;
-
-        CU_DEBUG("In alloc_cap_instances()");
+        int i;
 
         inst_list_init(&device_pool_list);
-        inst_list_init(&alloc_cap_list);
 
         if (!provider_is_responsible(broker, ref, &s))
                 goto out;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -129,7 +125,7 @@ static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
                 if (s.rc != CMPI_RC_OK)
                         goto out;
 
-                inst_list_add(&alloc_cap_list, alloc_cap_inst);
+                inst_list_add(list, alloc_cap_inst);
 
                 if (id && (STREQ(inst_id, id)))
                         break;
@@ -141,16 +137,42 @@ static CMPIStatus alloc_cap_instances(const CMPIBroker *broker,
                        "Requested Object could not be found.");
             goto out; 
         }
-
-        if (names_only)
-                cu_return_instance_names(results, &alloc_cap_list);
-        else
-                cu_return_instances(results, &alloc_cap_list);
-
+        
  out:
         virConnectClose(conn);
-        inst_list_free(&alloc_cap_list);
         inst_list_free(&device_pool_list);
+
+        return s;
+}
+
+static CMPIStatus return_alloc_cap_instances(const CMPIBroker *broker,
+                                             const CMPIObjectPath *ref,
+                                             const CMPIResult *results,
+                                             bool names_only,
+                                             const char **properties,
+                                             const char *id)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        struct inst_list list;
+
+        inst_list_init(&list);
+
+        s = enum_alloc_cap_instances(broker,
+                                     ref,
+                                     properties,
+                                     id,
+                                     &list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        if (names_only)
+                cu_return_instance_names(results, &list);
+        else
+                cu_return_instances(results, &list);
+        
+ out:        
+        inst_list_free(&list);
+
         return s;
 }
 
@@ -170,12 +192,12 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                 return s;
         }
 
-        return alloc_cap_instances(_BROKER,
-                                   reference,
-                                   results,
-                                   false,
-                                   properties,
-                                   id);
+        return return_alloc_cap_instances(_BROKER,
+                                          reference,
+                                          results,
+                                          false,
+                                          properties,
+                                          id);
 }
 
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
@@ -183,12 +205,12 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return alloc_cap_instances(_BROKER, 
-                                   reference, 
-                                   results, 
-                                   true, 
-                                   NULL, 
-                                   NULL);
+        return return_alloc_cap_instances(_BROKER, 
+                                          reference, 
+                                          results, 
+                                          true, 
+                                          NULL, 
+                                          NULL);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -197,12 +219,12 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return alloc_cap_instances(_BROKER, 
-                                   reference, 
-                                   results, 
-                                   false, 
-                                   properties, 
-                                   NULL);
+        return return_alloc_cap_instances(_BROKER, 
+                                          reference, 
+                                          results, 
+                                          false, 
+                                          properties, 
+                                          NULL);
 }
 
 DEFAULT_CI();
