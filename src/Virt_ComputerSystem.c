@@ -285,7 +285,7 @@ CMPIInstance *instance_from_name(const CMPIBroker *broker,
 
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL)
-                return 0;
+                return NULL;
 
         instance = get_typed_instance(broker,
                                       pfx_from_conn(conn),
@@ -374,44 +374,57 @@ static CMPIStatus return_enum_domains(const CMPIObjectPath *reference,
         return s;
 }
 
-static CMPIStatus get_domain(const CMPIObjectPath *reference,
-                             const CMPIResult *results,
-                             const char *name)
+CMPIStatus get_domain(const CMPIBroker *broker,
+                      const CMPIObjectPath *reference,
+                      CMPIInstance **inst)
 {
-        CMPIInstance *inst;
-        CMPIStatus s;
+        CMPIInstance *_inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn = NULL;
-        const char *prop = NULL;
+        const char *name;
 
-        if (!provider_is_responsible(_BROKER, reference, &s)) {
-                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+        if (!provider_is_responsible(broker, reference, &s))
+                return s;
+
+        if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {                
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No domain name specified");
                 return s;
         }
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL)
                 return s;
 
-        inst = instance_from_name(_BROKER, conn, name, reference);
-        if (inst == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to find `%s'", name);
-                goto out;
-        }
-
-        prop = cu_compare_ref(reference, inst);
-        if (prop != NULL) {
-                cu_statusf(_BROKER, &s,
+        _inst = instance_from_name(broker, conn, name, reference);
+        if (_inst == NULL) {
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", prop);
+                           "No such instance (%s)", name);
                 goto out;
         }
 
-        CMReturnInstance(results, inst);
-        CMSetStatus(&s, CMPI_RC_OK);
+        s = cu_validate_ref(broker, reference, _inst);
+
  out:
         virConnectClose(conn);
+        *inst = _inst;
+
+        return s;
+}
+
+static CMPIStatus return_domain(const CMPIObjectPath *reference,
+                                const CMPIResult *results)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+
+        s = get_domain(_BROKER, reference, &inst);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+
+        CMReturnInstance(results, inst);
 
         return s;
 }
@@ -440,19 +453,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        const char *name;
-
-        if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {
-                CMPIStatus s;
-                
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No domain name specified");
-                
-                return s;
-        }
-
-        return get_domain(reference, results, name);
+        return return_domain(reference, results);
 }
 
 DEFAULT_CI();

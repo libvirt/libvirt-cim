@@ -52,6 +52,19 @@ int enum_domains(const CMPIBroker *broker,
                  const char *ns,
                  struct inst_list *instlist);
 
+/**
+ * Get domain instance specified by the client given domain 
+ * object path
+ *
+ * @param broker A pointer to the current broker
+ * @param ref The client given object path
+ * @param inst In case of success the pointer to the instance
+ * @returns CMPIStatus
+ */
+CMPIStatus get_domain(const CMPIBroker *broker,
+                      const CMPIObjectPath *reference,
+                      CMPIInstance **inst);
+
 
 #endif
 
