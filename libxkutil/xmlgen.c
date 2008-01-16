@@ -93,6 +93,26 @@ static char *tagify(char *tagname, char *content, struct kv *attrs, int count)
         return result;
 }
 
+static int astrcat(char **dest, char *source)
+{
+        char *tmp;
+        int ret;
+
+        if (*dest) {
+                ret = asprintf(&tmp, "%s%s", *dest, source);
+                if (ret == -1)
+                        return 0;
+        } else {
+                tmp = strdup(source);
+        }
+
+        free(*dest);
+
+        *dest = tmp;
+
+        return 1;
+}
+
 static char *disk_block_xml(const char *path, const char *vdev)
 {
         char *xml;
@@ -129,26 +149,34 @@ static char *disk_file_xml(const char *path, const char *vdev)
         return xml;
 }
 
-static char *disk_to_xml(struct disk_device *disk)
+static bool disk_to_xml(char **xml, struct virt_device *dev)
 {
+        char *_xml = NULL;
+        struct disk_device *disk = &dev->dev.disk;
+
         if (disk->disk_type == DISK_PHY)
-                return disk_block_xml(disk->source, disk->virtual_dev);
+                _xml = disk_block_xml(disk->source, disk->virtual_dev);
         else if (disk->disk_type == DISK_FILE)
                 /* If it's not a block device, we assume a file,
                    which should be a reasonable fail-safe */
-                return disk_file_xml(disk->source, disk->virtual_dev);
+                _xml = disk_file_xml(disk->source, disk->virtual_dev);
         else
-                return strdup("<!-- Unknown disk type -->\n");
+                return false;
+
+        astrcat(xml, _xml);
+        free(_xml);
+
+        return true;
 }
 
-static char *net_to_xml(struct net_device *net)
+static bool net_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
-        char *xml;
-
+        char *_xml;
         char *script = "vif-bridge";
+        struct net_device *net = &dev->dev.net;
 
-        ret = asprintf(&xml,
+        ret = asprintf(&_xml,
                        "<interface type='%s'>\n"
                        "  <mac address='%s'/>\n"
                        "  <script path='%s'/>\n"
@@ -158,114 +186,136 @@ static char *net_to_xml(struct net_device *net)
                        script);
 
         if (ret == -1)
-                xml = NULL;
+                return false;
+        else
+                astrcat(xml, _xml);
 
-        return xml;
+        free(_xml);
+
+        return true;
 }
 
-static char *proc_to_xml(struct vcpu_device *proc)
+static bool vcpu_to_xml(char **xml, struct virt_device *dev)
 {
-        return strdup("");
+        astrcat(xml, "<vcpu>1</vcpu>\n");
+        return true;
 }
 
-static char *mem_to_xml(struct mem_device *mem)
+static bool mem_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
-        char *xml;
+        char *_xml;
+        struct mem_device *mem = &dev->dev.mem;
 
-        ret = asprintf(&xml,
+        ret = asprintf(&_xml,
                        "<currentMemory>%" PRIu64 "</currentMemory>\n"
                        "<memory>%" PRIu64 "</memory>\n",
                        mem->size,
                        mem->maxsize);
 
 
-        if (ret == 1)
-                xml = NULL;
+        if (ret == -1)
+                return false;
+        else
+                astrcat(xml, _xml);
 
-        return xml;
+        free(_xml);
+
+        return true;
 }
 
-static char *emu_to_xml(struct emu_device *emu)
+static bool emu_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
-        char *xml;
+        char *_xml;
+        struct emu_device *emu = &dev->dev.emu;
 
-        ret = asprintf(&xml,
+        ret = asprintf(&_xml,
                        "<emulator>%s</emulator>\n",
                        emu->path);
         if (ret == -1)
-                xml = NULL;
+                return false;
+        else
+                astrcat(xml, _xml);
 
-        return xml;
+        free(_xml);
+
+        return true;
 }
 
-static char *graphics_to_xml(struct graphics_device *graphics)
+static bool graphics_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
-        char *xml;
+        char *_xml;
+        struct graphics_device *graphics = &dev->dev.graphics;
 
-        ret = asprintf(&xml,
+        ret = asprintf(&_xml,
                        "<graphics type='%s' port='%s'/>\n",
                        graphics->type,
                        graphics->port);
         if (ret == -1)
-                xml = NULL;
+                return false;
+        else
+                astrcat(xml, _xml);
 
-        return xml;
+        free(_xml);
+
+        return true;
+}
+
+static bool concat_devxml(char **xml,
+                          struct virt_device *list,
+                          int count,
+                          bool (*func)(char **, struct virt_device *))
+{
+        char *_xml = NULL;
+        int i;
+
+        for (i = 0; i < count; i++) {
+                func(&_xml, &list[i]);
+        }
+
+        astrcat(xml, _xml);
+        free(_xml);
+
+        return true;
 }
 
 char *device_to_xml(struct virt_device *dev)
 {
-        switch (dev->type) {
-        case VIRT_DEV_NET:
-                return net_to_xml(&dev->dev.net);
+        char *xml = NULL;
+        int type = dev->type;
+        bool (*func)(char **, struct virt_device *);
+
+        switch (type) {
         case VIRT_DEV_DISK:
-                return disk_to_xml(&dev->dev.disk);
-        case VIRT_DEV_MEM:
-                return mem_to_xml(&dev->dev.mem);
+                func = disk_to_xml;
+                break;
         case VIRT_DEV_VCPU:
-                return proc_to_xml(&dev->dev.vcpu);
+                func = vcpu_to_xml;
+                break;
+        case VIRT_DEV_NET:
+                func = net_to_xml;
+                break;
+        case VIRT_DEV_MEM:
+                func = mem_to_xml;
+                break;
         case VIRT_DEV_EMU:
-                return emu_to_xml(&dev->dev.emu);
+                func = emu_to_xml;
+                break;
         case VIRT_DEV_GRAPHICS:
-                return graphics_to_xml(&dev->dev.graphics);
+                func = graphics_to_xml;
+                break;
         default:
                 return NULL;
-        };
-}
-
-static int astrcat(char **dest, char *source)
-{
-        char *tmp;
-        int ret;
-
-        ret = asprintf(&tmp, "%s%s", *dest, source);
-        if (ret == -1)
-                return 0;
-
-        free(*dest);
-
-        *dest = tmp;
-
-        return 1;
-}
-
-static int concat_devxml(char ** xml, struct virt_device *list, int count)
-{
-        int i;
-
-        for (i = 0; i < count; i++) {
-                char *devxml;
-
-                devxml = device_to_xml(&list[i]);
-                if (devxml) {
-                        astrcat(xml, devxml);
-                        free(devxml);
-                }
         }
 
-        return count;
+        if (concat_devxml(&xml, dev, 1, func))
+                return xml;
+
+        free(xml);
+
+        return NULL;
 }
 
 static char *system_xml(struct domain *domain)
@@ -458,17 +508,35 @@ char *system_to_xml(struct domain *dominfo)
                 uuid_unparse(uuid, uuidstr);
         }
 
-        concat_devxml(&devxml, dominfo->dev_net, dominfo->dev_net_ct);
-        concat_devxml(&devxml, dominfo->dev_disk, dominfo->dev_disk_ct);
+        concat_devxml(&devxml,
+                      dominfo->dev_net,
+                      dominfo->dev_net_ct,
+                      net_to_xml);
+        concat_devxml(&devxml,
+                      dominfo->dev_disk,
+                      dominfo->dev_disk_ct,
+                      disk_to_xml);
 
         if (dominfo->dev_emu)
-                concat_devxml(&devxml, dominfo->dev_emu, 1);
+                concat_devxml(&devxml,
+                              dominfo->dev_emu,
+                              1,
+                              emu_to_xml);
 
         if (dominfo->dev_graphics)
-                concat_devxml(&devxml, dominfo->dev_graphics, 1);
+                concat_devxml(&devxml,
+                              dominfo->dev_graphics,
+                              1,
+                              graphics_to_xml);
 
-        concat_devxml(&sysdevxml, dominfo->dev_mem, dominfo->dev_mem_ct);
-        concat_devxml(&sysdevxml, dominfo->dev_vcpu, dominfo->dev_vcpu_ct);
+        concat_devxml(&sysdevxml,
+                      dominfo->dev_mem,
+                      dominfo->dev_mem_ct,
+                      mem_to_xml);
+        concat_devxml(&sysdevxml,
+                      dominfo->dev_vcpu,
+                      dominfo->dev_vcpu_ct,
+                      vcpu_to_xml);
 
         sysxml = system_xml(dominfo);
         osxml = os_xml(dominfo);
