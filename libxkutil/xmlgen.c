@@ -197,8 +197,21 @@ static bool net_to_xml(char **xml, struct virt_device *dev)
 
 static bool vcpu_to_xml(char **xml, struct virt_device *dev)
 {
-        astrcat(xml, "<vcpu>1</vcpu>\n");
-        return true;
+        int count;
+        int ret;
+
+        if (*xml == NULL) {
+                ret = asprintf(xml, "<vcpu>1</vcpu>");
+                return ret != -1;
+        }
+
+        if (sscanf(*xml, "<vcpu>%i</vcpu>\n", &count) != 1)
+                return false;
+
+        free(*xml);
+        ret = asprintf(xml, "<vcpu>%i</vcpu>\n", count + 1);
+
+        return ret != -1;
 }
 
 static bool mem_to_xml(char **xml, struct virt_device *dev)
