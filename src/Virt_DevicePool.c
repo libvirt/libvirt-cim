@@ -295,7 +295,7 @@ static char *netpool_member_of(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].id), dev)) {
                         result = _netpool_member_of(conn,
-                                                    devs[i].dev.net.bridge);
+                                                    devs[i].dev.net.source);
                         break;
                 }
         }

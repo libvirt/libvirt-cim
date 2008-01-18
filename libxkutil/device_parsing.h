@@ -41,7 +41,7 @@ struct disk_device {
 struct net_device {
         char *type;
         char *mac;
-        char *bridge;
+        char *source;
 };
 
 struct mem_device {

@@ -44,6 +44,7 @@
 #define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics"
 
 #define DEFAULT_BRIDGE "xenbr0"
+#define DEFAULT_NETWORK "default"
 
 #define XSTREQ(x, y) (STREQ((char *)x, y))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -61,7 +62,7 @@ static void cleanup_net_device(struct net_device *dev)
 {
         free(dev->type);
         free(dev->mac);
-        free(dev->bridge);
+        free(dev->source);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -216,18 +217,35 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         if (ndev->mac == NULL)
                                 goto err;
                 } else if (XSTREQ(child->name, "source")) {
-                        ndev->bridge = get_attr_value(child, "bridge");
-                        if (ndev->bridge == NULL)
-                                goto err;
+                        ndev->source = get_attr_value(child, "bridge");
+                        if (ndev->source != NULL)
+                                continue;
+                        ndev->source = get_attr_value(child, "network");
+                        if (ndev->source != NULL)
+                                continue;
+                        goto err;
                 }
         }
 
         if (ndev->mac == NULL)
                 goto err;
 
-        if (ndev->bridge == NULL) {
-                ndev->bridge = strdup(DEFAULT_BRIDGE);
-                printf("No bridge, taking default of `%s'\n", ndev->bridge);
+        if (ndev->source == NULL) {
+                if (STREQC(ndev->type, "bridge")) {
+                        ndev->source = strdup(DEFAULT_BRIDGE);
+                        CU_DEBUG("No bridge, taking default of `%s'\n",
+                                 ndev->source);
+                } else if (STREQC(ndev->type, "network")) {
+                        ndev->source = strdup(DEFAULT_NETWORK);
+                        CU_DEBUG("No network, taking default of `%s'\n",
+                                 ndev->source);
+                } else {
+                        /* This likely indicates an unsupported
+                         * network configuration
+                         */
+                        CU_DEBUG("No network source, and no known default");
+                        goto err;
+                }
         }
 
         vdev->type = VIRT_DEV_NET;
@@ -517,7 +535,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         if (dev->type == VIRT_DEV_NET) {
                 DUP_FIELD(dev, _dev, dev.net.mac);
                 DUP_FIELD(dev, _dev, dev.net.type);
-                DUP_FIELD(dev, _dev, dev.net.bridge);
+                DUP_FIELD(dev, _dev, dev.net.source);
         } else if (dev->type == VIRT_DEV_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);
