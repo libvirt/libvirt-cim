@@ -8,8 +8,17 @@
 class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
 {
 
+  [Description ("Flag to determine whether this guest is fully-virtualized")]
+  boolean IsFullVirt;
+
+  [Description ("The bootloader and arguments to use when in "
+  	        "para-virtualized mode")]
   string Bootloader;
   string BootloaderArgs;
+
+  [Description ("The device to boot from when in fully-virtualized mode."
+                "One of hd,fd,cdrom.")]
+  string BootDevice;
 
 };
 
@@ -20,4 +29,8 @@ class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
 ]
 class KVM_VirtualSystemSettingData : CIM_VirtualSystemSettingData
 {
+
+  [Description ("The device to boot from.  One of hd,fd,cdrom.")]
+  string BootDevice;
+
 };
