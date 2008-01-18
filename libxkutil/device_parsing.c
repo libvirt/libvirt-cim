@@ -652,7 +652,8 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         if ((STREQC(dominfo->os_info.fv.type, "hvm")) &&
             (STREQC(dominfo->typestr, "xen")))
                 dominfo->type = DOMAIN_XENFV;
-        else if (STREQC(dominfo->typestr, "kvm"))
+        else if ((STREQC(dominfo->typestr, "kvm")) ||
+                 (STREQC(dominfo->typestr, "qemu")))
                 dominfo->type = DOMAIN_KVM;
         else if (STREQC(dominfo->os_info.pv.type, "linux"))
                 dominfo->type = DOMAIN_XENPV;
