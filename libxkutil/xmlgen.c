@@ -169,7 +169,7 @@ static bool disk_to_xml(char **xml, struct virt_device *dev)
         return true;
 }
 
-static bool net_to_xml(char **xml, struct virt_device *dev)
+static bool xen_net_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
         char *_xml;
@@ -193,6 +193,43 @@ static bool net_to_xml(char **xml, struct virt_device *dev)
         free(_xml);
 
         return true;
+}
+
+static bool kvm_net_to_xml(char **xml, struct virt_device *dev)
+{
+        int ret;
+        char *_xml;
+        struct net_device *net = &dev->dev.net;
+
+        if (net->source == NULL)
+                net->source = strdup("default");
+
+        ret = asprintf(&_xml,
+                       "<interface type='%s'>\n"
+                       "  <mac address='%s'/>\n"
+                       "  <source network='%s'/>\n"
+                       "</interface>\n",
+                       net->type,
+                       net->mac,
+                       net->source);
+        if (ret == -1)
+                return false;
+        else
+                astrcat(xml, _xml);
+
+        free(_xml);
+
+        return true;
+}
+
+static bool net_to_xml(char **xml, struct virt_device *dev)
+{
+        if (STREQ(dev->dev.net.type, "network"))
+                return kvm_net_to_xml(xml, dev);
+        else if (STREQ(dev->dev.net.type, "bridge"))
+                return xen_net_to_xml(xml, dev);
+        else
+                return false;
 }
 
 static bool vcpu_to_xml(char **xml, struct virt_device *dev)
