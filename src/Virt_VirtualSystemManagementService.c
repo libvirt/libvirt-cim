@@ -127,12 +127,73 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
         return s;
 }
 
+static int xenpv_vssd_to_domain(CMPIInstance *inst,
+                                struct domain *domain)
+{
+        int ret;
+        const char *val;
+
+        domain->type = DOMAIN_XENPV;
+
+        ret = cu_get_str_prop(inst, "Bootloader", &val);
+        if (ret != CMPI_RC_OK)
+                val = "";
+
+        free(domain->bootloader);
+        domain->bootloader = strdup(val);
+
+        ret = cu_get_str_prop(inst, "BootloaderArgs", &val);
+        if (ret != CMPI_RC_OK)
+                val = "";
+
+        free(domain->bootloader_args);
+        domain->bootloader_args = strdup(val);
+
+        return 1;
+}
+
+static int fv_vssd_to_domain(CMPIInstance *inst,
+                             struct domain *domain,
+                             const char *pfx)
+{
+        int ret;
+        const char *val;
+
+        if (STREQC(pfx, "KVM"))
+                domain->type = DOMAIN_KVM;
+        else if (STREQC(pfx, "Xen"))
+                domain->type = DOMAIN_XENFV;
+        else {
+                CU_DEBUG("Unknown fullvirt domain type: %s", pfx);
+                return 0;
+        }
+
+        ret = cu_get_str_prop(inst, "BootDevice", &val);
+        if (ret != CMPI_RC_OK)
+                val = "hd";
+
+        free(domain->os_info.fv.boot);
+        domain->os_info.fv.boot = strdup(val);
+
+        return 1;
+}
+
 static int vssd_to_domain(CMPIInstance *inst,
                           struct domain *domain)
 {
         uint16_t tmp;
         int ret = 0;
         const char *val;
+        const char *cn;
+        char *pfx = NULL;
+        bool fullvirt;
+
+        cn = CLASSNAME(CMGetObjectPath(inst, NULL));
+        pfx = class_prefix_name(cn);
+        if (pfx == NULL) {
+                CU_DEBUG("Unknown prefix for class: %s", cn);
+                return 0;
+        }
 
         ret = cu_get_str_prop(inst, "VirtualSystemIdentifier", &val);
         if (ret != CMPI_RC_OK)
@@ -153,23 +214,41 @@ static int vssd_to_domain(CMPIInstance *inst,
 
         domain->on_crash = (int)tmp;
 
-        ret = cu_get_str_prop(inst, "Bootloader", &val);
-        if (ret != CMPI_RC_OK)
-                val = "";
+        if (STREQC(pfx, "KVM"))
+                fullvirt = true;
+        else if (cu_get_bool_prop(inst, "IsFullVirt", &fullvirt) != CMPI_RC_OK)
+                fullvirt = false;
 
-        free(domain->bootloader);
-        domain->bootloader = strdup(val);
+        if (fullvirt)
+                ret = fv_vssd_to_domain(inst, domain, pfx);
+        else
+                ret = xenpv_vssd_to_domain(inst, domain);
 
-        ret = cu_get_str_prop(inst, "BootloaderArgs", &val);
-        if (ret != CMPI_RC_OK)
-                val = "";
-
-        free(domain->bootloader_args);
-        domain->bootloader_args = strdup(val);
-
-        ret = 1;
  out:
+        free(pfx);
+
         return ret;
+}
+
+static int xen_net_rasd_to_vdev(CMPIInstance *inst,
+                                struct virt_device *dev)
+{
+        free(dev->dev.net.type);
+        dev->dev.net.type = strdup("bridge");
+
+        return 1;
+}
+
+static int kvm_net_rasd_to_vdev(CMPIInstance *inst,
+                                struct virt_device *dev)
+{
+        free(dev->dev.net.type);
+        dev->dev.net.type = strdup("network");
+
+        free(dev->dev.net.source);
+        dev->dev.net.source = strdup("default");
+
+        return 1;
 }
 
 static int rasd_to_vdev(CMPIInstance *inst,
@@ -211,11 +290,14 @@ static int rasd_to_vdev(CMPIInstance *inst,
                 free(dev->dev.net.mac);
                 dev->dev.net.mac = devid;
 
-                if (cu_get_str_prop(inst, "NetworkType", &val) != CMPI_RC_OK)
-                        val = "bridge";
+                if (STARTS_WITH(CLASSNAME(op), "Xen"))
+                        xen_net_rasd_to_vdev(inst, dev);
+                else if (STARTS_WITH(CLASSNAME(op), "KVM"))
+                        kvm_net_rasd_to_vdev(inst, dev);
+                else
+                        CU_DEBUG("Unknown class type for net device: %s",
+                                 CLASSNAME(op));
 
-                free(dev->dev.net.type);
-                dev->dev.net.type = strdup(val);
         } else if (type == VIRT_DEV_MEM) {
                 cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
                 cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
