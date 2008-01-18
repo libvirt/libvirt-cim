@@ -462,21 +462,32 @@ static char *_kvm_os_xml(struct domain *domain)
         int ret;
         char *xml;
         char *type;
+        char *boot;
+        struct kv bootattr = {"dev", NULL};
 
         if (os->type == NULL)
                 os->type = strdup("hvm");
 
+        if (os->boot == NULL)
+                os->boot = strdup("hd");
+
         type = tagify("type", os->type, NULL, 0);
+
+        bootattr.val = os->boot;
+        boot = tagify("boot", NULL, &bootattr, 1);
 
         ret = asprintf(&xml,
                        "<os>\n"
                        "  %s\n"
+                       "  %s\n"
                        "</os>\n",
-                       type);
+                       type,
+                       boot);
         if (ret == -1)
                 xml = NULL;
 
         free(type);
+        free(boot);
 
         return xml;
 }
