@@ -38,6 +38,41 @@
 
 const static CMPIBroker *_BROKER;
 
+static void _set_fv_prop(struct domain *dominfo,
+                         CMPIInstance *inst)
+{
+        bool fv = true;
+
+        if (dominfo->type == DOMAIN_XENFV)
+                CMSetProperty(inst, "IsFullVirt",
+                              (CMPIValue *)&fv, CMPI_boolean);
+
+        if (dominfo->os_info.fv.boot != NULL)
+                CMSetProperty(inst,
+                              "BootDevice",
+                              (CMPIValue *)dominfo->os_info.fv.boot,
+                              CMPI_chars);
+}
+
+static void _set_pv_prop(struct domain *dominfo,
+                         CMPIInstance *inst)
+{
+        bool fv = false;
+
+        CMSetProperty(inst, "IsFullVirt",
+                      (CMPIValue *)&fv, CMPI_boolean);
+
+        if (dominfo->bootloader != NULL)
+                CMSetProperty(inst, "Bootloader",
+                              (CMPIValue *)dominfo->bootloader,
+                              CMPI_chars);
+
+        if (dominfo->bootloader_args != NULL)
+                CMSetProperty(inst, "BootloaderArgs",
+                              (CMPIValue *)dominfo->bootloader_args,
+                              CMPI_chars);
+}
+
 static int instance_from_dom(virDomainPtr dom,
                              CMPIInstance *inst)
 {
@@ -75,15 +110,14 @@ static int instance_from_dom(virDomainPtr dom,
         CMSetProperty(inst, "AutomaticRecoveryAction",
                       (CMPIValue *)&dominfo->on_crash, CMPI_uint16);
 
-        if (dominfo->bootloader)
-                CMSetProperty(inst, "Bootloader",
-                              (CMPIValue *)dominfo->bootloader,
-                              CMPI_chars);
-
-        if (dominfo->bootloader_args)
-                CMSetProperty(inst, "BootloaderArgs",
-                              (CMPIValue *)dominfo->bootloader_args,
-                              CMPI_chars);
+        if ((dominfo->type == DOMAIN_XENFV) ||
+            (dominfo->type == DOMAIN_KVM))
+                _set_fv_prop(dominfo, inst);
+        else if (dominfo->type == DOMAIN_XENPV)
+                _set_pv_prop(dominfo, inst);
+        else
+                CU_DEBUG("Unknown domain type %i for creating VSSD",
+                         dominfo->type);
 
         if (asprintf(&vsid, "%s:%s", pfx, dominfo->name) == -1) {
                 ret = 0;
