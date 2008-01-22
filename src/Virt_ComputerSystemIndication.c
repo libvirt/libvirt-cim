@@ -48,6 +48,7 @@ static CMPI_THREAD_TYPE lifecycle_thread_id = 0;
 
 enum CS_EVENTS {CS_CREATED,
                 CS_DELETED,
+                CS_MODIFIED,
 };
 
 static pthread_cond_t lifecycle_cond = PTHREAD_COND_INITIALIZER;
@@ -157,82 +158,70 @@ static bool dom_changed(struct dom_xml prev_dom,
         return ret;
 }
 
-static bool _lifecycle_indication(const CMPIBroker *broker,
-                                  const CMPIContext *ctx,
-                                  const CMPIObjectPath *newsystem,
-                                  const char *type)
+static bool _do_indication(const CMPIBroker *broker,
+                           const CMPIContext *ctx,
+                           CMPIInstance *affected_inst,
+                           int ind_type,
+                           const char *ind_type_name,
+                           char *prefix,
+                           char *ns)
 {
+        CMPIObjectPath *affected_op;
         CMPIObjectPath *ind_op;
         CMPIInstance *ind;
         CMPIStatus s;
-
-        ind = get_typed_instance(broker,
-                                 "Xen", /* Temporary hack */
-                                 type,
-                                 NAMESPACE(newsystem));
-        if (ind == NULL) {
-                CU_DEBUG("Failed to create ind");
-                return false;
-        }
-
-        ind_op = CMGetObjectPath(ind, &s);
-        if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("Failed to get ind_op");
-                return false;
-        }
-
-        CMSetProperty(ind, "AffectedSystem",
-                      (CMPIValue *)&newsystem, CMPI_ref);
-
-        CU_DEBUG("Delivering Indication: %s",
-               CMGetCharPtr(CMObjectPathToString(ind_op, NULL)));
-
-        CBDeliverIndication(_BROKER,
-                            ctx,
-                            NAMESPACE(newsystem),
-                            ind);
-
-
-        return true;
-}
-
-static bool _do_modified_indication(const CMPIBroker *broker,
-                                    const CMPIContext *ctx,
-                                    CMPIInstance *mod_inst,
-                                    char *prefix,
-                                    char *ns)
-{
-        CMPIObjectPath *ind_op;
-        CMPIInstance *ind;
-        CMPIStatus s;
+        bool ret = true;
 
         ind = get_typed_instance(broker,
                                  prefix,
-                                 "ComputerSystemModifiedIndication",
+                                 ind_type_name,
                                  ns);
+
+        /* Generally report errors and hope to continue, since we have no one 
+           to actually return status to. */
         if (ind == NULL) {
-                CU_DEBUG("Failed to create ind");
-                return false;
+                CU_DEBUG("Failed to create ind, type '%s:%s_%s'", 
+                         ns,
+                         prefix,
+                         ind_type_name);
+                ret = false;
         }
 
         ind_op = CMGetObjectPath(ind, &s);
         if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("Failed to get ind_op");
-                return false;
+                CU_DEBUG("Failed to get ind_op.  Error: '%s'", s.msg);
+                ret = false;
         }
 
-        CMSetProperty(ind, "PreviousInstance",
-                      (CMPIValue *)&mod_inst, CMPI_instance);
+        switch (ind_type) {
+        case CS_CREATED:
+        case CS_DELETED:
+                affected_op = CMGetObjectPath(affected_inst, &s);
+                if (s.rc != CMPI_RC_OK) {
+                        ret = false;
+                        CU_DEBUG("problem getting affected_op: '%s'", s.msg);
+                        goto out;
+                }
+                CMSetProperty(ind, "AffectedSystem",
+                              (CMPIValue *)&affected_op, CMPI_ref);
+                break;
+        case CS_MODIFIED:
+                CMSetProperty(ind, "PreviousInstance",
+                              (CMPIValue *)&affected_inst, CMPI_instance);
+                break;
+        }
 
-        CU_DEBUG("Delivering Indication: %s\n",
+        CU_DEBUG("Delivering Indication: %s",
                  CMGetCharPtr(CMObjectPathToString(ind_op, NULL)));
 
-        CBDeliverIndication(_BROKER,
+        CBDeliverIndication(broker,
                             ctx,
-                            CIM_VIRT_NS,
+                            ns,
                             ind);
+        CU_DEBUG("Delivered");
 
-        return true;
+ out:
+        return ret;
 }
 
 static bool wait_for_event(void)
@@ -251,18 +240,12 @@ static bool wait_for_event(void)
         return true;
 }
 
-static bool dom_in_list(virDomainPtr dom, int count, virDomainPtr *list)
+static bool dom_in_list(char *uuid, int count, struct dom_xml *list)
 {
-        const char *_name;
         int i;
 
-        _name = virDomainGetName(dom);
-
         for (i = 0; i < count; i++) {
-                const char *name;
-
-                name = virDomainGetName(list[i]);
-                if (STREQ(name, _name))
+                if (STREQ(uuid, list[i].uuid))
                         return true;
         }
 
@@ -271,60 +254,20 @@ static bool dom_in_list(virDomainPtr dom, int count, virDomainPtr *list)
 
 static bool async_ind(CMPIContext *context,
                       virConnectPtr conn,
-                      const char *name,
-                      int type)
-{
-        CMPIInstance *newinst;
-        CMPIObjectPath *op;
-        CMPIStatus s;
-        const char *type_name;
-        char *type_cn = NULL;
-        const char *ns = CIM_VIRT_NS;
-
-        /* FIXME: Hmm, need to get the namespace a better way */
-
-        if (type == CS_CREATED) {
-                type_name = "ComputerSystemCreatedIndication";
-                type_cn = get_typed_class(pfx_from_conn(conn), type_name);
-
-                op = CMNewObjectPath(_BROKER, ns, type_cn, &s);
-        } else if (type == CS_DELETED) {
-                type_name = "ComputerSystemDeletedIndication";
-                type_cn = get_typed_class(pfx_from_conn(conn), type_name);
-
-                op = CMNewObjectPath(_BROKER, ns, type_cn, &s);
-        } else {
-                CU_DEBUG("Unknown event type: %i", type);
-                return false;
-        }
-
-        if (type != CS_DELETED)
-                newinst = instance_from_name(_BROKER, conn, (char *)name, op);
-        else
-                /* A deleted domain will have no instance to lookup */
-                newinst = CMNewInstance(_BROKER, op, &s);
-
-        op = CMGetObjectPath(newinst, NULL);
-
-        free(type_cn);
-
-        return _lifecycle_indication(_BROKER, context, op, type_name);
-}
-
-static bool mod_ind(CMPIContext *context,
-                    virConnectPtr conn,
-                    struct dom_xml prev_dom,
-                    char *prefix,
-                    char *ns)
+                      int ind_type,
+                      struct dom_xml prev_dom,
+                      char *prefix,
+                      char *ns)
 {
         bool rc;
         char *name = NULL;
-        CMPIInstance *mod_inst;
+        char *type_name = NULL;
+        CMPIInstance *affected_inst;
 
-        mod_inst = get_typed_instance(_BROKER,
-                                      prefix,
-                                      "ComputerSystem",
-                                      ns);
+        affected_inst = get_typed_instance(_BROKER,
+                                           prefix,
+                                           "ComputerSystem",
+                                           ns);
 
         name = sys_name_from_xml(prev_dom.xml);
         CU_DEBUG("Name for system: '%s'", name);
@@ -333,12 +276,25 @@ static bool mod_ind(CMPIContext *context,
                 goto out;
         }
 
-        CMSetProperty(mod_inst, "Name", 
+        switch (ind_type) {
+        case CS_CREATED:
+                type_name = "ComputerSystemCreatedIndication";
+                break;
+        case CS_DELETED:
+                type_name = "ComputerSystemDeletedIndication";
+                break;
+        case CS_MODIFIED:
+                type_name = "ComputerSystemModifiedIndication";
+                break;
+        }
+
+        CMSetProperty(affected_inst, "Name", 
                       (CMPIValue *)name, CMPI_chars);
-        CMSetProperty(mod_inst, "UUID",
+        CMSetProperty(affected_inst, "UUID",
                       (CMPIValue *)prev_dom.uuid, CMPI_chars);
 
-        rc = _do_modified_indication(_BROKER, context, mod_inst, prefix, ns);
+        rc = _do_indication(_BROKER, context, affected_inst, 
+                            ind_type, type_name, prefix, ns);
 
  out:
         free(name);
@@ -352,8 +308,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         CMPIStatus s;
         int prev_count;
         int cur_count;
-        virDomainPtr *prev_list;
-        virDomainPtr *cur_list;
+        virDomainPtr *tmp_list;
         struct dom_xml *cur_xml = NULL;
         struct dom_xml *prev_xml = NULL;
         virConnectPtr conn;
@@ -363,66 +318,65 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         conn = connect_by_classname(_BROKER, args->classname, &s);
         if (conn == NULL) {
                 CU_DEBUG("Failed to connect: %s", CMGetCharPtr(s.msg));
-                return NULL;
+                goto out;
         }
 
         pthread_mutex_lock(&lifecycle_mutex);
 
         CBAttachThread(_BROKER, context);
 
-        prev_count = get_domain_list(conn, &prev_list);
-        s = doms_to_xml(&prev_xml, prev_list, prev_count);
+        prev_count = get_domain_list(conn, &tmp_list);
+        s = doms_to_xml(&prev_xml, tmp_list, prev_count);
         if (s.rc != CMPI_RC_OK)
                 CU_DEBUG("doms_to_xml failed.  Attempting to continue.");
-
+        free_domain_list(tmp_list, prev_count);
+        free(tmp_list);
 
         CU_DEBUG("entering event loop");
         while (lifecycle_enabled) {
                 int i;
                 bool res;
 
-                cur_count = get_domain_list(conn, &cur_list);
-                s = doms_to_xml(&cur_xml, cur_list, cur_count);
+                cur_count = get_domain_list(conn, &tmp_list);
+                s = doms_to_xml(&cur_xml, tmp_list, cur_count);
                 if (s.rc != CMPI_RC_OK)
                         CU_DEBUG("doms_to_xml failed.");
+                free_domain_list(tmp_list, cur_count);
+                free(tmp_list);
 
                 for (i = 0; i < cur_count; i++) {
-                        res = dom_in_list(cur_list[i], prev_count, prev_list);
+                        res = dom_in_list(cur_xml[i].uuid, prev_count, prev_xml);
                         if (!res)
-                                async_ind(context,
-                                          conn,
-                                          virDomainGetName(cur_list[i]),
-                                          CS_CREATED);
+                                async_ind(context, conn, CS_CREATED,
+                                          cur_xml[i], prefix, ns);
+
                 }
 
                 for (i = 0; i < prev_count; i++) {
-                        res = dom_in_list(prev_list[i], cur_count, cur_list);
+                        res = dom_in_list(prev_xml[i].uuid, cur_count, cur_xml);
                         if (!res)
-                                async_ind(context,
-                                          conn,
-                                          virDomainGetName(prev_list[i]),
-                                          CS_DELETED);
+                                async_ind(context, conn, CS_DELETED, 
+                                          prev_xml[i], prefix, ns);
                 }
 
                 for (i = 0; i < prev_count; i++) {
                         res = dom_changed(prev_xml[i], cur_xml, cur_count);
                         if (res) {
-                                CU_DEBUG("Domain '%s' modified.", prev_xml[i].uuid);
-                                mod_ind(context, conn, prev_xml[i], prefix, ns);
+                                async_ind(context, conn, CS_MODIFIED, 
+                                          prev_xml[i], prefix, ns);
+
                         }
                         free_dom_xml(prev_xml[i]);
                 }
 
-                free_domain_list(prev_list, prev_count);
-
-                free(prev_list);
                 free(prev_xml);
-                prev_list = cur_list;
                 prev_xml = cur_xml;
                 prev_count = cur_count;
 
                 wait_for_event();
         }
+
+ out:
         pthread_mutex_unlock(&lifecycle_mutex);
         free_ind_args(&args);
         free(prefix);
