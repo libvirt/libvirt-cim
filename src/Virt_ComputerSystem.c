@@ -512,6 +512,7 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
+        case VIR_DOMAIN_BLOCKED:
                 CU_DEBUG("Stop domain");
                 ret = virDomainShutdown(dom);
                 break;
@@ -537,6 +538,7 @@ static CMPIStatus state_change_pause(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
+        case VIR_DOMAIN_BLOCKED:
                 CU_DEBUG("Pause domain");
                 ret = virDomainSuspend(dom);
                 break;
@@ -561,6 +563,7 @@ static CMPIStatus state_change_reboot(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
+        case VIR_DOMAIN_BLOCKED:
                 CU_DEBUG("Reboot domain");
                 ret = virDomainReboot(dom, 0);
                 break;
@@ -585,6 +588,7 @@ static CMPIStatus state_change_reset(virDomainPtr dom, virDomainInfoPtr info)
 
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
+        case VIR_DOMAIN_BLOCKED:
                 CU_DEBUG("Reset domain");
                 ret = domain_reset(dom);
                 break;
