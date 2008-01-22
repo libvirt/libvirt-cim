@@ -76,7 +76,8 @@ REGS = \
 	schema/HostedService.registration \
 	schema/ElementSettingData.registration \
 	schema/VSMigrationCapabilities.registration \
-	schema/VSMigrationService.registration
+	schema/VSMigrationService.registration \
+	schema/ElementConformsToProfile.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \

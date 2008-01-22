@@ -169,7 +169,7 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
                         continue;
 
                 instance = reg_prof_instance(_BROKER, 
-                                             "/root/interop", 
+                                             "root/interop", 
                                              NULL,
                                              conn,
                                              candidate);
