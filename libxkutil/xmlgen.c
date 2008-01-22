@@ -322,7 +322,11 @@ static bool concat_devxml(char **xml,
         int i;
 
         for (i = 0; i < count; i++) {
-                func(&_xml, &list[i]);
+                /* Deleted devices are marked as VIRT_DEV_UNKNOWN
+                 * and should be skipped
+                 */
+                if (list[i].type != VIRT_DEV_UNKNOWN)
+                        func(&_xml, &list[i]);
         }
 
         astrcat(xml, _xml);
