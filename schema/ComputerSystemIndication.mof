@@ -14,6 +14,13 @@ class Xen_ComputerSystemDeletedIndication : CIM_InstDeletion
 {
 };
 
+[Description ("Xen_ComputerSystem modified"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
+class Xen_ComputerSystemModifiedIndication : CIM_InstModification
+{
+};
+
 [Description ("KVM_ComputerSystem lifecycle"),
  Provider("cmpi::Virt_ComputerSystemIndication")
 ]
@@ -25,5 +32,12 @@ class KVM_ComputerSystemCreatedIndication : CIM_InstCreation
  Provider("cmpi::Virt_ComputerSystemIndication")
 ]
 class KVM_ComputerSystemDeletedIndication : CIM_InstDeletion
+{
+};
+
+[Description ("KVM_ComputerSystem modified"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
+class KVM_ComputerSystemModifiedIndication : CIM_InstModification
 {
 };
