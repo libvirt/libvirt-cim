@@ -36,6 +36,8 @@ pegasus_transform()
 {
     OUTFILE=$1
     shift
+    namespace=$1
+    shift
     regfiles=$*
     PROVIDERMODULES=`cat $regfiles 2> /dev/null | grep -v '^[[:space:]]*#.*' | cut -d ' ' -f 4 | sort | uniq`
     if test x"$PROVIDERMODULES" = x
@@ -114,7 +116,9 @@ EOFP
 		  return 1;;
 	  esac	  
 	done
-	cat >> $OUTFILE <<EOFC
+	if test $namespace = $NAMESPACE
+	then
+	    cat >> $OUTFILE <<EOFC
 instance of PG_ProviderCapabilities
 {
    ProviderModuleName = "$PROVIDERMODULE";
@@ -128,6 +132,7 @@ instance of PG_ProviderCapabilities
 };
 
 EOFC
+	fi
       done
     done
 }
@@ -197,10 +202,9 @@ pegasus_install()
       fi
     done
 
-    
     trap "rm -f $_REGFILENAME" EXIT
 
-    if pegasus_transform $_REGFILENAME $myregs
+    if pegasus_transform $_REGFILENAME $namespace $myregs
     then
 	chatter Registering providers with $state cimserver
 	$CIMMOF -uc -I $mofpath -n $namespace $mymofs &&
@@ -314,6 +318,8 @@ sfcb_transform()
 {
     OUTFILE=$1
     shift
+    namespace=$1
+    shift
     regfiles=$*
 
 #produce sfcb registraion
@@ -321,8 +327,10 @@ sfcb_transform()
     do
       cat $rf | grep -v '^[[:space:]]*#.*' | while read CLASSNAME NAMESPACE PROVIDERNAME PROVIDERMODULE CAPS
       do
-	chatter "Registering class" $CLASSNAME
-	cat >> $OUTFILE <<EOFC
+	if test $namespace = $NAMESPACE
+	then
+	    chatter "Registering class" $CLASSNAME
+	    cat >> $OUTFILE <<EOFC
 [$CLASSNAME]   
    provider: $PROVIDERNAME
    location: $PROVIDERMODULE
@@ -330,6 +338,7 @@ sfcb_transform()
    namespace: $NAMESPACE
 #
 EOFC
+	fi
       done
     done
 }
@@ -425,7 +434,7 @@ sfcb_install()
 
     trap "rm -f $_REGFILENAME" EXIT
 
-    if sfcb_transform $_REGFILENAME $myregs
+    if sfcb_transform $_REGFILENAME $namespace $myregs
     then
 	chatter "Staging provider registration."
 	sfcbstage -n $namespace -r $_REGFILENAME $mymofs
