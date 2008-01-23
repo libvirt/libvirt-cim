@@ -900,11 +900,40 @@ static int change_memory(virDomainPtr dom,
         return 1;
 }
 
+static int change_vcpus(virDomainPtr dom, int delta)
+{
+        int ret;
+        virDomainInfo info;
+
+        ret = virDomainGetInfo(dom, &info);
+        if (ret == -1) {
+                CU_DEBUG("Failed to get domain info for %s",
+                         virDomainGetName(dom));
+                return 0;
+        }
+
+        ret = virDomainSetVcpus(dom, info.nrVirtCpu + delta);
+        if (ret == -1) {
+                CU_DEBUG("Failed to set domain vcpus to %i",
+                         info.nrVirtCpu + delta);
+                return 0;
+        }
+
+        CU_DEBUG("Changed %s vcpus from %i to %i",
+                 virDomainGetName(dom),
+                 info.nrVirtCpu,
+                 info.nrVirtCpu + delta);
+
+        return 1;
+}
+
 int attach_device(virDomainPtr dom, struct virt_device *dev)
 {
         if ((dev->type == VIRT_DEV_NET) ||
             (dev->type == VIRT_DEV_DISK))
                 return _change_device(dom, dev, true);
+        else if (dev->type == VIRT_DEV_VCPU)
+                return change_vcpus(dom, 1);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 
@@ -916,6 +945,8 @@ int detach_device(virDomainPtr dom, struct virt_device *dev)
         if ((dev->type == VIRT_DEV_NET) ||
             (dev->type == VIRT_DEV_DISK))
                 return _change_device(dom, dev, false);
+        else if (dev->type == VIRT_DEV_VCPU)
+                return change_vcpus(dom, -1);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 
