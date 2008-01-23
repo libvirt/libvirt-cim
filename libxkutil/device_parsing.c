@@ -519,13 +519,16 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
         return count;
 }
 
-#define DUP_FIELD(d, s, f) ((d)->f = strdup((s)->f))
+#define DUP_FIELD(d, s, f) do {                         \
+                if ((s)->f != NULL)                     \
+                        (d)->f = strdup((s)->f);        \
+        } while (0);
 
 struct virt_device *virt_device_dup(struct virt_device *_dev)
 {
         struct virt_device *dev;
 
-        dev = malloc(sizeof(*dev));
+        dev = calloc(1, sizeof(*dev));
         if (dev == NULL)
                 return NULL;
 
