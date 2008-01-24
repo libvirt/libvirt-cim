@@ -91,8 +91,13 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
                 goto out;
 
         conn = connect_by_classname(broker, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        if (conn == NULL) {
+                if (id) 
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "Requested Object could not be found.");
                 goto out;
+        }
 
         s = get_all_pools(broker, conn, NAMESPACE(ref), &device_pool_list);
         if (s.rc != CMPI_RC_OK) {
