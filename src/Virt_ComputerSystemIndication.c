@@ -55,6 +55,9 @@ static pthread_cond_t lifecycle_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t lifecycle_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool lifecycle_enabled = 0;
 
+#define WAIT_TIME 3
+#define FAIL_WAIT_TIME 2
+
 #ifdef CMPI_EI_VOID
 # define _EI_RTYPE void
 # define _EI_RET() return
@@ -224,14 +227,14 @@ static bool _do_indication(const CMPIBroker *broker,
         return ret;
 }
 
-static bool wait_for_event(void)
+static bool wait_for_event(int wait_time)
 {
         struct timespec timeout;
         int ret;
 
 
         clock_gettime(CLOCK_REALTIME, &timeout);
-        timeout.tv_sec += 3;
+        timeout.tv_sec += wait_time;
 
         ret = pthread_cond_timedwait(&lifecycle_cond,
                                      &lifecycle_mutex,
@@ -336,11 +339,17 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         while (lifecycle_enabled) {
                 int i;
                 bool res;
+                bool failure = false;
 
                 cur_count = get_domain_list(conn, &tmp_list);
                 s = doms_to_xml(&cur_xml, tmp_list, cur_count);
-                if (s.rc != CMPI_RC_OK)
-                        CU_DEBUG("doms_to_xml failed.");
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("doms_to_xml failed. retry in %d seconds", 
+                                 FAIL_WAIT_TIME);
+                        failure = true;
+                        goto fail;
+                }
+
                 free_domain_list(tmp_list, cur_count);
                 free(tmp_list);
 
@@ -369,11 +378,16 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
                         free_dom_xml(prev_xml[i]);
                 }
 
-                free(prev_xml);
-                prev_xml = cur_xml;
-                prev_count = cur_count;
+        fail:
+                if (failure) {
+                        wait_for_event(FAIL_WAIT_TIME);
+                } else {
+                        free(prev_xml);
+                        prev_xml = cur_xml;
+                        prev_count = cur_count;
 
-                wait_for_event();
+                        wait_for_event(WAIT_TIME);
+                }
         }
 
  out:
