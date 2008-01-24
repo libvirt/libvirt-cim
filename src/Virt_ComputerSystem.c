@@ -394,8 +394,12 @@ CMPIStatus get_domain(const CMPIBroker *broker,
         }
 
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
-        if (conn == NULL)
+        if (conn == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance.");
                 return s;
+        }
 
         _inst = instance_from_name(broker, conn, name, reference);
         if (_inst == NULL) {
