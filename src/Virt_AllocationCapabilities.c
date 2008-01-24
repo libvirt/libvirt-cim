@@ -91,12 +91,8 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
                 goto out;
 
         conn = connect_by_classname(broker, CLASSNAME(ref), &s);
-        if (conn == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Could not connect to hypervisor");
+        if (conn == NULL)
                 goto out;
-        }
 
         s = get_all_pools(broker, conn, NAMESPACE(ref), &device_pool_list);
         if (s.rc != CMPI_RC_OK) {
