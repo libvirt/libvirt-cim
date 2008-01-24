@@ -551,7 +551,8 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
         return status;
 }
 
-static CMPIStatus update_system_settings(const CMPIObjectPath *ref,
+static CMPIStatus update_system_settings(const CMPIContext *context,
+                                         const CMPIObjectPath *ref,
                                          CMPIInstance *vssd)
 {
         CMPIStatus s;
@@ -599,6 +600,12 @@ static CMPIStatus update_system_settings(const CMPIObjectPath *ref,
                 connect_and_create(xml, ref, &s);
         }
 
+        if (s.rc == CMPI_RC_OK) {
+                trigger_indication(context,
+                                   "ComputerSystemModifiedIndication",
+                                   NAMESPACE(ref));
+        }
+
  out:
         free(xml);
         virDomainFree(dom);
@@ -640,7 +647,7 @@ static CMPIStatus mod_system_settings(CMPIMethodMI *self,
                 return s;
         }
 
-        return update_system_settings(reference, inst);
+        return update_system_settings(context, reference, inst);
 }
 
 typedef CMPIStatus (*resmod_fn)(struct domain *,

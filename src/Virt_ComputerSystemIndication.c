@@ -55,7 +55,7 @@ static pthread_cond_t lifecycle_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t lifecycle_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool lifecycle_enabled = 0;
 
-#define WAIT_TIME 3
+#define WAIT_TIME 180
 #define FAIL_WAIT_TIME 2
 
 #ifdef CMPI_EI_VOID
@@ -469,6 +469,7 @@ static _EI_RTYPE DisableIndications(CMPIIndicationMI* mi,
 
 static CMPIStatus trigger_indication(const CMPIContext *context)
 {
+        CU_DEBUG("triggered");
         pthread_cond_signal(&lifecycle_cond);
         return(CMPIStatus){CMPI_RC_OK, NULL};
 }
