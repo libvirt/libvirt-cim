@@ -115,6 +115,8 @@ CMPIInstance *make_reference(const CMPIBroker *broker,
                              struct std_assoc_info *info,
                              struct std_assoc *assoc);
 
+bool check_refs_pfx_match(const CMPIObjectPath *refa,
+                          const CMPIObjectPath *refb);
 
 #define LIBVIRT_CIM_DEFAULT_MAKEREF()                                   \
         static CMPIInstance* make_ref(const CMPIObjectPath *source_ref, \

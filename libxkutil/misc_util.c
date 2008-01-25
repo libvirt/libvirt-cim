@@ -435,6 +435,60 @@ bool libvirt_cim_init(void)
         return virInitialize == 0;
 }
 
+bool check_refs_pfx_match(const CMPIObjectPath *refa,
+                          const CMPIObjectPath *refb)
+{
+        bool result = false;
+        const char *refa_cn;
+        const char *refb_cn;
+        const char *ccn;
+        char *refa_pfx = NULL;
+        char *refb_pfx = NULL;
+
+        refa_cn = CLASSNAME(refa);
+        refb_cn = CLASSNAME(refb);
+
+        if ((refa_cn == NULL) || (refb_cn == NULL)) {
+                CU_DEBUG("Error getting ref classes %s:%s",
+                         refa_cn, refb_cn);
+                goto out;
+        }
+
+        refa_pfx = class_prefix_name(refa_cn);
+        refb_pfx = class_prefix_name(refb_cn);
+
+        if ((refa_pfx == NULL) || (refb_pfx == NULL)) {
+                CU_DEBUG("Error getting ref prefixes %s:%s %s:%s",
+                         refa_pfx, refb_pfx,
+                         refa_cn, refb_cn);
+                goto out;
+        }
+
+        if (!STREQC(refa_pfx, refb_pfx)) {
+                CU_DEBUG("Ref mismatch: %s != %s",
+                         refa_pfx,
+                         refb_pfx);
+                goto out;
+        }
+
+        if (cu_get_str_path(refb, "CreationClassName", &ccn) == CMPI_RC_OK) {
+                if (!STREQC(ccn, refb_cn)) {
+                        CU_DEBUG("ClassName(%s) != CreationClassName(%s)",
+                                 refb_cn,
+                                 ccn);
+                        goto out;
+                }
+        }
+
+        result = true;
+
+ out:
+        free(refa_pfx);
+        free(refb_pfx);
+
+        return result;
+}
+
 /*
  * Local Variables:
  * mode: C
