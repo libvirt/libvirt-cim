@@ -204,6 +204,14 @@ static CMPIStatus vs_migratable_host(CMPIMethodMI *self,
                 return s;
         }
 
+        if (!check_refs_pfx_match(ref, system)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid REF in ComputerSystem");
+                METHOD_RETURN(results, 1);
+                return s;
+        }
+
         return vs_migratable(ref, name, dhost, results);
 }
 
@@ -235,6 +243,14 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing key (Name) in ComputerSystem");
+                METHOD_RETURN(results, 1);
+                return s;
+        }
+
+        if (!check_refs_pfx_match(ref, sys)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid REF in ComputerSystem");
                 METHOD_RETURN(results, 1);
                 return s;
         }
@@ -549,6 +565,14 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
                 return s;
         }
 
+        if (!check_refs_pfx_match(ref, system)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid REF in ComputerSystem");
+                METHOD_RETURN(results, 1);
+                return s;
+        }
+
         return migrate_do(ref, ctx, name, dhost, results, argsout);
 }
 
@@ -580,6 +604,14 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing key (Name) in ComputerSystem");
+                METHOD_RETURN(results, 1);
+                return s;
+        }
+
+        if (!check_refs_pfx_match(ref, sys)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid REF in ComputerSystem");
                 METHOD_RETURN(results, 1);
                 return s;
         }
