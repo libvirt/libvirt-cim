@@ -856,7 +856,11 @@ static int _change_device(virDomainPtr dom,
 {
         char *xml = NULL;
         int ret = 0;
+#if LIBVIR_VERSION_NUMBER >= 4000
+        int (*func)(virDomainPtr, const char *);
+#else
         int (*func)(virDomainPtr, char *);
+#endif
 
         if (attach)
                 func = virDomainAttachDevice;
