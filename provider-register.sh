@@ -7,7 +7,7 @@
 pegasus_repository()
 {
     for p in $PEGASUS_HOME /var/lib/Pegasus /var/lib/pegasus /usr/local/var/lib/pegasus \
-	/var/local/lib/pegasus /var/opt/tog-pegasus 
+	/var/local/lib/pegasus /var/opt/tog-pegasus /opt/ibm/icc/cimom
     do
       if test -d $p/repository
       then
@@ -21,7 +21,7 @@ pegasus_repository()
 pegasus_path()
 {
     for p in $PEGASUS_HOME/bin /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin \
-	/opt/tog-pegasus/bin /opt/tog-pegasus/sbin 
+	/opt/tog-pegasus/bin /opt/tog-pegasus/sbin /opt/ibm/icc/cimom/bin
     do
       if test -x $p/$1
       then

@@ -24,7 +24,7 @@ fix_schema() {
 }
 
 detect_peg_repo() {
-    dirs="$PEGASUS_HOME /var/lib/Pegasus /var/lib/pegasus /usr/local/var/lib/pegasus /var/local/lib/pegasus /var/opt/tog-pegasus"
+    dirs="$PEGASUS_HOME /var/lib/Pegasus /var/lib/pegasus /usr/local/var/lib/pegasus /var/local/lib/pegasus /var/opt/tog-pegasus /opt/ibm/icc/cimom"
 
     for d in $dirs; do
 	if [ -d "$d" ]; then
