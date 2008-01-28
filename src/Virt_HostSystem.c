@@ -112,19 +112,35 @@ CMPIStatus get_host_cs(const CMPIBroker *broker,
 
 static CMPIStatus return_host_cs(const CMPIObjectPath *reference,
                                  const CMPIResult *results,
-                                 int name_only)
+                                 bool name_only,
+                                 bool getInstance)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
 
         s = get_host_cs(_BROKER, reference, &instance);
-        if (s.rc != CMPI_RC_OK || instance == NULL)
+        if (s.rc != CMPI_RC_OK)
                 goto out;
+
+        if (instance == NULL) {
+                if (getInstance)
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "No such instance");
+                goto out;
+        }
+
+        if (getInstance) {
+                s = cu_validate_ref(_BROKER, reference, instance);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
 
         if (name_only)
                 cu_return_instance_name(results, instance);
         else
                 CMReturnInstance(results, instance);
+
  out:
         return s;
 }
@@ -164,7 +180,10 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_host_cs(reference, results, 1);
+        return return_host_cs(reference,
+                              results,
+                              true,
+                              false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -174,7 +193,10 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_host_cs(reference, results, 0);
+        return return_host_cs(reference,
+                              results,
+                              false,
+                              false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -183,7 +205,10 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_host_cs(reference, results, 0);
+        return return_host_cs(reference,
+                              results,
+                              false,
+                              true);
 }
 
 DEFAULT_CI();
