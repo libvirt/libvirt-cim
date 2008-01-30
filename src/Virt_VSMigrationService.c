@@ -80,7 +80,7 @@ static char *dest_uri(const char *cn,
                 return NULL;
         }
 
-        if (asprintf(&uri, "%s://%s/", tport, dest) == -1)
+        if (asprintf(&uri, "%s://%s/system", tport, dest) == -1)
                 uri = NULL;
 
         return uri;
