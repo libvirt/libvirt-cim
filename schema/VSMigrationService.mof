@@ -3,34 +3,66 @@
 // Placeholder definition until schema is available upstream
 
 class CIM_VirtualSystemMigrationService : CIM_Service {
-      uint32 VirtualSystemIsMigratableToHost(
-      	     [Out]
-	       CIM_ConcreteJob REF Job,
-	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
-	       string NewResourceSettingData[],
+      uint32 CheckVirtualSystemIsMigratableToHost(
+	     [In]
+	       CIM_ComputerSystem REF ComputerSystem,
+	     [In]
+	       string DestinationHost,
 	     [In, EmbeddedInstance("CIM_SettingData")]
 	       string MigrationSettingData,
 	     [In, EmbeddedInstance("CIM_VirtualSystemSettingData")]
  	       string NewSystemSettingData,
+	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
+	       string NewResourceSettingData[],
+	     [Out]
+	       boolean IsMigratable
+      );
+
+      uint32 CheckVirtualSystemIsMigratableToSystem(
 	     [In]
 	       CIM_ComputerSystem REF ComputerSystem,
 	     [In]
-	       string DestinationHost);
+	       CIM_System REF DestinationSystem,
+	     [In, EmbeddedInstance("CIM_SettingData")]
+	       string MigrationSettingData,
+	     [In, EmbeddedInstance("CIM_VirtualSystemSettingData")]
+ 	       string NewSystemSettingData,
+	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
+	       string NewResourceSettingData[],
+	     [Out]
+	       boolean IsMigratable
+      );
+
 
       uint32 MigrateVirtualSystemToHost(
-      	     [Out]
-	       CIM_ConcreteJob REF Job,
-	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
-	       string NewResourceSettingData[],
+	     [In]
+	       CIM_ComputerSystem REF ComputerSystem,
+	     [In]
+	       string DestinationHost,
 	     [In, EmbeddedInstance("CIM_SettingData")]
 	       string MigrationSettingData,
 	     [In, EmbeddedInstance("CIM_VirtualSystemSettingData")]
  	       string NewSystemSettingData,
+	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
+	       string NewResourceSettingData[],
+      	     [Out]
+	       CIM_ConcreteJob REF Job
+      );
+
+      uint32 MigrateVirtualSystemToHost(
 	     [In]
 	       CIM_ComputerSystem REF ComputerSystem,
 	     [In]
-	       string DestinationHost);
-
+	       CIM_System REF DestinationSystem,
+	     [In, EmbeddedInstance("CIM_SettingData")]
+	       string MigrationSettingData,
+	     [In, EmbeddedInstance("CIM_VirtualSystemSettingData")]
+ 	       string NewSystemSettingData,
+	     [In, EmbeddedInstance("CIM_ResourceAllocationSettingData")]
+	       string NewResourceSettingData[],
+      	     [Out]
+	       CIM_ConcreteJob REF Job
+      );
 };
 
 class Virt_MigrationJob : CIM_ConcreteJob {

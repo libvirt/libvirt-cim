@@ -131,13 +131,15 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
 static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                                 const char *domain,
                                 const char *destination,
-                                const CMPIResult *results)
+                                const CMPIResult *results,
+                                CMPIArgs *argsout)
 {
         CMPIStatus s;
         char *uri = NULL;
         virConnectPtr conn = NULL;
         virConnectPtr dconn = NULL;
         uint32_t retcode = 1;
+        CMPIBoolean isMigratable = 0;
 
         uri = dest_uri(CLASSNAME(ref), destination);
         if (uri == NULL) {
@@ -173,6 +175,10 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
 
  out:
         CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
+
+        isMigratable = (retcode == 0);
+        CMAddArg(argsout, "IsMigratable",
+                 (CMPIValue *)&isMigratable, CMPI_boolean);
 
         free(uri);
         virConnectClose(conn);
@@ -212,7 +218,7 @@ static CMPIStatus vs_migratable_host(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dhost, results);
+        return vs_migratable(ref, name, dhost, results, argsout);
 }
 
 static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
@@ -255,7 +261,7 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dname, results);
+        return vs_migratable(ref, name, dname, results, argsout);
 }
 
 static void migrate_job_set_state(struct migration_job *job,
@@ -620,7 +626,7 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
 }
 
 static struct method_handler vsimth = {
-        .name = "VirtualSystemIsMigratableToHost",
+        .name = "CheckVirtualSystemIsMigratableToHost",
         .handler = vs_migratable_host,
         .args = {{"ComputerSystem", CMPI_ref},
                  {"DestinationHost", CMPI_string},
@@ -629,7 +635,7 @@ static struct method_handler vsimth = {
 };
 
 static struct method_handler vsimts = {
-        .name = "VirtualSystemIsMigratableToSystem",
+        .name = "CheckVirtualSystemIsMigratableToSystem",
         .handler = vs_migratable_system,
         .args = {{"ComputerSystem", CMPI_ref},
                  {"DestinationSystem", CMPI_ref},
