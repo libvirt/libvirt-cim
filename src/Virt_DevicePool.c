@@ -826,8 +826,12 @@ CMPIStatus get_pool_inst(const CMPIBroker *broker,
         }
 
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
-        if (conn == NULL)
+        if (conn == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
                 goto out;
+        }
 
         inst = get_pool_by_id(broker, conn, id, NAMESPACE(reference));
         if (inst == NULL)
