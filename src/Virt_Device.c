@@ -84,15 +84,6 @@ static int net_set_hwaddr(CMPIInstance *instance,
         return 1;
 }
 
-static int net_set_systemname(CMPIInstance *instance,
-                              const char *domain)
-{
-        CMSetProperty(instance, "SystemName",
-                      (CMPIValue *)domain, CMPI_chars);
-
-        return 1;
-}
-
 static CMPIInstance *net_instance(const CMPIBroker *broker,
                                   struct net_device *dev,
                                   const virDomainPtr dom,
@@ -111,9 +102,6 @@ static CMPIInstance *net_instance(const CMPIBroker *broker,
                 return NULL;
 
         if (!net_set_hwaddr(inst, dev, broker))
-                return NULL;
-
-        if (!net_set_systemname(inst, virDomainGetName(dom)))
                 return NULL;
 
         return inst;        
@@ -224,8 +212,20 @@ static int device_set_devid(CMPIInstance *instance,
 static int device_set_systemname(CMPIInstance *instance,
                                  const virDomainPtr dom)
 {
+        virConnectPtr conn = NULL;
+
         CMSetProperty(instance, "SystemName",
                       (CMPIValue *)virDomainGetName(dom), CMPI_chars);
+
+        conn = virDomainGetConnect(dom);
+        if (conn) {
+                char *sccn = NULL;
+                sccn = get_typed_class(pfx_from_conn(conn), "ComputerSystem");
+                CMSetProperty(instance, "SystemCreationClassName",
+                              (CMPIValue *)sccn, CMPI_chars);
+                free(sccn);
+                virConnectClose(conn);
+        }
 
         return 1;
 }
