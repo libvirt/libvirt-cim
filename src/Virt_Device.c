@@ -464,8 +464,12 @@ static CMPIStatus get_device(const CMPIObjectPath *reference,
         cn = CLASSNAME(reference);
 
         conn = connect_by_classname(_BROKER, cn, &s);
-        if (!conn)
-                return s;
+        if (conn == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
+                goto out;
+        }
 
         inst = instance_from_devid(_BROKER,
                                    conn,
@@ -481,6 +485,7 @@ static CMPIStatus get_device(const CMPIObjectPath *reference,
                            "Unable to get device instance");
         }
 
+ out:
         virConnectClose(conn);
 
         return s;                
