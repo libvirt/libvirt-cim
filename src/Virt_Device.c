@@ -456,7 +456,7 @@ static CMPIStatus get_device(const CMPIObjectPath *reference,
                              const CMPIResult *results,
                              const char *devid)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn;
         CMPIInstance *inst;
         const char *cn;
@@ -476,14 +476,18 @@ static CMPIStatus get_device(const CMPIObjectPath *reference,
                                    devid,
                                    NAMESPACE(reference),
                                    device_type_from_classname(cn));
-        if (inst) {
-                CMReturnInstance(results, inst);
-                CMSetStatus(&s, CMPI_RC_OK);
-        } else {
+        if (inst == NULL) {
                 cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get device instance");
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", devid);
+                goto out;
         }
+
+        s = cu_validate_ref(_BROKER, reference, inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        CMReturnInstance(results, inst);
 
  out:
         virConnectClose(conn);
