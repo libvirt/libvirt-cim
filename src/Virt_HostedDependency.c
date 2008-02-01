@@ -84,19 +84,19 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* antecedent[] = {
+static char* antecedent[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",       
         NULL
 };
 
-char* dependent[] = {
+static char* dependent[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_HostedDependency",
         "KVM_HostedDependency",        
         NULL
