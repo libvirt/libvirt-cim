@@ -134,8 +134,12 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
         int i;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return s;
+        if (conn == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
+                goto out;
+        }
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
