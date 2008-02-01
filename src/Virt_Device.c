@@ -224,7 +224,6 @@ static int device_set_systemname(CMPIInstance *instance,
                 CMSetProperty(instance, "SystemCreationClassName",
                               (CMPIValue *)sccn, CMPI_chars);
                 free(sccn);
-                virConnectClose(conn);
         }
 
         return 1;
