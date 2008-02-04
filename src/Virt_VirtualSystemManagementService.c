@@ -57,69 +57,23 @@ enum ResourceAction {
         RESOURCE_MOD,
 };
 
-static int parse_str_inst_array(CMPIArray *array,
-                                const char *ns,
-                                struct inst_list *list)
-{
-        int count;
-        int i;
-
-        count = CMGetArrayCount(array, NULL);
-
-        for (i = 0; i < count; i++) {
-                CMPIInstance *inst;
-                CMPIData item;
-                int ret;
-
-                item = CMGetArrayElementAt(array, i, NULL);
-                /* FIXME: Check for string here */
-
-                ret = cu_parse_embedded_instance(CMGetCharPtr(item.value.string),
-                                                 _BROKER,
-                                                 ns,
-                                                 &inst);
-
-                if (ret == 0)
-                        inst_list_add(list, inst);
-        }
-
-        return 1;
-}
-
 static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                                            CMPIInstance **sys,
                                            const char *ns,
-                                           struct inst_list *res)
+                                           CMPIArray **res)
 {
         CMPIStatus s = {CMPI_RC_ERR_FAILED, NULL};
-        const char *sys_str = NULL;
-        CMPIArray *res_arr;
-        int ret;
 
-        if (cu_get_str_arg(argsin, "SystemSettings", &sys_str) != CMPI_RC_OK) {
+        if (cu_get_inst_arg(argsin, "SystemSettings", sys) != CMPI_RC_OK) {
                 CU_DEBUG("No SystemSettings string argument");
                 goto out;
         }
 
-        ret = cu_parse_embedded_instance(sys_str,
-                                         _BROKER,
-                                         ns,
-                                         sys);
-        if (ret) {
-                CU_DEBUG("Unable to parse SystemSettings instance");
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "SystemSettings parse error");
-                goto out;
-        }
-
-        if (cu_get_array_arg(argsin, "ResourceSettings", &res_arr) !=
+        if (cu_get_array_arg(argsin, "ResourceSettings", res) !=
             CMPI_RC_OK) {
                 CU_DEBUG("Failed to get array arg");
                 goto out;
         }
-
-        ret = parse_str_inst_array(res_arr, ns, res);
 
         CMSetStatus(&s, CMPI_RC_OK);
 
@@ -317,24 +271,34 @@ static int rasd_to_vdev(CMPIInstance *inst,
         return 0;
 }
 
-static int classify_resources(struct inst_list *all,
+static int classify_resources(CMPIArray *resources,
                               struct domain *domain)
 {
         int i;
         uint16_t type;
+        int count;
 
         domain->dev_disk_ct = domain->dev_net_ct = 0;
         domain->dev_vcpu_ct = domain->dev_mem_ct = 0;
+  
+        count = CMGetArrayCount(resources, NULL);
+        if (count < 1)
+                return 0;
 
-        domain->dev_disk = calloc(all->cur, sizeof(struct virt_device));
-        domain->dev_vcpu = calloc(all->cur, sizeof(struct virt_device));
-        domain->dev_mem = calloc(all->cur, sizeof(struct virt_device));
-        domain->dev_net = calloc(all->cur, sizeof(struct virt_device));
+        domain->dev_disk = calloc(count, sizeof(struct virt_device));
+        domain->dev_vcpu = calloc(count, sizeof(struct virt_device));
+        domain->dev_mem = calloc(count, sizeof(struct virt_device));
+        domain->dev_net = calloc(count, sizeof(struct virt_device));
 
-        for (i = 0; i < all->cur; i++) {
+        for (i = 0; i < count; i++) {
                 CMPIObjectPath *op;
+                CMPIData item;
 
-                op = CMGetObjectPath(all->list[i], NULL);
+                item = CMGetArrayElementAt(resources, i, NULL);
+                if (CMIsNullObject(item.value.inst))
+                        return 0;
+
+                op = CMGetObjectPath(item.value.inst, NULL);
                 if (op == NULL)
                         return 0;
 
@@ -343,16 +307,16 @@ static int classify_resources(struct inst_list *all,
                         return 0;
 
                 if (type == CIM_RASD_TYPE_PROC)
-                        rasd_to_vdev(all->list[i],
+                        rasd_to_vdev(item.value.inst,
                                      &domain->dev_vcpu[domain->dev_vcpu_ct++]);
                 else if (type == CIM_RASD_TYPE_MEM)
-                        rasd_to_vdev(all->list[i],
+                        rasd_to_vdev(item.value.inst,
                                      &domain->dev_mem[domain->dev_mem_ct++]);
                 else if (type == CIM_RASD_TYPE_DISK)
-                        rasd_to_vdev(all->list[i],
+                        rasd_to_vdev(item.value.inst,
                                      &domain->dev_disk[domain->dev_disk_ct++]);
                 else if (type == CIM_RASD_TYPE_NET)
-                        rasd_to_vdev(all->list[i],
+                        rasd_to_vdev(item.value.inst,
                                      &domain->dev_net[domain->dev_net_ct++]);
         }
 
@@ -398,7 +362,7 @@ static CMPIInstance *connect_and_create(char *xml,
 }
 
 static CMPIInstance *create_system(CMPIInstance *vssd,
-                                   struct inst_list *resources,
+                                   CMPIArray *resources,
                                    const CMPIObjectPath *ref,
                                    CMPIStatus *s)
 {
@@ -466,11 +430,8 @@ static CMPIStatus define_system(CMPIMethodMI *self,
 {
         CMPIInstance *vssd;
         CMPIInstance *sys;
-        CMPIObjectPath *sys_op;
-        struct inst_list res;
+        CMPIArray *res;
         CMPIStatus s;
-
-        inst_list_init(&res);
 
         CU_DEBUG("DefineSystem");
 
@@ -478,15 +439,12 @@ static CMPIStatus define_system(CMPIMethodMI *self,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        sys = create_system(vssd, &res, reference, &s);
+        sys = create_system(vssd, res, reference, &s);
         if (sys == NULL)
                 goto out;
 
-        inst_list_free(&res);
-
         CMAddArg(argsout, "ResultingSystem", &sys, CMPI_instance);
 
-        sys_op = CMGetObjectPath(sys, NULL);
         trigger_indication(context,
                            "ComputerSystemCreatedIndication",
                            NAMESPACE(reference));
@@ -623,27 +581,14 @@ static CMPIStatus mod_system_settings(CMPIMethodMI *self,
                                       const CMPIArgs *argsin,
                                       CMPIArgs *argsout)
 {
-        const char *inst_str;
         CMPIInstance *inst;
 
-        if (cu_get_str_arg(argsin, "SystemSettings", &inst_str) != CMPI_RC_OK) {
+        if (cu_get_inst_arg(argsin, "SystemSettings", &inst) != CMPI_RC_OK) {
                 CMPIStatus s;
 
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing SystemSettings");
-                return s;
-        }
-
-        if (cu_parse_embedded_instance(inst_str,
-                                       _BROKER,
-                                       NAMESPACE(reference),
-                                       &inst)) {
-                CMPIStatus s;
-
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Internal Parse Error on SystemSettings");
                 return s;
         }
 
@@ -953,23 +898,30 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
 }
 
 static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
-                                            struct inst_list *list,
+                                            CMPIArray *resources,
                                             resmod_fn func)
 {
         int i;
         virConnectPtr conn = NULL;
         CMPIStatus s;
+        int count;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
-        for (i = 0; i < list->cur; i++) {
-                CMPIInstance *inst = list->list[i];
+        count = CMGetArrayCount(resources, NULL);
+
+        for (i = 0; i < count; i++) {
+                CMPIData item;
+                CMPIInstance *inst;
                 const char *id = NULL;
                 char *name = NULL;
                 char *devid = NULL;
                 virDomainPtr dom = NULL;
+
+                item = CMGetArrayElementAt(resources, i, NULL);
+                inst = item.value.inst;
 
                 if (cu_get_str_prop(inst, "InstanceID", &id) != CMPI_RC_OK) {
                         cu_statusf(_BROKER, &s,
@@ -1016,9 +968,6 @@ static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
 {
         CMPIArray *arr;
         CMPIStatus s;
-        struct inst_list list;
-
-        inst_list_init(&list);
 
         if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -1027,28 +976,30 @@ static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        parse_str_inst_array(arr, NAMESPACE(ref), &list);
-
-        s = _update_resource_settings(ref, &list, func);
+        s = _update_resource_settings(ref, arr, func);
 
  out:
-        inst_list_free(&list);
-
         return s;
 }
 
 static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
                                      const CMPIObjectPath *reference,
                                      CMPIArray *arr,
-                                     struct inst_list *list)
+                                     CMPIArray **ret_arr)
 {
         CMPIStatus s;
+        CMPIArray *tmp_arr;
         int i;
         int c;
 
         c = CMGetArrayCount(arr, &s);
         if (s.rc != CMPI_RC_OK)
                 return s;
+
+        tmp_arr = CMNewArray(_BROKER,
+                             c,
+                             CMPI_instance,
+                             &s); 
 
         for (i = 0; i < c; i++) {
                 CMPIData d;
@@ -1079,13 +1030,16 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
 
                 inst = get_rasd_instance(ctx, reference, _BROKER, id, type);
                 if (inst != NULL)
-                        inst_list_add(list, inst);
+                        CMSetArrayElementAt(tmp_arr, i,
+                                            &inst,
+                                            CMPI_instance);
                 else
                         CU_DEBUG("Failed to get instance for `%s'",
                                  REF2STR(ref));
         }
 
         CMSetStatus(&s, CMPI_RC_OK);
+        *ret_arr = tmp_arr;
 
         return s;
 }
@@ -1122,10 +1076,8 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
          */
 
         CMPIArray *arr;
+        CMPIArray *resource_arr;
         CMPIStatus s;
-        struct inst_list list;
-
-        inst_list_init(&list);
 
         if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -1134,23 +1086,21 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
                 goto out;
         }
 
-        s = rasd_refs_to_insts(context, reference, arr, &list);
+        s = rasd_refs_to_insts(context, reference, arr, &resource_arr);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = _update_resource_settings(reference, &list, resource_del);
+        s = _update_resource_settings(reference, resource_arr, resource_del);
  out:
-        inst_list_free(&list);
-
         return s;
 }
 
 static struct method_handler DefineSystem = {
         .name = "DefineSystem",
         .handler = define_system,
-        .args = {{"SystemSettings", CMPI_string},
-                 {"ResourceSettings", CMPI_stringA},
-                 {"ReferencedConfiguration", CMPI_string},
+        .args = {{"SystemSettings", CMPI_instance},
+                 {"ResourceSettings", CMPI_instanceA},
+                 {"ReferenceConfiguration", CMPI_string},
                  ARG_END
         }
 };
@@ -1167,7 +1117,7 @@ static struct method_handler AddResourceSettings = {
         .name = "AddResourceSettings",
         .handler = add_resource_settings,
         .args = {{"AffectedConfiguration", CMPI_ref},
-                 {"ResourceSettings", CMPI_stringA},
+                 {"ResourceSettings", CMPI_instanceA},
                  ARG_END
         }
 };
@@ -1175,7 +1125,7 @@ static struct method_handler AddResourceSettings = {
 static struct method_handler ModifyResourceSettings = {
         .name = "ModifyResourceSettings",
         .handler = mod_resource_settings,
-        .args = {{"ResourceSettings", CMPI_stringA},
+        .args = {{"ResourceSettings", CMPI_instanceA},
                  ARG_END
         }
 };
@@ -1183,7 +1133,7 @@ static struct method_handler ModifyResourceSettings = {
 static struct method_handler ModifySystemSettings = {
         .name = "ModifySystemSettings",
         .handler = mod_system_settings,
-        .args = {{"SystemSettings", CMPI_string},
+        .args = {{"SystemSettings", CMPI_instance},
                  ARG_END
         }
 };
