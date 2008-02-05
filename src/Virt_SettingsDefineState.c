@@ -290,7 +290,7 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* logical_device[] = {
+static char* logical_device[] = {
         "Xen_Processor",
         "Xen_Memory",
         "Xen_NetworkPort",
@@ -302,7 +302,7 @@ char* logical_device[] = {
         NULL
 };
 
-char* resource_allocation_setting_data[] = {
+static char* resource_allocation_setting_data[] = {
         "Xen_DiskResourceAllocationSettingData",
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
@@ -314,19 +314,19 @@ char* resource_allocation_setting_data[] = {
         NULL
 };
 
-char* computer_system[] = {
+static char* computer_system[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
         NULL
 };
 
-char* virtual_system_setting_data[] = {
+static char* virtual_system_setting_data[] = {
         "Xen_VirtualSystemSettingData",
         "KVM_VirtualSystemSettingData",        
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_SettingsDefineState",
         "KVM_SettingsDefineState",        
         NULL
