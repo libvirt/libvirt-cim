@@ -3,6 +3,7 @@
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
+ *  Jay Gagnon <grendel@linux.vnet.ibm.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
