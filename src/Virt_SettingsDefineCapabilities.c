@@ -827,13 +827,13 @@ static CMPIStatus rasd_to_alloc_cap(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* group_component[] = {
+static char* group_component[] = {
         "Xen_AllocationCapabilities",
         "KVM_AllocationCapabilities",
         NULL
 };
 
-char* part_component[] = {
+static char* part_component[] = {
         "Xen_DiskResourceAllocationSettingData",
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
@@ -845,13 +845,13 @@ char* part_component[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_SettingsDefineCapabilities",
         "KVM_SettingsDefineCapabilities",        
         NULL
 };
 
-struct std_assoc _alloc_cap_to_rasd = {
+static struct std_assoc _alloc_cap_to_rasd = {
         .source_class = (char**)&group_component,
         .source_prop = "GroupComponent",
 
@@ -864,7 +864,7 @@ struct std_assoc _alloc_cap_to_rasd = {
         .make_ref = make_ref
 };
 
-struct std_assoc _rasd_to_alloc_cap = {
+static struct std_assoc _rasd_to_alloc_cap = {
         .source_class = (char**)&part_component,
         .source_prop = "PartComponent",
 
@@ -877,7 +877,7 @@ struct std_assoc _rasd_to_alloc_cap = {
         .make_ref = make_ref
 };
 
-struct std_assoc *assoc_handlers[] = {
+static struct std_assoc *assoc_handlers[] = {
         &_alloc_cap_to_rasd,
         &_rasd_to_alloc_cap,
         NULL
