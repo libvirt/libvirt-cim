@@ -128,13 +128,13 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* antecedent[] = {  
+static char* antecedent[] = {  
         "Xen_HostSystem",
         "KVM_HostSystem",
         NULL
 };
 
-char* dependent[] = {
+static char* dependent[] = {
         "Xen_ResourcePoolConfigurationService",
         "Xen_VirtualSystemManagementService",
         "Xen_VirtualSystemMigrationService",
@@ -144,7 +144,7 @@ char* dependent[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_HostedService",
         "KVM_HostedService",        
         NULL
