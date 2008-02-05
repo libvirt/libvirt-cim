@@ -451,47 +451,70 @@ CMPIInstance *instance_from_devid(const CMPIBroker *broker,
         return instance;        
 }                                       
 
-static CMPIStatus get_device(const CMPIObjectPath *reference,
-                             const CMPIResult *results,
-                             const char *devid)
+CMPIStatus get_device(const CMPIBroker *broker,
+                      const CMPIObjectPath *reference,
+                      CMPIInstance **_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn;
         CMPIInstance *inst;
         const char *cn;
+        const char *devid;
 
         cn = CLASSNAME(reference);
 
-        conn = connect_by_classname(_BROKER, cn, &s);
+        conn = connect_by_classname(broker, cn, &s);
         if (conn == NULL) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "No such instance");
                 goto out;
+        }        
+
+        if (cu_get_str_path(reference, "DeviceID", &devid) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No DeviceID specified");
+                goto out;
         }
 
-        inst = instance_from_devid(_BROKER,
+        inst = instance_from_devid(broker,
                                    conn,
                                    devid,
                                    NAMESPACE(reference),
                                    device_type_from_classname(cn));
         if (inst == NULL) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "No such instance (%s)", devid);
                 goto out;
         }
 
-        s = cu_validate_ref(_BROKER, reference, inst);
+        s = cu_validate_ref(broker, reference, inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        CMReturnInstance(results, inst);
+        *_inst = inst;
 
  out:
         virConnectClose(conn);
 
         return s;                
+}
+
+static CMPIStatus return_device(const CMPIResult *results,
+                                const CMPIObjectPath *reference)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+
+        s = get_device(_BROKER, reference, &inst);
+        if (s.rc != CMPI_RC_OK || inst == NULL)
+                return s;
+
+        CMReturnInstance(results, inst);
+
+        return s;   
 }
 
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
@@ -517,19 +540,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        const char *devid;
-
-        if (cu_get_str_path(reference, "DeviceID", &devid) != CMPI_RC_OK) {
-                CMPIStatus s;
-
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No DeviceID specified");
-
-                return s;
-        }
-
-        return get_device(reference, results, devid);
+        return return_device(results, reference);
 }
 
 DEFAULT_CI();

@@ -42,6 +42,19 @@ int dom_devices(const CMPIBroker *broker,
                 struct inst_list *list);
 
 /**
+ * Returns the device instance defined by the reference
+ *
+ * @param broker A pointer to the CIM broker
+ * @param reference The object path identifying the instance
+ * @param inst Contains the pointer to the instance in case 
+ *             of success
+ * @returns CMPIStatus of the operation
+ */
+CMPIStatus get_device(const CMPIBroker *broker,
+                      const CMPIObjectPath *reference,
+                      CMPIInstance **_inst);
+
+/**
  * Return a device instance for a given devid
  *
  * @param broker A pointer to the CIM broker
