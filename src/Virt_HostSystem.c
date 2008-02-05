@@ -107,7 +107,7 @@ CMPIStatus get_host_cs(const CMPIBroker *broker,
 static CMPIStatus return_host_cs(const CMPIObjectPath *reference,
                                  const CMPIResult *results,
                                  bool name_only,
-                                 bool getInstance)
+                                 bool is_get_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance;
@@ -117,14 +117,14 @@ static CMPIStatus return_host_cs(const CMPIObjectPath *reference,
                 goto out;
 
         if (instance == NULL) {
-                if (getInstance)
+                if (is_get_inst)
                         cu_statusf(_BROKER, &s,
                                    CMPI_RC_ERR_NOT_FOUND,
                                    "No such instance");
                 goto out;
         }
 
-        if (getInstance) {
+        if (is_get_inst) {
                 s = cu_validate_ref(_BROKER, reference, instance);
                 if (s.rc != CMPI_RC_OK)
                         goto out;
