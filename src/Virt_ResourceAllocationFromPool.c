@@ -245,7 +245,7 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* antecedent[] = {
+static char* antecedent[] = {
         "Xen_ProcessorPool",
         "Xen_MemoryPool",
         "Xen_NetworkPool",
@@ -257,7 +257,7 @@ char* antecedent[] = {
         NULL
 };
 
-char* dependent[] = {
+static char* dependent[] = {
         "Xen_DiskResourceAllocationSettingData",
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
@@ -269,7 +269,7 @@ char* dependent[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_ResourceAllocationFromPool",
         "KVM_ResourceAllocationFromPool",        
         NULL
