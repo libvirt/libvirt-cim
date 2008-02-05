@@ -192,13 +192,13 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* conformant_standard[] = {
+static char* conformant_standard[] = {
         "Xen_RegisteredProfile",
         "KVM_RegisteredProfile",        
         NULL
 };
 
-char* managed_element[] = {
+static char* managed_element[] = {
         "Xen_HostSystem",
         "Xen_ComputerSystem",
         "KVM_HostSystem",
@@ -206,13 +206,13 @@ char* managed_element[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_ElementConformsToProfile",
         "KVM_ElementConformsToProfile",        
         NULL
 };
 
-struct std_assoc forward = {
+static struct std_assoc forward = {
         .source_class = (char**)&conformant_standard,
         .source_prop = "ConformantStandard",
 
@@ -225,7 +225,7 @@ struct std_assoc forward = {
         .make_ref = make_ref
 };
 
-struct std_assoc backward = {
+static struct std_assoc backward = {
         .source_class = (char**)&managed_element,
         .source_prop = "ManagedElement",
 
@@ -238,7 +238,7 @@ struct std_assoc backward = {
         .make_ref = make_ref
 };
 
-struct std_assoc *assoc_handlers[] = {
+static struct std_assoc *assoc_handlers[] = {
         &forward,
         &backward,
         NULL
