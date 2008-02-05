@@ -1,0 +1,15 @@
+// Copyright IBM Corp. 2007
+
+[Description ("Xen_ComputerSystem migration status"),
+ Provider("cmpi::Virt_ComputerSystemModificationIndication")
+]
+class Xen_ComputerSystemMigrationIndication : CIM_InstModification
+{
+};
+
+[Description ("KVM_ComputerSystem migration status"),
+ Provider("cmpi::Virt_ComputerSystemModificationIndication")
+]
+class KVM_ComputerSystemMigrationIndication : CIM_InstModification
+{
+};

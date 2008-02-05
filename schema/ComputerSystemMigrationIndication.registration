@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_ComputerSystemMigrationIndication root/virt Virt_ComputerSystemMigrationIndication Virt_ComputerSystemMigrationIndication indication method
+KVM_ComputerSystemMigrationIndication root/virt Virt_ComputerSystemMigrationIndication Virt_ComputerSystemMigrationIndication indication method

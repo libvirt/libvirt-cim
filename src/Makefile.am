@@ -30,6 +30,7 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_Device.la \
                        libVirt_SystemDevice.la \
                        libVirt_ComputerSystemIndication.la \
+                       libVirt_ComputerSystemMigrationIndication.la \
                        libVirt_RASD.la \
                        libVirt_HostSystem.la \
                        libVirt_VirtualSystemManagementService.la \
@@ -61,6 +62,10 @@ libVirt_Device_la_SOURCES = Virt_Device.c
 libVirt_ComputerSystemIndication_la_DEPENDENCIES = libVirt_ComputerSystem.la
 libVirt_ComputerSystemIndication_la_SOURCES = Virt_ComputerSystemIndication.c
 libVirt_ComputerSystemIndication_la_LIBADD = -lVirt_ComputerSystem -lpthread -lrt
+
+libVirt_ComputerSystemMigrationIndication_la_DEPENDENCIES = libVirt_ComputerSystem.la
+libVirt_ComputerSystemMigrationIndication_la_SOURCES = Virt_ComputerSystemMigrationIndication.c
+libVirt_ComputerSystemMigrationIndication_la_LIBADD = -lVirt_ComputerSystem
 
 libVirt_VirtualSystemManagementService_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_ComputerSystemIndication.la libVirt_RASD.la libVirt_HostSystem.la
 libVirt_VirtualSystemManagementService_la_SOURCES = Virt_VirtualSystemManagementService.c
