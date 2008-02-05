@@ -233,19 +233,19 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_ElementCapabilities",
         "KVM_ElementCapabilities",        
         NULL
 };
 
-char* host_system[] = {
+static char* host_system[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
         NULL
 };
 
-char* virtual_system_management_capabilities[] = {
+static char* virtual_system_management_capabilities[] = {
         "Xen_VirtualSystemManagementCapabilities",
         "Xen_VirtualSystemMigrationCapabilities",
         "KVM_VirtualSystemManagementCapabilities",
@@ -253,7 +253,7 @@ char* virtual_system_management_capabilities[] = {
         NULL,
 };
 
-struct std_assoc system_to_vsm_cap = {
+static struct std_assoc system_to_vsm_cap = {
         .source_class = (char**)&host_system,
         .source_prop = "ManagedElement",
 
@@ -266,7 +266,7 @@ struct std_assoc system_to_vsm_cap = {
         .make_ref = make_ref
 };
 
-struct std_assoc vsm_cap_to_system = {
+static struct std_assoc vsm_cap_to_system = {
         .source_class = (char**)&virtual_system_management_capabilities,
         .source_prop = "Capabilities",
 
@@ -279,19 +279,19 @@ struct std_assoc vsm_cap_to_system = {
         .make_ref = make_ref
 };
 
-char* computer_system[] = {
+static char* computer_system[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
         NULL
 };
 
-char* enabled_logical_element_capabilities[] = {
+static char* enabled_logical_element_capabilities[] = {
         "Xen_EnabledLogicalElementCapabilities",
         "KVM_EnabledLogicalElementCapabilities",
         NULL
 };
 
-struct std_assoc ele_cap_to_cs = {
+static struct std_assoc ele_cap_to_cs = {
         .source_class = (char**)&enabled_logical_element_capabilities,
         .source_prop = "Capabilities",
 
@@ -304,7 +304,7 @@ struct std_assoc ele_cap_to_cs = {
         .make_ref = make_ref
 };
 
-struct std_assoc cs_to_ele_cap = {
+static struct std_assoc cs_to_ele_cap = {
         .source_class = (char**)&computer_system,
         .source_prop = "ManagedElement",
 
@@ -317,13 +317,13 @@ struct std_assoc cs_to_ele_cap = {
         .make_ref = make_ref
 };
 
-char* allocation_capabilities[] = {
+static char* allocation_capabilities[] = {
         "Xen_AllocationCapabilities",
         "KVM_AllocationCapabilities",
         NULL
 };
 
-char* resource_pool[] = {
+static char* resource_pool[] = {
         "Xen_ProcessorPool",
         "Xen_MemoryPool",
         "Xen_NetworkPool",
@@ -335,7 +335,7 @@ char* resource_pool[] = {
         NULL
 };
 
-struct std_assoc alloc_cap_to_resource_pool = {
+static struct std_assoc alloc_cap_to_resource_pool = {
         .source_class = (char**)&allocation_capabilities,
         .source_prop = "Capabilities",
 
@@ -348,7 +348,7 @@ struct std_assoc alloc_cap_to_resource_pool = {
         .make_ref = make_ref
 };
 
-struct std_assoc resource_pool_to_alloc_cap = {
+static struct std_assoc resource_pool_to_alloc_cap = {
         .source_class = (char**)&resource_pool,
         .source_prop = "ManagedElement",
 
@@ -361,7 +361,7 @@ struct std_assoc resource_pool_to_alloc_cap = {
         .make_ref = make_ref
 };
 
-struct std_assoc *assoc_handlers[] = {
+static struct std_assoc *assoc_handlers[] = {
         &system_to_vsm_cap,
         &vsm_cap_to_system,
         &ele_cap_to_cs,
