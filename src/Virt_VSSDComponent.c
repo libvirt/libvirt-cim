@@ -154,13 +154,13 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* group_component[] = {
+static char* group_component[] = {
         "Xen_VirtualSystemSettingData",
         "KVM_VirtualSystemSettingData",
         NULL
 };
 
-char* part_component[] = {
+static char* part_component[] = {
         "Xen_DiskResourceAllocationSettingData",
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
@@ -172,7 +172,7 @@ char* part_component[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_VirtualSystemSettingDataComponent",
         "KVM_VirtualSystemSettingDataComponent",        
         NULL
