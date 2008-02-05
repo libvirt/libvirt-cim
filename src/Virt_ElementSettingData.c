@@ -160,13 +160,13 @@ static CMPIInstance *make_ref(const CMPIObjectPath *source_ref,
         return refinst;
 }
 
-char* virtual_system_setting_data[] = {
+static char* virtual_system_setting_data[] = {
         "Xen_VirtualSystemSettingData",
         "KVM_VirtualSystemSettingData",        
         NULL
 };
 
-char* resource_allocation_setting_data[] = {
+static char* resource_allocation_setting_data[] = {
         "Xen_DiskResourceAllocationSettingData",
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
@@ -178,7 +178,7 @@ char* resource_allocation_setting_data[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_ElementSettingData",
         "KVM_ElementSettingData",        
         NULL
