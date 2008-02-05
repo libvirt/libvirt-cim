@@ -19,6 +19,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  */
 
-CMPIStatus rpcs_instance(const CMPIObjectPath *reference,
-                         CMPIInstance **_inst,
-                         const CMPIBroker *broker);
+CMPIStatus get_rpcs(const CMPIObjectPath *reference,
+                    CMPIInstance **_inst,
+                    const CMPIBroker *broker,
+                    bool is_get_inst);
+
+/*
+ * Local Variables:
+ * mode: C
+ * c-set-style: "K&R"
+ * tab-width: 8
+ * c-basic-offset: 8
+ * indent-tabs-mode: nil
+ * End:
+ */
