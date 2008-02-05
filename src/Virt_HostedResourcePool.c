@@ -94,13 +94,13 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* group_component[] = {
+static char* group_component[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
         NULL
 };
 
-char* part_component[] = {
+static char* part_component[] = {
         "Xen_ProcessorPool",
         "Xen_MemoryPool",
         "Xen_NetworkPool",
@@ -112,13 +112,13 @@ char* part_component[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_HostedResourcePool",
         "KVM_HostedResourcePool",        
         NULL
 };
 
-struct std_assoc forward = {
+static struct std_assoc forward = {
         .source_class = (char**)&part_component,
         .source_prop = "PartComponent",
 
@@ -131,7 +131,7 @@ struct std_assoc forward = {
         .make_ref = make_ref
 };
 
-struct std_assoc backward = {
+static struct std_assoc backward = {
         .source_class = (char**)&group_component,
         .source_prop = "GroupComponent",
 
@@ -144,7 +144,7 @@ struct std_assoc backward = {
         .make_ref = make_ref
 };
 
-struct std_assoc *assoc_handlers[] = {
+static struct std_assoc *assoc_handlers[] = {
         &forward,
         &backward,
         NULL
