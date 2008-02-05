@@ -134,10 +134,15 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
 {
         const char *host = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
         int ret;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
+
+        s = get_domain(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "Name", &host) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -171,10 +176,15 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
         char *host = NULL;
         char *dev = NULL;
         CMPIInstance *sys;
+        CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
+
+        s = get_device(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "DeviceID", &devid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
