@@ -210,13 +210,13 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* group_component[] = {
+static char* group_component[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
         NULL
 };
 
-char* part_component[] = {
+static char* part_component[] = {
         "Xen_Processor",
         "Xen_Memory",
         "Xen_NetworkPort",
@@ -228,7 +228,7 @@ char* part_component[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_SystemDevice",
         "KVM_SystemDevice",        
         NULL
