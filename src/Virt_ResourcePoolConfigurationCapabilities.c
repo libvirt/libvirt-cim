@@ -47,45 +47,63 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-static CMPIStatus get_rpc_cap(const CMPIBroker *broker,
-                              const CMPIObjectPath *reference,
-                              CMPIInstance **_inst)
+static CMPIStatus get_rpc_cap(const CMPIObjectPath *reference,
+                              CMPIInstance **_inst,
+                              bool is_get_inst)
 {
-        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        virConnectPtr conn = NULL;
 
-        inst = get_typed_instance(broker,
-                                  CLASSNAME(reference),
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
+        inst = get_typed_instance(_BROKER,
+                                  pfx_from_conn(conn),
                                   "ResourcePoolConfigurationCapabilities",
                                   NAMESPACE(reference));
         if (inst == NULL)
-                return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Can't create ResourcePoolConfigurationCapabilities instance");
 
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)"RPCC", CMPI_chars);
 
         /* No method currently supported */
 
+        if (is_get_inst) {
+                s = cu_validate_ref(_BROKER, reference, inst);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+        
         *_inst = inst;
 
-        return (CMPIStatus){CMPI_RC_OK, NULL};
+ out:
+        virConnectClose(conn);
+        
+        return s;
 }
 
 static CMPIStatus return_rpc_cap(const CMPIObjectPath *reference,
                                  const CMPIResult *results,
-                                 bool names_only)
+                                 bool names_only,
+                                 bool is_get_inst)
 {
         CMPIStatus s;
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
 
-        s = get_rpc_cap(_BROKER, reference, &inst);
-        if (s.rc != CMPI_RC_OK)
+        s = get_rpc_cap(reference, &inst, is_get_inst);
+        if (s.rc != CMPI_RC_OK || inst == NULL)
                 goto out;
-
+        
         if (names_only)
                 cu_return_instance_name(results, inst);
         else
                 CMReturnInstance(results, inst);
-
+        
  out:
         return s;
 }
@@ -95,7 +113,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_rpc_cap(reference, results, 1);
+        return return_rpc_cap(reference, results, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -105,7 +123,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_rpc_cap(reference, results, 0);
+        return return_rpc_cap(reference, results, false, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -114,7 +132,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_rpc_cap(reference, results, 0);
+        return return_rpc_cap(reference, results, false, true);
 }
 
 
