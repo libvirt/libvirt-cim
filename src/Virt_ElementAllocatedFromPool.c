@@ -228,7 +228,7 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-char* antecedent[] = {
+static char* antecedent[] = {
         "Xen_ProcessorPool",
         "Xen_MemoryPool",
         "Xen_NetworkPool",
@@ -240,7 +240,7 @@ char* antecedent[] = {
         NULL
 };
 
-char* dependent[] = {
+static char* dependent[] = {
         "Xen_Processor",
         "Xen_Memory",
         "Xen_NetworkPort",
@@ -252,7 +252,7 @@ char* dependent[] = {
         NULL
 };
 
-char* assoc_classname[] = {
+static char* assoc_classname[] = {
         "Xen_ElementAllocatedFromPool",
         "KVM_ElementAllocatedFromPool",        
         NULL
