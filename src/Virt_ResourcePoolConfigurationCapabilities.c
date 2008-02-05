@@ -56,8 +56,13 @@ static CMPIStatus get_rpc_cap(const CMPIObjectPath *reference,
         virConnectPtr conn = NULL;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
-        if (conn == NULL)
+        if (conn == NULL) {
+                if (is_get_inst)
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "No such instance");
                 goto out;
+        }
 
         inst = get_typed_instance(_BROKER,
                                   pfx_from_conn(conn),
