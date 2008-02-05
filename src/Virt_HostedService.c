@@ -49,7 +49,7 @@ static CMPIStatus validate_service_ref(const CMPIObjectPath *ref)
         if (STREQC(classname, "VirtualSystemManagementService")) {
                 s = get_vsms(ref, &inst, _BROKER);
         } else if (STREQC(classname, "ResourcePoolConfigurationService")) {
-                s = rpcs_instance(ref, &inst, _BROKER);
+                s = get_rpcs(ref, &inst, _BROKER, true);
         } else if (STREQC(classname, "VirtualSystemMigrationService")) {
                 s = get_migration_service(ref, &inst, _BROKER);
         }
@@ -105,7 +105,7 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        s = rpcs_instance(ref, &inst, _BROKER);
+        s = get_rpcs(ref, &inst, _BROKER, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
