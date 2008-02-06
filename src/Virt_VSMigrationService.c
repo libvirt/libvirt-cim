@@ -34,6 +34,7 @@
 #include "misc_util.h"
 #include <libcmpiutil/std_instance.h>
 #include <libcmpiutil/std_invokemethod.h>
+#include <libcmpiutil/std_indication.h>
 
 #include "Virt_VSMigrationService.h"
 #include "Virt_HostSystem.h"
@@ -264,11 +265,76 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
         return vs_migratable(ref, name, dname, results, argsout);
 }
 
+static bool raise_indication(const CMPIContext *context,
+                             const char *base_type,
+                             const char *ns,
+                             CMPIInstance *inst,
+                             const CMPIInstance *ind)
+{
+        char *type;
+        CMPIStatus s;
+
+        CU_DEBUG("Setting SourceInstance");
+        CMSetProperty(ind, "SourceInstance",
+                      (CMPIValue *)&inst, CMPI_instance);
+
+        /* Seems like this shouldn't be hardcoded. */
+        type = get_typed_class("Xen", base_type);
+
+        s = stdi_raise_indication(_BROKER, context, type, ns, ind);
+
+        free(type);
+
+        return s.rc == CMPI_RC_OK;
+}
+
+static CMPIInstance *prepare_indication(const CMPIBroker *broker,
+                                        CMPIInstance *inst,
+                                        char *ns,
+                                        CMPIStatus *s)
+{
+        CMPIInstance *ind = NULL;
+        CMPIInstance *prev_inst = NULL;
+
+        CU_DEBUG("Creating indication.");
+        /* Prefix needs to be dynamic */
+        ind = get_typed_instance(broker,
+                                 "Xen",
+                                 "ComputerSystemMigrationIndication",
+                                 ns);
+        /* Prefix needs to be dynamic */
+        if (ind == NULL) {
+                CU_DEBUG("Failed to create ind, type '%s:%s_%s'", 
+                         ns,
+                         "Xen",
+                         "ComputerSystemMigrationIndication");
+        }
+
+        /* Need to copy job inst before attaching as PreviousInstance because 
+           otherwise the changes we are about to make to job inst are made 
+           to PreviousInstance as well. */
+        prev_inst = cu_dup_instance(_BROKER, inst, s);
+        if (s->rc != CMPI_RC_OK || prev_inst == NULL) {
+                CU_DEBUG("dup_instance failed (%i:%s)", s->rc, s->msg);
+                ind = NULL;
+                goto out;
+        }
+
+        CU_DEBUG("Setting PreviousInstance");
+        CMSetProperty(ind, "PreviousInstance", 
+                      (CMPIValue *)&prev_inst, CMPI_instance);
+
+ out:
+        return ind;
+}
+
 static void migrate_job_set_state(struct migration_job *job,
                                   uint16_t state,
                                   const char *status)
 {
         CMPIInstance *inst;
+        CMPIInstance *ind;
+        bool rc;
         CMPIStatus s;
         CMPIObjectPath *op;
 
@@ -292,6 +358,8 @@ static void migrate_job_set_state(struct migration_job *job,
                 return;
         }
 
+        ind = prepare_indication(_BROKER, inst, job->ref_ns, &s);
+
         CMSetProperty(inst, "JobState",
                       (CMPIValue *)&state, CMPI_uint16);
         CMSetProperty(inst, "Status",
@@ -303,6 +371,14 @@ static void migrate_job_set_state(struct migration_job *job,
         if (s.rc != CMPI_RC_OK)
                 CU_DEBUG("Failed to update job instance: %s",
                          CMGetCharPtr(s.msg));
+
+        rc = raise_indication(job->context,
+                              "ComputerSystemMigrationIndication",
+                              job->ref_ns,
+                              inst,
+                              ind);
+        if (!rc)
+                CU_DEBUG("Failed to raise indication");
 }
 
 static CMPIStatus migrate_vs(struct migration_job *job)
