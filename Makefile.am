@@ -36,7 +36,8 @@ MOFS = \
 	schema/HostedService.mof \
 	schema/ElementSettingData.mof \
 	schema/VSMigrationCapabilities.mof \
-	schema/VSMigrationService.mof
+	schema/VSMigrationService.mof \
+	schema/VSMigrationSettingData.mof 
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -79,7 +80,8 @@ REGS = \
 	schema/ElementSettingData.registration \
 	schema/VSMigrationCapabilities.registration \
 	schema/VSMigrationService.registration \
-	schema/ElementConformsToProfile.registration
+	schema/ElementConformsToProfile.registration \
+	schema/VSMigrationSettingData.registration 
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
@@ -112,3 +114,4 @@ clean-local:
 	rm -f $(find . -name "*.orig")
 	rm -f $(find . -name "*.rej")
 	rm -f $(find . -name "*~")
+

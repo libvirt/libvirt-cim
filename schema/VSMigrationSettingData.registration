@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_VirtualSystemMigrationSettingData root/virt Virt_VSMigrationSettingData Virt_VSMigrationSettingData instance
+KVM_VirtualSystemMigrationSettingData root/virt Virt_VSMigrationSettingData Virt_VSMigrationSettingData instance

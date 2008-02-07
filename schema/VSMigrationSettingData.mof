@@ -1,0 +1,15 @@
+// Copyright IBM Corp. 2007
+
+class CIM_VirtualSystemMigrationSettingData : CIM_SettingData {
+      uint16 MigrationType;
+
+      uint16 Priority;
+};
+
+[Provider("cmpi::Virt_VSMigrationSettingData")]
+class Xen_VirtualSystemMigrationSettingData : CIM_VirtualSystemMigrationSettingData {
+};
+
+[Provider("cmpi::Virt_VSMigrationSettingData")]
+class KVM_VirtualSystemMigrationSettingData : CIM_VirtualSystemMigrationSettingData {
+};

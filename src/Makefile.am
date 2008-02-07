@@ -54,7 +54,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_HostedService.la \
                        libVirt_ElementSettingData.la \
                        libVirt_VSMigrationCapabilities.la \
-                       libVirt_VSMigrationService.la
+                       libVirt_VSMigrationService.la \
+                       libVirt_VSMigrationSettingData.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_Device_la_SOURCES = Virt_Device.c
@@ -154,4 +155,6 @@ libVirt_VSMigrationCapabilities_la_SOURCES = Virt_VSMigrationCapabilities.c
 libVirt_VSMigrationService_la_DEPENDENCIES = libVirt_HostSystem.la
 libVirt_VSMigrationService_la_SOURCES = Virt_VSMigrationService.c
 libVirt_VSMigrationService_la_LIBADD = -lVirt_HostSystem
+
+libVirt_VSMigrationSettingData_la_SOURCES = Virt_VSMigrationSettingData.c
 
