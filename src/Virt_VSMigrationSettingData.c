@@ -30,6 +30,7 @@
 #include <libcmpiutil/std_instance.h>
 
 #include "misc_util.h"
+#include "Virt_VSMigrationSettingData.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -54,10 +55,10 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
         return s;
 }
 
-static CMPIStatus get_migration_sd(const CMPIObjectPath *ref,
-                                   CMPIInstance **_inst,
-                                   const CMPIBroker *broker,
-                                   bool is_get_inst)
+CMPIStatus get_migration_sd(const CMPIObjectPath *ref,
+                            CMPIInstance **_inst,
+                            const CMPIBroker *broker,
+                            bool is_get_inst)
 {
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
