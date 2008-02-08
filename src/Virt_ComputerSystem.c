@@ -71,7 +71,9 @@ static int set_name_from_dom(virDomainPtr dom, CMPIInstance *instance)
 }
 
 /* Set the "UUID" property of an instance from a domain */
-static int set_uuid_from_dom(virDomainPtr dom, CMPIInstance *instance)
+static int set_uuid_from_dom(virDomainPtr dom, 
+                             CMPIInstance *instance, 
+                             char **out_uuid)
 {
         char uuid[VIR_UUID_STRING_BUFLEN];
         int ret;
@@ -82,6 +84,8 @@ static int set_uuid_from_dom(virDomainPtr dom, CMPIInstance *instance)
 
         CMSetProperty(instance, "UUID",
                       (CMPIValue *)uuid, CMPI_chars);
+
+        *out_uuid = strdup(uuid);
 
         return 1;
 }
@@ -239,39 +243,114 @@ static int set_creation_class(CMPIInstance *instance)
         return 1;
 }
 
+static int set_other_id_info(const CMPIBroker *broker,
+                             char *uuid,
+                             const char *prefix,
+                             CMPIInstance *instance)
+{
+        CMPIStatus s;
+        CMPIArray *id_info;
+        CMPIArray *id_desc;
+        char *desc[3] = {"Type", "Model", "UUID"};
+        char *info[3];
+        int count = 3; 
+        char *type = "Virtual System";
+        char *model;
+        int i;
+
+        id_info = CMNewArray(broker,
+                             count,
+                             CMPI_string,
+                             &s);
+
+        if (s.rc != CMPI_RC_OK)
+                return 0;
+
+        id_desc = CMNewArray(broker,
+                             count,
+                             CMPI_string,
+                             &s);
+
+        if (s.rc != CMPI_RC_OK)
+                return 0;
+
+        if (asprintf(&model, "%s %s", prefix, type) == -1)
+                return 0;
+
+        info[0] = type;
+        info[1] = model;
+        info[2] = uuid;
+
+        for (i = 0; i < count; i++) {
+                CMPIString *tmp = CMNewString(broker, info[i], NULL);
+                CMSetArrayElementAt(id_info, i,
+                                    &tmp,
+                                    CMPI_string);
+
+                tmp = CMNewString(broker, desc[i], NULL);
+                CMSetArrayElementAt(id_desc, i,
+                                    &tmp,
+                                    CMPI_string);
+        }
+
+        CMSetProperty(instance, "OtherIdentifyingInfo",
+                      &id_info, CMPI_stringA);
+
+        CMSetProperty(instance, "IdentifyingDescriptions",
+                      (CMPIValue *)&id_desc, CMPI_stringA);
+        return 1;
+}
+
 /* Populate an instance with information from a domain */
 static int instance_from_dom(const CMPIBroker *broker,
                              virDomainPtr dom,
+                             const char *prefix,
                              CMPIInstance *instance)
 {
+        char *uuid = NULL;
+        int ret = 1;
+
         if (!set_name_from_dom(dom, instance)) {
                 /* Print trace error */
                 return 0;
         }
 
-        if (!set_uuid_from_dom(dom, instance)) {
+        if (!set_uuid_from_dom(dom, instance, &uuid)) {
                 /* Print trace error */
-                return 0;
+                ret = 0;
+                goto out;
         }
 
         if (!set_capdesc_from_dom(dom, instance)) {
                 /* Print trace error */
-                return 0;
+                ret = 0;
+                goto out;
         }
 
         if (!set_state_from_dom(broker, dom, instance)) {
                 /* Print trace error */
-                return 0;
+                ret = 0;
+                goto out;
         }
 
         if (!set_creation_class(instance)) {
                 /* Print trace error */
-                return 0;
+                ret = 0;
+                goto out;
+        }
+
+        if (!set_other_id_info(broker, uuid, prefix, instance)) {
+                /* Print trace error */
+                ret = 0;
+                goto out;
         }
 
         /* More attributes here, of course */
 
-        return 1;
+ out:
+        free(uuid);
+
+        return ret;
 }
 
 /* Given a hypervisor connection and a domain name, return an instance */
@@ -294,7 +373,10 @@ CMPIInstance *instance_from_name(const CMPIBroker *broker,
         if (instance == NULL)
                 goto out;
 
-        if (!instance_from_dom(broker, dom, instance))
+        if (!instance_from_dom(broker, 
+                               dom, 
+                               pfx_from_conn(conn), 
+                               instance))
                 instance = NULL;
 
  out:
@@ -327,7 +409,10 @@ int enum_domains(const CMPIBroker *broker,
                 if (inst == NULL)
                         goto end;
 
-                if (instance_from_dom(broker, list[i], inst))
+                if (instance_from_dom(broker, 
+                                      list[i], 
+                                      pfx_from_conn(conn), 
+                                      inst))
                         inst_list_add(instlist, inst);
 
         end:
