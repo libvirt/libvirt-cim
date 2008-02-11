@@ -1098,9 +1098,9 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
 static struct method_handler DefineSystem = {
         .name = "DefineSystem",
         .handler = define_system,
-        .args = {{"SystemSettings", CMPI_instance},
-                 {"ResourceSettings", CMPI_instanceA},
-                 {"ReferenceConfiguration", CMPI_string},
+        .args = {{"SystemSettings", CMPI_instance, false},
+                 {"ResourceSettings", CMPI_instanceA, false},
+                 {"ReferenceConfiguration", CMPI_string, false},
                  ARG_END
         }
 };
@@ -1108,7 +1108,7 @@ static struct method_handler DefineSystem = {
 static struct method_handler DestroySystem = {
         .name = "DestroySystem",
         .handler = destroy_system,
-        .args = {{"AffectedSystem", CMPI_ref},
+        .args = {{"AffectedSystem", CMPI_ref, false},
                  ARG_END
         }
 };
@@ -1116,8 +1116,8 @@ static struct method_handler DestroySystem = {
 static struct method_handler AddResourceSettings = {
         .name = "AddResourceSettings",
         .handler = add_resource_settings,
-        .args = {{"AffectedConfiguration", CMPI_ref},
-                 {"ResourceSettings", CMPI_instanceA},
+        .args = {{"AffectedConfiguration", CMPI_ref, false},
+                 {"ResourceSettings", CMPI_instanceA, false},
                  ARG_END
         }
 };
@@ -1125,7 +1125,7 @@ static struct method_handler AddResourceSettings = {
 static struct method_handler ModifyResourceSettings = {
         .name = "ModifyResourceSettings",
         .handler = mod_resource_settings,
-        .args = {{"ResourceSettings", CMPI_instanceA},
+        .args = {{"ResourceSettings", CMPI_instanceA, false},
                  ARG_END
         }
 };
@@ -1133,7 +1133,7 @@ static struct method_handler ModifyResourceSettings = {
 static struct method_handler ModifySystemSettings = {
         .name = "ModifySystemSettings",
         .handler = mod_system_settings,
-        .args = {{"SystemSettings", CMPI_instance},
+        .args = {{"SystemSettings", CMPI_instance, false},
                  ARG_END
         }
 };
@@ -1141,7 +1141,7 @@ static struct method_handler ModifySystemSettings = {
 static struct method_handler RemoveResourceSettings = {
         .name = "RemoveResourceSettings",
         .handler = rm_resource_settings,
-        .args = {{"ResourceSettings", CMPI_refA},
+        .args = {{"ResourceSettings", CMPI_refA, false},
                  ARG_END
         }
 };

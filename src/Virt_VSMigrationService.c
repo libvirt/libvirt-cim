@@ -704,8 +704,8 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
 static struct method_handler vsimth = {
         .name = "CheckVirtualSystemIsMigratableToHost",
         .handler = vs_migratable_host,
-        .args = {{"ComputerSystem", CMPI_ref},
-                 {"DestinationHost", CMPI_string},
+        .args = {{"ComputerSystem", CMPI_ref, false},
+                 {"DestinationHost", CMPI_string, false},
                  ARG_END
         }
 };
@@ -713,8 +713,8 @@ static struct method_handler vsimth = {
 static struct method_handler vsimts = {
         .name = "CheckVirtualSystemIsMigratableToSystem",
         .handler = vs_migratable_system,
-        .args = {{"ComputerSystem", CMPI_ref},
-                 {"DestinationSystem", CMPI_ref},
+        .args = {{"ComputerSystem", CMPI_ref, false},
+                 {"DestinationSystem", CMPI_ref, false},
                  ARG_END
         }
 };
@@ -722,8 +722,8 @@ static struct method_handler vsimts = {
 static struct method_handler mvsth = {
         .name = "MigrateVirtualSystemToHost",
         .handler = migrate_vs_host,
-        .args = {{"ComputerSystem", CMPI_ref},
-                 {"DestinationHost", CMPI_string},
+        .args = {{"ComputerSystem", CMPI_ref, false},
+                 {"DestinationHost", CMPI_string, false},
                  ARG_END
         }
 };
@@ -731,8 +731,8 @@ static struct method_handler mvsth = {
 static struct method_handler mvsts = {
         .name = "MigrateVirtualSystemToSystem",
         .handler = migrate_vs_system,
-        .args = {{"ComputerSystem", CMPI_ref},
-                 {"DestinationSystem", CMPI_ref},
+        .args = {{"ComputerSystem", CMPI_ref, false},
+                 {"DestinationSystem", CMPI_ref, false},
                  ARG_END
         }
 };

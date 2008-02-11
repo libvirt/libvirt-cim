@@ -782,8 +782,8 @@ STD_InstanceMIStub(,
 static struct method_handler RequestStateChange = {
         .name = "RequestStateChange",
         .handler = state_change,
-        .args = {{"RequestedState", CMPI_uint16},
-                 {"TimeoutPeriod", CMPI_dateTime},
+        .args = {{"RequestedState", CMPI_uint16, false},
+                 {"TimeoutPeriod", CMPI_dateTime, false},
                  ARG_END
         }
 };
