@@ -33,6 +33,8 @@
 #include <libcmpiutil/std_association.h>
 
 #include "Virt_VirtualSystemManagementCapabilities.h"
+#include "Virt_VirtualSystemManagementService.h"
+#include "Virt_VSMigrationService.h"
 #include "Virt_EnabledLogicalElementCapabilities.h"
 #include "Virt_ComputerSystem.h"
 #include "Virt_HostSystem.h"
@@ -48,31 +50,63 @@
 
 const static CMPIBroker *_BROKER;
 
-static CMPIStatus validate_host_caps_ref(const CMPIObjectPath *ref)
-{ 
+static CMPIStatus validate_caps_get_service(const CMPIObjectPath *ref,
+                                            CMPIInstance **inst)
+{
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst;
-        const char *prop;
-        char* classname;   
-        
+        CMPIInstance *_inst;
+        char* classname;
+
         classname = class_base_name(CLASSNAME(ref));
 
         if (STREQC(classname, "VirtualSystemManagementCapabilities")) {
-                s = get_vsm_cap(_BROKER, ref, &inst);
+                s = get_vsm_cap(_BROKER, ref, &_inst);
+                if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
+                        goto out;
+
+                s = get_vsms(ref, &_inst, _BROKER);
         } else if (STREQC(classname, "VirtualSystemMigrationCapabilities")) {
-                s = get_migration_caps(ref, &inst, _BROKER);
-        }
-        
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-        
-        prop = cu_compare_ref(ref, inst);
-        if (prop != NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", prop);
-        }
-        
+                s = get_migration_caps(ref, &_inst, _BROKER);
+                if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
+                        goto out;
+
+                s = get_migration_service(ref, &_inst, _BROKER);
+        } else
+                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+
+        *inst = _inst;
+ out:
+        free(classname);
+
+        return s;
+}
+
+static CMPIStatus validate_service_get_caps(const CMPIObjectPath *ref,
+                                            CMPIInstance **inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *_inst;
+        char* classname;
+
+        classname = class_base_name(CLASSNAME(ref));
+
+        if (STREQC(classname, "VirtualSystemManagementService")) {
+                s = get_vsms(ref, &_inst, _BROKER);
+                if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
+                        goto out;
+
+                s = get_vsm_cap(_BROKER, ref, &_inst);
+        } else if (STREQC(classname, "VirtualSystemMigrationService")) {
+                s = get_migration_service(ref, &_inst, _BROKER);
+                if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
+                        goto out;
+
+                s = get_migration_caps(ref, &_inst, _BROKER);
+        } else
+                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+
+        *inst = _inst;
+
  out:
         free(classname);
 
@@ -105,19 +139,22 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
-                             struct std_assoc_info *info,
-                             struct inst_list *list)
+static CMPIStatus cap_to_sys_or_service(const CMPIObjectPath *ref,
+                                        struct std_assoc_info *info,
+                                        struct inst_list *list)
 {
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-
+        
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = validate_host_caps_ref(ref);
+        s = validate_caps_get_service(ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
+        
+        if (inst != NULL)
+                inst_list_add(list, inst);
 
         s = get_host_cs(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
@@ -125,6 +162,26 @@ static CMPIStatus cap_to_sys(const CMPIObjectPath *ref,
 
         inst_list_add(list, inst);
 
+ out:
+        return s;
+}
+
+static CMPIStatus service_to_cap(const CMPIObjectPath *ref,
+                                 struct std_assoc_info *info,
+                                 struct inst_list *list)
+{
+        CMPIInstance *inst = NULL;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (!match_hypervisor_prefix(ref, info))
+                goto out;
+
+        s = validate_service_get_caps(ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        if (inst != NULL)
+                inst_list_add(list, inst);
  out:
         return s;
 }
@@ -245,6 +302,16 @@ static char* host_system[] = {
         NULL
 };
 
+static char* host_sys_and_service[] = {
+        "Xen_HostSystem",
+        "KVM_HostSystem",
+        "Xen_VirtualSystemManagementService",
+        "KVM_VirtualSystemManagementService",
+        "Xen_VirtualSystemMigrationService",
+        "KVM_VirtualSystemMigrationService",
+        NULL
+};
+
 static char* virtual_system_management_capabilities[] = {
         "Xen_VirtualSystemManagementCapabilities",
         "Xen_VirtualSystemMigrationCapabilities",
@@ -266,16 +333,37 @@ static struct std_assoc system_to_vsm_cap = {
         .make_ref = make_ref
 };
 
-static struct std_assoc vsm_cap_to_system = {
+static struct std_assoc vsm_cap_to_sys_or_service = {
         .source_class = (char**)&virtual_system_management_capabilities,
         .source_prop = "Capabilities",
 
-        .target_class = (char**)&host_system,
+        .target_class = (char**)&host_sys_and_service,
         .target_prop = "ManagedElement",
 
         .assoc_class = (char**)&assoc_classname,
 
-        .handler = cap_to_sys,
+        .handler = cap_to_sys_or_service,
+        .make_ref = make_ref
+};
+
+static char* service[] = {
+        "Xen_VirtualSystemManagementService",
+        "KVM_VirtualSystemManagementService",
+        "Xen_VirtualSystemMigrationService",
+        "KVM_VirtualSystemMigrationService",
+        NULL
+};
+
+static struct std_assoc _service_to_cap = {
+        .source_class = (char**)&service,
+        .source_prop = "ManagedElement",
+
+        .target_class = (char**)&virtual_system_management_capabilities,
+        .target_prop = "Capabilities",
+
+        .assoc_class = (char**)&assoc_classname,
+
+        .handler = service_to_cap,
         .make_ref = make_ref
 };
 
@@ -363,7 +451,8 @@ static struct std_assoc resource_pool_to_alloc_cap = {
 
 static struct std_assoc *assoc_handlers[] = {
         &system_to_vsm_cap,
-        &vsm_cap_to_system,
+        &vsm_cap_to_sys_or_service,
+        &_service_to_cap,
         &ele_cap_to_cs,
         &cs_to_ele_cap,
         &alloc_cap_to_resource_pool,
