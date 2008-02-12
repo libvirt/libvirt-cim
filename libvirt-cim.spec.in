@@ -52,7 +52,7 @@ rm -fr $RPM_BUILD_ROOT
 %define SCHEMA %{_datadir}/%{name}/*.mof
 
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-	-n /@CIM_VIRT_NS@ \
+	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 
 %post
@@ -63,12 +63,12 @@ rm -fr $RPM_BUILD_ROOT
 /etc/init.d/tog-pegasus restart
 
 %{_datadir}/%{name}/provider-register.sh -t pegasus \
-	-n /@CIM_VIRT_NS@ \
+	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 
 %preun
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-	-n /@CIM_VIRT_NS@ \
+	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 
 %postun -p /sbin/ldconfig
