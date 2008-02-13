@@ -269,7 +269,7 @@ static bool raise_indication(const CMPIContext *context,
                              const char *base_type,
                              const char *ns,
                              CMPIInstance *inst,
-                             const CMPIInstance *ind)
+                             CMPIInstance *ind)
 {
         char *type;
         CMPIStatus s;
