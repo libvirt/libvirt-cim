@@ -64,7 +64,7 @@ static CMPIStatus validate_caps_get_service(const CMPIObjectPath *ref,
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
-                s = get_vsms(ref, &_inst, _BROKER);
+                s = get_vsms(ref, &_inst, _BROKER, false);
         } else if (STREQC(classname, "VirtualSystemMigrationCapabilities")) {
                 s = get_migration_caps(ref, &_inst, _BROKER);
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
@@ -91,7 +91,7 @@ static CMPIStatus validate_service_get_caps(const CMPIObjectPath *ref,
         classname = class_base_name(CLASSNAME(ref));
 
         if (STREQC(classname, "VirtualSystemManagementService")) {
-                s = get_vsms(ref, &_inst, _BROKER);
+                s = get_vsms(ref, &_inst, _BROKER, true);
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
