@@ -1161,7 +1161,8 @@ STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
 
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
-                    const CMPIBroker *broker)
+                    const CMPIBroker *broker,
+                    bool is_get_inst)
 { 
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
@@ -1171,8 +1172,14 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
 
         *_inst = NULL;
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
-        if (conn == NULL)
+        if (conn == NULL) {
+                if (is_get_inst)
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "No such instance");
+
                 return s;
+        }
 
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
@@ -1207,6 +1214,12 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         CMSetProperty(inst, "SystemCreationClassName",
                       (CMPIValue *)ccname, CMPI_chars);
 
+        if (is_get_inst) {
+                s = cu_validate_ref(broker, reference, inst);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
         CMSetStatus(&s, CMPI_RC_OK);
 
  out:
@@ -1218,12 +1231,13 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
 
 static CMPIStatus return_vsms(const CMPIObjectPath *reference,
                               const CMPIResult *results,
-                              int name_only)
+                              bool name_only,
+                              bool is_get_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
 
-        s = get_vsms(reference, &inst, _BROKER);
+        s = get_vsms(reference, &inst, _BROKER, is_get_inst);
         if (s.rc != CMPI_RC_OK || inst == NULL)
                 goto out;
 
@@ -1240,7 +1254,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_vsms(reference, results, 1);
+        return return_vsms(reference, results, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -1250,7 +1264,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_vsms(reference, results, 0);
+        return return_vsms(reference, results, false, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -1259,25 +1273,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *ref,
                               const char **properties)
 {
-        CMPIInstance *inst;
-        CMPIStatus s;
-        const char *prop;
-
-        s = get_vsms(ref, &inst, _BROKER);
-        if (s.rc != CMPI_RC_OK)
-                return s;
-
-        prop = cu_compare_ref(ref, inst);
-        if (prop != NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", prop);
-        } else {
-                CMSetStatus(&s, CMPI_RC_OK);
-                CMReturnInstance(results, inst);
-        }
-
-        return s;
+        return return_vsms(ref, results, false, true);
 }
 
 DEFAULT_CI();
