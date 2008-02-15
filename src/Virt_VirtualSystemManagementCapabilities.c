@@ -83,11 +83,22 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
 CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                        const CMPIObjectPath *ref,
-                       CMPIInstance **inst)
+                       CMPIInstance **inst,
+                       bool is_get_inst)
 {
         CMPIStatus s;
         CMPIObjectPath *op;
+        virConnectPtr conn = NULL;
         char *classname = NULL;
+
+        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
+        if (conn == NULL) {
+                if (is_get_inst)
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "No such instance");
+                goto out;
+        }
 
         classname = get_typed_class(CLASSNAME(ref),
                                     "VirtualSystemManagementCapabilities");
@@ -116,26 +127,29 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
 
         s = set_inst_properties(broker, *inst, classname);
 
+        if (is_get_inst) {
+                s = cu_validate_ref(broker, ref, *inst);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
  out:
         free(classname);
+        virConnectClose(conn);
 
         return s;
 }
 
 static CMPIStatus return_vsm_cap(const CMPIObjectPath *ref,
                                  const CMPIResult *results,
-                                 int names_only)
+                                 bool names_only,
+                                 bool is_get_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        virConnectPtr conn = NULL;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                goto out;
-
-        s = get_vsm_cap(_BROKER, ref, &inst);
-        if (s.rc != CMPI_RC_OK)
+        s = get_vsm_cap(_BROKER, ref, &inst, is_get_inst);
+        if ((s.rc != CMPI_RC_OK) || (inst == NULL))
                 goto out;
 
         if (names_only)
@@ -143,8 +157,6 @@ static CMPIStatus return_vsm_cap(const CMPIObjectPath *ref,
         else
                 CMReturnInstance(results, inst);
  out:
-        virConnectClose(conn);
-
         return s;
 }
 
@@ -153,7 +165,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_vsm_cap(reference, results, 1);
+        return return_vsm_cap(reference, results, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -163,7 +175,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_vsm_cap(reference, results, 0);
+        return return_vsm_cap(reference, results, true, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -172,24 +184,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        CMPIInstance *inst;
-        CMPIStatus s;
-        const char *prop;
-
-        s = get_vsm_cap(_BROKER, reference, &inst);
-        if (s.rc != CMPI_RC_OK)
-                return s;
-
-        prop = cu_compare_ref(reference, inst);
-        if (prop != NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", prop);
-        } else {
-                CMReturnInstance(results, inst);
-        }
-
-        return s;
+        return return_vsm_cap(reference, results, false, true);
 }
 
 DEFAULT_CI();
