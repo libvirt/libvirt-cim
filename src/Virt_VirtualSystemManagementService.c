@@ -1235,7 +1235,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                         goto out;
         }
 
-        cu_statusf(_BROKER, &s,
+        cu_statusf(broker, &s,
                    CMPI_RC_OK,
                    "");
  out:

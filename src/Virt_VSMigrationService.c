@@ -793,7 +793,7 @@ CMPIStatus get_migration_service(const CMPIObjectPath *ref,
         CMSetProperty(inst, "SystemCreationClassName",
                       (CMPIValue *)ccname, CMPI_chars);
 
-        cu_statusf(_BROKER, &s,
+        cu_statusf(broker, &s,
                    CMPI_RC_OK,
                    "");
 
