@@ -73,8 +73,9 @@ static CMPIStatus set_method_properties(const CMPIBroker *broker,
         CMSetProperty(inst, "SynchronousMethodsSupported",
                       (CMPIValue *)&array, CMPI_uint16A);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
         return s;
 }
 

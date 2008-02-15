@@ -47,7 +47,9 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
                       (CMPIValue *)&priority, CMPI_uint16);
 
 
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(broker, &s,
+                   CMPI_RC_OK,
+                   "");
 
         return s;
 }

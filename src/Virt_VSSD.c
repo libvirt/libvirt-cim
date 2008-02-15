@@ -182,7 +182,9 @@ static CMPIStatus enum_vssd(const CMPIObjectPath *reference,
                            "Failed to enumerate domains");
                 goto out;
         } else if (count == 0) {
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
                 goto out;
         }
 
@@ -200,7 +202,9 @@ static CMPIStatus enum_vssd(const CMPIObjectPath *reference,
                         CMReturnInstance(results, inst);
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         free(list);
 
@@ -271,7 +275,9 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         if (inst)
                 CMReturnInstance(results, inst);
 
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
 
         free(locid);
 

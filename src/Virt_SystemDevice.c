@@ -157,7 +157,9 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
                               NAMESPACE(ref));
 
         if (ret >= 0) {
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         } else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -208,7 +210,9 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
                            "Unable to find DeviceID `%s'", devid);
         else {
                 inst_list_add(list, sys);
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         }
 
  out:

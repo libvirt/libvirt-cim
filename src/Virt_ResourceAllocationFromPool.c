@@ -112,7 +112,9 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                               NAMESPACE(ref));
         if (pool != NULL) {
                 inst_list_add(list, pool);
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         } else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -237,8 +239,9 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                         poolid,
                         list);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         return s;
 }

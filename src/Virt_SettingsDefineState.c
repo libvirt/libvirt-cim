@@ -104,8 +104,9 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         if (rasd != NULL)
                 inst_list_add(list, rasd);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         free(name);
         free(devid);
@@ -184,8 +185,9 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
 
         inst_list_add(list, dev);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         return s;
 }
@@ -226,8 +228,9 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
         if (vssd != NULL)
                 inst_list_add(list, vssd);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         virDomainFree(dom);
         virConnectClose(conn);
@@ -277,8 +280,9 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
         if (cs != NULL)
                 inst_list_add(list, cs);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         free(name);
         free(pfx);

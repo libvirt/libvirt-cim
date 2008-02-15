@@ -87,7 +87,9 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
                                  NAMESPACE(ref),
                                  list);
 
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
 
         return s;
 }

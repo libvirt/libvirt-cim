@@ -795,7 +795,9 @@ static CMPIStatus return_pool(const CMPIObjectPath *ref,
                              &list);
         if (s.rc == CMPI_RC_OK) {
                 __return_pool(results, &list, name_only);
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         } else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,

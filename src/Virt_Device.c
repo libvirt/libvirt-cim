@@ -371,7 +371,9 @@ static CMPIStatus enum_devices(const CMPIObjectPath *reference,
         inst_list_free(&list);
 
  out:
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
         virConnectClose(conn);
 
         return s;

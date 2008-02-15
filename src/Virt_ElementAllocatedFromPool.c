@@ -102,7 +102,9 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
         pool = get_pool_by_id(_BROKER, conn, poolid, NAMESPACE(ref));
         if (pool != NULL) {
                 inst_list_add(list, pool);
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         } else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -220,8 +222,9 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
 
         devs_from_pool(type, ref, poolid, list);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         return s;
 }

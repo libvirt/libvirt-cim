@@ -114,7 +114,9 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
 
         if (remote >= local) {
                 CU_DEBUG("Version check OK (%lu >= %lu)", remote, local);
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         } else {
                 CU_DEBUG("Version check FAILED (%lu < %lu)", remote, local);
                 cu_statusf(_BROKER, &s,
@@ -123,8 +125,9 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
                            remote, local);
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         return s;
 }
@@ -172,8 +175,9 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                 goto out;
 
         retcode = 0;
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
 
@@ -432,8 +436,9 @@ static CMPIStatus migrate_vs(struct migration_job *job)
         }
 
         CU_DEBUG("Migration succeeded");
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         free(uri);
         virDomainFree(dom);
@@ -788,8 +793,10 @@ CMPIStatus get_migration_service(const CMPIObjectPath *ref,
         CMSetProperty(inst, "SystemCreationClassName",
                       (CMPIValue *)ccname, CMPI_chars);
 
-        CMSetStatus(&s, CMPI_RC_OK);
- 
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
+
         *_inst = inst;
 
  out:

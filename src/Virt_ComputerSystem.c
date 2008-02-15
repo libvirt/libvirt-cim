@@ -440,7 +440,9 @@ static CMPIStatus return_enum_domains(const CMPIObjectPath *reference,
         inst_list_init(&list);
         ret = enum_domains(_BROKER, conn, NAMESPACE(reference), &list);
         if (!ret) {
-                CMSetStatus(&s, CMPI_RC_ERR_FAILED);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get domain list");
                 goto out;
         }
 
@@ -449,8 +451,9 @@ static CMPIStatus return_enum_domains(const CMPIObjectPath *reference,
         else
                 cu_return_instances(results, &list);
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         inst_list_free(&list);
 
@@ -734,7 +737,9 @@ static CMPIStatus __state_change(const char *name,
         else if (state == CIM_STATE_RESET)
                 s = state_change_reset(dom, &info);
         else
-                CMSetStatus(&s, CMPI_RC_ERR_NOT_SUPPORTED);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_SUPPORTED,
+                           "State not supported");
 
  out:
         virDomainFree(dom);
@@ -757,7 +762,9 @@ static CMPIStatus state_change(CMPIMethodMI *self,
 
         ret = cu_get_u16_arg(argsin, "RequestedState", &state);
         if (ret != CMPI_RC_OK) {
-                CMSetStatus(&s, CMPI_RC_ERR_INVALID_PARAMETER);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Invalid RequestedState");
                 goto out;
         }
 

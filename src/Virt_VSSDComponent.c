@@ -69,8 +69,9 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
                                  list);
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         free(name);
 
@@ -103,8 +104,9 @@ static CMPIStatus vssd_for_name(const char *host,
                            CMPI_RC_ERR_FAILED,
                            "Error getting VSSD for `%s'", host);
         else
-                CMSetStatus(&s, CMPI_RC_OK);
-
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
  out:
         virDomainFree(dom);
         virConnectClose(conn);

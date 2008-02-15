@@ -72,7 +72,9 @@ static CMPIStatus validate_caps_get_service(const CMPIObjectPath *ref,
 
                 s = get_migration_service(ref, &_inst, _BROKER);
         } else
-                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Not found");
 
         *inst = _inst;
  out:
@@ -103,7 +105,9 @@ static CMPIStatus validate_service_get_caps(const CMPIObjectPath *ref,
 
                 s = get_migration_caps(ref, &_inst, _BROKER);
         } else
-                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "");
 
         *inst = _inst;
 

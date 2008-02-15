@@ -162,7 +162,9 @@ static CMPIStatus get_prof(const CMPIObjectPath *ref,
         if(instance)
                 CMReturnInstance(results, instance);
         else
-                CMSetStatus(&s, CMPI_RC_ERR_NOT_FOUND);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Profile instance not found");
  out:
         virConnectClose(conn);
 

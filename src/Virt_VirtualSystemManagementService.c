@@ -75,8 +75,9 @@ static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                 goto out;
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         return s;
 }
@@ -373,7 +374,9 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
 
         domain = calloc(1, sizeof(*domain));
         if (domain == NULL) {
-                CMSetStatus(s, CMPI_RC_ERR_FAILED);
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to allocate memory");
                 goto out;
         }
 
@@ -492,7 +495,9 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
                         rc.uint32 = IM_RC_OK;
                 } else {
                         rc.uint32 = IM_RC_FAILED;
-                        CMSetStatus(&status, CMPI_RC_ERR_FAILED);
+                        cu_statusf(_BROKER, &status,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Domain already exists");
                 }
                 virDomainFree(dom);
                 trigger_indication(context,
@@ -665,7 +670,9 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
         if (!domain_online(dom)) {
                 CU_DEBUG("VS `%s' not online; skipping dynamic update",
                          dominfo->name);
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
                 goto out;
         }
 
@@ -676,7 +683,9 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
                            CMPI_RC_ERR_FAILED,
                            "Unable to change (%i) device", action);
         } else {
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         }
  out:
         virDomainFree(dom);
@@ -769,7 +778,9 @@ static CMPIStatus resource_add(struct domain *dominfo,
         list = realloc(*_list, ((*count)+1)*sizeof(struct virt_device));
         if (list == NULL) {
                 /* No memory */
-                CMSetStatus(&s, CMPI_RC_ERR_FAILED);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to allocate memory");
                 goto out;
         }
 
@@ -786,7 +797,9 @@ static CMPIStatus resource_add(struct domain *dominfo,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
         (*count)++;
 
  out:
@@ -1038,7 +1051,9 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
                                  REF2STR(ref));
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
         *ret_arr = tmp_arr;
 
         return s;
@@ -1220,8 +1235,9 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                         goto out;
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
-
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
  out:
         virConnectClose(conn);
         *_inst = inst;

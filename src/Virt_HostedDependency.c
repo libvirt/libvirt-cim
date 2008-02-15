@@ -70,14 +70,18 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
 
         ret = enum_domains(_BROKER, conn, NAMESPACE(ref), list);
         if (ret) {
-                CMSetStatus(&s, CMPI_RC_OK);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_OK,
+                           "");
         } else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to get domain list");
         }
 
-        CMSetStatus(&s, CMPI_RC_OK);
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_OK,
+                   "");
 
         return s;
 }
