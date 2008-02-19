@@ -847,7 +847,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *ref)
 {
-        return return_vsms(ref, results, true, false, false);
+        return return_vsms(ref, results, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -857,7 +857,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_vsms(ref, results, false, false, false);
+        return return_vsms(ref, results, false, false);
 }
 
 
@@ -867,7 +867,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *ref,
                               const char **properties)
 {
-        return return_vsms(ref, results, false, true, true);
+        return return_vsms(ref, results, false, true);
 }
 
 DEFAULT_CI();

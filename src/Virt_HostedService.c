@@ -51,7 +51,7 @@ static CMPIStatus validate_service_ref(const CMPIObjectPath *ref)
         } else if (STREQC(classname, "ResourcePoolConfigurationService")) {
                 s = get_rpcs(ref, &inst, _BROKER, true);
         } else if (STREQC(classname, "VirtualSystemMigrationService")) {
-                s = get_migration_service(ref, &inst, _BROKER);
+                s = get_migration_service(ref, &inst, _BROKER, true);
         }
         
         if (s.rc != CMPI_RC_OK)
@@ -117,7 +117,7 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         if (!CMIsNullObject(inst))
             inst_list_add(list, inst);
 
-        s = get_migration_service(ref, &inst, _BROKER);
+        s = get_migration_service(ref, &inst, _BROKER, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
