@@ -175,7 +175,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_vsm_cap(reference, results, true, false);
+        return return_vsm_cap(reference, results, false, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
