@@ -66,7 +66,7 @@ static CMPIStatus validate_caps_get_service(const CMPIObjectPath *ref,
 
                 s = get_vsms(ref, &_inst, _BROKER, false);
         } else if (STREQC(classname, "VirtualSystemMigrationCapabilities")) {
-                s = get_migration_caps(ref, &_inst, _BROKER);
+                s = get_migration_caps(ref, &_inst, _BROKER, true);
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
@@ -107,7 +107,7 @@ static CMPIStatus validate_service_get_caps(const CMPIObjectPath *ref,
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
-                s = get_migration_caps(ref, &_inst, _BROKER);
+                s = get_migration_caps(ref, &_inst, _BROKER, false);
         } else
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
@@ -139,7 +139,7 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
-        s = get_migration_caps(ref, &inst, _BROKER);
+        s = get_migration_caps(ref, &inst, _BROKER, false);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
