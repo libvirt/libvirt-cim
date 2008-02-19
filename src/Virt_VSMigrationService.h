@@ -21,7 +21,8 @@
 
 CMPIStatus get_migration_service(const CMPIObjectPath *reference,
                                  CMPIInstance **_inst,
-                                 const CMPIBroker *broker);
+                                 const CMPIBroker *broker,
+                                 bool is_get_inst);
 
 /*
  * Local Variables:
