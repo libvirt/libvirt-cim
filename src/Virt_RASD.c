@@ -34,6 +34,7 @@
 
 #include "device_parsing.h"
 #include "misc_util.h"
+#include "cs_util.h"
 
 #include "Virt_RASD.h"
 #include "svpc_types.h"
@@ -442,6 +443,100 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
         return rc;
 }
 
+static CMPIStatus _enum_rasds(const CMPIObjectPath *ref,
+                              struct inst_list *list)
+{
+        virConnectPtr conn = NULL;
+        virDomainPtr *domains = NULL;
+        int count;
+        int i, j;
+        uint16_t type;
+        CMPIStatus s;
+        uint16_t types[] = {CIM_RASD_TYPE_PROC,
+                            CIM_RASD_TYPE_DISK,
+                            CIM_RASD_TYPE_NET,
+                            CIM_RASD_TYPE_MEM,
+                            0};
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return s;
+
+        count = get_domain_list(conn, &domains);
+        if (count <= 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get domain list");
+                goto out;
+        }
+
+        if (rasd_type_from_classname(CLASSNAME(ref), &type) == CMPI_RC_OK) {
+                types[0] = type;
+                types[1] = 0;
+        }
+
+        for (i = 0; i < count; i++) {
+                for (j = 0; types[j] != 0; j++) {
+                        CU_DEBUG("Doing RASD type %i for %s",
+                                  type, virDomainGetName(domains[i]));
+                        rasds_for_domain(_BROKER,
+                                         virDomainGetName(domains[i]),
+                                         types[j],
+                                         ref,
+                                         list);
+                }
+                virDomainFree(domains[i]);
+        }
+
+        s = (CMPIStatus){CMPI_RC_OK, NULL};
+
+ out:
+        virConnectClose(conn);
+        free(domains);
+
+        return s;
+}
+
+static CMPIStatus return_enum_rasds(const CMPIObjectPath *ref,
+                                    const CMPIResult *results,
+                                    const bool names_only)
+{
+        struct inst_list list;
+        CMPIStatus s;
+
+        inst_list_init(&list);
+
+        s = _enum_rasds(ref, &list);
+        if (s.rc == CMPI_RC_OK) {
+                if (names_only)
+                        cu_return_instance_names(results, &list);
+                else
+                        cu_return_instances(results, &list);
+        }
+
+        inst_list_free(&list);
+
+        return s;
+}
+
+static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
+                                    const CMPIContext *context,
+                                    const CMPIResult *results,
+                                    const CMPIObjectPath *reference)
+{
+        return return_enum_rasds(reference, results, true);
+}
+
+static CMPIStatus EnumInstances(CMPIInstanceMI *self,
+                                const CMPIContext *context,
+                                const CMPIResult *results,
+                                const CMPIObjectPath *reference,
+                                const char **properties)
+{
+
+        return return_enum_rasds(reference, results, false);
+}
+
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIContext *context,
                               const CMPIResult *results,
@@ -516,8 +611,6 @@ int rasds_for_domain(const CMPIBroker *broker,
 DEFAULT_CI();
 DEFAULT_MI();
 DEFAULT_DI();
-DEFAULT_EI();
-DEFAULT_EIN();
 DEFAULT_INST_CLEANUP();
 DEFAULT_EQ();
 
