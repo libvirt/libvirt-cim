@@ -46,15 +46,11 @@ enum {ADD_RESOURCES = 1,
                          
 
 static CMPIStatus set_inst_properties(const CMPIBroker *broker,
-                                      CMPIInstance *inst,
-                                      const char *classname)
+                                      CMPIInstance *inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIArray *array;
         uint16_t element;
-
-        CMSetProperty(inst, "CreationClassName",
-                      (CMPIValue *)classname, CMPI_chars);
 
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)"ManagementCapabilities", CMPI_chars);
@@ -83,13 +79,12 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
 CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                        const CMPIObjectPath *ref,
-                       CMPIInstance **inst,
+                       CMPIInstance **_inst,
                        bool is_get_inst)
 {
-        CMPIStatus s;
-        CMPIObjectPath *op;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
         virConnectPtr conn = NULL;
-        char *classname = NULL;
 
         conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL) {
@@ -100,41 +95,26 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                 goto out;
         }
 
-        classname = get_typed_class(CLASSNAME(ref),
-                                    "VirtualSystemManagementCapabilities");
-        if (classname == NULL) {
-                cu_statusf(broker, &s,
+        inst = get_typed_instance(_BROKER,
+                                  pfx_from_conn(conn),
+                                  "VirtualSystemManagementCapabilities",
+                                  NAMESPACE(ref));
+        if (inst == NULL)
+                cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Invalid class");
-                goto out;
-        }
+                           "Can't create VirtualSystemManagementCapabilities instance");
 
-        op = CMNewObjectPath(broker, NAMESPACE(ref), classname, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op)) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Cannot get object path for VSMCapabilities");
-                goto out;
-        }
-
-        *inst = CMNewInstance(broker, op, &s);
-        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(*inst))) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to instantiate HostSystem");
-                goto out;
-        }
-
-        s = set_inst_properties(broker, *inst, classname);
+        s = set_inst_properties(broker, inst);
 
         if (is_get_inst) {
-                s = cu_validate_ref(broker, ref, *inst);
+                s = cu_validate_ref(broker, ref, inst);
                 if (s.rc != CMPI_RC_OK)
                         goto out;
         }
 
+        *_inst = inst;
+
  out:
-        free(classname);
         virConnectClose(conn);
 
         return s;
