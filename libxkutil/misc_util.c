@@ -236,6 +236,7 @@ CMPIInstance *get_typed_instance(const CMPIBroker *broker,
         CMPIObjectPath *op;
         CMPIInstance *inst = NULL;
         CMPIStatus s;
+        CMPIData data;
 
         new_cn = get_typed_class(refcn, base);
         if (new_cn == NULL)
@@ -248,9 +249,11 @@ CMPIInstance *get_typed_instance(const CMPIBroker *broker,
         inst = CMNewInstance(broker, op, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(inst))
                 goto out;
-
-        CMSetProperty(inst, "CreationClassName",
-                      (CMPIValue *)new_cn, CMPI_chars);
+        
+        data = CMGetProperty(inst, "CreationClassName", &s);
+        if (s.rc == CMPI_RC_OK)
+                CMSetProperty(inst, "CreationClassName",
+                              (CMPIValue *)new_cn, CMPI_chars);
 
  out:
         free(new_cn);
