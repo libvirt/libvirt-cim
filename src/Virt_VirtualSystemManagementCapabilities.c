@@ -95,14 +95,16 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                 goto out;
         }
 
-        inst = get_typed_instance(_BROKER,
+        inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "VirtualSystemManagementCapabilities",
                                   NAMESPACE(ref));
-        if (inst == NULL)
-                cu_statusf(_BROKER, &s,
+        if (inst == NULL) {
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Can't create VirtualSystemManagementCapabilities instance");
+                           "Can't create instance for %s", CLASSNAME(ref));
+                goto out;
+        }
 
         s = set_inst_properties(broker, inst);
 
