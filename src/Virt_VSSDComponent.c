@@ -66,6 +66,7 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
                                  name,
                                  types[i],
                                  ref,
+                                 info->properties,
                                  list);
         }
 

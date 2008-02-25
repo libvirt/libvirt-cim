@@ -98,6 +98,7 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
                                name,
                                device_type_from_classname(CLASSNAME(ref)),
                                ref,
+                               info->properties,
                                &rasds);
 
         rasd = find_rasd(&rasds, id);
@@ -180,7 +181,7 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
         
-        s = get_rasd_by_name(_BROKER, ref, id, type, &inst);
+        s = get_rasd_by_name(_BROKER, ref, id, type, NULL, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 

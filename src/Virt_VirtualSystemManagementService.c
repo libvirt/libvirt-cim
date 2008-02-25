@@ -1041,7 +1041,7 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
                         continue;
                 }
 
-                s = get_rasd_by_name(_BROKER, reference, id, type, &inst);
+                s = get_rasd_by_name(_BROKER, reference, id, type, NULL, &inst);
                 if (s.rc != CMPI_RC_OK)
                         continue;
 

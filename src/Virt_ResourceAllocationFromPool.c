@@ -66,7 +66,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = get_rasd_by_name(_BROKER, ref, id, type, &inst);
+        s = get_rasd_by_name(_BROKER, ref, id, type, NULL, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -138,6 +138,7 @@ static int filter_by_pool(struct inst_list *dest,
 static int rasds_from_pool(uint16_t type,
                            const CMPIObjectPath *ref,
                            const char *poolid,
+                           const char **properties,
                            struct inst_list *list)
 {
         CMPIStatus s;
@@ -164,6 +165,7 @@ static int rasds_from_pool(uint16_t type,
                                  name,
                                  type,
                                  ref,
+                                 properties,
                                  &tmp);
 
                 filter_by_pool(list, &tmp, poolid);
@@ -213,6 +215,7 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
         rasds_from_pool(type, 
                         ref,
                         poolid,
+                        info->properties,
                         list);
 
         cu_statusf(_BROKER, &s,

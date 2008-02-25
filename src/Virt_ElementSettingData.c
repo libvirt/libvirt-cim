@@ -98,7 +98,7 @@ static CMPIStatus rasd_to_rasd(const CMPIObjectPath *ref,
         /* Special association case: 
          * RASD instance is pointing to itself
          */
-        s = get_rasd_by_ref(_BROKER, ref, &inst);
+        s = get_rasd_by_ref(_BROKER, ref, info->properties, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
         
