@@ -1000,7 +1000,7 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
                                      CMPIArray *arr,
                                      CMPIArray **ret_arr)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIArray *tmp_arr;
         int i;
         int c;
@@ -1017,7 +1017,7 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
         for (i = 0; i < c; i++) {
                 CMPIData d;
                 CMPIObjectPath *ref;
-                CMPIInstance *inst;
+                CMPIInstance *inst = NULL;
                 const char *id;
                 uint16_t type;
 
@@ -1041,21 +1041,18 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
                         continue;
                 }
 
-                inst = get_rasd_instance(ctx, reference, _BROKER, id, type);
-                if (inst != NULL)
-                        CMSetArrayElementAt(tmp_arr, i,
-                                            &inst,
-                                            CMPI_instance);
-                else
-                        CU_DEBUG("Failed to get instance for `%s'",
-                                 REF2STR(ref));
+                s = get_rasd_by_name(_BROKER, reference, id, type, &inst);
+                if (s.rc != CMPI_RC_OK)
+                        continue;
+
+                CMSetArrayElementAt(tmp_arr, i,
+                                    &inst,
+                                    CMPI_instance);
+                
         }
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
         *ret_arr = tmp_arr;
-
+        
         return s;
 }
 
