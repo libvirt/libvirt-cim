@@ -37,28 +37,6 @@
 
 const static CMPIBroker *_BROKER;
 
-static CMPIStatus validate_rasd_ref(const CMPIContext *context,
-                                    const CMPIObjectPath *ref,
-                                    uint16_t type,
-                                    const char *id)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *rasd = NULL;
-
-        rasd = get_rasd_instance(context,
-                                 ref, 
-                                 _BROKER, 
-                                 id, 
-                                 type);
-
-        if (CMIsNullObject(rasd))
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", id);
-
-        return s;
-}
-
 static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
@@ -69,6 +47,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
         char *poolid = NULL;
         virConnectPtr conn = NULL;
         CMPIInstance *pool = NULL;
+        CMPIInstance *inst = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -87,10 +66,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = validate_rasd_ref(info->context,
-                              ref,
-                              type,
-                              id);
+        s = get_rasd_by_name(_BROKER, ref, id, type, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
