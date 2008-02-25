@@ -59,36 +59,14 @@ static bool lifecycle_enabled = 0;
 #define WAIT_TIME 180
 #define FAIL_WAIT_TIME 2
 
-#ifdef CMPI_EI_VOID
-# define _EI_RTYPE void
-# define _EI_RET() return
-#else
-# define _EI_RTYPE CMPIStatus
-# define _EI_RET() return (CMPIStatus){CMPI_RC_OK, NULL}
-#endif
-
 struct dom_xml {
         char uuid[VIR_UUID_STRING_BUFLEN];
         char *xml;
 };
 
-struct ind_args {
-        CMPIContext *context;
-        char *ns;
-        char *classname;
-};
-
 static void free_dom_xml (struct dom_xml dom)
 {
         free(dom.xml);
-}
-
-static void free_ind_args (struct ind_args **args)
-{
-        free((*args)->ns);
-        free((*args)->classname);
-        free(*args);
-        *args = NULL;
 }
 
 static char *sys_name_from_xml(char *xml)
@@ -168,7 +146,7 @@ static bool _do_indication(const CMPIBroker *broker,
                            int ind_type,
                            const char *ind_type_name,
                            char *prefix,
-                           char *ns)
+                           struct ind_args *args)
 {
         CMPIObjectPath *affected_op;
         CMPIObjectPath *ind_op;
@@ -179,13 +157,13 @@ static bool _do_indication(const CMPIBroker *broker,
         ind = get_typed_instance(broker,
                                  prefix,
                                  ind_type_name,
-                                 ns);
+                                 args->ns);
 
         /* Generally report errors and hope to continue, since we have no one 
            to actually return status to. */
         if (ind == NULL) {
                 CU_DEBUG("Failed to create ind, type '%s:%s_%s'", 
-                         ns,
+                         args->ns,
                          prefix,
                          ind_type_name);
                 ret = false;
@@ -218,10 +196,7 @@ static bool _do_indication(const CMPIBroker *broker,
         CU_DEBUG("Delivering Indication: %s",
                  CMGetCharPtr(CMObjectPathToString(ind_op, NULL)));
 
-        CBDeliverIndication(broker,
-                            ctx,
-                            ns,
-                            ind);
+        stdi_deliver(broker, ctx, args, ind);
         CU_DEBUG("Delivered");
 
  out:
@@ -261,7 +236,7 @@ static bool async_ind(CMPIContext *context,
                       int ind_type,
                       struct dom_xml prev_dom,
                       char *prefix,
-                      char *ns)
+                      struct ind_args *args)
 {
         bool rc;
         char *name = NULL;
@@ -271,7 +246,7 @@ static bool async_ind(CMPIContext *context,
         affected_inst = get_typed_instance(_BROKER,
                                            prefix,
                                            "ComputerSystem",
-                                           ns);
+                                           args->ns);
 
         name = sys_name_from_xml(prev_dom.xml);
         CU_DEBUG("Name for system: '%s'", name);
@@ -298,7 +273,7 @@ static bool async_ind(CMPIContext *context,
                       (CMPIValue *)prev_dom.uuid, CMPI_chars);
 
         rc = _do_indication(_BROKER, context, affected_inst, 
-                            ind_type, type_name, prefix, ns);
+                            ind_type, type_name, prefix, args);
 
  out:
         free(name);
@@ -317,7 +292,6 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         struct dom_xml *prev_xml = NULL;
         virConnectPtr conn;
         char *prefix = class_prefix_name(args->classname);
-        char *ns = args->ns;
 
         conn = connect_by_classname(_BROKER, args->classname, &s);
         if (conn == NULL) {
@@ -358,7 +332,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
                         res = dom_in_list(cur_xml[i].uuid, prev_count, prev_xml);
                         if (!res)
                                 async_ind(context, conn, CS_CREATED,
-                                          cur_xml[i], prefix, ns);
+                                          cur_xml[i], prefix, args);
 
                 }
 
@@ -366,14 +340,14 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
                         res = dom_in_list(prev_xml[i].uuid, cur_count, cur_xml);
                         if (!res)
                                 async_ind(context, conn, CS_DELETED, 
-                                          prev_xml[i], prefix, ns);
+                                          prev_xml[i], prefix, args);
                 }
 
                 for (i = 0; i < prev_count; i++) {
                         res = dom_changed(prev_xml[i], cur_xml, cur_count);
                         if (res) {
                                 async_ind(context, conn, CS_MODIFIED, 
-                                          prev_xml[i], prefix, ns);
+                                          prev_xml[i], prefix, args);
 
                         }
                         free_dom_xml(prev_xml[i]);
@@ -393,7 +367,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
 
  out:
         pthread_mutex_unlock(&lifecycle_mutex);
-        free_ind_args(&args);
+        stdi_free_ind_args(&args);
         free(prefix);
         virConnectClose(conn);
 
@@ -411,7 +385,10 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
 {
         CU_DEBUG("ActivateFilter");
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        struct std_indication_ctx *_ctx;
         struct ind_args *args = malloc(sizeof(struct ind_args));
+
+        _ctx = (struct std_indication_ctx *)mi->hdl;
 
         if (CMIsNullObject(op)) {
                 cu_statusf(_BROKER, &s, 
@@ -421,6 +398,7 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
         }
         args->ns = strdup(NAMESPACE(op));
         args->classname = strdup(CLASSNAME(op));
+        args->_ctx = _ctx;
 
         if (lifecycle_thread_id == 0) {
                 args->context = CBPrepareAttachThread(_BROKER, ctx);
@@ -451,8 +429,6 @@ static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
         lifecycle_enabled = true;
         pthread_mutex_unlock(&lifecycle_mutex);
 
-        CU_DEBUG("ComputerSystemIndication enabled");
-
         _EI_RET();
 }
 
@@ -462,8 +438,6 @@ static _EI_RTYPE DisableIndications(CMPIIndicationMI* mi,
         pthread_mutex_lock(&lifecycle_mutex);
         lifecycle_enabled = false;
         pthread_mutex_unlock(&lifecycle_mutex);
-
-        CU_DEBUG("ComputerSystemIndication disabled");
 
         _EI_RET();
 }
@@ -478,17 +452,34 @@ static CMPIStatus trigger_indication(const CMPIContext *context)
 static struct std_indication_handler csi = {
         .raise_fn = NULL,
         .trigger_fn = trigger_indication,
+        .activate_fn = ActivateFilter,
+        .deactivate_fn = DeActivateFilter,
+        .enable_fn = EnableIndications,
+        .disable_fn = DisableIndications,
 };
+
+DECLARE_FILTER(xen_created, "Xen_ComputerSystemCreatedIndication");
+DECLARE_FILTER(xen_deleted, "Xen_ComputerSystemDeletedIndication");
+DECLARE_FILTER(xen_modified, "Xen_ComputerSystemModifiedIndication");
+
+static struct std_ind_filter *filters[] = {
+        &xen_created,
+        &xen_deleted,
+        &xen_modified,
+        NULL,
+};
+
 
 DEFAULT_IND_CLEANUP();
 DEFAULT_AF();
 DEFAULT_MP();
 
 STDI_IndicationMIStub(, 
-                      Virt_ComputerSystemIndication,
+                      Virt_ComputerSystemIndicationProvider,
                       _BROKER,
                       libvirt_cim_init(), 
-                      &csi);
+                      &csi,
+                      filters);
 
 /*
  * Local Variables:
