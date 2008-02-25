@@ -42,61 +42,11 @@
 
 static const CMPIBroker *_BROKER;
 
-#ifdef CMPI_EI_VOID
-# define _EI_RTYPE void
-# define _EI_RET() return
-#else
-# define _EI_RTYPE CMPIStatus
-# define _EI_RET() return (CMPIStatus){CMPI_RC_OK, NULL}
-#endif
+DECLARE_FILTER(xen_migrate, "Xen_ComputerSystemMigrationIndication");
 
-static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
-                                 const CMPIContext* ctx,
-                                 const CMPISelectExp* se,
-                                 const char *ns,
-                                 const CMPIObjectPath* op,
-                                 CMPIBoolean first)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-
-        return s;
-}
-
-static CMPIStatus DeActivateFilter(CMPIIndicationMI* mi,
-                                   const CMPIContext* ctx,
-                                   const CMPISelectExp* se,
-                                   const  char *ns,
-                                   const CMPIObjectPath* op,
-                                   CMPIBoolean last)
-{
-        return (CMPIStatus){CMPI_RC_OK, NULL};
-}
-
-static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
-                                   const CMPIContext *ctx)
-{
-        struct std_indication_ctx *_ctx;
-        _ctx = (struct std_indication_ctx *)mi->hdl;
-        _ctx->enabled = true;
-        CU_DEBUG("ComputerSystemModifiedIndication enabled");
-
-        _EI_RET();
-}
-
-static _EI_RTYPE DisableIndications(CMPIIndicationMI* mi,
-                                    const CMPIContext *ctx)
-{
-        struct std_indication_ctx *_ctx;
-        _ctx = (struct std_indication_ctx *)mi->hdl;
-        _ctx->enabled = false;
-        CU_DEBUG("ComputerSystemModifiedIndication disabled");
-
-        _EI_RET();
-}
-
-static struct std_indication_handler csi = {
-        .raise_fn = NULL,
-        .trigger_fn = NULL,
+static struct std_ind_filter *filters[] = {
+        &xen_migrate,
+        NULL,
 };
 
 DEFAULT_IND_CLEANUP();
@@ -104,10 +54,11 @@ DEFAULT_AF();
 DEFAULT_MP();
 
 STDI_IndicationMIStub(, 
-                      Virt_ComputerSystemMigrationIndication,
+                      Virt_ComputerSystemMigrationIndicationProvider,
                       _BROKER,
                       libvirt_cim_init(), 
-                      &csi);
+                      NULL,
+                      filters);
 
 /*
  * Local Variables:
