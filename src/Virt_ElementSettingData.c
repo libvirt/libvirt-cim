@@ -90,38 +90,20 @@ static CMPIStatus rasd_to_rasd(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst;
-        const char *id = NULL;
-        uint16_t type;
+        CMPIInstance *inst = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
+        /* Special association case: 
+         * RASD instance is pointing to itself
+         */
+        s = get_rasd_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
-
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to determine RASD type");
-                goto out;
-        }
-
-        inst = get_rasd_instance(info->context, ref, _BROKER, id, type);
-        if (inst == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Error getting associated RASD");
-
-                goto out;
-        }
-
+        
         inst_list_add(list, inst);
-
+        
  out:
         return s;
 }
