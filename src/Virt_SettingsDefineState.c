@@ -159,6 +159,7 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *dev = NULL;
+        CMPIInstance *inst = NULL;
         const char *id = NULL;
         uint16_t type;
 
@@ -178,6 +179,10 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                            "Missing ResourceType");
                 goto out;
         }
+        
+        s = get_rasd_by_name(_BROKER, ref, id, type, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         dev = _get_typed_device(id, type, ref, &s);
         if (dev == NULL)
@@ -185,9 +190,6 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
 
         inst_list_add(list, dev);
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
  out:
         return s;
 }
