@@ -42,11 +42,15 @@ int rasds_for_domain(const CMPIBroker *broker,
 CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type);
 CMPIrc rasd_classname_from_type(uint16_t type, const char **cn);
 
-CMPIInstance *get_rasd_instance(const CMPIContext *context,
-                                const CMPIObjectPath *ref,
-                                const CMPIBroker *broker,
-                                const char *id,
-                                const uint16_t type);
+CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            const char *name,
+                            const uint16_t type,
+                            CMPIInstance **_inst);
+
+CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
+                           const CMPIObjectPath *reference,
+                           CMPIInstance **_inst);
 
 #endif
 

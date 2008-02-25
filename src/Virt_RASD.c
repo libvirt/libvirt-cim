@@ -357,38 +357,97 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         return inst;
 }
 
-CMPIInstance *get_rasd_instance(const CMPIContext *context,
-                                const CMPIObjectPath *ref,
-                                const CMPIBroker *broker,
-                                const char *id,
-                                const uint16_t type)
+CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            const char *name,
+                            const uint16_t type,
+                            CMPIInstance **_inst)
 {
         CMPIInstance *inst = NULL;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret;
         char *host = NULL;
         char *devid = NULL;
         virConnectPtr conn = NULL;
         struct virt_device *dev;
 
-        ret = parse_fq_devid((char *)id, &host, &devid);
-        if (!ret)
-                return NULL;
-
-        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
                 goto out;
+        }
+        
+        ret = parse_fq_devid((char *)name, &host, &devid);
+        if (ret != 1) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", 
+                           name);
+                goto out;
+        }
 
         dev = find_dev(conn, type, host, devid);
-        if (dev)
-                inst = rasd_from_vdev(broker, dev, host, ref);
+        if (!dev) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", 
+                           name);
+                goto out;
+        }
 
+        inst = rasd_from_vdev(broker, dev, host, reference);
+        if (inst == NULL)
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to set instance properties");
+        else
+                *_inst = inst;
+        
  out:
         virConnectClose(conn);
         free(host);
         free(devid);
 
-        return inst;
+        return s;
+}
+
+CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
+                           const CMPIObjectPath *reference,
+                           CMPIInstance **_inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        const char *name = NULL;
+        uint16_t type;
+
+        if (cu_get_str_path(reference, "InstanceID", &name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }
+
+        if (rasd_type_from_classname(CLASSNAME(reference), &type) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine RASD type");
+                goto out;
+        }
+
+        s = get_rasd_by_name(broker, reference, name, type, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        s = cu_validate_ref(broker, reference, inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *_inst = inst;
+        
+ out:
+        return s;
 }
 
 CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type)
@@ -544,32 +603,14 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const char **properties)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst;
-        const char *id = NULL;
-        uint16_t type;
+        CMPIInstance *inst = NULL;
 
-        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
+        s = get_rasd_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
 
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to determine RASD type");
-                goto out;
-        }
+        CMReturnInstance(results, inst);
 
-        inst = get_rasd_instance(context, ref, _BROKER, id, type);
-
-        if (inst != NULL)
-                CMReturnInstance(results, inst);
-        else
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", id);
  out:
         return s;
 }
