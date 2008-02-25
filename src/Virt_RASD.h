@@ -37,6 +37,7 @@ int rasds_for_domain(const CMPIBroker *broker,
                      const char *name,
                      const uint16_t type,
                      const CMPIObjectPath *ref,
+                     const char **properties,
                      struct inst_list *_list);
 
 CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type);
@@ -46,10 +47,12 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
                             const CMPIObjectPath *reference,
                             const char *name,
                             const uint16_t type,
+                            const char **properties,
                             CMPIInstance **_inst);
 
 CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
                            const CMPIObjectPath *reference,
+                           const char **properties,
                            CMPIInstance **_inst);
 
 #endif

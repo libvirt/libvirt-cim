@@ -283,8 +283,10 @@ static CMPIStatus proc_rasd_from_vdev(const CMPIBroker *broker,
 static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                     struct virt_device *dev,
                                     const char *host,
-                                    const CMPIObjectPath *ref)
+                                    const CMPIObjectPath *ref,
+                                    const char **properties)
 {
+        CMPIStatus s;
         CMPIInstance *inst;
         uint16_t type;
         char *base;
@@ -312,6 +314,12 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                   NAMESPACE(ref));
         if (inst == NULL)
                 return inst;
+
+        const char *keys[] = {"InstanceID", NULL};
+        s = CMSetPropertyFilter(inst, properties, keys);
+
+        if (s.rc != CMPI_RC_OK)
+                CU_DEBUG("Unable to set property filter: %d", s.rc);
 
         id = get_fq_devid((char *)host, dev->id);
 
@@ -361,6 +369,7 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
                             const CMPIObjectPath *reference,
                             const char *name,
                             const uint16_t type,
+                            const char **properties,
                             CMPIInstance **_inst)
 {
         CMPIInstance *inst = NULL;
@@ -397,7 +406,7 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
                 goto out;
         }
 
-        inst = rasd_from_vdev(broker, dev, host, reference);
+        inst = rasd_from_vdev(broker, dev, host, reference, properties);
         if (inst == NULL)
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -415,6 +424,7 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
 
 CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
                            const CMPIObjectPath *reference,
+                           const char **properties,
                            CMPIInstance **_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -436,7 +446,7 @@ CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
                 goto out;
         }
 
-        s = get_rasd_by_name(broker, reference, name, type, &inst);
+        s = get_rasd_by_name(broker, reference, name, type, properties, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
         
@@ -503,6 +513,7 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
 }
 
 static CMPIStatus _enum_rasds(const CMPIObjectPath *ref,
+                              const char **properties,
                               struct inst_list *list)
 {
         virConnectPtr conn = NULL;
@@ -542,6 +553,7 @@ static CMPIStatus _enum_rasds(const CMPIObjectPath *ref,
                                          virDomainGetName(domains[i]),
                                          types[j],
                                          ref,
+                                         properties,
                                          list);
                 }
                 virDomainFree(domains[i]);
@@ -558,6 +570,7 @@ static CMPIStatus _enum_rasds(const CMPIObjectPath *ref,
 
 static CMPIStatus return_enum_rasds(const CMPIObjectPath *ref,
                                     const CMPIResult *results,
+                                    const char **properties,
                                     const bool names_only)
 {
         struct inst_list list;
@@ -565,7 +578,7 @@ static CMPIStatus return_enum_rasds(const CMPIObjectPath *ref,
 
         inst_list_init(&list);
 
-        s = _enum_rasds(ref, &list);
+        s = _enum_rasds(ref, properties, &list);
         if (s.rc == CMPI_RC_OK) {
                 if (names_only)
                         cu_return_instance_names(results, &list);
@@ -583,7 +596,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_enum_rasds(reference, results, true);
+        return return_enum_rasds(reference, results, NULL, true);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -593,7 +606,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_enum_rasds(reference, results, false);
+        return return_enum_rasds(reference, results, properties, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -605,7 +618,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
 
-        s = get_rasd_by_ref(_BROKER, ref, &inst);
+        s = get_rasd_by_ref(_BROKER, ref, properties, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -619,6 +632,7 @@ int rasds_for_domain(const CMPIBroker *broker,
                      const char *name,
                      const uint16_t type,
                      const CMPIObjectPath *ref,
+                     const char **properties,
                      struct inst_list *_list)
 {
         struct virt_device *list;
@@ -636,7 +650,7 @@ int rasds_for_domain(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 CMPIInstance *inst;
 
-                inst = rasd_from_vdev(broker, &list[i], name, ref);
+                inst = rasd_from_vdev(broker, &list[i], name, ref, properties);
                 if (inst != NULL)
                         inst_list_add(_list, inst);
         }
