@@ -216,7 +216,7 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = get_ele_cap(_BROKER, ref, sys_name, &inst);
+        s = get_elec_by_name(_BROKER, ref, sys_name, &inst);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
@@ -234,6 +234,10 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!match_hypervisor_prefix(ref, info))
+                goto out;
+
+        s = get_elec_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
