@@ -39,119 +39,41 @@
 
 const static CMPIBroker *_BROKER;
 
-static CMPIInstance *find_rasd(struct inst_list *list,
-                               const char *devid)
-{
-        int i;
-        CMPIInstance *inst;
-
-        for (i = 0; i < list->cur; i++) {
-                const char *id;
-                int ret;
-
-                inst = list->list[i];
-
-                ret = cu_get_str_prop(inst, "InstanceID", &id);
-                if (ret != CMPI_RC_OK)
-                        continue;
-
-                if (STREQ(id, devid))
-                        return inst;
-        }
-
-        return NULL;
-}
-
 static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *rasd;
-        struct inst_list rasds;
-        const char *id = NULL;
-        char *name = NULL;
-        char *devid = NULL;
-        int ret;
+        CMPIInstance *inst = NULL;
+        const char *name = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        inst_list_init(&rasds);
+        s = get_device_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
-        if (cu_get_str_path(ref, "DeviceID", &id) != CMPI_RC_OK) {
+        if (cu_get_str_path(ref, "DeviceID", &name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing DeviceID");
                 goto out;
-        }
+        }        
 
-        ret = parse_fq_devid(id, &name, &devid);
-        if (!ret) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Invalid DeviceID");
+        s = get_rasd_by_name(_BROKER,
+                             ref,
+                             name,
+                             device_type_from_classname(CLASSNAME(ref)),
+                             NULL,
+                             &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
 
-        ret = rasds_for_domain(_BROKER,
-                               name,
-                               device_type_from_classname(CLASSNAME(ref)),
-                               ref,
-                               info->properties,
-                               &rasds);
+        inst_list_add(list, inst);
 
-        rasd = find_rasd(&rasds, id);
-        if (rasd != NULL)
-                inst_list_add(list, rasd);
-
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
  out:
-        free(name);
-        free(devid);
-
         return s;
-}
-
-static CMPIInstance *_get_typed_device(const char *id,
-                                       int type,
-                                       const CMPIObjectPath *ref,
-                                       CMPIStatus *s)
-{
-        virConnectPtr conn = NULL;
-        CMPIInstance *dev = NULL;
-        const char *typestr;
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
-        if (conn == NULL)
-                goto out;
-
-        if (type == CIM_RASD_TYPE_DISK)
-                typestr = "LogicalDisk";
-        else if (type == CIM_RASD_TYPE_MEM)
-                typestr = "Memory";
-        else if (type == CIM_RASD_TYPE_PROC)
-                typestr = "Processor";
-        else if (type == CIM_RASD_TYPE_NET)
-                typestr = "NetworkPort";
-        else {
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Invalid device type (%i)", type);
-                goto out;
-        }
-
-        dev = instance_from_devid(_BROKER,
-                                  conn,
-                                  id,
-                                  NAMESPACE(ref),
-                                  device_type_from_classname(typestr));
- out:
-        virConnectClose(conn);
-
-        return dev;
 }
 
 static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
@@ -159,15 +81,18 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                               struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *dev = NULL;
         CMPIInstance *inst = NULL;
-        const char *id = NULL;
+        const char *name = NULL;
         uint16_t type;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
+        s = get_rasd_by_ref(_BROKER, ref, NULL, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        if (cu_get_str_path(ref, "InstanceID", &name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
@@ -180,16 +105,12 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                            "Missing ResourceType");
                 goto out;
         }
-        
-        s = get_rasd_by_name(_BROKER, ref, id, type, NULL, &inst);
+
+        s = get_device_by_name(_BROKER, ref, name, type, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        dev = _get_typed_device(id, type, ref, &s);
-        if (dev == NULL)
-                goto out;
-
-        inst_list_add(list, dev);
+        inst_list_add(list, inst);
 
  out:
         return s;
