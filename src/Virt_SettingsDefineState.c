@@ -199,18 +199,16 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        virConnectPtr conn = NULL;
-        virDomainPtr dom = NULL;
-        const char *name;
-        CMPIInstance *vssd;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *name;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return s;
+        s = get_domain(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "Name", &name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -219,27 +217,14 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        dom = virDomainLookupByName(conn, name);
-        if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such domain `%s'", name);
+        s = get_vssd_by_name(_BROKER, ref, name, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
 
-        vssd = get_vssd_instance(dom, _BROKER, ref);
-        if (vssd != NULL)
-                inst_list_add(list, vssd);
-
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
+        inst_list_add(list, inst);
+        
  out:
-        virDomainFree(dom);
-        virConnectClose(conn);
-
         return s;
-
 }
 
 static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
@@ -253,9 +238,14 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
         virConnectPtr conn = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *cs;
+        CMPIInstance *inst;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
+
+        s = get_vssd_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
