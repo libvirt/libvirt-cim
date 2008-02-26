@@ -46,30 +46,31 @@ int dom_devices(const CMPIBroker *broker,
  *
  * @param broker A pointer to the CIM broker
  * @param reference The object path identifying the instance
- * @param inst Contains the pointer to the instance in case 
+ * @param _inst Contains the pointer to the instance in case 
  *             of success
  * @returns CMPIStatus of the operation
  */
-CMPIStatus get_device(const CMPIBroker *broker,
-                      const CMPIObjectPath *reference,
-                      CMPIInstance **_inst);
+CMPIStatus get_device_by_ref(const CMPIBroker *broker,
+                             const CMPIObjectPath *reference,
+                             CMPIInstance **_inst);
 
 /**
- * Return a device instance for a given devid
+ * Returns the device instance for a given name and type
  *
  * @param broker A pointer to the CIM broker
- * @param conn The libvirt connection to use
- * @param devid The device id
- * @param reference the namespace
- * @returns The instance, or NULL if not found
+ * @param reference The object path containing namespace info
+ * @param name The name "<vm>/<resource>"
+ * @param type The resource type
+ * @param _inst The instance pointer in case of success
+ * @returns The result as CMPIStatus
  */
-CMPIInstance *instance_from_devid(const CMPIBroker *broker,
-                                  virConnectPtr conn,
-                                  const char *devid,
-                                  const char *ns,
-                                  int type);
+CMPIStatus get_device_by_name(const CMPIBroker *broker,
+                              const CMPIObjectPath *reference,
+                              const char *name,
+                              const uint16_t type,
+                              CMPIInstance **_inst);
 
-int device_type_from_classname(const char *classname);
+uint16_t device_type_from_classname(const char *classname);
 
 #endif
 

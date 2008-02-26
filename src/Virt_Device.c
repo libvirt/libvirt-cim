@@ -268,7 +268,7 @@ static CMPIInstance *device_instance(const CMPIBroker *broker,
         return instance;
 }
 
-int device_type_from_classname(const char *classname)
+uint16_t device_type_from_classname(const char *classname)
 {
         if (strstr(classname, "NetworkPort"))
                 return VIRT_DEV_NET;
@@ -419,79 +419,96 @@ static struct virt_device *find_dom_dev(virDomainPtr dom,
         return dev;
 }
 
-CMPIInstance *instance_from_devid(const CMPIBroker *broker,
-                                  virConnectPtr conn,
-                                  const char *devid,
-                                  const char *ns,
-                                  int type)
+CMPIStatus get_device_by_name(const CMPIBroker *broker,
+                              const CMPIObjectPath *reference,
+                              const char *name,
+                              const uint16_t type,
+                              CMPIInstance **_inst)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         char *domain = NULL;
         char *device = NULL;
         CMPIInstance *instance = NULL;
+        virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
         struct virt_device *dev = NULL;
 
-        if (!parse_devid(devid, &domain, &device))
-                return NULL;
-
-        dom = virDomainLookupByName(conn, domain);
-        if (!dom)
-                goto out;
-
-        dev = find_dom_dev(dom, device, type);
-        if (!dev)
-                goto out;
-
-        instance = device_instance(broker, dev, dom, ns);
-        cleanup_virt_device(dev);
-
- out:
-        virDomainFree(dom);
-        free(domain);
-        free(device);
-
-        return instance;        
-}                                       
-
-CMPIStatus get_device(const CMPIBroker *broker,
-                      const CMPIObjectPath *reference,
-                      CMPIInstance **_inst)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        virConnectPtr conn;
-        CMPIInstance *inst;
-        const char *cn;
-        const char *devid;
-
-        cn = CLASSNAME(reference);
-
-        conn = connect_by_classname(broker, cn, &s);
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "No such instance");
                 goto out;
-        }        
+        }
 
-        if (cu_get_str_path(reference, "DeviceID", &devid) != CMPI_RC_OK) {
+        if (parse_devid(name, &domain, &device) != 1) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", 
+                           name);
+                goto out;
+        }
+
+        dom = virDomainLookupByName(conn, domain);
+        if (dom == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           name);
+                goto err;
+        }
+
+        dev = find_dom_dev(dom, device, type);
+        if (!dev) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           name);
+                goto err;
+        }
+
+        instance = device_instance(broker, 
+                                   dev, 
+                                   dom, 
+                                   NAMESPACE(reference));
+        cleanup_virt_device(dev);
+
+        *_inst = instance;
+
+ err:
+        virDomainFree(dom);
+        free(domain);
+        free(device);
+
+ out:
+        virConnectClose(conn);
+
+        return s;        
+}                                       
+
+CMPIStatus get_device_by_ref(const CMPIBroker *broker,
+                             const CMPIObjectPath *reference,
+                             CMPIInstance **_inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        const char *name = NULL;
+
+        if (cu_get_str_path(reference, "DeviceID", &name) != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "No DeviceID specified");
                 goto out;
         }
-
-        inst = instance_from_devid(broker,
-                                   conn,
-                                   devid,
-                                   NAMESPACE(reference),
-                                   device_type_from_classname(cn));
-        if (inst == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", devid);
+        
+        s = get_device_by_name(broker, 
+                               reference, 
+                               name, 
+                               device_type_from_classname(CLASSNAME(reference)), 
+                               &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
-
+        
         s = cu_validate_ref(broker, reference, inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
@@ -499,24 +516,7 @@ CMPIStatus get_device(const CMPIBroker *broker,
         *_inst = inst;
 
  out:
-        virConnectClose(conn);
-
         return s;                
-}
-
-static CMPIStatus return_device(const CMPIResult *results,
-                                const CMPIObjectPath *reference)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst = NULL;
-
-        s = get_device(_BROKER, reference, &inst);
-        if (s.rc != CMPI_RC_OK || inst == NULL)
-                return s;
-
-        CMReturnInstance(results, inst);
-
-        return s;   
 }
 
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
@@ -542,7 +542,17 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_device(results, reference);
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+
+        s = get_device_by_ref(_BROKER, reference, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        CMReturnInstance(results, inst);
+        
+ out:
+        return s;
 }
 
 DEFAULT_CI();
