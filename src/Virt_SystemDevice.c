@@ -184,7 +184,7 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        s = get_device(_BROKER, ref, &inst);
+        s = get_device_by_ref(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
