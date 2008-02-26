@@ -21,8 +21,14 @@
 #ifndef __VIRT_VSSD_H
 #define __VIRT_VSSD_H
 
-CMPIInstance *get_vssd_instance(virDomainPtr dom,
-                                const CMPIBroker *broker,
-                                const CMPIObjectPath *ref);
+CMPIStatus get_vssd_by_ref(const CMPIBroker *broker,
+                           const CMPIObjectPath *reference,
+                           CMPIInstance **_inst);
+
+CMPIStatus get_vssd_by_name(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            const char *name,
+                            CMPIInstance **_inst);
+
 
 #endif

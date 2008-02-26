@@ -135,42 +135,46 @@ static int instance_from_dom(virDomainPtr dom,
         return ret;
 }
 
-CMPIInstance *get_vssd_instance(virDomainPtr dom,
-                                const CMPIBroker *broker,
-                                const CMPIObjectPath *ref)
+static CMPIInstance *_get_vssd(const CMPIBroker *broker,
+                               const CMPIObjectPath *reference,
+                               virConnectPtr conn,
+                               virDomainPtr dom,
+                               CMPIStatus *s)
 {
-        CMPIInstance *inst;
-
+        CMPIInstance *inst = NULL;
+        
         inst = get_typed_instance(broker,
-                                  CLASSNAME(ref),
+                                  pfx_from_conn(conn),
                                   "VirtualSystemSettingData",
-                                  NAMESPACE(ref));
+                                  NAMESPACE(reference));
 
-        if (inst == NULL)
-                return NULL;
-
-        if (instance_from_dom(dom, inst))
-                return inst;
-        else
-                return NULL;
+        if (inst == NULL) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to init VirtualSystemSettingData instance");
+                goto out;
+        }
+        
+        if (instance_from_dom(dom, inst) != 1) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get VSSD instance from Domain");
+        }
+        
+ out:
+        return inst;
 }
 
-static CMPIStatus enum_vssd(const CMPIObjectPath *reference,
-                            const CMPIResult *results,
-                            int names_only)
+static CMPIStatus return_enum_vssd(const CMPIObjectPath *reference,
+                                   const CMPIResult *results,
+                                   bool names_only)
 {
         virConnectPtr conn;
         virDomainPtr *list;
         int count;
         int i;
-        CMPIStatus s;
-        const char *ns;
-
-        if (!provider_is_responsible(_BROKER, reference, &s))
-                return s;
-
-        ns = NAMESPACE(reference);
-
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        
         conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL)
                 return s;
@@ -181,17 +185,14 @@ static CMPIStatus enum_vssd(const CMPIObjectPath *reference,
                            CMPI_RC_ERR_FAILED,
                            "Failed to enumerate domains");
                 goto out;
-        } else if (count == 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_OK,
-                           "");
+        } else if (count == 0)
                 goto out;
-        }
 
         for (i = 0; i < count; i++) {
-                CMPIInstance *inst;
-
-                inst = get_vssd_instance(list[i], _BROKER, reference);
+                CMPIInstance *inst = NULL;
+                
+                inst = _get_vssd(_BROKER, reference, conn, list[i], &s);
+                
                 virDomainFree(list[i]);
                 if (inst == NULL)
                         continue;
@@ -202,39 +203,83 @@ static CMPIStatus enum_vssd(const CMPIObjectPath *reference,
                         CMReturnInstance(results, inst);
         }
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
  out:
         free(list);
 
         return s;
-
 }
 
-static CMPIInstance *get_vssd_for_name(const CMPIObjectPath *reference,
-                                       char *name)
+CMPIStatus get_vssd_by_name(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            const char *name,
+                            CMPIInstance **_inst)
 {
         virConnectPtr conn;
         virDomainPtr dom;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
-        if (conn == NULL)
-                return NULL;
-
-        dom = virDomainLookupByName(conn, name);
-        if (dom == NULL)
+        
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
                 goto out;
-
-        inst = get_vssd_instance(dom, _BROKER, reference);
-
- out:
-        virConnectClose(conn);
+        }
+        
+        dom = virDomainLookupByName(conn, name);
+        if (dom == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           name);
+                goto out;
+        }
+        
+        inst = _get_vssd(broker, reference, conn, dom, &s);
+        
         virDomainFree(dom);
 
-        return inst;
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *_inst = inst;
+        
+ out:
+        virConnectClose(conn);
+
+        return s;
+}
+
+CMPIStatus get_vssd_by_ref(const CMPIBroker *broker,
+                           const CMPIObjectPath *reference,
+                           CMPIInstance **_inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        char *name = NULL;
+        
+        if (!parse_instanceid(reference, NULL, &name)) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (InstanceID)");
+                goto out;
+        }
+        
+        s = get_vssd_by_name(broker, reference, name, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        s = cu_validate_ref(broker, reference, inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *_inst = inst;
+        
+ out:
+        free(name);
+        
+        return s;
 }
 
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
@@ -242,7 +287,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return enum_vssd(reference, results, 1);
+        return return_enum_vssd(reference, results, true);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -251,7 +296,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return enum_vssd(reference, results, 0);
+        return return_enum_vssd(reference, results, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -261,26 +306,15 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const char **properties)
 {
         CMPIStatus s;
-        CMPIInstance *inst;
-        char *locid;
+        CMPIInstance *inst = NULL;
 
-        if (!parse_instanceid(reference, NULL, &locid)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Invalid InstanceID specified");
-                return s;
-        }
+        s = get_vssd_by_ref(_BROKER, reference, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        CMReturnInstance(results, inst);
 
-        inst = get_vssd_for_name(reference, locid);
-        if (inst)
-                CMReturnInstance(results, inst);
-
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
-
-        free(locid);
-
+ out:
         return s;
 }
 
