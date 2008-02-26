@@ -41,6 +41,7 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
         char *name = NULL;
         int i = 0;
         int types[] = {
@@ -52,7 +53,11 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
         };
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
+
+        s = get_vssd_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (!parse_instanceid(ref, NULL, &name)) {
                 cu_statusf(_BROKER, &s,
@@ -70,48 +75,9 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
                                  list);
         }
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
- out:
         free(name);
 
-        return s;
-}
-
-static CMPIStatus vssd_for_name(const char *host,
-                                const CMPIObjectPath *ref,
-                                CMPIInstance **inst)
-{
-        virConnectPtr conn = NULL;
-        virDomainPtr dom = NULL;
-        CMPIStatus s;
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                goto out;
-
-        dom = virDomainLookupByName(conn, host);
-        if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such system `%s'", host);
-                goto out;
-        }
-
-        *inst = get_vssd_instance(dom, _BROKER, ref);
-        if (*inst == NULL)
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Error getting VSSD for `%s'", host);
-        else
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_OK,
-                           "");
  out:
-        virDomainFree(dom);
-        virConnectClose(conn);
-
         return s;
 }
 
@@ -144,9 +110,11 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = vssd_for_name(host, ref, &vssd);
-        if (vssd)
-                inst_list_add(list, vssd);
+        s = get_vssd_by_name(_BROKER, ref, host, &vssd);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        inst_list_add(list, vssd);
 
  out:
         free(host);
