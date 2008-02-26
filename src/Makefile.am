@@ -155,9 +155,9 @@ libVirt_ElementSettingData_la_LIBADD = -lVirt_VSSD -lVirt_RASD
 
 libVirt_VSMigrationCapabilities_la_SOURCES = Virt_VSMigrationCapabilities.c
 
-libVirt_VSMigrationService_la_DEPENDENCIES = libVirt_HostSystem.la
+libVirt_VSMigrationService_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_VSMigrationSettingData.la
 libVirt_VSMigrationService_la_SOURCES = Virt_VSMigrationService.c
-libVirt_VSMigrationService_la_LIBADD = -lVirt_HostSystem
+libVirt_VSMigrationService_la_LIBADD = -lVirt_HostSystem -lVirt_VSMigrationSettingData
 
 libVirt_VSMigrationSettingData_la_SOURCES = Virt_VSMigrationSettingData.c
 

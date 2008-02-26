@@ -38,6 +38,7 @@
 
 #include "Virt_VSMigrationService.h"
 #include "Virt_HostSystem.h"
+#include "Virt_VSMigrationSettingData.h"
 
 #define CIM_JOBSTATE_STARTING 3
 #define CIM_JOBSTATE_RUNNING 4
@@ -56,6 +57,7 @@ struct migration_job {
         char *host;
         char *ref_cn;
         char *ref_ns;
+        uint16_t type;
         char uuid[33];
 };
 
@@ -385,13 +387,35 @@ static void migrate_job_set_state(struct migration_job *job,
                 CU_DEBUG("Failed to raise indication");
 }
 
+static CMPIStatus handle_migrate(virConnectPtr dconn,
+                                 virDomainPtr dom,
+                                 char *uri,
+                                 int type,
+                                 struct migration_job *job)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virDomainPtr ddom = NULL;
+
+        CU_DEBUG("Migrating %s -> %s", job->domain, uri);
+        ddom = virDomainMigrate(dom, dconn, type, NULL, NULL, 0);
+        if (ddom == NULL) {
+                CU_DEBUG("Migration failed");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Migration Failed");
+        }
+
+        virDomainFree(ddom);
+
+        return s;
+}
+
 static CMPIStatus migrate_vs(struct migration_job *job)
 {
         CMPIStatus s;
         virConnectPtr conn = NULL;
         virConnectPtr dconn = NULL;
         virDomainPtr dom = NULL;
-        virDomainPtr ddom = NULL;
         char *uri = NULL;
 
         uri = dest_uri(job->ref_cn, job->host);
@@ -424,25 +448,39 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                 goto out;
         }
 
-        CU_DEBUG("Migrating %s -> %s", job->domain, uri);
-
-        ddom = virDomainMigrate(dom, dconn, VIR_MIGRATE_LIVE, NULL, NULL, 0);
-        if (ddom == NULL) {
-                CU_DEBUG("Migration failed");
+        switch(job->type) {
+        case CIM_MIGRATE_OTHER:
+                /* FIXME - Handle offline migration here */
+                CU_DEBUG("Preparing for offline migration");
+                break;
+        case CIM_MIGRATE_LIVE:
+                CU_DEBUG("Preparing for live migration");
+                s = handle_migrate(dconn, dom, uri, VIR_MIGRATE_LIVE, job);
+                break;
+        case CIM_MIGRATE_RESUME:
+        case CIM_MIGRATE_RESTART:
+                CU_DEBUG("Preparing for static migration");
+                s = handle_migrate(dconn, dom, uri, 0, job);
+                break;
+        default: 
+                CU_DEBUG("Unsupported migration type (%d)", job->type);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Migration Failed");
+                           "Unsupported migration type (%d)", job->type);
                 goto out;
         }
+
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         CU_DEBUG("Migration succeeded");
         cu_statusf(_BROKER, &s,
                    CMPI_RC_OK,
                    "");
+
  out:
         free(uri);
         virDomainFree(dom);
-        virDomainFree(ddom);
         virConnectClose(conn);
         virConnectClose(dconn);
 
@@ -568,7 +606,8 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
 static struct migration_job *migrate_job_prepare(const CMPIContext *context,
                                                  const CMPIObjectPath *ref,
                                                  const char *domain,
-                                                 const char *host)
+                                                 const char *host,
+                                                 uint16_t type)
 {
         struct migration_job *job;
         uuid_t uuid;
@@ -581,6 +620,7 @@ static struct migration_job *migrate_job_prepare(const CMPIContext *context,
         job->host = strdup(host);
         job->ref_cn = strdup(CLASSNAME(ref));
         job->ref_ns = strdup(NAMESPACE(ref));
+        job->type = type;
 
         uuid_generate(uuid);
         uuid_unparse(uuid, job->uuid);
@@ -594,6 +634,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
                              const CMPIContext *context,
                              const char *domain,
                              const char *host,
+                             uint16_t type,
                              const CMPIResult *results,
                              CMPIArgs *argsout)
 {
@@ -603,7 +644,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
         CMPI_THREAD_TYPE thread;
         uint32_t retcode = 1;
 
-        job = migrate_job_prepare(context, ref, domain, host);
+        job = migrate_job_prepare(context, ref, domain, host, type);
         if (job == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -629,6 +670,36 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus get_migration_type(const CMPIObjectPath *ref,
+                                     const CMPIArgs *argsin,
+                                     uint16_t *type)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *msd;
+        int ret;
+        
+        ret = cu_get_inst_arg(argsin, "MigrationSettingData", &msd);
+        if ((ret != CMPI_RC_OK) || (msd == NULL)) {
+                CU_DEBUG("Using default values for MigrationSettingData param");
+                s = get_migration_sd(ref, &msd, _BROKER, false);
+                if ((s.rc != CMPI_RC_OK) || (msd == NULL)) {
+                        cu_statusf(_BROKER, &s,
+                                   s.rc,
+                                   "Unable to get default setting data values");
+                        return s;
+                }
+        }
+
+        ret = cu_get_u16_prop(msd, "MigrationType", type);
+        if (ret != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           ret,
+                           "Invalid MigrationType value");
+        }
+
+        return s;
+}
+
 static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
                                   const CMPIContext *ctx,
                                   const CMPIResult *results,
@@ -640,7 +711,8 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
         const char *dhost = NULL;
         CMPIObjectPath *system;
         const char *name = NULL;
-
+        uint16_t type;
+          
         cu_get_str_arg(argsin, "DestinationHost", &dhost);
         cu_get_ref_arg(argsin, "ComputerSystem", &system);
 
@@ -660,7 +732,13 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
                 return s;
         }
 
-        return migrate_do(ref, ctx, name, dhost, results, argsout);
+        s = get_migration_type(ref, argsin, &type);
+        if (s.rc != CMPI_RC_OK) {
+                METHOD_RETURN(results, 1);
+                return s;
+        }
+
+        return migrate_do(ref, ctx, name, dhost, type, results, argsout);
 }
 
 static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
@@ -675,6 +753,7 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
         CMPIObjectPath *sys;
         const char *dname;
         const char *name;
+        uint16_t type;
 
         cu_get_ref_arg(argsin, "DestinationSystem", &dsys);
         cu_get_ref_arg(argsin, "ComputerSystem", &sys);
@@ -703,7 +782,13 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
                 return s;
         }
 
-        return migrate_do(ref, ctx, name, dname, results, argsout);
+        s = get_migration_type(ref, argsin, &type);
+        if (s.rc != CMPI_RC_OK) {
+                METHOD_RETURN(results, 1);
+                return s;
+        }
+
+        return migrate_do(ref, ctx, name, dname, type, results, argsout);
 }
 
 static struct method_handler vsimth = {
@@ -711,6 +796,7 @@ static struct method_handler vsimth = {
         .handler = vs_migratable_host,
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationHost", CMPI_string, false},
+                 {"MigrationSettingData", CMPI_instance, true},
                  ARG_END
         }
 };
@@ -720,6 +806,7 @@ static struct method_handler vsimts = {
         .handler = vs_migratable_system,
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationSystem", CMPI_ref, false},
+                 {"MigrationSettingData", CMPI_instance, true},
                  ARG_END
         }
 };
@@ -729,6 +816,7 @@ static struct method_handler mvsth = {
         .handler = migrate_vs_host,
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationHost", CMPI_string, false},
+                 {"MigrationSettingData", CMPI_instance, true},
                  ARG_END
         }
 };
@@ -738,6 +826,7 @@ static struct method_handler mvsts = {
         .handler = migrate_vs_system,
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationSystem", CMPI_ref, false},
+                 {"MigrationSettingData", CMPI_instance, true},
                  ARG_END
         }
 };
