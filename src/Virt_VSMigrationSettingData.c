@@ -38,7 +38,7 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
                                  CMPIInstance *inst)
 {
         CMPIStatus s;
-        uint16_t type = 3;  /* Use live migration as default */
+        uint16_t type = CIM_MIGRATE_LIVE;
         uint16_t priority = 0;  /* Use default priority */
 
         CMSetProperty(inst, "MigrationType",

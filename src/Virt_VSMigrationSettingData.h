@@ -19,6 +19,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  */
 
+enum {CIM_MIGRATE_OTHER = 1,
+      CIM_MIGRATE_LIVE = 2,
+      CIM_MIGRATE_RESUME = 3,
+      CIM_MIGRATE_RESTART = 4,
+} migration_type;
+
 CMPIStatus get_migration_sd(const CMPIObjectPath *ref,
                             CMPIInstance **_inst,
                             const CMPIBroker *broker,
