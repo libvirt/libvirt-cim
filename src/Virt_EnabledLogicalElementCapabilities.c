@@ -46,26 +46,33 @@ enum {ENABLED = 2,
       QUIESCE,
       REBOOT,
       RESET};
-      
-                         
 
-static CMPIStatus set_inst_properties(const CMPIBroker *broker,
-                                      CMPIInstance *inst,
-                                      const char *classname,
-                                      const char *sys_name)
+static CMPIInstance *_get_elec(const CMPIBroker *broker,
+                               const CMPIObjectPath *reference,
+                               virConnectPtr conn,
+                               const char *name,
+                               CMPIStatus *s)
 {
-        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
         CMPIArray *array;
         uint16_t element;
         int edit_name = 0;
-        
-        CMSetProperty(inst, "CreationClassName",
-                      (CMPIValue *)classname, CMPI_chars);
 
-        CMSetProperty(inst, "InstanceID", (CMPIValue *)sys_name, CMPI_chars);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "EnabledLogicalElementCapabilities",
+                                  NAMESPACE(reference));
+        if (inst == NULL) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to init EnabledLogicalElementCapabilities instance");
+                goto out;
+        }
 
-        array = CMNewArray(broker, 5, CMPI_uint16, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(array))
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)name, CMPI_chars);
+
+        array = CMNewArray(broker, 5, CMPI_uint16, s);
+        if ((s->rc != CMPI_RC_OK) || CMIsNullObject(array))
                 goto out;
         
         element = (uint16_t)ENABLED;
@@ -88,56 +95,14 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
         CMSetProperty(inst, "ElementNameEditSupported",
                       (CMPIValue *)&edit_name, CMPI_boolean);
- out:
-        return s;
-}
-
-CMPIStatus get_ele_cap(const CMPIBroker *broker,
-                       const CMPIObjectPath *ref,
-                       const char *sys_name,
-                       CMPIInstance **inst)
-{
-        CMPIStatus s;
-        CMPIObjectPath *op;
-        char *classname = NULL;
-
-        classname = get_typed_class(CLASSNAME(ref),
-                                    "EnabledLogicalElementCapabilities");
-        if (classname == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Invalid class");
-                goto out;
-        }
-
-        op = CMNewObjectPath(broker, NAMESPACE(ref), classname, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op)) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Cannot get object path for ELECapabilities");
-                goto out;
-        }
-
-        *inst = CMNewInstance(broker, op, &s);
-        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(*inst))) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to instantiate HostSystem");
-                goto out;
-        }
-
-        s = set_inst_properties(broker, *inst, classname, sys_name);
 
  out:
-        free(classname);
-
-        return s;
+        return inst;
 }
 
-static CMPIStatus return_ele_cap(const CMPIObjectPath *ref,
-                                 const CMPIResult *results,
-                                 int names_only,
-                                 const char *id)
+static CMPIStatus return_enum_elec(const CMPIObjectPath *ref,
+                                   const CMPIResult *results,
+                                   bool names_only)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
@@ -164,10 +129,7 @@ static CMPIStatus return_ele_cap(const CMPIObjectPath *ref,
                         goto end;
                 }
 
-                if (id && (!STREQ(name, id)))
-                        goto end;
-
-                s = get_ele_cap(_BROKER, ref, name, &inst);
+                inst = _get_elec(_BROKER, ref, conn, name, &s);
                 if (s.rc != CMPI_RC_OK)
                         goto end;
 
@@ -178,16 +140,81 @@ static CMPIStatus return_ele_cap(const CMPIObjectPath *ref,
 
           end:
                 virDomainFree(list[i]);
-
-                if ((s.rc != CMPI_RC_OK) || (id && (STREQ(name, id))))
-                        goto out;
         }
 
  out:
         free(list);
-
         virConnectClose(conn);
 
+        return s;
+}
+
+CMPIStatus get_elec_by_name(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            const char *name,
+                            CMPIInstance **_inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        virConnectPtr conn;
+        virDomainPtr dom;
+        
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
+                goto out;
+        }
+        
+        dom = virDomainLookupByName(conn, name);
+        if (dom == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           name);
+                goto out;
+        }
+
+        inst = _get_elec(broker, reference, conn, name, &s);
+        virDomainFree(dom);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *_inst = inst;
+        
+ out:
+        virConnectClose(conn);
+
+        return s;
+}
+
+CMPIStatus get_elec_by_ref(const CMPIBroker *broker,
+                           const CMPIObjectPath *reference,
+                           CMPIInstance **_inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        const char *name;
+        
+        if (cu_get_str_path(reference, "InstanceID", &name) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No InstanceID specified");
+                goto out;
+        }
+        
+        s = get_elec_by_name(broker, reference, name, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        s = cu_validate_ref(broker, reference, inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *_inst = inst;
+        
+ out:
         return s;
 }
 
@@ -196,7 +223,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_ele_cap(reference, results, 1, NULL);
+        return return_enum_elec(reference, results, true);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -206,7 +233,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_ele_cap(reference, results, 0, NULL);
+        return return_enum_elec(reference, results, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -216,16 +243,16 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const char **properties)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        const char* id;
+        CMPIInstance *inst = NULL;
 
-        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No InstanceID specified");
-                return s;
-        }
+        s = get_elec_by_ref(_BROKER, reference, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        CMReturnInstance(results, inst);
 
-        return return_ele_cap(reference, results, 0, id);
+ out:
+        return s;
 }
 
 DEFAULT_CI();
