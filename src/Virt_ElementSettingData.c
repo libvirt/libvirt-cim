@@ -41,47 +41,20 @@ static CMPIStatus vssd_to_vssd(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
-        virConnectPtr conn = NULL;
-        virDomainPtr dom = NULL;
-        char *host = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        if (!parse_instanceid(ref, NULL, &host)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get system name");
+        /* Special association case: 
+         * VSSD instance is pointing to itself
+         */
+        s = get_vssd_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                goto out;
-
-        dom = virDomainLookupByName(conn, host);
-        if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such system `%s'", host);
-                goto out;
-        }
-
-        inst = get_vssd_instance(dom, _BROKER, ref);
-        if (inst == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Error getting VSSD for `%s'", host);
-                goto out;
-        }
 
         inst_list_add(list, inst);
 
  out:
-        virDomainFree(dom);
-        virConnectClose(conn);
-        free(host);
-
         return s;
 }
 
