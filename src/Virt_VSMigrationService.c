@@ -410,6 +410,69 @@ static CMPIStatus handle_migrate(virConnectPtr dconn,
         return s;
 }
 
+static CMPIStatus prepare_offline_migrate(virDomainPtr dom,
+                                          char **xml)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virDomainInfo info;
+        int ret;
+
+        ret = virDomainGetInfo(dom, &info);
+        if (ret != 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unabled to get info for domain.");
+                goto out;
+        }
+
+        if ((const int)info.state != VIR_DOMAIN_SHUTOFF) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Domain must be shutoff for offline migration.");
+                goto out;
+        }
+
+        *xml = virDomainGetXMLDesc(dom, 0);
+        if (*xml == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to retrieve domain XML.");
+                goto out;
+        }
+
+ out:
+        return s;
+}
+
+static CMPIStatus handle_offline_migrate(virConnectPtr dconn,
+                                         virDomainPtr dom,
+                                         char *uri,
+                                         char *xml,
+                                         struct migration_job *job)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virDomainPtr new_dom;
+
+        if (domain_exists(dconn, job->domain)) {
+                CU_DEBUG("This domain already exists on the target system.");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "This domain already exists on the target system");
+                goto out;
+        }
+
+        new_dom = virDomainDefineXML(dconn, xml);
+        if (new_dom == NULL) {
+                CU_DEBUG("Failed to define domain from XML");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to create domain");
+        }
+
+ out:
+        return s;
+}
+
 static CMPIStatus migrate_vs(struct migration_job *job)
 {
         CMPIStatus s;
@@ -417,6 +480,7 @@ static CMPIStatus migrate_vs(struct migration_job *job)
         virConnectPtr dconn = NULL;
         virDomainPtr dom = NULL;
         char *uri = NULL;
+        char *xml = NULL;
 
         uri = dest_uri(job->ref_cn, job->host);
         if (uri == NULL) {
@@ -439,6 +503,12 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                 goto out;
         }
 
+        if (job->type == CIM_MIGRATE_OTHER) {
+                s = prepare_offline_migrate(dom, &xml);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
         dconn = virConnectOpen(uri);
         if (dconn == NULL) {
                 CU_DEBUG("Failed to connect to remote host (%s)", uri);
@@ -450,8 +520,8 @@ static CMPIStatus migrate_vs(struct migration_job *job)
 
         switch(job->type) {
         case CIM_MIGRATE_OTHER:
-                /* FIXME - Handle offline migration here */
                 CU_DEBUG("Preparing for offline migration");
+                s = handle_offline_migrate(dconn, dom, uri, xml, job);
                 break;
         case CIM_MIGRATE_LIVE:
                 CU_DEBUG("Preparing for live migration");
@@ -480,6 +550,7 @@ static CMPIStatus migrate_vs(struct migration_job *job)
 
  out:
         free(uri);
+        free(xml);
         virDomainFree(dom);
         virConnectClose(conn);
         virConnectClose(dconn);
