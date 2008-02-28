@@ -62,7 +62,8 @@ CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
         }
 
         if (properties) {
-                s = CMSetPropertyFilter(instance, properties, NULL);
+                const char *keys[] = {"InstanceID", NULL};
+                s = CMSetPropertyFilter(instance, properties, keys);
                 if (s.rc != CMPI_RC_OK) {
                         goto out;
                 }
