@@ -111,9 +111,12 @@ libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabiliti
                                         -lVirt_VirtualSystemManagementService \
                                         -lVirt_VSMigrationService
 
-libVirt_SettingsDefineCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la
+libVirt_SettingsDefineCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la libVirt_VSMigrationCapabilities.la libVirt_VSMigrationSettingData.la
 libVirt_SettingsDefineCapabilities_la_SOURCES = Virt_SettingsDefineCapabilities.c
-libVirt_SettingsDefineCapabilities_la_LIBADD = -lVirt_RASD -lVirt_DevicePool
+libVirt_SettingsDefineCapabilities_la_LIBADD = -lVirt_RASD \
+                                               -lVirt_DevicePool \
+                                               -lVirt_VSMigrationCapabilities \
+                                               -lVirt_VSMigrationSettingData
 
 libVirt_RegisteredProfile_la_SOURCES = Virt_RegisteredProfile.c
 

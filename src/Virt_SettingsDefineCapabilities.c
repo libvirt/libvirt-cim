@@ -43,6 +43,8 @@
 #include "Virt_SettingsDefineCapabilities.h"
 #include "Virt_DevicePool.h"
 #include "Virt_RASD.h"
+#include "Virt_VSMigrationCapabilities.h"
+#include "Virt_VSMigrationSettingData.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -825,6 +827,50 @@ static CMPIStatus rasd_to_alloc_cap(const CMPIObjectPath *ref,
         RETURN_UNSUPPORTED();
 }
 
+static CMPIStatus migrate_cap_to_vsmsd(const CMPIObjectPath *ref,
+                                       struct std_assoc_info *info,
+                                       struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK};
+        CMPIInstance *inst;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
+
+        s = get_migration_caps(ref, &inst, _BROKER, true);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_sd(ref, &inst, _BROKER, false);
+        if (s.rc == CMPI_RC_OK)
+                inst_list_add(list, inst);
+
+ out:
+        return s;
+}
+
+static CMPIStatus vsmsd_to_migrate_cap(const CMPIObjectPath *ref,
+                                       struct std_assoc_info *info,
+                                       struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK};
+        CMPIInstance *inst;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
+
+        s = get_migration_sd(ref, &inst, _BROKER, true);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_caps(ref, &inst, _BROKER, false);
+        if (s.rc == CMPI_RC_OK)
+                inst_list_add(list, inst);
+
+ out:
+        return s;
+}
+
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 static char* group_component[] = {
@@ -877,9 +923,49 @@ static struct std_assoc _rasd_to_alloc_cap = {
         .make_ref = make_ref
 };
 
+static char* migrate_cap[] = {
+        "Xen_VirtualSystemMigrationCapabilities",
+        "KVM_VirtualSystemMigrationCapabilities",
+        NULL
+};
+
+static char* migrate_sd[] = {
+        "Xen_VirtualSystemMigrationSettingData",
+        "KVM_VirtualSystemMigrationSettingData",
+        NULL
+};
+
+static struct std_assoc _migrate_cap_to_vsmsd = {
+        .source_class = (char**)&migrate_cap,
+        .source_prop = "GroupComponent",
+
+        .target_class = (char**)&migrate_sd,
+        .target_prop = "PartComponent",
+
+        .assoc_class = (char**)&assoc_classname,
+
+        .handler = migrate_cap_to_vsmsd,
+        .make_ref = make_ref
+};
+
+static struct std_assoc _vsmsd_to_migrate_cap = {
+        .source_class = (char**)&migrate_sd,
+        .source_prop = "PartComponent",
+
+        .target_class = (char**)&migrate_cap,
+        .target_prop = "GroupComponent",
+
+        .assoc_class = (char**)&assoc_classname,
+
+        .handler = vsmsd_to_migrate_cap,
+        .make_ref = make_ref
+};
+
 static struct std_assoc *assoc_handlers[] = {
         &_alloc_cap_to_rasd,
         &_rasd_to_alloc_cap,
+        &_migrate_cap_to_vsmsd,
+        &_vsmsd_to_migrate_cap,
         NULL
 };
 
