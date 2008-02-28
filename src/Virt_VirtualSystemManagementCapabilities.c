@@ -46,11 +46,14 @@ enum {ADD_RESOURCES = 1,
                          
 
 static CMPIStatus set_inst_properties(const CMPIBroker *broker,
+                                      const CMPIObjectPath *ref,
                                       CMPIInstance *inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIArray *array;
         uint16_t element;
+        char *prefix = NULL;
+        CMPIString *str;
 
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)"ManagementCapabilities", CMPI_chars);
@@ -73,7 +76,29 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
         CMSetProperty(inst, "SynchronousMethodsSupported",
                       (CMPIValue *)&array, CMPI_uint16A);
+
+        prefix = class_prefix_name(CLASSNAME(ref));
+        if (prefix == NULL) {
+                CU_DEBUG("Prefix of %s was NULL", CLASSNAME(ref));
+                goto out;
+        }
+
+        str = CMNewString(broker, prefix, &s);
+        if ((str == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
+
+        array = CMNewArray(broker, 1, CMPI_string, &s);
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(array)))
+                goto out;
+
+        CMSetArrayElementAt(array, 0, (CMPIValue *)&str, CMPI_string);
+
+        CMSetProperty(inst, "TypesSupported",
+                      (CMPIValue *)&array, CMPI_stringA);
+
  out:
+        free(prefix);
+
         return s;
 }
 
@@ -106,7 +131,7 @@ CMPIStatus get_vsm_cap(const CMPIBroker *broker,
                 goto out;
         }
 
-        s = set_inst_properties(broker, inst);
+        s = set_inst_properties(broker, ref, inst);
 
         if (is_get_inst) {
                 s = cu_validate_ref(broker, ref, inst);
