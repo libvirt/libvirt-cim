@@ -41,23 +41,23 @@ static CMPIStatus pool_to_sys(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct inst_list *list)
 {
-        CMPIInstance *host;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
 
         s = get_pool_inst(_BROKER, ref, &inst);
         if ((s.rc != CMPI_RC_OK) || (inst == NULL))
-                return s;
+                goto out;
 
-        s = get_host_cs(_BROKER, ref, &host);
+        s = get_host(_BROKER, ref, &inst, false);
         if (s.rc != CMPI_RC_OK)
-                return s;
+                goto out;
 
-        inst_list_add(list, host);
+        inst_list_add(list, inst);
 
+ out:
         return s;
 }
 
@@ -66,19 +66,20 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
                               struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
         int i;
         virConnectPtr conn;
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
 
-        s = validate_host_ref(_BROKER, ref);
+        s = get_host(_BROKER, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
-                return s;
+                goto out;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
-                return s;
+                goto out;
 
         for (i = 0; device_pool_names[i]; i++)
                 get_pool_by_type(_BROKER,
@@ -87,10 +88,7 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
                                  NAMESPACE(ref),
                                  list);
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
-
+ out:
         return s;
 }
 
