@@ -40,8 +40,7 @@ const static CMPIBroker *_BROKER;
 static CMPIStatus validate_service_ref(const CMPIObjectPath *ref)
 {      
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst;
-        const char *prop;
+        CMPIInstance *inst = NULL;
         char* classname;
 
         classname = class_base_name(CLASSNAME(ref));
@@ -54,17 +53,6 @@ static CMPIStatus validate_service_ref(const CMPIObjectPath *ref)
                 s = get_migration_service(ref, &inst, _BROKER, true);
         }
         
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-        
-        prop = cu_compare_ref(ref, inst);
-        if (prop != NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", prop);
-        }
-        
- out:
         free(classname);
 
         return s;
@@ -75,7 +63,7 @@ static CMPIStatus service_to_host(const CMPIObjectPath *ref,
                                   struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *instance;
+        CMPIInstance *instance = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -84,7 +72,7 @@ static CMPIStatus service_to_host(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        s = get_host_cs(_BROKER, ref, &instance);
+        s = get_host(_BROKER, ref, &instance, false);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, instance);
 
@@ -96,12 +84,12 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
                                   struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        s = validate_host_ref(_BROKER, ref);
+        s = get_host(_BROKER, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
