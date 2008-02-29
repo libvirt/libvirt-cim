@@ -75,11 +75,12 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
                 goto out;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        if (conn == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "No such instance");
                 goto out;
+        }
 
         ret = enum_domains(_BROKER, conn, NAMESPACE(ref), list);
         if (!ret)
