@@ -125,13 +125,13 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
 {
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = validate_host_ref(_BROKER, ref);
+        s = get_host(_BROKER, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -164,7 +164,7 @@ static CMPIStatus cap_to_sys_or_service(const CMPIObjectPath *ref,
         if (inst != NULL)
                 inst_list_add(list, inst);
 
-        s = get_host_cs(_BROKER, ref, &inst);
+        s = get_host(_BROKER, ref, &inst, false);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
