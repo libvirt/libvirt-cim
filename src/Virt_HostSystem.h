@@ -21,16 +21,14 @@
 #ifndef __VIRT_HOSTSYSTEM_H
 #define __VIRT_HOSTSYSTEM_H
 
-CMPIStatus get_host_cs(const CMPIBroker *broker,
-                       const CMPIObjectPath *reference,
-                       CMPIInstance **instance);
+CMPIStatus get_host(const CMPIBroker *broker,
+                    const CMPIObjectPath *reference,
+                    CMPIInstance **_inst,
+                    bool is_get_inst);
 
 CMPIStatus get_host_system_properties(const char **name,
                                       const char **ccname,
                                       const CMPIObjectPath *ref,
                                       const CMPIBroker *broker);
-
-CMPIStatus validate_host_ref(const CMPIBroker *broker,
-                             const CMPIObjectPath *ref);
 
 #endif
