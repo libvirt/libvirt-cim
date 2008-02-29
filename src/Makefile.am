@@ -17,7 +17,9 @@ noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_VSSD.h					\
     Virt_VSMigrationCapabilities.h              \
     Virt_VSMigrationService.h                   \
-    Virt_AllocationCapabilities.h
+    Virt_AllocationCapabilities.h               \
+    Virt_VirtualSystemSnapshotService.h         \
+    Virt_VirtualSystemSnapshotServiceCapabilities.h
 
 XKUADD = $(top_builddir)/libxkutil/libxkutil.la
 
@@ -56,7 +58,9 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_ElementSettingData.la \
                        libVirt_VSMigrationCapabilities.la \
                        libVirt_VSMigrationService.la \
-                       libVirt_VSMigrationSettingData.la
+                       libVirt_VSMigrationSettingData.la \
+                       libVirt_VirtualSystemSnapshotService.la \
+                       libVirt_VirtualSystemSnapshotServiceCapabilities.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_Device_la_SOURCES = Virt_Device.c
@@ -164,3 +168,10 @@ libVirt_VSMigrationService_la_LIBADD = -lVirt_HostSystem -lVirt_VSMigrationSetti
 
 libVirt_VSMigrationSettingData_la_SOURCES = Virt_VSMigrationSettingData.c
 
+libVirt_VirtualSystemSnapshotService_la_DEPENDENCIES = libVirt_HostSystem.la
+libVirt_VirtualSystemSnapshotService_la_SOURCES = Virt_VirtualSystemSnapshotService.c
+libVirt_VirtualSystemSnapshotService_la_LIBADD = -lVirt_HostSystem
+
+libVirt_VirtualSystemSnapshotServiceCapabilities_la_DEPENDENCIES = 
+libVirt_VirtualSystemSnapshotServiceCapabilities_la_SOURCES = Virt_VirtualSystemSnapshotServiceCapabilities.c
+libVirt_VirtualSystemSnapshotServiceCapabilities_la_LIBADD =

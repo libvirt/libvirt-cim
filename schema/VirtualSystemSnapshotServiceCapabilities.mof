@@ -1,0 +1,4 @@
+// Copyright IBM Corp. 2008
+
+class Xen_VirtualSystemSnapshotServiceCapabilities : CIM_VirtualSystemSnapshotServiceCapabilities {};
+class KVM_VirtualSystemSnapshotServiceCapabilities : CIM_VirtualSystemSnapshotServiceCapabilities {};

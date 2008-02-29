@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_VirtualSystemSnapshotService root/virt Virt_VirtualSystemSnapshotService Virt_VirtualSystemSnapshotService method instance
+KVM_VirtualSystemSnapshotService root/virt Virt_VirtualSystemSnapshotService Virt_VirtualSystemSnapshotService method instance
