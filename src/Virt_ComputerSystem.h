@@ -24,33 +24,16 @@
 #include "misc_util.h"
 
 /**
- * Return an instance of a Virt_ComputerSystem, based on a name
- *
- * @param broker A pointer to the current broker
- * @param conn The libvirt connection to use
- * @param name The name of the desired domain instance
- * @param ns The namespace to use
- * @returns The instance or NULL on failure
- */
-CMPIInstance *instance_from_name(const CMPIBroker *broker,
-                                 virConnectPtr conn,
-                                 const char *name,
-                                 const CMPIObjectPath *ns);
-
-
-/**
  * Get a list of domain instances
  *
  * @param broker A pointer to the current broker
- * @param conn The libvirt connection to use
- * @param op The namespace to use
+ * @param reference The object path containing namespace and prefix info
  * @param instlist A pointer to an initialized inst_list to populate
- * @returns nonzero on success
+ * @returns CMPIStatus
  */
-int enum_domains(const CMPIBroker *broker,
-                 virConnectPtr conn,
-                 const char *ns,
-                 struct inst_list *instlist);
+CMPIStatus enum_domains(const CMPIBroker *broker,
+                        const CMPIObjectPath *reference,
+                        struct inst_list *instlist);
 
 /**
  * Get domain instance specified by the client given domain 
@@ -58,13 +41,26 @@ int enum_domains(const CMPIBroker *broker,
  *
  * @param broker A pointer to the current broker
  * @param ref The client given object path
- * @param inst In case of success the pointer to the instance
+ * @param _inst In case of success the pointer to the instance
  * @returns CMPIStatus
  */
-CMPIStatus get_domain(const CMPIBroker *broker,
-                      const CMPIObjectPath *reference,
-                      CMPIInstance **inst);
+CMPIStatus get_domain_by_ref(const CMPIBroker *broker,
+                             const CMPIObjectPath *reference,
+                             CMPIInstance **_inst);
 
+/**
+ * Get domain instance specified by the domain name
+ *
+ * @param broker A pointer to the current broker
+ * @param ref The object path containing namespace and prefix info
+ * @param name The domain name
+ * @param _inst In case of success the pointer to the instance
+ * @returns CMPIStatus
+ */
+CMPIStatus get_domain_by_name(const CMPIBroker *broker,
+                              const CMPIObjectPath *reference,
+                              const char *name,
+                              CMPIInstance **_inst);
 
 #endif
 
