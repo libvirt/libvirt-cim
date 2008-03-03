@@ -55,12 +55,12 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_SettingsDefineState.la \
                        libVirt_ResourceAllocationFromPool.la \
                        libVirt_ElementAllocatedFromPool.la \
-                       libVirt_VSMigrationService.la \
                        libVirt_HostedService.la \
                        libVirt_ElementSettingData.la \
                        libVirt_VSMigrationCapabilities.la \
                        libVirt_VSMigrationSettingData.la \
                        libVirt_VirtualSystemSnapshotService.la \
+                       libVirt_VSMigrationService.la \
                        libVirt_VirtualSystemSnapshotServiceCapabilities.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
