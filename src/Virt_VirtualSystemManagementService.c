@@ -331,7 +331,7 @@ static CMPIInstance *connect_and_create(char *xml,
         virConnectPtr conn;
         virDomainPtr dom;
         const char *name;
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (conn == NULL) {
@@ -349,14 +349,16 @@ static CMPIInstance *connect_and_create(char *xml,
         }
 
         name = virDomainGetName(dom);
-        inst = instance_from_name(_BROKER, conn, (char *)name, ref);
-        if (inst == NULL) {
+
+        *s = get_domain_by_name(_BROKER, ref, name, &inst);
+        if (s->rc != CMPI_RC_OK) {
                 CU_DEBUG("Failed to get new instance");
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to lookup resulting system");
         }
 
+        virDomainFree(dom);
         virConnectClose(conn);
 
         return inst;
