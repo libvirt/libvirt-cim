@@ -205,7 +205,7 @@ static CMPIStatus cs_to_cap(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = get_domain(_BROKER, ref, &inst);
+        s = get_domain_by_ref(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -229,8 +229,7 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
                             struct inst_list *list)
 {
         const char *inst_id;
-        CMPIInstance *inst;
-        virConnectPtr conn;
+        CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!match_hypervisor_prefix(ref, info))
@@ -247,19 +246,11 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        s = get_domain_by_name(_BROKER, ref, inst_id, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        inst = instance_from_name(_BROKER, conn, inst_id, ref);
-        if (inst)
-                inst_list_add(list, inst);
-        else
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", inst_id);
-        
-        virConnectClose(conn);
+        inst_list_add(list, inst);
 
  out:
         return s;
