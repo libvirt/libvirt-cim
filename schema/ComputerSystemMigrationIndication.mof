@@ -1,15 +1,17 @@
 // Copyright IBM Corp. 2007
 
 [Description ("Xen_ComputerSystem migration status"),
- Provider("cmpi::Virt_ComputerSystemModificationIndication")
+ Provider("cmpi::Virt_ComputerSystemMigrationIndication")
 ]
 class Xen_ComputerSystemMigrationIndication : CIM_InstModification
 {
+        uint32 RaiseIndication([IN] CIM_InstModification REF TheIndication);
 };
 
 [Description ("KVM_ComputerSystem migration status"),
- Provider("cmpi::Virt_ComputerSystemModificationIndication")
+ Provider("cmpi::Virt_ComputerSystemMigrationIndication")
 ]
 class KVM_ComputerSystemMigrationIndication : CIM_InstModification
 {
+        uint32 RaiseIndication([IN] CIM_InstModification REF TheIndication);
 };
