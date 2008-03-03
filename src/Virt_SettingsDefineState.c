@@ -127,7 +127,7 @@ static CMPIStatus vs_to_vssd(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        s = get_domain(_BROKER, ref, &inst);
+        s = get_domain_by_ref(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -156,10 +156,8 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
         char *pfx = NULL;
         char *name = NULL;
         int ret;
-        virConnectPtr conn = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *cs;
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -183,25 +181,15 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        s = get_domain_by_name(_BROKER, ref, name, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        cs = instance_from_name(_BROKER,
-                                conn,
-                                name,
-                                ref);
-        if (cs != NULL)
-                inst_list_add(list, cs);
+        inst_list_add(list, inst);
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
  out:
         free(name);
         free(pfx);
-
-        virConnectClose(conn);
 
         return s;
 }
