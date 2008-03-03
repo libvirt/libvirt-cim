@@ -97,37 +97,6 @@ static int get_all_devices(const char *name,
         return i;
 }
 
-static CMPIInstance *host_instance(char *name,
-                                   const CMPIObjectPath *ref)
-{
-        CMPIInstance *inst = NULL;
-        virConnectPtr conn = NULL;
-        CMPIStatus s;
-        CMPIObjectPath *op;
-        char *host_class;
-
-        host_class = get_typed_class(CLASSNAME(ref),
-                                     "ComputerSystem");
-        if (host_class == NULL)
-                goto out;
-
-        op = CMNewObjectPath(_BROKER, NAMESPACE(ref), host_class, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
-                goto out;
-
-        conn = connect_by_classname(_BROKER, host_class, &s);
-        if (conn == NULL)
-                goto out;
-
-        inst = instance_from_name(_BROKER, conn, name, op);
-
- out:
-        free(host_class);
-        virConnectClose(conn);
-
-        return inst;
-}
-
 static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
@@ -140,7 +109,7 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        s = get_domain(_BROKER, ref, &inst);
+        s = get_domain_by_ref(_BROKER, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -177,7 +146,6 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
         const char *devid = NULL;
         char *host = NULL;
         char *dev = NULL;
-        CMPIInstance *sys;
         CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -202,18 +170,11 @@ static CMPIStatus dev_to_sys(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        sys = host_instance(host, ref);
+        s = get_domain_by_name(_BROKER, ref, host, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
-        if (sys == NULL)
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to find DeviceID `%s'", devid);
-        else {
-                inst_list_add(list, sys);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_OK,
-                           "");
-        }
+        inst_list_add(list, inst);
 
  out:
         free(dev);
