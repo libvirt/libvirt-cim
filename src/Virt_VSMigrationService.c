@@ -64,34 +64,53 @@ struct migration_job {
         char *ref_cn;
         char *ref_ns;
         uint16_t type;
+        uint16_t transport;
         char uuid[33];
 };
 
-static const char *transport_from_class(const char *cn)
+static char *dest_uri(const char *cn,
+                      const char *dest,
+                      uint16_t transport)
 {
+        const char *prefix;
+        const char *tport = NULL;
+        const char *param = "";
+        char *uri = NULL;
+        int rc;
+
         if (STARTS_WITH(cn, "Xen"))
-                return "xen+ssh";
+                prefix = "xen";
         else if (STARTS_WITH(cn, "KVM"))
-                return "qemu+ssh";
+                prefix = "qemu";
         else
                 return NULL;
-}
 
-static char *dest_uri(const char *cn,
-                      const char *dest)
-{
-        char *uri;
-        const char *tport = NULL;
-
-        tport = transport_from_class(cn);
-        if (tport == NULL) {
-                CU_DEBUG("Failed to get transport for %s", cn);
-                return NULL;
+        switch (transport) {
+        case CIM_MIGRATE_URI_SSH: 
+                tport = "ssh";
+                break; 
+        case CIM_MIGRATE_URI_TLS:
+                tport = "tls";
+                param = "?no_verify=1";
+                break; 
+        case CIM_MIGRATE_URI_TLS_STRICT:
+                tport = "tls";
+                break; 
+        case CIM_MIGRATE_URI_UNIX:
+                tport = "unix";
+                break; 
+        case CIM_MIGRATE_URI_TCP:
+                tport = "tcp";
+                break; 
+        default:
+                goto out;
         }
 
-        if (asprintf(&uri, "%s://%s/system", tport, dest) == -1)
+        rc = asprintf(&uri, "%s+%s://%s/system/%s", prefix, tport, dest, param);
+        if (rc == -1)
                 uri = NULL;
 
+ out:
         return uri;
 }
 
@@ -153,7 +172,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         uint32_t retcode = 1;
         CMPIBoolean isMigratable = 0;
 
-        uri = dest_uri(CLASSNAME(ref), destination);
+        uri = dest_uri(CLASSNAME(ref), destination, CIM_MIGRATE_URI_SSH);
         if (uri == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -557,7 +576,7 @@ static CMPIStatus migrate_vs(struct migration_job *job)
         char *uri = NULL;
         char *xml = NULL;
 
-        uri = dest_uri(job->ref_cn, job->host);
+        uri = dest_uri(job->ref_cn, job->host, job->transport);
         if (uri == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -792,6 +811,23 @@ static CMPIStatus get_migration_type(CMPIInstance *msd,
         return s;
 }
 
+static CMPIStatus get_migration_uri(CMPIInstance *msd,
+                                    uint16_t *uri)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_u16_prop(msd, "TransportType", uri);
+        if (ret == CMPI_RC_OK)
+                goto out;
+
+        CU_DEBUG("Using default TransportType: %d", CIM_MIGRATE_URI_SSH);
+        *uri = CIM_MIGRATE_URI_SSH;
+
+ out:
+        return s;
+}
+
 static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
                                  const CMPIArgs *argsin,
                                  struct migration_job *job)
@@ -804,6 +840,10 @@ static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
                 goto out;
 
         s = get_migration_type(msd, &job->type);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_uri(msd, &job->transport);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
