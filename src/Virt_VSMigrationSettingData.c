@@ -40,6 +40,7 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
         CMPIStatus s;
         uint16_t type = CIM_MIGRATE_LIVE;
         uint16_t priority = 0;  /* Use default priority */
+        uint16_t transport = CIM_MIGRATE_URI_SSH;
 
         CMSetProperty(inst, "MigrationType",
                       (CMPIValue *)&type, CMPI_uint16);
@@ -47,6 +48,8 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
         CMSetProperty(inst, "Priority",
                       (CMPIValue *)&priority, CMPI_uint16);
 
+        CMSetProperty(inst, "TransportType",
+                      (CMPIValue *)&transport, CMPI_uint16);
 
         cu_statusf(broker, &s,
                    CMPI_RC_OK,

@@ -25,6 +25,14 @@ enum {CIM_MIGRATE_OTHER = 1,
       CIM_MIGRATE_RESTART = 4,
 } migration_type;
 
+enum {CIM_MIGRATE_URI_OTHER = 1,
+      CIM_MIGRATE_URI_SSH = 2,
+      CIM_MIGRATE_URI_TLS = 3,
+      CIM_MIGRATE_URI_TLS_STRICT = 4,
+      CIM_MIGRATE_URI_TCP = 5,
+      CIM_MIGRATE_URI_UNIX = 6,
+} transport_type;
+
 CMPIStatus get_migration_sd(const CMPIObjectPath *ref,
                             CMPIInstance **_inst,
                             const CMPIBroker *broker,
