@@ -45,13 +45,13 @@ static uint16_t class_to_type(const CMPIObjectPath *ref)
         uint16_t type;
 
         if (CMClassPathIsA(_BROKER, ref, "CIM_LogicalDisk", NULL))
-                type = CIM_RASD_TYPE_DISK;
+                type = CIM_RES_TYPE_DISK;
         else if (CMClassPathIsA(_BROKER, ref, "CIM_NetworkPort", NULL))
-                type = CIM_RASD_TYPE_NET;
+                type = CIM_RES_TYPE_NET;
         else if (CMClassPathIsA(_BROKER, ref, "CIM_Memory", NULL))
-                type = CIM_RASD_TYPE_MEM;
+                type = CIM_RES_TYPE_MEM;
         else if (CMClassPathIsA(_BROKER, ref, "CIM_Processor", NULL))
-                type = CIM_RASD_TYPE_PROC;
+                type = CIM_RES_TYPE_PROC;
         else
                 type = 0;
 
