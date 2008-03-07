@@ -45,10 +45,10 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
         char *name = NULL;
         int i = 0;
         int types[] = {
-                CIM_RASD_TYPE_PROC,
-                CIM_RASD_TYPE_NET,
-                CIM_RASD_TYPE_DISK,
-                CIM_RASD_TYPE_MEM,
+                CIM_RES_TYPE_PROC,
+                CIM_RES_TYPE_NET,
+                CIM_RES_TYPE_DISK,
+                CIM_RES_TYPE_MEM,
                 -1
         };
 
