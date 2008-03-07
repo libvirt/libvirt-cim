@@ -752,11 +752,69 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
         return s;
 }
 
+static CMPIStatus get_msd(const CMPIObjectPath *ref,
+                          const CMPIArgs *argsin,
+                          CMPIInstance **msd)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_inst_arg(argsin, "MigrationSettingData", msd);
+        if ((ret == CMPI_RC_OK) && (*msd != NULL))
+                goto out;
+
+        s = get_migration_sd(ref, msd, _BROKER, false);
+        if ((s.rc != CMPI_RC_OK) || (*msd == NULL)) {
+                cu_statusf(_BROKER, &s,
+                           s.rc,
+                           "Unable to get default setting data values");
+                goto out;
+        }
+        CU_DEBUG("Using default values for MigrationSettingData param");
+
+ out:
+        return s;
+}
+
+static CMPIStatus get_migration_type(CMPIInstance *msd,
+                                     uint16_t *type)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_u16_prop(msd, "MigrationType", type);
+        if (ret != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           ret,
+                           "Invalid MigrationType value");
+        }
+
+        return s;
+}
+
+static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
+                                 const CMPIArgs *argsin,
+                                 struct migration_job *job)
+{
+        CMPIStatus s;
+        CMPIInstance *msd;
+
+        s = get_msd(ref, argsin, &msd);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_type(msd, &job->type);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+ out:
+        return s;
+}
+
 static struct migration_job *migrate_job_prepare(const CMPIContext *context,
                                                  const CMPIObjectPath *ref,
                                                  const char *domain,
-                                                 const char *host,
-                                                 uint16_t type)
+                                                 const char *host)
 {
         struct migration_job *job;
         uuid_t uuid;
@@ -769,7 +827,6 @@ static struct migration_job *migrate_job_prepare(const CMPIContext *context,
         job->host = strdup(host);
         job->ref_cn = strdup(CLASSNAME(ref));
         job->ref_ns = strdup(NAMESPACE(ref));
-        job->type = type;
 
         uuid_generate(uuid);
         uuid_unparse(uuid, job->uuid);
@@ -783,7 +840,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
                              const CMPIContext *context,
                              const char *domain,
                              const char *host,
-                             uint16_t type,
+                             const CMPIArgs *argsin,
                              const CMPIResult *results,
                              CMPIArgs *argsout)
 {
@@ -796,13 +853,17 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
         CMPIInstance *inst = NULL;
         bool rc;
 
-        job = migrate_job_prepare(context, ref, domain, host, type);
+        job = migrate_job_prepare(context, ref, domain, host);
         if (job == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to prepare migration job");
                 goto out;
         }
+
+        s = get_msd_values(ref, argsin, job); 
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         CU_DEBUG("Prepared migration job %s", job->uuid);
 
@@ -834,36 +895,6 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus get_migration_type(const CMPIObjectPath *ref,
-                                     const CMPIArgs *argsin,
-                                     uint16_t *type)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *msd;
-        int ret;
-        
-        ret = cu_get_inst_arg(argsin, "MigrationSettingData", &msd);
-        if ((ret != CMPI_RC_OK) || (msd == NULL)) {
-                CU_DEBUG("Using default values for MigrationSettingData param");
-                s = get_migration_sd(ref, &msd, _BROKER, false);
-                if ((s.rc != CMPI_RC_OK) || (msd == NULL)) {
-                        cu_statusf(_BROKER, &s,
-                                   s.rc,
-                                   "Unable to get default setting data values");
-                        return s;
-                }
-        }
-
-        ret = cu_get_u16_prop(msd, "MigrationType", type);
-        if (ret != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           ret,
-                           "Invalid MigrationType value");
-        }
-
-        return s;
-}
-
 static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
                                   const CMPIContext *ctx,
                                   const CMPIResult *results,
@@ -875,7 +906,6 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
         const char *dhost = NULL;
         CMPIObjectPath *system;
         const char *name = NULL;
-        uint16_t type;
           
         cu_get_str_arg(argsin, "DestinationHost", &dhost);
         cu_get_ref_arg(argsin, "ComputerSystem", &system);
@@ -896,13 +926,7 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
                 return s;
         }
 
-        s = get_migration_type(ref, argsin, &type);
-        if (s.rc != CMPI_RC_OK) {
-                METHOD_RETURN(results, 1);
-                return s;
-        }
-
-        return migrate_do(ref, ctx, name, dhost, type, results, argsout);
+        return migrate_do(ref, ctx, name, dhost, argsin, results, argsout);
 }
 
 static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
@@ -917,7 +941,6 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
         CMPIObjectPath *sys;
         const char *dname;
         const char *name;
-        uint16_t type;
 
         cu_get_ref_arg(argsin, "DestinationSystem", &dsys);
         cu_get_ref_arg(argsin, "ComputerSystem", &sys);
@@ -946,13 +969,7 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
                 return s;
         }
 
-        s = get_migration_type(ref, argsin, &type);
-        if (s.rc != CMPI_RC_OK) {
-                METHOD_RETURN(results, 1);
-                return s;
-        }
-
-        return migrate_do(ref, ctx, name, dname, type, results, argsout);
+        return migrate_do(ref, ctx, name, dname, argsin, results, argsout);
 }
 
 static struct method_handler vsimth = {
