@@ -292,17 +292,17 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         char *base;
         char *id;
 
-        if (dev->type == VIRT_DEV_DISK) {
-                type = CIM_RASD_TYPE_DISK;
+        if (dev->type == CIM_RES_TYPE_DISK) {
+                type = CIM_RES_TYPE_DISK;
                 base = "DiskResourceAllocationSettingData";
-        } else if (dev->type == VIRT_DEV_NET) {
-                type = CIM_RASD_TYPE_NET;
+        } else if (dev->type == CIM_RES_TYPE_NET) {
+                type = CIM_RES_TYPE_NET;
                 base = "NetResourceAllocationSettingData";
-        } else if (dev->type == VIRT_DEV_VCPU) {
-                type = CIM_RASD_TYPE_PROC;
+        } else if (dev->type == CIM_RES_TYPE_PROC) {
+                type = CIM_RES_TYPE_PROC;
                 base = "ProcResourceAllocationSettingData";
-        } else if (dev->type == VIRT_DEV_MEM) {
-                type = CIM_RASD_TYPE_MEM;
+        } else if (dev->type == CIM_RES_TYPE_MEM) {
+                type = CIM_RES_TYPE_MEM;
                 base = "MemResourceAllocationSettingData";
         } else {
                 return NULL;
@@ -329,7 +329,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         CMSetProperty(inst, "ResourceType",
                       (CMPIValue *)&type, CMPI_uint16);
 
-        if (dev->type == VIRT_DEV_DISK) {
+        if (dev->type == CIM_RES_TYPE_DISK) {
                 CMSetProperty(inst,
                               "VirtualDevice",
                               (CMPIValue *)dev->dev.disk.virtual_dev,
@@ -338,12 +338,12 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               "Address",
                               (CMPIValue *)dev->dev.disk.source,
                               CMPI_chars);
-        } else if (dev->type == VIRT_DEV_NET) {
+        } else if (dev->type == CIM_RES_TYPE_NET) {
                 CMSetProperty(inst,
                               "NetworkType",
                               (CMPIValue *)dev->dev.disk.type,
                               CMPI_chars);
-        } else if (dev->type == VIRT_DEV_MEM) {
+        } else if (dev->type == CIM_RES_TYPE_MEM) {
                 const char *units = "MegaBytes";
 
                 CMSetProperty(inst, "AllocationUnits",
@@ -354,7 +354,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               (CMPIValue *)&dev->dev.mem.size, CMPI_uint64);
                 CMSetProperty(inst, "Limit",
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
-        } else if (dev->type == VIRT_DEV_VCPU) {
+        } else if (dev->type == CIM_RES_TYPE_PROC) {
                 proc_rasd_from_vdev(broker, dev, host, ref, inst);
         }
 
@@ -470,13 +470,13 @@ CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type)
                 goto out;
 
        if (STREQ(base, "DiskResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_DISK;
+               *type = CIM_RES_TYPE_DISK;
        else if (STREQ(base, "NetResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_NET;
+               *type = CIM_RES_TYPE_NET;
        else if (STREQ(base, "ProcResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_PROC;
+               *type = CIM_RES_TYPE_PROC;
        else if (STREQ(base, "MemResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_MEM;
+               *type = CIM_RES_TYPE_MEM;
        else
                goto out;
 
@@ -493,16 +493,16 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
         CMPIrc rc = CMPI_RC_OK;
         
         switch(type) {
-        case CIM_RASD_TYPE_MEM:
+        case CIM_RES_TYPE_MEM:
                 *classname = "MemResourceAllocationSettingData";
                 break;
-        case CIM_RASD_TYPE_PROC:
+        case CIM_RES_TYPE_PROC:
                 *classname = "ProcResourceAllocationSettingData";
                 break;
-        case CIM_RASD_TYPE_NET:
+        case CIM_RES_TYPE_NET:
                 *classname = "NetResourceAllocationSettingData";
                 break;
-        case CIM_RASD_TYPE_DISK: 
+        case CIM_RES_TYPE_DISK: 
                 *classname = "DiskResourceAllocationSettingData";
                 break;
         default:
@@ -522,10 +522,10 @@ static CMPIStatus _enum_rasds(const CMPIObjectPath *ref,
         int i, j;
         uint16_t type;
         CMPIStatus s;
-        uint16_t types[] = {CIM_RASD_TYPE_PROC,
-                            CIM_RASD_TYPE_DISK,
-                            CIM_RASD_TYPE_NET,
-                            CIM_RASD_TYPE_MEM,
+        uint16_t types[] = {CIM_RES_TYPE_PROC,
+                            CIM_RES_TYPE_DISK,
+                            CIM_RES_TYPE_NET,
+                            CIM_RES_TYPE_MEM,
                             0};
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
