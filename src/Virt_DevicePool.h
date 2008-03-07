@@ -26,20 +26,6 @@
 #include <libcmpiutil/libcmpiutil.h>
 #include <stdint.h>
 
-extern char *device_pool_names[];
-
-CMPIStatus get_pool_by_type(const CMPIBroker *broker,
-                            virConnectPtr conn,
-                            const char *type,
-                            const char *ns,
-                            struct inst_list *list);
-
-CMPIInstance *get_pool_by_id(const CMPIBroker *broker,
-                             virConnectPtr conn,
-                             const char *id,
-                             const char *ns);
-
-
 /**
  * Get the InstanceID of a pool that a given RASD id (for type) is in
  *
@@ -56,24 +42,35 @@ char *pool_member_of(const CMPIBroker *broker,
                      const char *id);
 
 /**
- * Get the device type of a given pool from the pool's InstanceID
+ * Get the resource type of a given pool from the pool's classname
  *
- * @param id The InstanceID of the pool
+ * @param classname The classname of the pool
+ * Returns the resource type
  */
-uint16_t device_type_from_poolid(const char *id);
+uint16_t res_type_from_pool_classname(const char *classname);
 
 /**
- * Get all device pools on the system for the given connection
+ * Get the resource type of a given pool from the pool's InstanceID
+ *
+ * @param id The InstanceID of the pool
+ * Returns the resource type
+ */
+uint16_t res_type_from_pool_id(const char *id);
+
+/**
+ * Get all device pools on the system for the given type
+ * 
  *
  * @param broker The current Broker
- * @param conn The libvirt connection to use
- * @param ns Namespace for the pools
- * @param list Return instances in this struct
+ * @param reference Defines the libvirt connection to use
+ * @param type The device pool type or CIM_RES_TYPE_ALL
+ *             to get all resource pools
+ * @param list The list of returned instances
  */
-CMPIStatus get_all_pools(const CMPIBroker *broker,
-                         virConnectPtr conn,
-                         const char *ns,
-                         struct inst_list *list);
+CMPIStatus enum_pools(const CMPIBroker *broker,
+                      const CMPIObjectPath *reference,
+                      const uint16_t type,
+                      struct inst_list *list);
 
 /**
  * Get a device pools instance for the given reference 
@@ -82,9 +79,23 @@ CMPIStatus get_all_pools(const CMPIBroker *broker,
  * @param reference The reference passed to the CIMOM 
  * @param instance Return corresponding instance 
  */
-CMPIStatus get_pool_inst(const CMPIBroker *broker,
-                         const CMPIObjectPath *reference,
-                         CMPIInstance **instance);
+CMPIStatus get_pool_by_ref(const CMPIBroker *broker,
+                           const CMPIObjectPath *reference,
+                           CMPIInstance **instance);
+
+/**
+ * Get device pool instance specified by the id
+ *
+ * @param broker A pointer to the current broker
+ * @param ref The object path containing namespace and prefix info
+ * @param name The device pool id
+ * @param _inst In case of success the pointer to the instance
+ * @returns CMPIStatus
+ */
+CMPIStatus get_pool_by_name(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            const char *id,
+                            CMPIInstance **_inst);
 
 #endif
 

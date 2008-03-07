@@ -45,12 +45,6 @@
 
 static const CMPIBroker *_BROKER;
 
-char *device_pool_names[] = {"ProcessorPool",
-                             "MemoryPool",
-                             "DiskPool",
-                             "NetworkPool",
-                             NULL};
-
 struct disk_pool {
         char *tag;
         char *path;
@@ -174,7 +168,7 @@ static char *diskpool_member_of(const CMPIBroker *broker,
         if (dom == NULL)
                 goto out;
 
-        count = get_devices(dom, &devs, VIRT_DEV_DISK);
+        count = get_devices(dom, &devs, CIM_RES_TYPE_DISK);
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].dev.disk.virtual_dev), dev)) {
@@ -290,7 +284,7 @@ static char *netpool_member_of(const CMPIBroker *broker,
         if (dom == NULL)
                 goto out;
 
-        count = get_devices(dom, &devs, VIRT_DEV_NET);
+        count = get_devices(dom, &devs, CIM_RES_TYPE_NET);
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].id), dev)) {
@@ -332,7 +326,21 @@ char *pool_member_of(const CMPIBroker *broker,
         return poolid;
 }
 
-uint16_t device_type_from_poolid(const char *id)
+uint16_t res_type_from_pool_classname(const char *classname)
+{
+        if (strstr(classname, "NetworkPool"))
+                return CIM_RES_TYPE_NET;
+        else if (strstr(classname, "DiskPool"))
+                return CIM_RES_TYPE_DISK;
+        else if (strstr(classname, "MemoryPool"))
+                return CIM_RES_TYPE_MEM;
+        else if (strstr(classname, "ProcessorPool"))
+                return CIM_RES_TYPE_PROC;
+        else
+                return CIM_RES_TYPE_UNKNOWN;
+}
+
+uint16_t res_type_from_pool_id(const char *id)
 {
         if (STARTS_WITH(id, "NetworkPool"))
                 return CIM_RES_TYPE_NET;
@@ -673,159 +681,79 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
         return s;
 }
 
-static CMPIStatus _get_pool(const CMPIBroker *broker,
-                            virConnectPtr conn,
-                            const char *type,
-                            const char *id,
-                            const char *ns,
-                            struct inst_list *list)
-{
-        if (STARTS_WITH(type, "MemoryPool"))
-                return mempool_instance(conn, list, ns, id, broker);
-        else if (STARTS_WITH(type, "ProcessorPool"))
-                return procpool_instance(conn, list, ns, id, broker);
-        else if (STARTS_WITH(type, "NetworkPool"))
-                return netpool_instance(conn, list, ns, id, broker);
-        else if (STARTS_WITH(type, "DiskPool"))
-                return diskpool_instance(conn, list, ns, id, broker);
-
-        return (CMPIStatus){CMPI_RC_ERR_NOT_FOUND, NULL};
-}
-
-CMPIStatus get_pool_by_type(const CMPIBroker *broker,
-                            virConnectPtr conn,
-                            const char *type,
-                            const char *ns,
-                            struct inst_list *list)
-{
-        return _get_pool(broker, conn, type, NULL, ns, list);
-}
-
-CMPIInstance *get_pool_by_id(const CMPIBroker *broker,
-                             virConnectPtr conn,
+static CMPIStatus _get_pools(const CMPIBroker *broker,
+                             const CMPIObjectPath *reference,
+                             const uint16_t type,
                              const char *id,
-                             const char *ns)
+                             struct inst_list *list)
 {
-        CMPIInstance *inst = NULL;
-        CMPIStatus s;
-        char *type = NULL;
-        char *poolid = NULL;
-        int ret;
-        struct inst_list list;
-
-        inst_list_init(&list);
-
-        ret = sscanf(id, "%a[^/]/%as", &type, &poolid);
-        if (ret != 2)
-                goto out;
-
-        s = _get_pool(broker, conn, type, poolid, ns, &list);
-        if ((s.rc == CMPI_RC_OK) && (list.cur > 0))
-                inst = list.list[0];
-
- out:
-        inst_list_free(&list);
-
-        return inst;
-}
-
-CMPIStatus get_all_pools(const CMPIBroker *broker,
-                         virConnectPtr conn,
-                         const char *ns,
-                         struct inst_list *list)
-{
-        int i;
-        CMPIStatus s = {CMPI_RC_OK};
-
-        for (i = 0; device_pool_names[i]; i++) {
-                s = get_pool_by_type(broker,
-                                     conn,
-                                     device_pool_names[i],
-                                     ns,
-                                     list);
-                if (s.rc != CMPI_RC_OK)
-                        goto out;
-        }
-
- out:
-        return s;
-}
-
-static void __return_pool(const CMPIResult *results,
-                          struct inst_list *list,
-                          bool name_only)
-{
-        if (name_only)
-                cu_return_instance_names(results, list);
-        else
-                cu_return_instances(results, list);
-}
-
-static CMPIStatus return_pool(const CMPIObjectPath *ref,
-                              const CMPIResult *results,
-                              bool name_only,
-                              bool single_only)
-{
-        CMPIStatus s;
-        char *type;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn;
-        struct inst_list list;
 
-        if (!provider_is_responsible(_BROKER, ref, &s))
-                return s;
-
-        type = class_base_name(CLASSNAME(ref));
-        if (type == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Invalid classname `%s'", CLASSNAME(ref));
-                return s;
-        }
-
-        inst_list_init(&list);
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL)
                 goto out;
 
-        s = get_pool_by_type(_BROKER,
-                             conn,
-                             type,
-                             NAMESPACE(ref),
-                             &list);
-        if (s.rc == CMPI_RC_OK) {
-                __return_pool(results, &list, name_only);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_OK,
-                           "");
-        } else {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Pool type %s not found", type);
-        }
+        if ((type == CIM_RES_TYPE_PROC) || 
+            (type == CIM_RES_TYPE_ALL))
+                s = procpool_instance(conn,
+                                      list,
+                                      NAMESPACE(reference),
+                                      id,
+                                      broker);
+
+        if ((type == CIM_RES_TYPE_MEM) || 
+            (type == CIM_RES_TYPE_ALL))
+                s = mempool_instance(conn,
+                                     list,
+                                     NAMESPACE(reference),
+                                     id,
+                                     broker);
+
+        if ((type == CIM_RES_TYPE_NET) || 
+            (type == CIM_RES_TYPE_ALL))
+                s = netpool_instance(conn,
+                                     list,
+                                     NAMESPACE(reference),
+                                     id,
+                                     broker);
+
+        if ((type == CIM_RES_TYPE_DISK) || 
+            (type == CIM_RES_TYPE_ALL))
+                s = diskpool_instance(conn,
+                                      list,
+                                      NAMESPACE(reference),
+                                      id,
+                                      broker);
+
+        if (type == CIM_RES_TYPE_UNKNOWN)
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance - resource pool type unknown");
+
+        if (id && list->cur == 0)
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)", id);
 
  out:
-        free(type);
-        inst_list_free(&list);
-
+        virConnectClose(conn);
         return s;
 }
 
-CMPIStatus get_pool_inst(const CMPIBroker *broker,
-                         const CMPIObjectPath *reference,
-                         CMPIInstance **instance)
+CMPIStatus get_pool_by_name(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            const char *id,
+                            CMPIInstance **_inst)
 {
-        CMPIStatus s;
-        CMPIInstance *inst = NULL;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn = NULL;
-        const char *id = NULL;
+        struct inst_list list;
+        char *poolid = NULL;
+        int ret;
+        uint16_t type;
 
-        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
-                goto out;
-        }
+        inst_list_init(&list);
 
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL) {
@@ -835,15 +763,116 @@ CMPIStatus get_pool_inst(const CMPIBroker *broker,
                 goto out;
         }
 
-        inst = get_pool_by_id(broker, conn, id, NAMESPACE(reference));
-        if (inst == NULL)
+        type = res_type_from_pool_id(id);
+
+        if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", id);
+                           "No such instance (%s) - resource pool type mismatch",
+                           id);
+                goto out;
+        }
+
+        ret = sscanf(id, "%*[^/]/%as", &poolid);
+        if (ret != 1) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           id);
+                goto out;
+        }
+
+        s = _get_pools(broker, reference, type, poolid, &list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *_inst = list.list[0];
+
+ out:
+        free(poolid);
+        virConnectClose(conn);
+        inst_list_free(&list);
+
+        return s;
+}
+
+CMPIStatus get_pool_by_ref(const CMPIBroker *broker,
+                           const CMPIObjectPath *reference,
+                           CMPIInstance **instance)
+{
+        CMPIStatus s = {CMPI_RC_OK};
+        CMPIInstance *inst = NULL;
+        const char *id = NULL;
+        uint16_t type_cls;
+        uint16_t type_id;
+
+        if (cu_get_str_path(reference, "InstanceID", &id) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }
+        
+        type_cls = res_type_from_pool_classname(CLASSNAME(reference));
+        type_id = res_type_from_pool_id(id);
+
+        if ((type_cls != type_id) || 
+            (type_cls == CIM_RES_TYPE_UNKNOWN)) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s) - resource pool type mismatch",
+                           id);
+                goto out;
+        }
+
+        s = get_pool_by_name(broker, reference, id, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = cu_validate_ref(broker, reference, inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *instance = inst;
         
  out:
-        virConnectClose(conn);
-        *instance = inst;
+        return s;
+}
+
+CMPIStatus enum_pools(const CMPIBroker *broker,
+                      const CMPIObjectPath *reference,
+                      const uint16_t type,
+                      struct inst_list *list)
+{
+        return _get_pools(broker, reference, type, NULL, list);
+}
+
+static CMPIStatus return_pool(const CMPIObjectPath *ref,
+                              const CMPIResult *results,
+                              bool names_only)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        struct inst_list list;
+
+        if (!provider_is_responsible(_BROKER, ref, &s))
+                goto out;
+
+        inst_list_init(&list);
+
+        s = enum_pools(_BROKER,
+                       ref,
+                       res_type_from_pool_classname(CLASSNAME(ref)),
+                       &list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        if (names_only)
+                cu_return_instance_names(results, &list);
+        else
+                cu_return_instances(results, &list);
+
+ out:
+        inst_list_free(&list);
 
         return s;
 }
@@ -853,7 +882,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_pool(reference, results, true, false);
+        return return_pool(reference, results, true);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -862,7 +891,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return return_pool(reference, results, false, false);
+        return return_pool(reference, results, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -871,13 +900,16 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK};
         CMPIInstance *inst = NULL;
 
-        s = get_pool_inst(_BROKER, reference, &inst);
-        if ((s.rc == CMPI_RC_OK) && (inst != NULL))
-                CMReturnInstance(results, inst);
+        s = get_pool_by_ref(_BROKER, reference, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
+        CMReturnInstance(results, inst);
+
+ out:
         return s;
 }
 
