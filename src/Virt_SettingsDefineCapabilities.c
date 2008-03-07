@@ -529,13 +529,9 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
 
         /* Getting the relevant resource pool directly finds the free space 
            for us.  It is in the Capacity field. */
-        pool_inst = get_pool_by_id(_BROKER, conn, inst_id, NAMESPACE(ref));
-        if (pool_inst == NULL) {
-                cu_statusf(_BROKER, s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get pool instance");
+        *s = get_pool_by_name(_BROKER, ref, inst_id, &pool_inst);
+        if (s->rc != CMPI_RC_OK)
                 goto out;
-        }
 
         prop_ret = cu_get_u64_prop(pool_inst, "Capacity", &free_64);
         if (prop_ret != CMPI_RC_OK) {
@@ -794,8 +790,6 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        CU_DEBUG("Getting ResourceType");
-
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -803,9 +797,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
  
-        type = device_type_from_poolid(id);
-
-        CU_DEBUG("ResourceType: %hi", type);
+        type = res_type_from_pool_id(id);
 
         if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
