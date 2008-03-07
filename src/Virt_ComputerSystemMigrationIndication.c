@@ -42,10 +42,14 @@
 
 static const CMPIBroker *_BROKER;
 
-DECLARE_FILTER(xen_migrate, "Xen_ComputerSystemMigrationIndication");
+DECLARE_FILTER(xen_created, "Xen_ComputerSystemMigrationJobCreatedIndication");
+DECLARE_FILTER(xen_mod, "Xen_ComputerSystemMigrationJobModifiedIndication");
+DECLARE_FILTER(xen_deleted, "Xen_ComputerSystemMigrationJobDeletedIndication");
 
 static struct std_ind_filter *filters[] = {
-        &xen_migrate,
+        &xen_created,
+        &xen_mod,
+        &xen_deleted,
         NULL,
 };
 
