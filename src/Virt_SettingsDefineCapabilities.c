@@ -614,7 +614,7 @@ static struct sdc_rasd_prop *disk_inc(const CMPIObjectPath *ref,
 }
 
 static struct sdc_rasd mem = {
-        .resource_type = CIM_RASD_TYPE_MEM,
+        .resource_type = CIM_RES_TYPE_MEM,
         .min = mem_min,
         .max = mem_max,
         .def = mem_def,
@@ -622,7 +622,7 @@ static struct sdc_rasd mem = {
 };
 
 static struct sdc_rasd processor = {
-         .resource_type = CIM_RASD_TYPE_PROC,
+         .resource_type = CIM_RES_TYPE_PROC,
          .min = proc_min,
          .max = proc_max,
          .def = proc_def,
@@ -630,7 +630,7 @@ static struct sdc_rasd processor = {
 };
 
 static struct sdc_rasd network = {
-        .resource_type = CIM_RASD_TYPE_NET,
+        .resource_type = CIM_RES_TYPE_NET,
         .min = net_min,
         .max = net_max,
         .def = net_def,
@@ -638,7 +638,7 @@ static struct sdc_rasd network = {
 };
 
 static struct sdc_rasd disk = {
-        .resource_type = CIM_RASD_TYPE_DISK,
+        .resource_type = CIM_RES_TYPE_DISK,
         .min = disk_min,
         .max = disk_max,
         .def = disk_def,
@@ -807,7 +807,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
 
         CU_DEBUG("ResourceType: %hi", type);
 
-        if (type == VIRT_DEV_UNKNOWN) {
+        if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to determine resource type");
