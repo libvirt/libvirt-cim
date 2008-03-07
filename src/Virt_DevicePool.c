@@ -318,13 +318,13 @@ char *pool_member_of(const CMPIBroker *broker,
 {
         char *poolid = NULL;
 
-        if (type == CIM_RASD_TYPE_PROC)
+        if (type == CIM_RES_TYPE_PROC)
                 poolid = strdup("ProcessorPool/0");
-        else if (type == CIM_RASD_TYPE_MEM)
+        else if (type == CIM_RES_TYPE_MEM)
                 poolid = strdup("MemoryPool/0");
-        else if (type == CIM_RASD_TYPE_NET)
+        else if (type == CIM_RES_TYPE_NET)
                 poolid = netpool_member_of(broker, id, refcn);
-        else if (type == CIM_RASD_TYPE_DISK)
+        else if (type == CIM_RES_TYPE_DISK)
                 poolid = diskpool_member_of(broker, id, refcn);
         else
                 return NULL;
@@ -335,15 +335,15 @@ char *pool_member_of(const CMPIBroker *broker,
 uint16_t device_type_from_poolid(const char *id)
 {
         if (STARTS_WITH(id, "NetworkPool"))
-                return VIRT_DEV_NET;
+                return CIM_RES_TYPE_NET;
         else if (STARTS_WITH(id, "DiskPool"))
-                return VIRT_DEV_DISK;
+                return CIM_RES_TYPE_DISK;
         else if (STARTS_WITH(id, "MemoryPool"))
-                return VIRT_DEV_MEM;
+                return CIM_RES_TYPE_MEM;
         else if (STARTS_WITH(id, "ProcessorPool"))
-                return VIRT_DEV_VCPU;
+                return CIM_RES_TYPE_PROC;
         else
-                return VIRT_DEV_UNKNOWN;
+                return CIM_RES_TYPE_UNKNOWN;
 }
 
 static bool mempool_set_total(CMPIInstance *inst, virConnectPtr conn)
@@ -412,7 +412,7 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
                                    const CMPIBroker *broker)
 {
         const char *id = "MemoryPool/0";
-        uint16_t type = CIM_RASD_TYPE_MEM;
+        uint16_t type = CIM_RES_TYPE_MEM;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -450,7 +450,7 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
                                     const CMPIBroker *broker)
 {
         const char *id = "ProcessorPool/0";
-        uint16_t type = CIM_RASD_TYPE_PROC;
+        uint16_t type = CIM_RES_TYPE_PROC;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -489,7 +489,7 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
 {
         char *str = NULL;
         char *bridge = NULL;
-        uint16_t type = CIM_RASD_TYPE_NET;
+        uint16_t type = CIM_RES_TYPE_NET;
         CMPIInstance *inst;
         virNetworkPtr network = NULL;
 
@@ -595,7 +595,7 @@ static CMPIInstance *diskpool_from_path(const char *path,
 {
         CMPIInstance *inst;
         char *poolid = NULL;
-        const uint16_t type = CIM_RASD_TYPE_DISK;
+        const uint16_t type = CIM_RES_TYPE_DISK;
         struct statvfs vfs;
         uint64_t cap;
         uint64_t res;
