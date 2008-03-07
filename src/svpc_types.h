@@ -22,10 +22,12 @@
 #ifndef __SVPC_TYPES_H
 #define __SVPC_TYPES_H
 
-#define CIM_RASD_TYPE_PROC  3
-#define CIM_RASD_TYPE_MEM   4
-#define CIM_RASD_TYPE_NET  10
-#define CIM_RASD_TYPE_DISK 17
+#define CIM_RES_TYPE_ALL        0
+#define CIM_RES_TYPE_PROC       3
+#define CIM_RES_TYPE_MEM        4
+#define CIM_RES_TYPE_NET        10
+#define CIM_RES_TYPE_DISK       17
+#define CIM_RES_TYPE_UNKNOWN    1000
 
 #define CIM_VSSD_RECOVERY_NONE       2
 #define CIM_VSSD_RECOVERY_RESTART    3
