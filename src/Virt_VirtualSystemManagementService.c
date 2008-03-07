@@ -231,7 +231,7 @@ static int rasd_to_vdev(CMPIInstance *inst,
         if (!parse_fq_devid(id, &name, &devid))
                 goto err;
 
-        if (type == VIRT_DEV_DISK) {
+        if (type == CIM_RES_TYPE_DISK) {
                 free(dev->dev.disk.virtual_dev);
                 dev->dev.disk.virtual_dev = devid;
 
@@ -241,7 +241,7 @@ static int rasd_to_vdev(CMPIInstance *inst,
                 free(dev->dev.disk.source);
                 dev->dev.disk.source = strdup(val);
                 dev->dev.disk.disk_type = disk_type_from_file(val);
-        } else if (type == VIRT_DEV_NET) {
+        } else if (type == CIM_RES_TYPE_NET) {
                 free(dev->dev.net.mac);
                 dev->dev.net.mac = devid;
 
@@ -253,7 +253,7 @@ static int rasd_to_vdev(CMPIInstance *inst,
                         CU_DEBUG("Unknown class type for net device: %s",
                                  CLASSNAME(op));
 
-        } else if (type == VIRT_DEV_MEM) {
+        } else if (type == CIM_RES_TYPE_MEM) {
                 cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
                 cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
                 dev->dev.mem.maxsize = dev->dev.mem.size;
@@ -307,16 +307,16 @@ static int classify_resources(CMPIArray *resources,
                     CMPI_RC_OK)
                         return 0;
 
-                if (type == CIM_RASD_TYPE_PROC)
+                if (type == CIM_RES_TYPE_PROC)
                         rasd_to_vdev(item.value.inst,
                                      &domain->dev_vcpu[domain->dev_vcpu_ct++]);
-                else if (type == CIM_RASD_TYPE_MEM)
+                else if (type == CIM_RES_TYPE_MEM)
                         rasd_to_vdev(item.value.inst,
                                      &domain->dev_mem[domain->dev_mem_ct++]);
-                else if (type == CIM_RASD_TYPE_DISK)
+                else if (type == CIM_RES_TYPE_DISK)
                         rasd_to_vdev(item.value.inst,
                                      &domain->dev_disk[domain->dev_disk_ct++]);
-                else if (type == CIM_RASD_TYPE_NET)
+                else if (type == CIM_RES_TYPE_NET)
                         rasd_to_vdev(item.value.inst,
                                      &domain->dev_net[domain->dev_net_ct++]);
         }
@@ -613,16 +613,16 @@ static struct virt_device **find_list(struct domain *dominfo,
 {
         struct virt_device **list = NULL;
 
-        if (type == VIRT_DEV_NET) {
+        if (type == CIM_RES_TYPE_NET) {
                 list = &dominfo->dev_net;
                 *count = &dominfo->dev_net_ct;
-        } else if (type == VIRT_DEV_DISK) {
+        } else if (type == CIM_RES_TYPE_DISK) {
                 list = &dominfo->dev_disk;
                 *count = &dominfo->dev_disk_ct;
-        } else if (type == VIRT_DEV_VCPU) {
+        } else if (type == CIM_RES_TYPE_PROC) {
                 list = &dominfo->dev_vcpu;
                 *count = &dominfo->dev_vcpu_ct;
-        } else if (type == VIRT_DEV_MEM) {
+        } else if (type == CIM_RES_TYPE_MEM) {
                 list = &dominfo->dev_mem;
                 *count = &dominfo->dev_mem_ct;
         }
@@ -713,7 +713,7 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 goto out;
 
         _list = find_list(dominfo, type, &count);
-        if ((type == CIM_RASD_TYPE_MEM) || (_list != NULL))
+        if ((type == CIM_RES_TYPE_MEM) || (_list != NULL))
                 list = *_list;
         else {
                 cu_statusf(_BROKER, &s,
@@ -734,7 +734,7 @@ static CMPIStatus resource_del(struct domain *dominfo,
                                               dev,
                                               RESOURCE_DEL,
                                               CLASSNAME(op));
-                        dev->type = VIRT_DEV_UNKNOWN;
+                        dev->type = CIM_RES_TYPE_UNKNOWN;
                         break;
                 }
         }
@@ -760,7 +760,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
                 goto out;
 
         _list = find_list(dominfo, type, &count);
-        if ((type == CIM_RASD_TYPE_MEM) || (_list == NULL)) {
+        if ((type == CIM_RES_TYPE_MEM) || (_list == NULL)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Cannot add resources of type %" PRIu16, type);
