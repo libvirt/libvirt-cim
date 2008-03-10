@@ -236,22 +236,22 @@ static CMPIInstance *device_instance(const CMPIBroker *broker,
 {
         CMPIInstance *instance;
 
-        if (dev->type == VIRT_DEV_NET)
+        if (dev->type == CIM_RES_TYPE_NET)
                 instance = net_instance(broker,
                                         &dev->dev.net,
                                         dom,
                                         ns);
-        else if (dev->type == VIRT_DEV_DISK)
+        else if (dev->type == CIM_RES_TYPE_DISK)
                 instance = disk_instance(broker,
                                          &dev->dev.disk,
                                          dom,
                                          ns);
-        else if (dev->type == VIRT_DEV_MEM)
+        else if (dev->type == CIM_RES_TYPE_MEM)
                 instance = mem_instance(broker,
                                         &dev->dev.mem,
                                         dom,
                                         ns);
-        else if (dev->type == VIRT_DEV_VCPU)
+        else if (dev->type == CIM_RES_TYPE_PROC)
                 instance = vcpu_instance(broker,
                                          &dev->dev.vcpu,
                                          dom,
@@ -271,23 +271,24 @@ static CMPIInstance *device_instance(const CMPIBroker *broker,
 uint16_t device_type_from_classname(const char *classname)
 {
         if (strstr(classname, "NetworkPort"))
-                return VIRT_DEV_NET;
+                return CIM_RES_TYPE_NET;
         else if (strstr(classname, "LogicalDisk"))
-                return VIRT_DEV_DISK;
+                return CIM_RES_TYPE_DISK;
         else if (strstr(classname, "Memory"))
-                return VIRT_DEV_MEM;
+                return CIM_RES_TYPE_MEM;
         else if (strstr(classname, "Processor"))
-                return VIRT_DEV_VCPU;
+                return CIM_RES_TYPE_PROC;
         else
-                return VIRT_DEV_UNKNOWN;
+                return CIM_RES_TYPE_UNKNOWN;
 }
 
-int dom_devices(const CMPIBroker *broker,
-                virDomainPtr dom,
-                const char *ns,
-                int type,
-                struct inst_list *list)
+static CMPIStatus _get_devices(const CMPIBroker *broker,
+                               const CMPIObjectPath *reference,
+                               const virDomainPtr dom,
+                               const uint16_t type,
+                               struct inst_list *list)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         int count;
         int i;
         struct virt_device *devs = NULL;
@@ -299,7 +300,10 @@ int dom_devices(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 CMPIInstance *dev = NULL;
 
-                dev = device_instance(broker, &devs[i], dom, ns);
+                dev = device_instance(broker,
+                                      &devs[i],
+                                      dom,
+                                      NAMESPACE(reference));
                 if (dev)
                         inst_list_add(list, dev);
 
@@ -308,59 +312,107 @@ int dom_devices(const CMPIBroker *broker,
 
  out:
         free(devs);
-
-        return 1;
+        return s;
 }
 
-static int dom_list_devices(virConnectPtr conn,
-                            const CMPIObjectPath *ref,
-                            struct inst_list *list)
-{
-        virDomainPtr *doms;
-        int ndom;
-        int i;
-        int type;
-
-        type = device_type_from_classname(CLASSNAME(ref));
-
-        ndom = get_domain_list(conn, &doms);
-        if (ndom == 0)
-                return 1;
-        else if (ndom < 0)
-                return 0;
-
-        for (i = 0; i < ndom; i++) {
-                dom_devices(_BROKER, doms[i], NAMESPACE(ref), type, list);
-        }
-
-        return 1;
-}
-
-static CMPIStatus enum_devices(const CMPIObjectPath *reference,
-                               const CMPIResult *results,
-                               int names_only)
+static CMPIStatus _enum_devices(const CMPIBroker *broker,
+                                const CMPIObjectPath *reference,
+                                const virDomainPtr dom,
+                                const uint16_t type,
+                                struct inst_list *list)
 {
         CMPIStatus s;
-        virConnectPtr conn;
+
+        if (type == CIM_RES_TYPE_ALL) {
+                s = _get_devices(broker,
+                                 reference,
+                                 dom,
+                                 CIM_RES_TYPE_PROC,
+                                 list);
+                s = _get_devices(broker,
+                                 reference,
+                                 dom,
+                                 CIM_RES_TYPE_NET,
+                                 list);
+                s = _get_devices(broker,
+                                 reference,
+                                 dom,
+                                 CIM_RES_TYPE_MEM,
+                                 list);
+                s = _get_devices(broker,
+                                 reference,
+                                 dom,
+                                 CIM_RES_TYPE_DISK,
+                                 list);
+        }
+        else
+                s = _get_devices(broker,
+                                 reference,
+                                 dom,
+                                 type,
+                                 list);
+
+        return s;
+}
+
+CMPIStatus enum_devices(const CMPIBroker *broker,
+                        const CMPIObjectPath *reference,
+                        const char *domain,
+                        const uint16_t type,
+                        struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virConnectPtr conn = NULL;
+        virDomainPtr *doms = NULL;
+        int count = 1;
+        int i;
+
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
+        if (domain) {
+                doms = calloc(1, sizeof(virDomainPtr));
+                doms[0] = virDomainLookupByName(conn, domain);
+        }
+        else
+                count = get_domain_list(conn, &doms);
+
+        for (i = 0; i < count; i++) {
+                s = _enum_devices(broker,
+                                  reference,
+                                  doms[i],
+                                  type,
+                                  list);
+
+                virDomainFree(doms[i]);
+        }
+
+ out:
+        virConnectClose(conn);
+        free(doms);
+
+        return s;
+}
+
+static CMPIStatus return_enum_devices(const CMPIObjectPath *reference,
+                                      const CMPIResult *results,
+                                      int names_only)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         struct inst_list list;
 
         if (!provider_is_responsible(_BROKER, reference, &s))
-                return s;
+                goto out;
 
         inst_list_init(&list);
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
-        if (conn == NULL)
-                return s;
-
-        if (!dom_list_devices(conn, reference, &list)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to list domains");
-                return s;
-        }
-
-        if (list.cur == 0)
+        s = enum_devices(_BROKER,
+                         reference,
+                         NULL, 
+                         device_type_from_classname(CLASSNAME(reference)),
+                         &list);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
         if (names_only)
@@ -371,11 +423,6 @@ static CMPIStatus enum_devices(const CMPIObjectPath *reference,
         inst_list_free(&list);
 
  out:
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
-        virConnectClose(conn);
-
         return s;
 }
 
@@ -524,7 +571,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return enum_devices(reference, results, 1);
+        return return_enum_devices(reference, results, true);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -533,7 +580,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return enum_devices(reference, results, 0);
+        return return_enum_devices(reference, results, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
