@@ -99,7 +99,7 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
+        if (res_type_from_rasd_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing ResourceType");
