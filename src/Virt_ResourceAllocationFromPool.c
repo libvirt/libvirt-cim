@@ -51,7 +51,7 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
+        if (res_type_from_rasd_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to determine RASD type");
@@ -109,7 +109,7 @@ static int filter_by_pool(struct inst_list *dest,
                 if (op == NULL)
                         continue;
 
-                if (rasd_type_from_classname(CLASSNAME(op), &type) !=
+                if (res_type_from_rasd_classname(CLASSNAME(op), &type) !=
                     CMPI_RC_OK)
                         continue;
 
@@ -123,52 +123,6 @@ static int filter_by_pool(struct inst_list *dest,
         return dest->cur;
 }
 
-static int rasds_from_pool(uint16_t type,
-                           const CMPIObjectPath *ref,
-                           const char *poolid,
-                           const char **properties,
-                           struct inst_list *list)
-{
-        CMPIStatus s;
-        virConnectPtr conn = NULL;
-        virDomainPtr *doms = NULL;
-        int count;
-        int i;
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return 0;
-
-        count = get_domain_list(conn, &doms);
-
-        for (i = 0; i < count; i++) {
-                const char *name;
-                struct inst_list tmp;
-
-                inst_list_init(&tmp);
-
-                name = virDomainGetName(doms[i]);
-
-                rasds_for_domain(_BROKER,
-                                 name,
-                                 type,
-                                 ref,
-                                 properties,
-                                 &tmp);
-
-                filter_by_pool(list, &tmp, poolid);
-
-                inst_list_free(&tmp);
-
-                virDomainFree(doms[i]);
-        }
-
-        free(doms);
-        virConnectClose(conn);
-
-        return count;
-}
-
 static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
@@ -176,7 +130,8 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *poolid;
         uint16_t type;
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
+        struct inst_list tmp_list;
 
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
@@ -200,11 +155,18 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        rasds_from_pool(type, 
-                        ref,
-                        poolid,
-                        info->properties,
-                        list);
+        inst_list_init(&tmp_list);
+
+        s = enum_rasds(_BROKER,
+                       ref,
+                       NULL,
+                       type,
+                       info->properties,
+                       &tmp_list);
+
+        filter_by_pool(list, &tmp_list, poolid);
+
+        inst_list_free(&tmp_list);
 
  out:
         return s;
