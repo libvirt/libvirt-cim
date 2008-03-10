@@ -562,32 +562,16 @@ static CMPIStatus _enum_rasds(const CMPIBroker *broker,
                               struct inst_list *list)
 {
         CMPIStatus s;
+        int i;
 
         if (type == CIM_RES_TYPE_ALL) {
-                s = _get_rasds(broker,
-                               reference,
-                               dom, 
-                               CIM_RES_TYPE_PROC,
-                               properties,
-                               list);
-                s = _get_rasds(broker,
-                               reference,
-                               dom, 
-                               CIM_RES_TYPE_MEM,
-                               properties,
-                               list);
-                s = _get_rasds(broker,
-                               reference,
-                               dom, 
-                               CIM_RES_TYPE_NET,
-                               properties,
-                               list);
-                s = _get_rasds(broker,
-                               reference,
-                               dom,
-                               CIM_RES_TYPE_DISK,
-                               properties,
-                               list);
+                for (i=0; i<CIM_RES_TYPE_COUNT; i++)
+                        s = _get_rasds(broker,
+                                       reference,
+                                       dom, 
+                                       cim_res_types[i],
+                                       properties,
+                                       list);
         }
         else
                 s = _get_rasds(broker,

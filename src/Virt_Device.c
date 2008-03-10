@@ -322,28 +322,15 @@ static CMPIStatus _enum_devices(const CMPIBroker *broker,
                                 struct inst_list *list)
 {
         CMPIStatus s;
+        int i;
 
         if (type == CIM_RES_TYPE_ALL) {
-                s = _get_devices(broker,
-                                 reference,
-                                 dom,
-                                 CIM_RES_TYPE_PROC,
-                                 list);
-                s = _get_devices(broker,
-                                 reference,
-                                 dom,
-                                 CIM_RES_TYPE_NET,
-                                 list);
-                s = _get_devices(broker,
-                                 reference,
-                                 dom,
-                                 CIM_RES_TYPE_MEM,
-                                 list);
-                s = _get_devices(broker,
-                                 reference,
-                                 dom,
-                                 CIM_RES_TYPE_DISK,
-                                 list);
+                for (i=0; i<CIM_RES_TYPE_COUNT; i++)
+                        s = _get_devices(broker,
+                                         reference,
+                                         dom,
+                                         cim_res_types[i],
+                                         list);
         }
         else
                 s = _get_devices(broker,
