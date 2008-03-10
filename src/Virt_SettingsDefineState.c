@@ -64,7 +64,7 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         s = get_rasd_by_name(_BROKER,
                              ref,
                              name,
-                             device_type_from_classname(CLASSNAME(ref)),
+                             res_type_from_device_classname(CLASSNAME(ref)),
                              NULL,
                              &inst);
         if (s.rc != CMPI_RC_OK)
