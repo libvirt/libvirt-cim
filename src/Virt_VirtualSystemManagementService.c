@@ -220,7 +220,7 @@ static int rasd_to_vdev(CMPIInstance *inst,
         if (op == NULL)
                 goto err;
 
-        if (rasd_type_from_classname(CLASSNAME(op), &type) != CMPI_RC_OK)
+        if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK)
                 goto err;
 
         dev->type = (int)type;
@@ -303,7 +303,7 @@ static int classify_resources(CMPIArray *resources,
                 if (op == NULL)
                         return 0;
 
-                if (rasd_type_from_classname(CLASSNAME(op), &type) != 
+                if (res_type_from_rasd_classname(CLASSNAME(op), &type) != 
                     CMPI_RC_OK)
                         return 0;
 
@@ -882,7 +882,7 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        if (rasd_type_from_classname(CLASSNAME(op), &type) != CMPI_RC_OK) {
+        if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to determine RASD type");
@@ -1036,7 +1036,7 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
                         continue;
                 }
 
-                if (rasd_type_from_classname(CLASSNAME(ref), &type) !=
+                if (res_type_from_rasd_classname(CLASSNAME(ref), &type) !=
                     CMPI_RC_OK) {
                         CU_DEBUG("Unable to get type of `%s'",
                                  REF2STR(ref));
