@@ -27,20 +27,20 @@ char *rasd_to_xml(CMPIInstance *rasd);
  * Get a list of RASDs for a given domain
  *
  * @param broker The current broker
- * @param name The name of the domain in question
+ * @param ref Defines the libvirt connection to use
+ * @param domain The domain id (NULL means for all domains)
  * @param type The ResourceType of the desired RASDs
- * @param ref A reference used for hypervisor connection and namespace
- *            setting of the resulting instances
+ * @param properties The properties to filter for
  * @param _list The list of instances to populate
  */
-int rasds_for_domain(const CMPIBroker *broker,
-                     const char *name,
-                     const uint16_t type,
-                     const CMPIObjectPath *ref,
-                     const char **properties,
-                     struct inst_list *_list);
+CMPIStatus enum_rasds(const CMPIBroker *broker,
+                      const CMPIObjectPath *ref,
+                      const char *domain,
+                      const uint16_t type,
+                      const char **properties,
+                      struct inst_list *_list);
 
-CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type);
+CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type);
 CMPIrc rasd_classname_from_type(uint16_t type, const char **cn);
 
 CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
