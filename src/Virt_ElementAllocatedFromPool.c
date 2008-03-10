@@ -40,24 +40,6 @@
 
 const static CMPIBroker *_BROKER;
 
-static uint16_t class_to_type(const CMPIObjectPath *ref)
-{
-        uint16_t type;
-
-        if (CMClassPathIsA(_BROKER, ref, "CIM_LogicalDisk", NULL))
-                type = CIM_RES_TYPE_DISK;
-        else if (CMClassPathIsA(_BROKER, ref, "CIM_NetworkPort", NULL))
-                type = CIM_RES_TYPE_NET;
-        else if (CMClassPathIsA(_BROKER, ref, "CIM_Memory", NULL))
-                type = CIM_RES_TYPE_MEM;
-        else if (CMClassPathIsA(_BROKER, ref, "CIM_Processor", NULL))
-                type = CIM_RES_TYPE_PROC;
-        else
-                type = 0;
-
-        return type;
-}
-
 static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
@@ -76,7 +58,7 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        type = class_to_type(ref);
+        type = res_type_from_device_classname(CLASSNAME(ref));
         if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
