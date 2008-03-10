@@ -69,7 +69,7 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
                               const uint16_t type,
                               CMPIInstance **_inst);
 
-uint16_t device_type_from_classname(const char *classname);
+uint16_t res_type_from_device_classname(const char *classname);
 
 #endif
 

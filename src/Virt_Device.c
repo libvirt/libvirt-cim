@@ -268,7 +268,7 @@ static CMPIInstance *device_instance(const CMPIBroker *broker,
         return instance;
 }
 
-uint16_t device_type_from_classname(const char *classname)
+uint16_t res_type_from_device_classname(const char *classname)
 {
         if (strstr(classname, "NetworkPort"))
                 return CIM_RES_TYPE_NET;
@@ -410,7 +410,7 @@ static CMPIStatus return_enum_devices(const CMPIObjectPath *reference,
         s = enum_devices(_BROKER,
                          reference,
                          NULL, 
-                         device_type_from_classname(CLASSNAME(reference)),
+                         res_type_from_device_classname(CLASSNAME(reference)),
                          &list);
         if (s.rc != CMPI_RC_OK)
                 goto out;
@@ -551,7 +551,7 @@ CMPIStatus get_device_by_ref(const CMPIBroker *broker,
         s = get_device_by_name(broker, 
                                reference, 
                                name, 
-                               device_type_from_classname(CLASSNAME(reference)), 
+                               res_type_from_device_classname(CLASSNAME(reference)), 
                                &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
