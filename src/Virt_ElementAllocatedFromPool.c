@@ -77,7 +77,7 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                 goto out;
 
         type = class_to_type(ref);
-        if (type == 0) {
+        if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unknown device type");
@@ -138,47 +138,6 @@ static int filter_by_pool(struct inst_list *dest,
         return dest->cur;
 }
 
-static int devs_from_pool(uint16_t type,
-                          const CMPIObjectPath *ref,
-                          const char *poolid,
-                          struct inst_list *list)
-{
-        CMPIStatus s;
-        virConnectPtr conn = NULL;
-        virDomainPtr *doms = NULL;
-        int count;
-        int i;
-        const char *ns = NAMESPACE(ref);
-        const char *cn = CLASSNAME(ref);
-
-        conn = connect_by_classname(_BROKER, cn, &s);
-        if (conn == NULL)
-                return 0;
-
-        count = get_domain_list(conn, &doms);
-
-        for (i = 0; i < count; i++) {
-                const char *name;
-                struct inst_list tmp;
-
-                inst_list_init(&tmp);
-
-                name = virDomainGetName(doms[i]);
-
-                dom_devices(_BROKER, doms[i], ns, type, &tmp);
-
-                filter_by_pool(list, &tmp, type, poolid);
-
-                inst_list_free(&tmp);
-                virDomainFree(doms[i]);
-        }
-
-        free(doms);
-        virConnectClose(conn);
-
-        return count;
-}
-
 static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
@@ -186,7 +145,8 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
         const char *poolid;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         uint16_t type;
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
+        struct inst_list tmp;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -210,7 +170,15 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        devs_from_pool(type, ref, poolid, list);
+        inst_list_init(&tmp);
+
+        s = enum_devices(_BROKER, ref, NULL, type, &tmp);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        filter_by_pool(list, &tmp, type, poolid);
+
+        inst_list_free(&tmp);
 
  out:
         return s;
