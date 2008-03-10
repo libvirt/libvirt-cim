@@ -48,55 +48,6 @@
 
 const static CMPIBroker *_BROKER;
 
-#define DEV_TYPE_COUNT 4
-const static int device_types[DEV_TYPE_COUNT] = 
-        {VIRT_DEV_NET,
-         VIRT_DEV_DISK,
-         VIRT_DEV_MEM,
-         VIRT_DEV_VCPU,
-        };
-
-static int get_dom_devices(const char *name,
-                           struct inst_list *list,
-                           int type,
-                           const char *host_cn,
-                           const char *ns)
-{
-        virConnectPtr conn = NULL;
-        virDomainPtr dom = NULL;
-        CMPIStatus s;
-        int ret = 0;
-
-        conn = connect_by_classname(_BROKER, host_cn, &s);
-        if (conn == NULL)
-                goto out;
-
-        dom = virDomainLookupByName(conn, name);
-        if (dom == NULL)
-                goto out;
-
-        ret = dom_devices(_BROKER, dom, ns, type, list);
-
-        virDomainFree(dom);
- out:
-        virConnectClose(conn);
-
-        return ret;
-}
-
-static int get_all_devices(const char *name,
-                           struct inst_list *list,
-                           const char *host_cn,
-                           const char *ns)
-{
-        int i;
-
-        for (i = 0; i < DEV_TYPE_COUNT; i++)
-                get_dom_devices(name, list, device_types[i], host_cn, ns);
-
-        return i;
-}
-
 static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
                              struct std_assoc_info *info,
                              struct inst_list *list)
@@ -104,7 +55,6 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
         const char *host = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        int ret;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -120,20 +70,7 @@ static CMPIStatus sys_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        ret = get_all_devices(host,
-                              list,
-                              CLASSNAME(ref),
-                              NAMESPACE(ref));
-
-        if (ret >= 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_OK,
-                           "");
-        } else {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get devices");
-        }
+        s = enum_devices(_BROKER, ref, host, CIM_RES_TYPE_ALL, list);
 
  out:
         return s;
