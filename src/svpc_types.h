@@ -27,6 +27,8 @@
 #define CIM_RES_TYPE_MEM        4
 #define CIM_RES_TYPE_NET        10
 #define CIM_RES_TYPE_DISK       17
+#define CIM_RES_TYPE_EMU        1
+#define CIM_RES_TYPE_GRAPHICS   24
 #define CIM_RES_TYPE_UNKNOWN    1000
 
 #define CIM_VSSD_RECOVERY_NONE       2

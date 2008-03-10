@@ -81,13 +81,13 @@ void cleanup_virt_device(struct virt_device *dev)
         if (dev == NULL)
                 return; /* free()-like semantics */
 
-        if (dev->type == VIRT_DEV_DISK)
+        if (dev->type == CIM_RES_TYPE_DISK)
                 cleanup_disk_device(&dev->dev.disk);
-        else if (dev->type == VIRT_DEV_NET)
+        else if (dev->type == CIM_RES_TYPE_NET)
                 cleanup_net_device(&dev->dev.net);
-        else if (dev->type == VIRT_DEV_EMU)
+        else if (dev->type == CIM_RES_TYPE_EMU)
                 cleanup_emu_device(&dev->dev.emu);
-        else if (dev->type == VIRT_DEV_GRAPHICS)
+        else if (dev->type == CIM_RES_TYPE_GRAPHICS)
                 cleanup_graphics_device(&dev->dev.graphics);
 
         free(dev->id);
@@ -181,7 +181,7 @@ static int parse_disk_device(xmlNode *dnode, struct virt_device **vdevs)
         if ((ddev->source == NULL) || (ddev->virtual_dev == NULL))
                 goto err;
 
-        vdev->type = VIRT_DEV_DISK;
+        vdev->type = CIM_RES_TYPE_DISK;
         vdev->id = strdup(ddev->virtual_dev);
 
         *vdevs = vdev;
@@ -248,7 +248,7 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                 }
         }
 
-        vdev->type = VIRT_DEV_NET;
+        vdev->type = CIM_RES_TYPE_NET;
         vdev->id = strdup(ndev->mac);
 
         *vdevs = vdev;
@@ -286,7 +286,7 @@ static int parse_vcpu_device(xmlNode *node, struct virt_device **vdevs)
 
                 cdev->number = i;
 
-                vdev->type = VIRT_DEV_VCPU;
+                vdev->type = CIM_RES_TYPE_PROC;
                 if (asprintf(&vdev->id, "%i", i) == -1)
                         vdev->id = NULL;
         }
@@ -315,7 +315,7 @@ static int parse_emu_device(xmlNode *node, struct virt_device **vdevs)
         if (edev->path != NULL)
                 goto err;
 
-        vdev->type = VIRT_DEV_EMU;
+        vdev->type = CIM_RES_TYPE_EMU;
 
         *vdevs = vdev;
 
@@ -376,7 +376,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         if ((gdev->type == NULL) || (gdev->port == NULL))
                 goto err;
 
-        vdev->type = VIRT_DEV_GRAPHICS;
+        vdev->type = CIM_RES_TYPE_GRAPHICS;
 
         *vdevs = vdev;
 
@@ -411,17 +411,17 @@ static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
         int (*do_real_parse)(xmlNode *, struct virt_device **) = NULL;
 
         /* point to correct parser function according to type */
-        if (type == VIRT_DEV_NET)
+        if (type == CIM_RES_TYPE_NET)
                 do_real_parse = &parse_net_device;
-        else if (type == VIRT_DEV_DISK)
+        else if (type == CIM_RES_TYPE_DISK)
                 do_real_parse = &parse_disk_device;
-        else if (type == VIRT_DEV_VCPU)
+        else if (type == CIM_RES_TYPE_PROC)
                 do_real_parse = parse_vcpu_device;
-        else if (type == VIRT_DEV_EMU)
+        else if (type == CIM_RES_TYPE_EMU)
                 do_real_parse = parse_emu_device;
-        else if (type == VIRT_DEV_MEM)
+        else if (type == CIM_RES_TYPE_MEM)
                 do_real_parse = parse_mem_device;
-        else if (type == VIRT_DEV_GRAPHICS)
+        else if (type == CIM_RES_TYPE_GRAPHICS)
                 do_real_parse = parse_graphics_device;
         else
                 goto out;
@@ -479,17 +479,17 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
         xmlXPathObject *xpathObj;
         xmlChar *xpathstr;
 
-        if (type == VIRT_DEV_NET)
+        if (type == CIM_RES_TYPE_NET)
                 xpathstr = NET_XPATH;
-        else if (type == VIRT_DEV_DISK)
+        else if (type == CIM_RES_TYPE_DISK)
                 xpathstr = DISK_XPATH;
-        else if (type == VIRT_DEV_VCPU)
+        else if (type == CIM_RES_TYPE_PROC)
                 xpathstr = VCPU_XPATH;
-        else if (type == VIRT_DEV_EMU)
+        else if (type == CIM_RES_TYPE_EMU)
                 xpathstr = EMU_XPATH;
-        else if (type == VIRT_DEV_MEM)
+        else if (type == CIM_RES_TYPE_MEM)
                 xpathstr = MEM_XPATH;
-        else if (type == VIRT_DEV_GRAPHICS)
+        else if (type == CIM_RES_TYPE_GRAPHICS)
                 xpathstr = GRAPHICS_XPATH;
         else
                 goto err1;
@@ -535,24 +535,24 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         dev->type = _dev->type;
         dev->id = strdup(_dev->id);
 
-        if (dev->type == VIRT_DEV_NET) {
+        if (dev->type == CIM_RES_TYPE_NET) {
                 DUP_FIELD(dev, _dev, dev.net.mac);
                 DUP_FIELD(dev, _dev, dev.net.type);
                 DUP_FIELD(dev, _dev, dev.net.source);
-        } else if (dev->type == VIRT_DEV_DISK) {
+        } else if (dev->type == CIM_RES_TYPE_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);
                 DUP_FIELD(dev, _dev, dev.disk.driver);
                 DUP_FIELD(dev, _dev, dev.disk.source);
                 DUP_FIELD(dev, _dev, dev.disk.virtual_dev);
-        } else if (dev->type == VIRT_DEV_MEM) {
+        } else if (dev->type == CIM_RES_TYPE_MEM) {
                 dev->dev.mem.size = _dev->dev.mem.size;
                 dev->dev.mem.maxsize = _dev->dev.mem.maxsize;
-        } else if (dev->type == VIRT_DEV_VCPU) {
+        } else if (dev->type == CIM_RES_TYPE_PROC) {
                 dev->dev.vcpu.number = _dev->dev.vcpu.number;
-        } else if (dev->type == VIRT_DEV_EMU) {
+        } else if (dev->type == CIM_RES_TYPE_EMU) {
                 DUP_FIELD(dev, _dev, dev.emu.path);
-        } else if (dev->type == VIRT_DEV_GRAPHICS) {
+        } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
                 DUP_FIELD(dev, _dev, dev.graphics.type);
                 DUP_FIELD(dev, _dev, dev.graphics.port);
         }
@@ -566,7 +566,7 @@ static int _get_mem_device(const char *xml, struct virt_device **list)
         struct virt_device *mdev = NULL;
         int ret;
 
-        ret = parse_devices(xml, &mdevs, VIRT_DEV_MEM);
+        ret = parse_devices(xml, &mdevs, CIM_RES_TYPE_MEM);
         if (ret <= 0)
                 return ret;
 
@@ -592,7 +592,7 @@ static int _get_mem_device(const char *xml, struct virt_device **list)
                 mdev->dev.mem.maxsize = mdev->dev.mem.size;
         }
 
-        mdev->type = VIRT_DEV_MEM;
+        mdev->type = CIM_RES_TYPE_MEM;
         mdev->id = strdup("mem");
         *list = mdev;
 
@@ -610,7 +610,7 @@ int get_devices(virDomainPtr dom, struct virt_device **list, int type)
         if (xml == NULL)
                 return 0;
 
-        if (type == VIRT_DEV_MEM)
+        if (type == CIM_RES_TYPE_MEM)
                 ret = _get_mem_device(xml, list);
         else
                 ret = parse_devices(xml, list, type);
@@ -775,19 +775,19 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
         if (ret == 0)
                 goto err;
 
-        parse_devices(xml, &(*dominfo)->dev_emu, VIRT_DEV_EMU);
-        parse_devices(xml, &(*dominfo)->dev_graphics, VIRT_DEV_GRAPHICS);
+        parse_devices(xml, &(*dominfo)->dev_emu, CIM_RES_TYPE_EMU);
+        parse_devices(xml, &(*dominfo)->dev_graphics, CIM_RES_TYPE_GRAPHICS);
 
         (*dominfo)->dev_mem_ct = _get_mem_device(xml, &(*dominfo)->dev_mem);
         (*dominfo)->dev_net_ct = parse_devices(xml,
                                                &(*dominfo)->dev_net,
-                                               VIRT_DEV_NET);
+                                               CIM_RES_TYPE_NET);
         (*dominfo)->dev_disk_ct = parse_devices(xml,
                                                 &(*dominfo)->dev_disk,
-                                                VIRT_DEV_DISK);
+                                                CIM_RES_TYPE_DISK);
         (*dominfo)->dev_vcpu_ct = parse_devices(xml,
                                                 &(*dominfo)->dev_vcpu,
-                                                VIRT_DEV_VCPU);
+                                                CIM_RES_TYPE_PROC);
 
         return ret;
 
@@ -933,10 +933,10 @@ static int change_vcpus(virDomainPtr dom, int delta)
 
 int attach_device(virDomainPtr dom, struct virt_device *dev)
 {
-        if ((dev->type == VIRT_DEV_NET) ||
-            (dev->type == VIRT_DEV_DISK))
+        if ((dev->type == CIM_RES_TYPE_NET) ||
+            (dev->type == CIM_RES_TYPE_DISK))
                 return _change_device(dom, dev, true);
-        else if (dev->type == VIRT_DEV_VCPU)
+        else if (dev->type == CIM_RES_TYPE_PROC)
                 return change_vcpus(dom, 1);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
@@ -946,10 +946,10 @@ int attach_device(virDomainPtr dom, struct virt_device *dev)
 
 int detach_device(virDomainPtr dom, struct virt_device *dev)
 {
-        if ((dev->type == VIRT_DEV_NET) ||
-            (dev->type == VIRT_DEV_DISK))
+        if ((dev->type == CIM_RES_TYPE_NET) ||
+            (dev->type == CIM_RES_TYPE_DISK))
                 return _change_device(dom, dev, false);
-        else if (dev->type == VIRT_DEV_VCPU)
+        else if (dev->type == CIM_RES_TYPE_PROC)
                 return change_vcpus(dom, -1);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
@@ -959,7 +959,7 @@ int detach_device(virDomainPtr dom, struct virt_device *dev)
 
 int change_device(virDomainPtr dom, struct virt_device *dev)
 {
-        if (dev->type == VIRT_DEV_MEM)
+        if (dev->type == CIM_RES_TYPE_MEM)
                 return change_memory(dom, dev);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
