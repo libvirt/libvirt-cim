@@ -433,7 +433,7 @@ CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
         uint16_t type;
 
         if (cu_get_str_path(reference, "InstanceID", &name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
                 goto out;
