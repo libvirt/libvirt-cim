@@ -275,6 +275,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         uint32_t retcode = 1;
         CMPIBoolean isMigratable = 0;
         uint16_t type;
+        virDomainPtr dom = NULL;
 
         s = get_msd_values(ref, destination, argsin, &type, &dconn);
         if (s.rc != CMPI_RC_OK)
@@ -287,6 +288,14 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         s = check_hver(conn, dconn);
         if (s.rc != CMPI_RC_OK)
                 goto out;
+
+        dom = virDomainLookupByName(conn, domain);
+        if (dom == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such domain");
+                goto out;
+        }
 
         s = check_caps(conn, dconn);
         if (s.rc != CMPI_RC_OK)
@@ -303,6 +312,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         CMAddArg(argsout, "IsMigratable",
                  (CMPIValue *)&isMigratable, CMPI_boolean);
 
+        virDomainFree(dom);
         virConnectClose(conn);
         virConnectClose(dconn);
 
