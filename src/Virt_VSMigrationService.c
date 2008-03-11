@@ -60,13 +60,70 @@ enum {
 struct migration_job {
         CMPIContext *context;
         char *domain;
-        char *host;
+        virConnectPtr conn;
         char *ref_cn;
         char *ref_ns;
         uint16_t type;
         uint16_t transport;
         char uuid[33];
 };
+
+static CMPIStatus get_msd(const CMPIObjectPath *ref,
+                          const CMPIArgs *argsin,
+                          CMPIInstance **msd)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_inst_arg(argsin, "MigrationSettingData", msd);
+        if ((ret == CMPI_RC_OK) && (*msd != NULL))
+                goto out;
+
+        s = get_migration_sd(ref, msd, _BROKER, false);
+        if ((s.rc != CMPI_RC_OK) || (*msd == NULL)) {
+                cu_statusf(_BROKER, &s,
+                           s.rc,
+                           "Unable to get default setting data values");
+                goto out;
+        }
+        CU_DEBUG("Using default values for MigrationSettingData param");
+
+ out:
+        return s;
+}
+
+static CMPIStatus get_migration_type(CMPIInstance *msd,
+                                     uint16_t *type)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_u16_prop(msd, "MigrationType", type);
+        if (ret != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           ret,
+                           "Invalid MigrationType value");
+        }
+
+        return s;
+}
+
+static CMPIStatus get_migration_uri(CMPIInstance *msd,
+                                    uint16_t *uri)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_u16_prop(msd, "TransportType", uri);
+        if (ret == CMPI_RC_OK)
+                goto out;
+
+        CU_DEBUG("Using default TransportType: %d", CIM_MIGRATE_URI_SSH);
+        *uri = CIM_MIGRATE_URI_SSH;
+
+ out:
+        return s;
+}
 
 static char *dest_uri(const char *cn,
                       const char *dest,
@@ -112,6 +169,52 @@ static char *dest_uri(const char *cn,
 
  out:
         return uri;
+}
+
+static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
+                                 const char *destination,
+                                 const CMPIArgs *argsin,
+                                 uint16_t *type,
+                                 virConnectPtr *conn)
+{
+        CMPIStatus s;
+        CMPIInstance *msd;
+        uint16_t uri_type;
+        char *uri = NULL;
+
+        s = get_msd(ref, argsin, &msd);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_type(msd, type);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_uri(msd, &uri_type);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        uri = dest_uri(CLASSNAME(ref), destination, uri_type);
+        if (uri == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to construct a valid libvirt URI");
+                goto out;
+        }
+
+        *conn = virConnectOpen(uri);
+        if (*conn == NULL) {
+                CU_DEBUG("Failed to connect to remote host (%s)", uri);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to connect to remote host (%s)", uri);
+                goto out;
+        }
+
+ out:
+        free(uri);
+
+        return s;
 }
 
 static CMPIStatus check_caps(virConnectPtr conn, virConnectPtr dconn)
@@ -163,35 +266,23 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                                 const char *domain,
                                 const char *destination,
                                 const CMPIResult *results,
+                                const CMPIArgs *argsin,
                                 CMPIArgs *argsout)
 {
         CMPIStatus s;
-        char *uri = NULL;
         virConnectPtr conn = NULL;
         virConnectPtr dconn = NULL;
         uint32_t retcode = 1;
         CMPIBoolean isMigratable = 0;
+        uint16_t type;
 
-        uri = dest_uri(CLASSNAME(ref), destination, CIM_MIGRATE_URI_SSH);
-        if (uri == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to construct a valid libvirt URI");
+        s = get_msd_values(ref, destination, argsin, &type, &dconn);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
-
-        dconn = virConnectOpen(uri);
-        if (dconn == NULL) {
-                CU_DEBUG("Failed to connect to remote host (%s)", uri);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to connect to remote host (%s)", uri);
-                goto out;
-        }
 
         s = check_hver(conn, dconn);
         if (s.rc != CMPI_RC_OK)
@@ -212,7 +303,6 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         CMAddArg(argsout, "IsMigratable",
                  (CMPIValue *)&isMigratable, CMPI_boolean);
 
-        free(uri);
         virConnectClose(conn);
         virConnectClose(dconn);
 
@@ -250,7 +340,7 @@ static CMPIStatus vs_migratable_host(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dhost, results, argsout);
+        return vs_migratable(ref, name, dhost, results, argsin, argsout);
 }
 
 static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
@@ -293,7 +383,7 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dname, results, argsout);
+        return vs_migratable(ref, name, dname, results, argsin, argsout);
 }
 
 static const char *ind_type_to_name(int ind_type)
@@ -571,18 +661,9 @@ static CMPIStatus migrate_vs(struct migration_job *job)
 {
         CMPIStatus s;
         virConnectPtr conn = NULL;
-        virConnectPtr dconn = NULL;
         virDomainPtr dom = NULL;
         char *uri = NULL;
         char *xml = NULL;
-
-        uri = dest_uri(job->ref_cn, job->host, job->transport);
-        if (uri == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to construct a valid libvirt URI");
-                goto out;
-        }
 
         conn = connect_by_classname(_BROKER, job->ref_cn, &s);
         if (conn == NULL)
@@ -603,28 +684,19 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                         goto out;
         }
 
-        dconn = virConnectOpen(uri);
-        if (dconn == NULL) {
-                CU_DEBUG("Failed to connect to remote host (%s)", uri);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to connect to remote host (%s)", uri);
-                goto out;
-        }
-
         switch(job->type) {
         case CIM_MIGRATE_OTHER:
                 CU_DEBUG("Preparing for offline migration");
-                s = handle_offline_migrate(dconn, dom, uri, xml, job);
+                s = handle_offline_migrate(job->conn, dom, uri, xml, job);
                 break;
         case CIM_MIGRATE_LIVE:
                 CU_DEBUG("Preparing for live migration");
-                s = handle_migrate(dconn, dom, uri, VIR_MIGRATE_LIVE, job);
+                s = handle_migrate(job->conn, dom, uri, VIR_MIGRATE_LIVE, job);
                 break;
         case CIM_MIGRATE_RESUME:
         case CIM_MIGRATE_RESTART:
                 CU_DEBUG("Preparing for static migration");
-                s = handle_migrate(dconn, dom, uri, 0, job);
+                s = handle_migrate(job->conn, dom, uri, 0, job);
                 break;
         default: 
                 CU_DEBUG("Unsupported migration type (%d)", job->type);
@@ -649,7 +721,6 @@ static CMPIStatus migrate_vs(struct migration_job *job)
         free(xml);
         virDomainFree(dom);
         virConnectClose(conn);
-        virConnectClose(dconn);
 
         return s;
 }
@@ -675,8 +746,8 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
                                       CIM_JOBSTATE_COMPLETE,
                                       "Completed");
 
+        virConnectClose(job->conn);
         free(job->domain);
-        free(job->host);
         free(job->ref_cn);
         free(job->ref_ns);
         free(job);
@@ -771,86 +842,6 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
         return s;
 }
 
-static CMPIStatus get_msd(const CMPIObjectPath *ref,
-                          const CMPIArgs *argsin,
-                          CMPIInstance **msd)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret;
-
-        ret = cu_get_inst_arg(argsin, "MigrationSettingData", msd);
-        if ((ret == CMPI_RC_OK) && (*msd != NULL))
-                goto out;
-
-        s = get_migration_sd(ref, msd, _BROKER, false);
-        if ((s.rc != CMPI_RC_OK) || (*msd == NULL)) {
-                cu_statusf(_BROKER, &s,
-                           s.rc,
-                           "Unable to get default setting data values");
-                goto out;
-        }
-        CU_DEBUG("Using default values for MigrationSettingData param");
-
- out:
-        return s;
-}
-
-static CMPIStatus get_migration_type(CMPIInstance *msd,
-                                     uint16_t *type)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret;
-
-        ret = cu_get_u16_prop(msd, "MigrationType", type);
-        if (ret != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           ret,
-                           "Invalid MigrationType value");
-        }
-
-        return s;
-}
-
-static CMPIStatus get_migration_uri(CMPIInstance *msd,
-                                    uint16_t *uri)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret;
-
-        ret = cu_get_u16_prop(msd, "TransportType", uri);
-        if (ret == CMPI_RC_OK)
-                goto out;
-
-        CU_DEBUG("Using default TransportType: %d", CIM_MIGRATE_URI_SSH);
-        *uri = CIM_MIGRATE_URI_SSH;
-
- out:
-        return s;
-}
-
-static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
-                                 const CMPIArgs *argsin,
-                                 struct migration_job *job)
-{
-        CMPIStatus s;
-        CMPIInstance *msd;
-
-        s = get_msd(ref, argsin, &msd);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-
-        s = get_migration_type(msd, &job->type);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-
-        s = get_migration_uri(msd, &job->transport);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-
- out:
-        return s;
-}
-
 static struct migration_job *migrate_job_prepare(const CMPIContext *context,
                                                  const CMPIObjectPath *ref,
                                                  const char *domain,
@@ -864,7 +855,6 @@ static struct migration_job *migrate_job_prepare(const CMPIContext *context,
                 return NULL;
 
         job->domain = strdup(domain);
-        job->host = strdup(host);
         job->ref_cn = strdup(CLASSNAME(ref));
         job->ref_ns = strdup(NAMESPACE(ref));
 
@@ -901,7 +891,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = get_msd_values(ref, argsin, job); 
+        s = get_msd_values(ref, host, argsin, &job->type, &job->conn);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
