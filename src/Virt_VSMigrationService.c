@@ -66,7 +66,6 @@ struct migration_job {
         char *ref_cn;
         char *ref_ns;
         uint16_t type;
-        uint16_t transport;
         char uuid[33];
 };
 
