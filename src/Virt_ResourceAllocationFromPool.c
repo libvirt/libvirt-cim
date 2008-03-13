@@ -116,7 +116,7 @@ static int filter_by_pool(struct inst_list *dest,
                 cu_get_str_prop(inst, "InstanceID", &rasd_id);
 
                 poolid = pool_member_of(_BROKER, CLASSNAME(op), type, rasd_id);
-                if (STREQ(poolid, _poolid))
+                if ((poolid != NULL) && STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
         }
 
