@@ -44,6 +44,9 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
 /* Vendor-specific extension; should be documented somewhere */
 #define CIM_VSSD_RECOVERY_PRESERVE 123
 
+#define CIM_SVPC_RETURN_JOB_STARTED   4096
+#define CIM_SVPC_RETURN_COMPLETED        0
+
 #include <libcmpiutil/libcmpiutil.h>
 #include <string.h>
 

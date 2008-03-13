@@ -40,6 +40,7 @@
 #include "Virt_HostSystem.h"
 #include "Virt_ComputerSystem.h"
 #include "Virt_VSMigrationSettingData.h"
+#include "svpc_types.h"
 
 #define CIM_JOBSTATE_STARTING 3
 #define CIM_JOBSTATE_RUNNING 4
@@ -315,7 +316,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        retcode = 0;
+        retcode = CIM_SVPC_RETURN_COMPLETED;
         cu_statusf(_BROKER, &s,
                    CMPI_RC_OK,
                    "");
@@ -923,7 +924,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
 
         thread = _BROKER->xft->newThread((void*)migration_thread, job, 0);
 
-        retcode = 0;
+        retcode = CIM_SVPC_RETURN_JOB_STARTED;
 
  out:
         CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
