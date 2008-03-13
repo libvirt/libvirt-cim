@@ -38,6 +38,7 @@
 
 #include "Virt_VSMigrationService.h"
 #include "Virt_HostSystem.h"
+#include "Virt_ComputerSystem.h"
 #include "Virt_VSMigrationSettingData.h"
 
 #define CIM_JOBSTATE_STARTING 3
@@ -262,7 +263,7 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
 }
 
 static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
-                                const char *domain,
+                                CMPIObjectPath *system,
                                 const char *destination,
                                 const CMPIResult *results,
                                 const CMPIArgs *argsin,
@@ -275,6 +276,15 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         CMPIBoolean isMigratable = 0;
         uint16_t type;
         virDomainPtr dom = NULL;
+        CMPIInstance *dominst;
+        const char *domain;
+
+        if (cu_get_str_path(system, "Name", &domain) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing key (Name) in ComputerSystem");
+                goto out;
+        }
 
         s = get_msd_values(ref, destination, argsin, &type, &dconn);
         if (s.rc != CMPI_RC_OK)
@@ -295,6 +305,11 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                            "No such domain");
                 goto out;
         }
+
+        CMSetNameSpace(system, NAMESPACE(ref));
+        s = get_domain_by_ref(_BROKER, system, &dominst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         s = check_caps(conn, dconn);
         if (s.rc != CMPI_RC_OK)
@@ -328,18 +343,9 @@ static CMPIStatus vs_migratable_host(CMPIMethodMI *self,
         CMPIStatus s;
         const char *dhost = NULL;
         CMPIObjectPath *system;
-        const char *name = NULL;
 
         cu_get_str_arg(argsin, "DestinationHost", &dhost);
         cu_get_ref_arg(argsin, "ComputerSystem", &system);
-
-        if (cu_get_str_path(system, "Name", &name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing key (Name) in ComputerSystem");
-                METHOD_RETURN(results, 1);
-                return s;
-        }
 
         if (!check_refs_pfx_match(ref, system)) {
                 cu_statusf(_BROKER, &s,
@@ -349,7 +355,7 @@ static CMPIStatus vs_migratable_host(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dhost, results, argsin, argsout);
+        return vs_migratable(ref, system, dhost, results, argsin, argsout);
 }
 
 static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
@@ -363,7 +369,6 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
         CMPIObjectPath *dsys;
         CMPIObjectPath *sys;
         const char *dname;
-        const char *name;
 
         cu_get_ref_arg(argsin, "DestinationSystem", &dsys);
         cu_get_ref_arg(argsin, "ComputerSystem", &sys);
@@ -376,14 +381,6 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
                 return s;
         }
 
-        if (cu_get_str_path(sys, "Name", &name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing key (Name) in ComputerSystem");
-                METHOD_RETURN(results, 1);
-                return s;
-        }
-
         if (!check_refs_pfx_match(ref, sys)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -392,7 +389,7 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dname, results, argsin, argsout);
+        return vs_migratable(ref, sys, dname, results, argsin, argsout);
 }
 
 static const char *ind_type_to_name(int ind_type)
