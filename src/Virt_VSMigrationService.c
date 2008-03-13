@@ -100,9 +100,8 @@ static CMPIStatus get_migration_type(CMPIInstance *msd,
 
         ret = cu_get_u16_prop(msd, "MigrationType", type);
         if (ret != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           ret,
-                           "Invalid MigrationType value");
+                CU_DEBUG("Using default MigrationType: %d", CIM_MIGRATE_LIVE);
+                *type = CIM_MIGRATE_LIVE;
         }
 
         return s;
