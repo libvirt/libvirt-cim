@@ -180,6 +180,9 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         }
 
         for (i = 0; profiles[i] != NULL; i++) {
+                if (profiles[i]->scoping_class == NULL)
+                        continue;
+
                 if (!STREQC(profiles[i]->scoping_class, classname))
                         continue;
 
