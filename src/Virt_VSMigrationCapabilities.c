@@ -39,6 +39,10 @@ const static CMPIBroker *_BROKER;
 #define SVPC_MIG_CVSIMTH 4
 #define SVPC_MIG_CVSIMTS 5
 
+#define SVPC_MIG_DOMAIN  2
+#define SVPC_MIG_IPv4    3
+#define SVPC_MIG_IPv6    4
+
 static CMPIStatus set_method_properties(const CMPIBroker *broker,
                                         CMPIInstance *inst)
 {
@@ -79,6 +83,36 @@ static CMPIStatus set_method_properties(const CMPIBroker *broker,
         return s;
 }
 
+static CMPIStatus set_formats_property(const CMPIBroker *broker,
+                                       CMPIInstance *inst)
+{
+        CMPIArray *array;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        uint16_t val;
+
+        array = CMNewArray(broker, 3, CMPI_uint16, &s);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "CMNewArray() call failed.");
+                return s;
+        }
+
+        val = SVPC_MIG_DOMAIN;
+        CMSetArrayElementAt(array, 0, (CMPIValue *)&val, CMPI_uint16);
+
+        val = SVPC_MIG_IPv4;
+        CMSetArrayElementAt(array, 1, (CMPIValue *)&val, CMPI_uint16);
+
+        val = SVPC_MIG_IPv6;
+        CMSetArrayElementAt(array, 2, (CMPIValue *)&val, CMPI_uint16);
+
+        CMSetProperty(inst, "DestinationHostFormatsSupported",
+                      (CMPIValue *)&array, CMPI_uint16A);
+
+        return s;
+}
+
 CMPIStatus get_migration_caps(const CMPIObjectPath *ref,
                               CMPIInstance **_inst,
                               const CMPIBroker *broker,
@@ -113,6 +147,10 @@ CMPIStatus get_migration_caps(const CMPIObjectPath *ref,
 
         s = set_method_properties(broker, inst);
 
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = set_formats_property(broker, inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
