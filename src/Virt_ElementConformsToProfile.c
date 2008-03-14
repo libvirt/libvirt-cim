@@ -59,6 +59,9 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         CMPIData data ;
         char *classname;
 
+        if (profile->scoping_class == NULL)
+                return s;
+
         classname = get_typed_class(pfx_from_conn(conn), 
                                     profile->scoping_class);
         if (classname == NULL) {
