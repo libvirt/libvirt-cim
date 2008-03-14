@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2008
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -40,19 +40,20 @@
 
 const static CMPIBroker *_BROKER;
 
-CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
-                                const char *namespace,
-                                const char **properties,
-                                virConnectPtr conn,
-				struct reg_prof *profile)
+CMPIStatus get_profile(const CMPIBroker *broker,
+                       const CMPIObjectPath *reference,
+                       const char **properties,
+                       const char* pfx,
+                       struct reg_prof *profile,
+                       CMPIInstance **_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
 
         instance = get_typed_instance(broker,
-                                      pfx_from_conn(conn),
+                                      pfx,
                                       "RegisteredProfile",
-                                      namespace);
+                                      CIM_INTEROP_NS);
 
         if (instance == NULL) {
                 cu_statusf(broker, &s, 
@@ -63,10 +64,7 @@ CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
 
         if (properties) {
                 const char *keys[] = {"InstanceID", NULL};
-                s = CMSetPropertyFilter(instance, properties, keys);
-                if (s.rc != CMPI_RC_OK) {
-                        goto out;
-                }
+                CMSetPropertyFilter(instance, properties, keys);
         }
         
         CMSetProperty(instance, "InstanceID",
@@ -81,41 +79,120 @@ CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
         CMSetProperty(instance, "RegisteredVersion", 
                       (CMPIValue *)profile->reg_version, CMPI_chars);
 
+        *_inst = instance;
+
  out:
-        return instance;
+
+        return s;
 }
 
-static CMPIStatus enum_profs(const CMPIObjectPath *ref,
-                             const CMPIResult *results,
-                             const char **properties,
-                             bool names_only)
+CMPIStatus get_profile_by_name(const CMPIBroker *broker,
+                               const CMPIObjectPath *reference,
+                               const char *name,
+                               const char **properties,
+                               CMPIInstance **_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *instance;
+        virConnectPtr conn = NULL;
+        int i;
+        bool found = false;
+
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
+        if (conn == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
+                goto out;
+        }
+
+        for (i = 0; profiles[i] != NULL; i++) {
+                if(STREQ(name, profiles[i]->reg_id)) {
+                        CMPIInstance *inst = NULL;
+
+                        s = get_profile(broker,
+                                        reference, 
+                                        properties,
+                                        pfx_from_conn(conn),
+                                        profiles[i],
+                                        &inst);
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+
+                        *_inst = inst;
+                        found = true;
+                        break;
+                }
+        }
+
+        if (found == false)
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           name);
+
+ out:
+        virConnectClose(conn);
+
+        return s;
+}
+
+CMPIStatus get_profile_by_ref(const CMPIBroker *broker,
+                              const CMPIObjectPath *reference,
+                              const char **properties,
+                              CMPIInstance **_inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        const char *name = NULL;
+
+        if (cu_get_str_path(reference, "InstanceID", &name) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No InstanceID specified");
+                goto out;
+        }
+
+        s = get_profile_by_name(broker, reference, name, properties, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+        
+        s = cu_validate_ref(broker, reference, inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        *_inst = inst;
+
+ out:
+        return s;
+}
+
+CMPIStatus enum_profiles(const CMPIBroker *broker,
+                         const CMPIObjectPath *reference,
+                         const char **properties,
+                         struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn = NULL;
         int i;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL)
-                return s;
+                goto out;
 
         for (i = 0; profiles[i] != NULL; i++) {
-                instance = reg_prof_instance(_BROKER, 
-                                             NAMESPACE(ref), 
-                                             properties,
-                                             conn,
-                                             profiles[i]);
-                if (instance == NULL) {
-                        cu_statusf(_BROKER, &s, 
-                                   CMPI_RC_ERR_FAILED,
-                                   "Can't create profile instance");
-                        goto out;
-                }
+                CMPIInstance *inst = NULL;
 
-                if (names_only)
-                        cu_return_instance_name(results, instance);
-                else
-                        CMReturnInstance(results, instance);
+                s = get_profile(broker,
+                                reference, 
+                                properties,
+                                pfx_from_conn(conn),
+                                profiles[i],
+                                &inst);
+
+                if (s.rc != CMPI_RC_OK)
+                        continue;
+
+                inst_list_add(list, inst);
         }
 
  out:
@@ -124,50 +201,27 @@ static CMPIStatus enum_profs(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus get_prof(const CMPIObjectPath *ref,
-                           const CMPIResult *results,
-                           const char **properties)
-{       
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *instance = NULL;
-        virConnectPtr conn = NULL;
-        const char* id;
-        int i;
+static CMPIStatus return_enum_profiles(const CMPIObjectPath *reference,
+                                       const CMPIResult *results,
+                                       const char **properties,
+                                       const bool names_only)
+{
+        struct inst_list list;
+        CMPIStatus s;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance");
+        inst_list_init(&list);
+
+        s = enum_profiles(_BROKER, reference, properties, &list);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-        }
 
-        if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No InstanceID specified");
-                goto out;
-        }
-
-        for (i = 0; profiles[i] != NULL; i++) {
-                if(STREQ(id, profiles[i]->reg_id)) {
-                        instance = reg_prof_instance(_BROKER, 
-                                                     NAMESPACE(ref), 
-                                                     properties,
-                                                     conn,
-                                                     profiles[i]);
-                        break;
-                }
-        }
-
-        if(instance)
-                CMReturnInstance(results, instance);
+        if (names_only)
+                cu_return_instance_names(results, &list);
         else
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "Profile instance not found");
+                cu_return_instances(results, &list);
+
  out:
-        virConnectClose(conn);
+        inst_list_free(&list);
 
         return s;
 }
@@ -177,7 +231,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return enum_profs(reference, results, NULL, true);
+        return return_enum_profiles(reference, results, NULL, true);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -186,7 +240,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return enum_profs(reference, results, properties, false);
+        return return_enum_profiles(reference, results, properties, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -195,7 +249,17 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return get_prof(reference, results, properties);
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+
+        s = get_profile_by_ref(_BROKER, reference, properties, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        CMReturnInstance(results, inst);
+
+ out:
+        return s;
 }
 
 DEFAULT_CI();

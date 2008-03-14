@@ -1,8 +1,9 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2008
  *
  * Authors:
  *  Jay Gagnon <grendel@linux.vnet.ibm.com>
+ *  Heidi Eckhart <heidieck@linux.vnet.ibm.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,6 +19,10 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  */
+
+/* Interop Namespace */
+#define CIM_INTEROP_NS "root/interop"
+
 struct reg_prof {
         uint16_t reg_org; // Valid: 1 = Other, 2 = DMTF
         char *reg_id;
@@ -26,7 +31,7 @@ struct reg_prof {
         int ad_types;
         char *other_reg_org;
         char *ad_type_descriptions;
-        char *provider_name;
+        char *scoping_class;
 };
 
 struct reg_prof SystemVirtualization = {
@@ -34,7 +39,7 @@ struct reg_prof SystemVirtualization = {
         .reg_id = "CIM:DSP1042-SystemVirtualization-1.0.0",
         .reg_name = "System Virtualization",
         .reg_version = "1.0.0",
-        .provider_name = "HostSystem"
+        .scoping_class = "HostSystem"
 };
 
 struct reg_prof VirtualSystem = {
@@ -42,7 +47,7 @@ struct reg_prof VirtualSystem = {
         .reg_id = "CIM:DSP1057-VirtualSystem-1.0.0a",
         .reg_name = "Virtual System Profile",
         .reg_version = "1.0.0a",
-        .provider_name = "ComputerSystem"
+        .scoping_class = "ComputerSystem"
 };
 
 
