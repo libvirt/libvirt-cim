@@ -1,0 +1,34 @@
+// Copyright IBM Corp. 2008
+
+[Association,
+ Description (
+        "Associates a RegisteredProfile with its scoping RegisteredProfile."),
+ Provider("cmpi::Virt_ReferencedProfile")
+]
+class Xen_ReferencedProfile : CIM_ReferencedProfile
+{
+
+  [Override ("Antecedent")]
+  Xen_RegisteredProfile REF Antecedent;
+
+  [Override ("Dependent")]
+  Xen_RegisteredProfile REF Dependent;
+
+};
+
+[Association,
+ Description (
+        "Associates a RegisteredProfile with its scoping RegisteredProfile."),
+ Provider("cmpi::Virt_ReferencedProfile")
+]
+class KVM_ReferencedProfile : CIM_ReferencedProfile
+{
+
+  [Override ("Antecedent")]
+  KVM_RegisteredProfile REF Antecedent;
+
+  [Override ("Dependent")]
+  KVM_RegisteredProfile REF Dependent;
+
+};
+

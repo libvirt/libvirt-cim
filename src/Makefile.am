@@ -46,6 +46,7 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_HostedDependency.la \
                        libVirt_RegisteredProfile.la \
                        libVirt_ElementConformsToProfile.la \
+                       libVirt_ReferencedProfile.la \
                        libVirt_SettingsDefineCapabilities.la \
                        libVirt_HostedResourcePool.la \
                        libVirt_ElementCapabilities.la \
@@ -98,6 +99,10 @@ libVirt_DevicePool_la_SOURCES = Virt_DevicePool.c
 libVirt_ElementConformsToProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la
 libVirt_ElementConformsToProfile_la_SOURCES = Virt_ElementConformsToProfile.c
 libVirt_ElementConformsToProfile_la_LIBADD = -lVirt_RegisteredProfile
+
+libVirt_ReferencedProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la
+libVirt_ReferencedProfile_la_SOURCES = Virt_ReferencedProfile.c
+libVirt_ReferencedProfile_la_LIBADD = -lVirt_RegisteredProfile
 
 libVirt_EnabledLogicalElementCapabilities_la_SOURCES = Virt_EnabledLogicalElementCapabilities.c
 
