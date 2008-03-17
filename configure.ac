@@ -73,6 +73,20 @@ AC_ARG_WITH(html-dir,
 	    [HTML_DIR='$(datadir)/doc/$(PACKAGE)-$(VERSION)/html'])
 AC_SUBST(HTML_DIR)
 
+AC_ARG_WITH([migrate_check_timeout],
+	    [  --with-migrate_check_timeout=SECS  Max runtime allowed for external migration checks],
+	    [test "x$withval" != "x" && MIG_CHECKS_TIMEOUT="$withval"],
+	    [MIG_CHECKS_TIMEOUT=10])
+AC_SUBST(MIG_CHECKS_TIMEOUT)
+AC_DEFINE_UNQUOTED(MIG_CHECKS_TIMEOUT, $MIG_CHECKS_TIMEOUT, [External migration check timeout])
+
+AC_ARG_WITH([migrate_check_dir],
+	    [  --with-migrate_check_dir=dir  Location of external migration checks],
+	    [test "x$withval" != "x" && MIG_CHECKS_DIR="$withval"],
+	    [MIG_CHECKS_DIR=/usr/libexec/libvirt-cim/extchecks])
+AC_SUBST(MIG_CHECKS_DIR)
+AC_DEFINE_UNQUOTED(MIG_CHECKS_DIR, "$MIG_CHECKS_DIR", [External migration check timeout])
+
 # Autogenerate the autoconf header file to store build settings
 AC_CONFIG_HEADER([config.h])
 
