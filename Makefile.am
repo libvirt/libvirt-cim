@@ -93,7 +93,7 @@ INTEROP_REGS = \
 	schema/ElementConformsToProfile.registration \
 	schema/ReferencedProfile.registration
 
-pkgdata_DATA = $(MOFS) $(REGS)
+pkgdata_DATA = $(MOFS) $(REGS) $(INTEROP_REGS)
 pkgdata_SCRIPTS = provider-register.sh
 
 EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
