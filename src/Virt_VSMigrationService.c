@@ -21,6 +21,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <signal.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <errno.h>
 
 #include <uuid/uuid.h>
 
@@ -41,6 +48,8 @@
 #include "Virt_ComputerSystem.h"
 #include "Virt_VSMigrationSettingData.h"
 #include "svpc_types.h"
+
+#include "config.h"
 
 #define CIM_JOBSTATE_STARTING 3
 #define CIM_JOBSTATE_RUNNING 4
@@ -262,6 +271,258 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
         return s;
 }
 
+static bool is_valid_check(const char *path)
+{
+        struct stat s;
+
+        if (stat(path, &s) != 0)
+                return false;
+
+        if (!S_ISREG(s.st_mode))
+                return false;
+
+        if ((s.st_mode & S_IXUSR) ||
+            (s.st_mode & S_IXGRP) ||
+            (s.st_mode & S_IXOTH))
+                return true;
+        else
+                return false;
+}
+
+static void free_list(char **list, int count)
+{
+        int i;
+
+        if (list == NULL)
+                return;
+
+        for (i = 0; i < count; i++)
+                free(list[i]);
+
+        free(list);
+}
+
+static char **list_migration_checks(int *count)
+{
+        DIR *dir;
+        struct dirent *de;
+        char **list = NULL;
+        int len = 0;
+
+        *count = 0;
+
+        dir = opendir(MIG_CHECKS_DIR);
+        if (dir == NULL) {
+                CU_DEBUG("Unable to open migration checks dir: %s (%s)",
+                         MIG_CHECKS_DIR,
+                         strerror(errno));
+                *count = -1;
+                return NULL;
+        }
+
+        while ((de = readdir(dir)) != NULL) {
+                int ret;
+                char *path = NULL;
+
+                if (de->d_name[0] == '.')
+                        continue;
+
+                if (*count == len) {
+                        char **tmp;
+
+                        len = (len * 2) + 1;
+                        tmp = realloc(list, sizeof(char *) * len);
+                        if (tmp == NULL) {
+                                CU_DEBUG("Failed to alloc check list");
+                                goto error;
+                        }
+
+                        list = tmp;
+                }
+
+                ret = asprintf(&path,
+                               "%s/%s",
+                               MIG_CHECKS_DIR,
+                               de->d_name);
+                if (ret == -1) {
+                        CU_DEBUG("Failed to alloc path for check");
+                        goto error;
+                }
+
+                if (is_valid_check(path)) {
+                        list[*count] = path;
+                        (*count) += 1;
+                } else {
+                        CU_DEBUG("Invalid check program: %s", path);
+                        free(path);
+                }
+        }
+
+        closedir(dir);
+
+        return list;
+ error:
+        closedir(dir);
+
+        free_list(list, *count);
+        *count = 0;
+
+        return NULL;
+}
+
+static CMPIStatus _call_check(virDomainPtr dom,
+                              const char *prog,
+                              const char *param_path)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        pid_t pid;
+        int i;
+        int rc = -1;
+
+        pid = fork();
+        if (pid == 0) {
+                virConnectPtr conn = virDomainGetConnect(dom);
+                const char *name = virDomainGetName(dom);
+                const char *uri = virConnectGetURI(conn);
+
+                if (setpgrp() == -1)
+                        perror("setpgrp");
+
+                execl(prog, prog, name, uri, param_path, NULL);
+                CU_DEBUG("exec(%s) failed: %s", prog, strerror(errno));
+                _exit(1);
+        }
+
+        for (i = 0; i < (MIG_CHECKS_TIMEOUT * 4); i++) {
+                int status;
+                if (waitpid(pid, &status, WNOHANG) != pid) {
+                        usleep(250000);
+                } else {
+                        rc = WEXITSTATUS(status);
+                        break;
+                }
+        }
+
+        if (rc == -1) {
+                CU_DEBUG("Killing off stale child %i", pid);
+                killpg(pid, SIGKILL);
+                waitpid(pid, NULL, WNOHANG);
+        }
+
+        if (rc != 0) {
+                char *name = strdup(prog);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Migration check `%s' failed",
+                           basename(name));
+                free(name);
+        }
+
+        return s;
+}
+
+static CMPIStatus call_external_checks(virDomainPtr dom,
+                                       const char *param_path)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        char **list = NULL;
+        int count = 0;
+        int i;
+
+        list = list_migration_checks(&count);
+        if (count < 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to execute migration checks");
+                goto out;
+        } else if (list == NULL) {
+                goto out;
+        }
+
+        for (i = 0; i < count; i++) {
+                CU_DEBUG("Calling migration check: %s", list[i]);
+                s = _call_check(dom, list[i], param_path);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("...Failed");
+                        break;
+                } else
+                        CU_DEBUG("...OK");
+        }
+ out:
+        free_list(list, count);
+
+        return s;
+}
+
+static char *write_params(CMPIArray *array)
+{
+        int i;
+        int fd;
+        char *filename = strdup("/tmp/libvirtcim_mig.XXXXXX");
+        FILE *file = NULL;
+
+        if (filename == NULL) {
+                CU_DEBUG("Unable to get temporary file");
+                return NULL;
+        }
+
+        fd = mkstemp(filename);
+        if (fd < 0) {
+                CU_DEBUG("Unable to get temporary file: %s", strerror(errno));
+                free(filename);
+                filename = NULL;
+                goto out;
+        }
+
+        file = fdopen(fd, "w");
+        if (file == NULL) {
+                CU_DEBUG("Unable to open temporary file: %s", strerror(errno));
+                free(filename);
+                filename = NULL;
+                goto out;
+        }
+
+        for (i = 0; i < CMGetArrayCount(array, NULL); i++) {
+                CMPIData d;
+                CMPIStatus s;
+
+                d = CMGetArrayElementAt(array, i, &s);
+                if ((s.rc != CMPI_RC_OK) || CMIsNullValue(d)) {
+                        CU_DEBUG("Unable to get array[%i]: %s",
+                                 i,
+                                 CMGetCharPtr(s.msg));
+                        continue;
+                }
+
+                fprintf(file, "%s\n", CMGetCharPtr(d.value.string));
+        }
+
+ out:
+        if (file != NULL)
+                fclose(file);
+
+        close(fd);
+
+        return filename;
+}
+
+static char *get_parms_file(const CMPIObjectPath *ref,
+                            const CMPIArgs *argsin)
+{
+        CMPIStatus s;
+        CMPIArray *array;
+        CMPIInstance *msd;
+
+        s = get_msd(ref, argsin, &msd);
+        if (s.rc != CMPI_RC_OK)
+                return NULL;
+
+        if (cu_get_array_prop(msd, "CheckParameters", &array) == CMPI_RC_OK)
+                return write_params(array);
+        else
+                return NULL;
+}
+
 static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                                 CMPIObjectPath *system,
                                 const char *destination,
@@ -278,6 +539,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         virDomainPtr dom = NULL;
         CMPIInstance *dominst;
         const char *domain;
+        char *path = NULL;
 
         if (cu_get_str_path(system, "Name", &domain) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -315,6 +577,11 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
+        path = get_parms_file(ref, argsin);
+        s = call_external_checks(dom, path);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
         retcode = CIM_SVPC_RETURN_COMPLETED;
         cu_statusf(_BROKER, &s,
                    CMPI_RC_OK,
@@ -329,6 +596,10 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         virDomainFree(dom);
         virConnectClose(conn);
         virConnectClose(dconn);
+
+        if (path != NULL)
+                unlink(path);
+        free(path);
 
         return s;
 }
