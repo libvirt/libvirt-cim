@@ -3,7 +3,23 @@
 [Description ("Xen_ComputerSystem migration status"),
  Provider("cmpi::Virt_ComputerSystemMigrationIndication")
 ]
-class Xen_ComputerSystemMigrationIndication : CIM_InstModification
+class Xen_ComputerSystemMigrationJobCreatedIndication : CIM_InstCreation
+{
+        uint32 RaiseIndication([IN] CIM_InstCreation REF TheIndication);
+};
+
+[Description ("KVM_ComputerSystem migration status"),
+ Provider("cmpi::Virt_ComputerSystemMigrationIndication")
+]
+class KVM_ComputerSystemMigrationJobCreatedIndication : CIM_InstCreation
+{
+        uint32 RaiseIndication([IN] CIM_InstCreation REF TheIndication);
+};
+
+[Description ("Xen_ComputerSystem migration status"),
+ Provider("cmpi::Virt_ComputerSystemMigrationIndication")
+]
+class Xen_ComputerSystemMigrationJobModifiedIndication : CIM_InstModification
 {
         uint32 RaiseIndication([IN] CIM_InstModification REF TheIndication);
 };
@@ -11,7 +27,23 @@ class Xen_ComputerSystemMigrationIndication : CIM_InstModification
 [Description ("KVM_ComputerSystem migration status"),
  Provider("cmpi::Virt_ComputerSystemMigrationIndication")
 ]
-class KVM_ComputerSystemMigrationIndication : CIM_InstModification
+class KVM_ComputerSystemMigrationJobModifiedIndication : CIM_InstModification
 {
         uint32 RaiseIndication([IN] CIM_InstModification REF TheIndication);
+};
+
+[Description ("Xen_ComputerSystem migration status"),
+ Provider("cmpi::Virt_ComputerSystemMigrationIndication")
+]
+class Xen_ComputerSystemMigrationJobDeletedIndication : CIM_InstDeletion
+{
+        uint32 RaiseIndication([IN] CIM_InstDeletion REF TheIndication);
+};
+
+[Description ("KVM_ComputerSystem migration status"),
+ Provider("cmpi::Virt_ComputerSystemMigrationIndication")
+]
+class KVM_ComputerSystemMigrationJobDeletedIndication : CIM_InstDeletion
+{
+        uint32 RaiseIndication([IN] CIM_InstDeletion REF TheIndication);
 };

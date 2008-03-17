@@ -45,14 +45,13 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
         uint16_t type;
         const char *id = NULL;
         char *poolid = NULL;
-        virConnectPtr conn = NULL;
         CMPIInstance *pool = NULL;
         CMPIInstance *inst = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
+        if (res_type_from_rasd_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to determine RASD type");
@@ -78,28 +77,17 @@ static CMPIStatus rasd_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        s = get_pool_by_name(_BROKER,
+                             ref,
+                             poolid,
+                             &pool);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        pool = get_pool_by_id(_BROKER,
-                              conn,
-                              poolid,
-                              NAMESPACE(ref));
-        if (pool != NULL) {
-                inst_list_add(list, pool);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_OK,
-                           "");
-        } else {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to find pool `%s'", poolid);
-        }
+        inst_list_add(list, pool);
 
  out:
         free(poolid);
-        virConnectClose(conn);
 
         return s;
 }
@@ -121,64 +109,18 @@ static int filter_by_pool(struct inst_list *dest,
                 if (op == NULL)
                         continue;
 
-                if (rasd_type_from_classname(CLASSNAME(op), &type) !=
+                if (res_type_from_rasd_classname(CLASSNAME(op), &type) !=
                     CMPI_RC_OK)
                         continue;
 
                 cu_get_str_prop(inst, "InstanceID", &rasd_id);
 
                 poolid = pool_member_of(_BROKER, CLASSNAME(op), type, rasd_id);
-                if (STREQ(poolid, _poolid))
+                if ((poolid != NULL) && STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
         }
 
         return dest->cur;
-}
-
-static int rasds_from_pool(uint16_t type,
-                           const CMPIObjectPath *ref,
-                           const char *poolid,
-                           const char **properties,
-                           struct inst_list *list)
-{
-        CMPIStatus s;
-        virConnectPtr conn = NULL;
-        virDomainPtr *doms = NULL;
-        int count;
-        int i;
-
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return 0;
-
-        count = get_domain_list(conn, &doms);
-
-        for (i = 0; i < count; i++) {
-                const char *name;
-                struct inst_list tmp;
-
-                inst_list_init(&tmp);
-
-                name = virDomainGetName(doms[i]);
-
-                rasds_for_domain(_BROKER,
-                                 name,
-                                 type,
-                                 ref,
-                                 properties,
-                                 &tmp);
-
-                filter_by_pool(list, &tmp, poolid);
-
-                inst_list_free(&tmp);
-
-                virDomainFree(doms[i]);
-        }
-
-        free(doms);
-        virConnectClose(conn);
-
-        return count;
 }
 
 static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
@@ -188,10 +130,15 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *poolid;
         uint16_t type;
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
+        struct inst_list tmp_list;
 
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
+
+        s = get_pool_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -200,27 +147,27 @@ static CMPIStatus pool_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        type = device_type_from_poolid(poolid);
-        if (type == VIRT_DEV_UNKNOWN) {
+        type = res_type_from_pool_id(poolid);
+        if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid InstanceID or unsupported pool type");
                 goto out;
         }
 
-        s = get_pool_inst(_BROKER, ref, &inst);
-        if ((s.rc != CMPI_RC_OK) || (inst == NULL))
-                goto out;
+        inst_list_init(&tmp_list);
 
-        rasds_from_pool(type, 
-                        ref,
-                        poolid,
-                        info->properties,
-                        list);
+        s = enum_rasds(_BROKER,
+                       ref,
+                       NULL,
+                       type,
+                       info->properties,
+                       &tmp_list);
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
+        filter_by_pool(list, &tmp_list, poolid);
+
+        inst_list_free(&tmp_list);
+
  out:
         return s;
 }

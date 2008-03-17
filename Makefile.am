@@ -45,7 +45,8 @@ INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
 	schema/HostSystem.mof \
 	schema/RegisteredProfile.mof \
-	schema/ElementConformsToProfile.mof
+	schema/ElementConformsToProfile.mof \
+	schema/ReferencedProfile.mof
 
 
 REGS = \
@@ -89,7 +90,8 @@ REGS = \
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
-	schema/ElementConformsToProfile.registration
+	schema/ElementConformsToProfile.registration \
+	schema/ReferencedProfile.registration
 
 pkgdata_DATA = $(MOFS) $(REGS)
 pkgdata_SCRIPTS = provider-register.sh

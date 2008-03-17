@@ -38,7 +38,9 @@
 
 #include "Virt_VSMigrationService.h"
 #include "Virt_HostSystem.h"
+#include "Virt_ComputerSystem.h"
 #include "Virt_VSMigrationSettingData.h"
+#include "svpc_types.h"
 
 #define CIM_JOBSTATE_STARTING 3
 #define CIM_JOBSTATE_RUNNING 4
@@ -51,42 +53,168 @@
 
 const static CMPIBroker *_BROKER;
 
+enum {
+        MIG_CREATED,
+        MIG_MODIFIED,
+        MIG_DELETED,
+};
+
 struct migration_job {
         CMPIContext *context;
         char *domain;
-        char *host;
+        virConnectPtr conn;
         char *ref_cn;
         char *ref_ns;
         uint16_t type;
         char uuid[33];
 };
 
-static const char *transport_from_class(const char *cn)
+static CMPIStatus get_msd(const CMPIObjectPath *ref,
+                          const CMPIArgs *argsin,
+                          CMPIInstance **msd)
 {
-        if (STARTS_WITH(cn, "Xen"))
-                return "xen+ssh";
-        else if (STARTS_WITH(cn, "KVM"))
-                return "qemu+ssh";
-        else
-                return NULL;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_inst_arg(argsin, "MigrationSettingData", msd);
+        if ((ret == CMPI_RC_OK) && (*msd != NULL))
+                goto out;
+
+        s = get_migration_sd(ref, msd, _BROKER, false);
+        if ((s.rc != CMPI_RC_OK) || (*msd == NULL)) {
+                cu_statusf(_BROKER, &s,
+                           s.rc,
+                           "Unable to get default setting data values");
+                goto out;
+        }
+        CU_DEBUG("Using default values for MigrationSettingData param");
+
+ out:
+        return s;
+}
+
+static CMPIStatus get_migration_type(CMPIInstance *msd,
+                                     uint16_t *type)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_u16_prop(msd, "MigrationType", type);
+        if (ret != CMPI_RC_OK) {
+                CU_DEBUG("Using default MigrationType: %d", CIM_MIGRATE_LIVE);
+                *type = CIM_MIGRATE_LIVE;
+        }
+
+        return s;
+}
+
+static CMPIStatus get_migration_uri(CMPIInstance *msd,
+                                    uint16_t *uri)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+
+        ret = cu_get_u16_prop(msd, "TransportType", uri);
+        if (ret == CMPI_RC_OK)
+                goto out;
+
+        CU_DEBUG("Using default TransportType: %d", CIM_MIGRATE_URI_SSH);
+        *uri = CIM_MIGRATE_URI_SSH;
+
+ out:
+        return s;
 }
 
 static char *dest_uri(const char *cn,
-                      const char *dest)
+                      const char *dest,
+                      uint16_t transport)
 {
-        char *uri;
+        const char *prefix;
         const char *tport = NULL;
+        const char *param = "";
+        char *uri = NULL;
+        int rc;
 
-        tport = transport_from_class(cn);
-        if (tport == NULL) {
-                CU_DEBUG("Failed to get transport for %s", cn);
+        if (STARTS_WITH(cn, "Xen"))
+                prefix = "xen";
+        else if (STARTS_WITH(cn, "KVM"))
+                prefix = "qemu";
+        else
                 return NULL;
+
+        switch (transport) {
+        case CIM_MIGRATE_URI_SSH: 
+                tport = "ssh";
+                break; 
+        case CIM_MIGRATE_URI_TLS:
+                tport = "tls";
+                param = "?no_verify=1";
+                break; 
+        case CIM_MIGRATE_URI_TLS_STRICT:
+                tport = "tls";
+                break; 
+        case CIM_MIGRATE_URI_UNIX:
+                tport = "unix";
+                break; 
+        case CIM_MIGRATE_URI_TCP:
+                tport = "tcp";
+                break; 
+        default:
+                goto out;
         }
 
-        if (asprintf(&uri, "%s://%s/system", tport, dest) == -1)
+        rc = asprintf(&uri, "%s+%s://%s/system/%s", prefix, tport, dest, param);
+        if (rc == -1)
                 uri = NULL;
 
+ out:
         return uri;
+}
+
+static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
+                                 const char *destination,
+                                 const CMPIArgs *argsin,
+                                 uint16_t *type,
+                                 virConnectPtr *conn)
+{
+        CMPIStatus s;
+        CMPIInstance *msd;
+        uint16_t uri_type;
+        char *uri = NULL;
+
+        s = get_msd(ref, argsin, &msd);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_type(msd, type);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = get_migration_uri(msd, &uri_type);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        uri = dest_uri(CLASSNAME(ref), destination, uri_type);
+        if (uri == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to construct a valid libvirt URI");
+                goto out;
+        }
+
+        *conn = virConnectOpen(uri);
+        if (*conn == NULL) {
+                CU_DEBUG("Failed to connect to remote host (%s)", uri);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to connect to remote host (%s)", uri);
+                goto out;
+        }
+
+ out:
+        free(uri);
+
+        return s;
 }
 
 static CMPIStatus check_caps(virConnectPtr conn, virConnectPtr dconn)
@@ -135,40 +263,51 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
 }
 
 static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
-                                const char *domain,
+                                CMPIObjectPath *system,
                                 const char *destination,
                                 const CMPIResult *results,
+                                const CMPIArgs *argsin,
                                 CMPIArgs *argsout)
 {
         CMPIStatus s;
-        char *uri = NULL;
         virConnectPtr conn = NULL;
         virConnectPtr dconn = NULL;
         uint32_t retcode = 1;
         CMPIBoolean isMigratable = 0;
+        uint16_t type;
+        virDomainPtr dom = NULL;
+        CMPIInstance *dominst;
+        const char *domain;
 
-        uri = dest_uri(CLASSNAME(ref), destination);
-        if (uri == NULL) {
+        if (cu_get_str_path(system, "Name", &domain) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Failed to construct a valid libvirt URI");
+                           "Missing key (Name) in ComputerSystem");
                 goto out;
         }
+
+        s = get_msd_values(ref, destination, argsin, &type, &dconn);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
                 goto out;
 
-        dconn = virConnectOpen(uri);
-        if (dconn == NULL) {
-                CU_DEBUG("Failed to connect to remote host (%s)", uri);
+        s = check_hver(conn, dconn);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        dom = virDomainLookupByName(conn, domain);
+        if (dom == NULL) {
                 cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to connect to remote host (%s)", uri);
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such domain");
                 goto out;
         }
 
-        s = check_hver(conn, dconn);
+        CMSetNameSpace(system, NAMESPACE(ref));
+        s = get_domain_by_ref(_BROKER, system, &dominst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -176,7 +315,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        retcode = 0;
+        retcode = CIM_SVPC_RETURN_COMPLETED;
         cu_statusf(_BROKER, &s,
                    CMPI_RC_OK,
                    "");
@@ -187,7 +326,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         CMAddArg(argsout, "IsMigratable",
                  (CMPIValue *)&isMigratable, CMPI_boolean);
 
-        free(uri);
+        virDomainFree(dom);
         virConnectClose(conn);
         virConnectClose(dconn);
 
@@ -204,18 +343,9 @@ static CMPIStatus vs_migratable_host(CMPIMethodMI *self,
         CMPIStatus s;
         const char *dhost = NULL;
         CMPIObjectPath *system;
-        const char *name = NULL;
 
         cu_get_str_arg(argsin, "DestinationHost", &dhost);
         cu_get_ref_arg(argsin, "ComputerSystem", &system);
-
-        if (cu_get_str_path(system, "Name", &name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing key (Name) in ComputerSystem");
-                METHOD_RETURN(results, 1);
-                return s;
-        }
 
         if (!check_refs_pfx_match(ref, system)) {
                 cu_statusf(_BROKER, &s,
@@ -225,7 +355,7 @@ static CMPIStatus vs_migratable_host(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dhost, results, argsout);
+        return vs_migratable(ref, system, dhost, results, argsin, argsout);
 }
 
 static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
@@ -239,7 +369,6 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
         CMPIObjectPath *dsys;
         CMPIObjectPath *sys;
         const char *dname;
-        const char *name;
 
         cu_get_ref_arg(argsin, "DestinationSystem", &dsys);
         cu_get_ref_arg(argsin, "ComputerSystem", &sys);
@@ -252,14 +381,6 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
                 return s;
         }
 
-        if (cu_get_str_path(sys, "Name", &name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing key (Name) in ComputerSystem");
-                METHOD_RETURN(results, 1);
-                return s;
-        }
-
         if (!check_refs_pfx_match(ref, sys)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -268,24 +389,46 @@ static CMPIStatus vs_migratable_system(CMPIMethodMI *self,
                 return s;
         }
 
-        return vs_migratable(ref, name, dname, results, argsout);
+        return vs_migratable(ref, sys, dname, results, argsin, argsout);
+}
+
+static const char *ind_type_to_name(int ind_type)
+{
+        const char *ind_name = NULL;
+
+        switch (ind_type) {
+        case MIG_CREATED:
+                ind_name = "ComputerSystemMigrationJobCreatedIndication";
+                break;
+        case MIG_DELETED:
+                ind_name = "ComputerSystemMigrationJobDeletedIndication";
+                break;
+        case MIG_MODIFIED:
+                ind_name = "ComputerSystemMigrationJobModifiedIndication";
+                break;
+        }
+        
+        return ind_name;
 }
 
 static bool raise_indication(const CMPIContext *context,
-                             const char *base_type,
+                             int ind_type,
                              const char *ns,
                              CMPIInstance *inst,
                              CMPIInstance *ind)
 {
         char *type;
         CMPIStatus s;
+        const char *ind_name = NULL;
+
+        ind_name = ind_type_to_name(ind_type);
 
         CU_DEBUG("Setting SourceInstance");
         CMSetProperty(ind, "SourceInstance",
                       (CMPIValue *)&inst, CMPI_instance);
 
         /* Seems like this shouldn't be hardcoded. */
-        type = get_typed_class("Xen", base_type);
+        type = get_typed_class("Xen", ind_name);
 
         s = stdi_raise_indication(_BROKER, context, type, ns, ind);
 
@@ -297,41 +440,97 @@ static bool raise_indication(const CMPIContext *context,
 static CMPIInstance *prepare_indication(const CMPIBroker *broker,
                                         CMPIInstance *inst,
                                         char *ns,
+                                        int ind_type,
                                         CMPIStatus *s)
 {
+        const char *ind_name = NULL;
         CMPIInstance *ind = NULL;
         CMPIInstance *prev_inst = NULL;
 
+        ind_name = ind_type_to_name(ind_type);
+
         CU_DEBUG("Creating indication.");
         /* Prefix needs to be dynamic */
-        ind = get_typed_instance(broker,
-                                 "Xen",
-                                 "ComputerSystemMigrationIndication",
+        ind = get_typed_instance(broker, 
+                                 "Xen", 
+                                 ind_name, 
                                  ns);
         /* Prefix needs to be dynamic */
         if (ind == NULL) {
                 CU_DEBUG("Failed to create ind, type '%s:%s_%s'", 
-                         ns,
-                         "Xen",
-                         "ComputerSystemMigrationIndication");
+                         ns, "Xen", ind_name);
         }
 
-        /* Need to copy job inst before attaching as PreviousInstance because 
-           otherwise the changes we are about to make to job inst are made 
-           to PreviousInstance as well. */
-        prev_inst = cu_dup_instance(_BROKER, inst, s);
-        if (s->rc != CMPI_RC_OK || prev_inst == NULL) {
-                CU_DEBUG("dup_instance failed (%i:%s)", s->rc, s->msg);
-                ind = NULL;
-                goto out;
+        if (ind_type == MIG_MODIFIED) {
+                /* Need to copy job inst before attaching as PreviousInstance because 
+                   otherwise the changes we are about to make to job inst are made 
+                   to PreviousInstance as well. */
+                prev_inst = cu_dup_instance(_BROKER, inst, s);
+                if (s->rc != CMPI_RC_OK || prev_inst == NULL) {
+                        CU_DEBUG("dup_instance failed (%i:%s)", s->rc, s->msg);
+                        ind = NULL;
+                        goto out;
+                }
+                CU_DEBUG("Setting PreviousInstance");
+                CMSetProperty(ind, "PreviousInstance", 
+                              (CMPIValue *)&prev_inst, CMPI_instance);
         }
-
-        CU_DEBUG("Setting PreviousInstance");
-        CMSetProperty(ind, "PreviousInstance", 
-                      (CMPIValue *)&prev_inst, CMPI_instance);
 
  out:
         return ind;
+}
+
+static CMPIObjectPath *ref_from_job(struct migration_job *job,
+                                    CMPIStatus *s)
+{
+        CMPIObjectPath *ref = NULL;
+        
+        ref = CMNewObjectPath(_BROKER,
+                              job->ref_ns,
+                              "Virt_MigrationJob",
+                              s);
+        if (s->rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to create job ref for update");
+                goto out;
+        }
+
+        CMSetNameSpace(ref, job->ref_ns);
+        CMAddKey(ref, "InstanceID", (CMPIValue *)job->uuid, CMPI_chars);
+
+        CU_DEBUG("  MigrationJob ref: %s", 
+                 CMGetCharPtr(CMObjectPathToString(ref, NULL)));
+        
+ out:
+        return ref;
+}
+
+static void raise_deleted_ind(struct migration_job *job)
+{
+        CMPIInstance *ind = NULL;
+        CMPIInstance *inst = NULL;
+        CMPIObjectPath *ref = NULL;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        bool rc;
+
+        ref = ref_from_job(job, &s);
+        if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get job ref for delete");
+                return;
+        }
+        inst = CBGetInstance(_BROKER, job->context, ref, NULL, &s);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get job instance for delete (%i)", s.rc);
+                return;
+        }
+
+        ind = prepare_indication(_BROKER, inst, job->ref_ns, MIG_DELETED, &s);
+        
+        rc = raise_indication(job->context, MIG_MODIFIED, job->ref_ns, 
+                              inst, ind);
+        if (!rc)
+                CU_DEBUG("Failed to raise indication");
+
+        return;
 }
 
 static void migrate_job_set_state(struct migration_job *job,
@@ -344,27 +543,18 @@ static void migrate_job_set_state(struct migration_job *job,
         CMPIStatus s;
         CMPIObjectPath *op;
 
-        op = CMNewObjectPath(_BROKER,
-                             job->ref_ns,
-                             "Virt_MigrationJob",
-                             &s);
-        if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("Failed to create job path for update");
+        op = ref_from_job(job, &s);
+        if ((op == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get job ref for update");
                 return;
         }
-
-        CMSetNameSpace(op, job->ref_ns);
-        CMAddKey(op, "InstanceID", (CMPIValue *)job->uuid, CMPI_chars);
-
-        CU_DEBUG("Getting job instance %s", job->uuid);
-        CU_DEBUG("  OP: %s", CMGetCharPtr(CMObjectPathToString(op, NULL)));
         inst = CBGetInstance(_BROKER, job->context, op, NULL, &s);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK)) {
                 CU_DEBUG("Failed to get job instance for update (%i)", s.rc);
                 return;
         }
 
-        ind = prepare_indication(_BROKER, inst, job->ref_ns, &s);
+        ind = prepare_indication(_BROKER, inst, job->ref_ns, MIG_MODIFIED, &s);
 
         CMSetProperty(inst, "JobState",
                       (CMPIValue *)&state, CMPI_uint16);
@@ -378,10 +568,10 @@ static void migrate_job_set_state(struct migration_job *job,
                 CU_DEBUG("Failed to update job instance: %s",
                          CMGetCharPtr(s.msg));
 
-        rc = raise_indication(job->context,
-                              "ComputerSystemMigrationIndication",
-                              job->ref_ns,
-                              inst,
+        rc = raise_indication(job->context, 
+                              MIG_MODIFIED, 
+                              job->ref_ns, 
+                              inst, 
                               ind);
         if (!rc)
                 CU_DEBUG("Failed to raise indication");
@@ -477,18 +667,9 @@ static CMPIStatus migrate_vs(struct migration_job *job)
 {
         CMPIStatus s;
         virConnectPtr conn = NULL;
-        virConnectPtr dconn = NULL;
         virDomainPtr dom = NULL;
         char *uri = NULL;
         char *xml = NULL;
-
-        uri = dest_uri(job->ref_cn, job->host);
-        if (uri == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to construct a valid libvirt URI");
-                goto out;
-        }
 
         conn = connect_by_classname(_BROKER, job->ref_cn, &s);
         if (conn == NULL)
@@ -509,28 +690,19 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                         goto out;
         }
 
-        dconn = virConnectOpen(uri);
-        if (dconn == NULL) {
-                CU_DEBUG("Failed to connect to remote host (%s)", uri);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to connect to remote host (%s)", uri);
-                goto out;
-        }
-
         switch(job->type) {
         case CIM_MIGRATE_OTHER:
                 CU_DEBUG("Preparing for offline migration");
-                s = handle_offline_migrate(dconn, dom, uri, xml, job);
+                s = handle_offline_migrate(job->conn, dom, uri, xml, job);
                 break;
         case CIM_MIGRATE_LIVE:
                 CU_DEBUG("Preparing for live migration");
-                s = handle_migrate(dconn, dom, uri, VIR_MIGRATE_LIVE, job);
+                s = handle_migrate(job->conn, dom, uri, VIR_MIGRATE_LIVE, job);
                 break;
         case CIM_MIGRATE_RESUME:
         case CIM_MIGRATE_RESTART:
                 CU_DEBUG("Preparing for static migration");
-                s = handle_migrate(dconn, dom, uri, 0, job);
+                s = handle_migrate(job->conn, dom, uri, 0, job);
                 break;
         default: 
                 CU_DEBUG("Unsupported migration type (%d)", job->type);
@@ -549,11 +721,12 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                    "");
 
  out:
+        raise_deleted_ind(job);
+        
         free(uri);
         free(xml);
         virDomainFree(dom);
         virConnectClose(conn);
-        virConnectClose(dconn);
 
         return s;
 }
@@ -579,8 +752,8 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
                                       CIM_JOBSTATE_COMPLETE,
                                       "Completed");
 
+        virConnectClose(job->conn);
         free(job->domain);
-        free(job->host);
         free(job->ref_cn);
         free(job->ref_ns);
         free(job);
@@ -665,6 +838,7 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
                  CMGetCharPtr(CMObjectPathToString(*job_op, NULL)));
 
         *job_op = CBCreateInstance(_BROKER, context, *job_op, jobinst, &s);
+        CMSetNameSpace(*job_op, job->ref_ns);
         if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(*job_op))) {
                 CU_DEBUG("Failed to create job instance: %i", s.rc);
                 goto out;
@@ -677,8 +851,7 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
 static struct migration_job *migrate_job_prepare(const CMPIContext *context,
                                                  const CMPIObjectPath *ref,
                                                  const char *domain,
-                                                 const char *host,
-                                                 uint16_t type)
+                                                 const char *host)
 {
         struct migration_job *job;
         uuid_t uuid;
@@ -688,10 +861,8 @@ static struct migration_job *migrate_job_prepare(const CMPIContext *context,
                 return NULL;
 
         job->domain = strdup(domain);
-        job->host = strdup(host);
         job->ref_cn = strdup(CLASSNAME(ref));
         job->ref_ns = strdup(NAMESPACE(ref));
-        job->type = type;
 
         uuid_generate(uuid);
         uuid_unparse(uuid, job->uuid);
@@ -705,7 +876,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
                              const CMPIContext *context,
                              const char *domain,
                              const char *host,
-                             uint16_t type,
+                             const CMPIArgs *argsin,
                              const CMPIResult *results,
                              CMPIArgs *argsout)
 {
@@ -714,8 +885,11 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
         struct migration_job *job;
         CMPI_THREAD_TYPE thread;
         uint32_t retcode = 1;
+        CMPIInstance *ind = NULL;
+        CMPIInstance *inst = NULL;
+        bool rc;
 
-        job = migrate_job_prepare(context, ref, domain, host, type);
+        job = migrate_job_prepare(context, ref, domain, host);
         if (job == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -723,50 +897,36 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        s = get_msd_values(ref, host, argsin, &job->type, &job->conn);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
         CU_DEBUG("Prepared migration job %s", job->uuid);
 
         s = migrate_create_job_instance(context, job, &job_op);
         if (s.rc != CMPI_RC_OK)
                 goto out;
-
+        
         CMAddArg(argsout, "Job", (CMPIValue *)&job_op, CMPI_ref);
+
+        inst = CBGetInstance(_BROKER, job->context, job_op, NULL, &s);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get job instance for create ind", s.rc);
+                goto out;
+        }
+
+        ind = prepare_indication(_BROKER, inst, job->ref_ns, MIG_CREATED, &s);
+        rc = raise_indication(job->context, MIG_CREATED, job->ref_ns, 
+                              inst, ind);
+        if (!rc)
+                CU_DEBUG("Failed to raise indication");
 
         thread = _BROKER->xft->newThread((void*)migration_thread, job, 0);
 
-        retcode = 0;
+        retcode = CIM_SVPC_RETURN_JOB_STARTED;
 
  out:
         CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
-
-        return s;
-}
-
-static CMPIStatus get_migration_type(const CMPIObjectPath *ref,
-                                     const CMPIArgs *argsin,
-                                     uint16_t *type)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *msd;
-        int ret;
-        
-        ret = cu_get_inst_arg(argsin, "MigrationSettingData", &msd);
-        if ((ret != CMPI_RC_OK) || (msd == NULL)) {
-                CU_DEBUG("Using default values for MigrationSettingData param");
-                s = get_migration_sd(ref, &msd, _BROKER, false);
-                if ((s.rc != CMPI_RC_OK) || (msd == NULL)) {
-                        cu_statusf(_BROKER, &s,
-                                   s.rc,
-                                   "Unable to get default setting data values");
-                        return s;
-                }
-        }
-
-        ret = cu_get_u16_prop(msd, "MigrationType", type);
-        if (ret != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           ret,
-                           "Invalid MigrationType value");
-        }
 
         return s;
 }
@@ -782,7 +942,6 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
         const char *dhost = NULL;
         CMPIObjectPath *system;
         const char *name = NULL;
-        uint16_t type;
           
         cu_get_str_arg(argsin, "DestinationHost", &dhost);
         cu_get_ref_arg(argsin, "ComputerSystem", &system);
@@ -803,13 +962,7 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
                 return s;
         }
 
-        s = get_migration_type(ref, argsin, &type);
-        if (s.rc != CMPI_RC_OK) {
-                METHOD_RETURN(results, 1);
-                return s;
-        }
-
-        return migrate_do(ref, ctx, name, dhost, type, results, argsout);
+        return migrate_do(ref, ctx, name, dhost, argsin, results, argsout);
 }
 
 static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
@@ -824,7 +977,6 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
         CMPIObjectPath *sys;
         const char *dname;
         const char *name;
-        uint16_t type;
 
         cu_get_ref_arg(argsin, "DestinationSystem", &dsys);
         cu_get_ref_arg(argsin, "ComputerSystem", &sys);
@@ -853,13 +1005,7 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
                 return s;
         }
 
-        s = get_migration_type(ref, argsin, &type);
-        if (s.rc != CMPI_RC_OK) {
-                METHOD_RETURN(results, 1);
-                return s;
-        }
-
-        return migrate_do(ref, ctx, name, dname, type, results, argsout);
+        return migrate_do(ref, ctx, name, dname, argsin, results, argsout);
 }
 
 static struct method_handler vsimth = {

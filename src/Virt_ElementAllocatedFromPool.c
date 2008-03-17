@@ -40,24 +40,6 @@
 
 const static CMPIBroker *_BROKER;
 
-static uint16_t class_to_type(const CMPIObjectPath *ref)
-{
-        uint16_t type;
-
-        if (CMClassPathIsA(_BROKER, ref, "CIM_LogicalDisk", NULL))
-                type = CIM_RASD_TYPE_DISK;
-        else if (CMClassPathIsA(_BROKER, ref, "CIM_NetworkPort", NULL))
-                type = CIM_RASD_TYPE_NET;
-        else if (CMClassPathIsA(_BROKER, ref, "CIM_Memory", NULL))
-                type = CIM_RASD_TYPE_MEM;
-        else if (CMClassPathIsA(_BROKER, ref, "CIM_Processor", NULL))
-                type = CIM_RASD_TYPE_PROC;
-        else
-                type = 0;
-
-        return type;
-}
-
 static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
@@ -66,14 +48,18 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
         uint16_t type;
         const char *id = NULL;
         char *poolid = NULL;
-        virConnectPtr conn = NULL;
         CMPIInstance *pool = NULL;
+        CMPIInstance *inst = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        type = class_to_type(ref);
-        if (type == 0) {
+        s = get_device_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        type = res_type_from_device_classname(CLASSNAME(ref));
+        if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unknown device type");
@@ -95,25 +81,14 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        s = get_pool_by_name(_BROKER, ref, poolid, &pool);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        pool = get_pool_by_id(_BROKER, conn, poolid, NAMESPACE(ref));
-        if (pool != NULL) {
-                inst_list_add(list, pool);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_OK,
-                           "");
-        } else {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to find pool `%s'", poolid);
-        }
+        inst_list_add(list, pool);
 
  out:
         free(poolid);
-        virConnectClose(conn);
 
         return s;
 }
@@ -145,48 +120,6 @@ static int filter_by_pool(struct inst_list *dest,
         return dest->cur;
 }
 
-static int devs_from_pool(uint16_t type,
-                          const CMPIObjectPath *ref,
-                          const char *poolid,
-                          struct inst_list *list)
-{
-        CMPIStatus s;
-        virConnectPtr conn = NULL;
-        virDomainPtr *doms = NULL;
-        int count;
-        int i;
-        const char *ns = NAMESPACE(ref);
-        const char *cn = CLASSNAME(ref);
-
-        conn = connect_by_classname(_BROKER, cn, &s);
-        if (conn == NULL)
-                return 0;
-
-        count = get_domain_list(conn, &doms);
-
-        for (i = 0; i < count; i++) {
-                const char *name;
-                struct inst_list tmp;
-
-                inst_list_init(&tmp);
-
-                name = virDomainGetName(doms[i]);
-
-                /* FIXME: Get VIRT_DEV_ type here */
-                dom_devices(_BROKER, doms[i], ns, type, &tmp);
-
-                filter_by_pool(list, &tmp, type, poolid);
-
-                inst_list_free(&tmp);
-                virDomainFree(doms[i]);
-        }
-
-        free(doms);
-        virConnectClose(conn);
-
-        return count;
-}
-
 static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                                struct std_assoc_info *info,
                                struct inst_list *list)
@@ -194,10 +127,15 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
         const char *poolid;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         uint16_t type;
-        CMPIInstance *inst;
+        CMPIInstance *inst = NULL;
+        struct inst_list tmp;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
+
+        s = get_pool_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -206,25 +144,24 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        CU_DEBUG("Got %s\n", poolid);
-
-        type = device_type_from_poolid(poolid);
-        if (type == VIRT_DEV_UNKNOWN) {
+        type = res_type_from_pool_id(poolid);
+        if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid InstanceID or unsupported pool type");
                 goto out;
         }
 
-        s = get_pool_inst(_BROKER, ref, &inst);
-        if ((s.rc != CMPI_RC_OK) || (inst == NULL))
+        inst_list_init(&tmp);
+
+        s = enum_devices(_BROKER, ref, NULL, type, &tmp);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        devs_from_pool(type, ref, poolid, list);
+        filter_by_pool(list, &tmp, type, poolid);
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
+        inst_list_free(&tmp);
+
  out:
         return s;
 }

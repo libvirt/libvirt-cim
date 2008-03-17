@@ -59,8 +59,11 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         CMPIData data ;
         char *classname;
 
+        if (profile->scoping_class == NULL)
+                return s;
+
         classname = get_typed_class(pfx_from_conn(conn), 
-                                    profile->provider_name);
+                                    profile->scoping_class);
         if (classname == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED, 
@@ -72,7 +75,7 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto out;
         
-        en = CBEnumInstances(_BROKER, info->context , op, NULL, &s);
+        en = CBEnumInstances(_BROKER, info->context , op, info->properties, &s);
         if (en == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED, 
@@ -103,12 +106,17 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *instance = NULL;
         virConnectPtr conn = NULL;
         const char *id;
         int i;
         
         if (!match_hypervisor_prefix(ref, info))
                 return s;
+
+        s = get_profile_by_ref(_BROKER, ref, info->properties, &instance);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
@@ -122,11 +130,12 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
         }
 
         for (i = 0; profiles[i] != NULL; i++) {
-                if (STREQ(id, profiles[i]->reg_id)) {
-                        s = elem_instances(ref, info, list, 
-                                           profiles[i], conn);
-                        if ((s.rc != CMPI_RC_OK))
-                                goto out;
+                if (STREQC(id, profiles[i]->reg_id)) {
+                        s = elem_instances(ref,
+                                           info,
+                                           list, 
+                                           profiles[i],
+                                           conn);
                         break;
                 }
         }
@@ -142,13 +151,20 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *instance;
+        CMPIInstance *instance = NULL;
         virConnectPtr conn = NULL;
         char *classname;
-        struct reg_prof *candidate;
         int i;
         
         if (!match_hypervisor_prefix(ref, info))
+                return s;
+
+        instance = CBGetInstance(_BROKER,
+                                 info->context,
+                                 ref,
+                                 NULL,
+                                 &s);
+        if (s.rc != CMPI_RC_OK)
                 return s;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
@@ -164,22 +180,21 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         }
 
         for (i = 0; profiles[i] != NULL; i++) {
-                candidate = profiles[i];
-                if (!STREQC(candidate->provider_name, classname))
+                if (profiles[i]->scoping_class == NULL)
                         continue;
 
-                instance = reg_prof_instance(_BROKER, 
-                                             "root/interop", 
-                                             NULL,
-                                             conn,
-                                             candidate);
-                if (instance == NULL) {
-                        cu_statusf(_BROKER, &s, 
-                                   CMPI_RC_ERR_FAILED,
-                                   "Can't create profile instance");
+                if (!STREQC(profiles[i]->scoping_class, classname))
+                        continue;
+
+                s = get_profile(_BROKER,
+                                ref, 
+                                info->properties,
+                                pfx_from_conn(conn),
+                                profiles[i],
+                                &instance);
+                if (s.rc != CMPI_RC_OK)
                         goto out;
-                }
-                
+
                 inst_list_add(list, instance);
         }
              

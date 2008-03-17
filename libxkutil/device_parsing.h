@@ -63,15 +63,7 @@ struct graphics_device {
 };
 
 struct virt_device {
-        enum {
-              VIRT_DEV_NET = CIM_RASD_TYPE_NET,
-              VIRT_DEV_DISK = CIM_RASD_TYPE_DISK,
-              VIRT_DEV_MEM = CIM_RASD_TYPE_MEM,
-              VIRT_DEV_VCPU = CIM_RASD_TYPE_PROC,
-              VIRT_DEV_UNKNOWN = 1000,
-              VIRT_DEV_EMU,
-              VIRT_DEV_GRAPHICS,
-        } type;
+        uint16_t type;
         union {
                 struct disk_device disk;
                 struct net_device net;

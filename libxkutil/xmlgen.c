@@ -322,10 +322,10 @@ static bool concat_devxml(char **xml,
         int i;
 
         for (i = 0; i < count; i++) {
-                /* Deleted devices are marked as VIRT_DEV_UNKNOWN
+                /* Deleted devices are marked as CIM_RES_TYPE_UNKNOWN
                  * and should be skipped
                  */
-                if (list[i].type != VIRT_DEV_UNKNOWN)
+                if (list[i].type != CIM_RES_TYPE_UNKNOWN)
                         func(&_xml, &list[i]);
         }
 
@@ -342,22 +342,22 @@ char *device_to_xml(struct virt_device *dev)
         bool (*func)(char **, struct virt_device *);
 
         switch (type) {
-        case VIRT_DEV_DISK:
+        case CIM_RES_TYPE_DISK:
                 func = disk_to_xml;
                 break;
-        case VIRT_DEV_VCPU:
+        case CIM_RES_TYPE_PROC:
                 func = vcpu_to_xml;
                 break;
-        case VIRT_DEV_NET:
+        case CIM_RES_TYPE_NET:
                 func = net_to_xml;
                 break;
-        case VIRT_DEV_MEM:
+        case CIM_RES_TYPE_MEM:
                 func = mem_to_xml;
                 break;
-        case VIRT_DEV_EMU:
+        case CIM_RES_TYPE_EMU:
                 func = emu_to_xml;
                 break;
-        case VIRT_DEV_GRAPHICS:
+        case CIM_RES_TYPE_GRAPHICS:
                 func = graphics_to_xml;
                 break;
         default:

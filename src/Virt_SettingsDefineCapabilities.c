@@ -529,13 +529,9 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
 
         /* Getting the relevant resource pool directly finds the free space 
            for us.  It is in the Capacity field. */
-        pool_inst = get_pool_by_id(_BROKER, conn, inst_id, NAMESPACE(ref));
-        if (pool_inst == NULL) {
-                cu_statusf(_BROKER, s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get pool instance");
+        *s = get_pool_by_name(_BROKER, ref, inst_id, &pool_inst);
+        if (s->rc != CMPI_RC_OK)
                 goto out;
-        }
 
         prop_ret = cu_get_u64_prop(pool_inst, "Capacity", &free_64);
         if (prop_ret != CMPI_RC_OK) {
@@ -614,7 +610,7 @@ static struct sdc_rasd_prop *disk_inc(const CMPIObjectPath *ref,
 }
 
 static struct sdc_rasd mem = {
-        .resource_type = CIM_RASD_TYPE_MEM,
+        .resource_type = CIM_RES_TYPE_MEM,
         .min = mem_min,
         .max = mem_max,
         .def = mem_def,
@@ -622,7 +618,7 @@ static struct sdc_rasd mem = {
 };
 
 static struct sdc_rasd processor = {
-         .resource_type = CIM_RASD_TYPE_PROC,
+         .resource_type = CIM_RES_TYPE_PROC,
          .min = proc_min,
          .max = proc_max,
          .def = proc_def,
@@ -630,7 +626,7 @@ static struct sdc_rasd processor = {
 };
 
 static struct sdc_rasd network = {
-        .resource_type = CIM_RASD_TYPE_NET,
+        .resource_type = CIM_RES_TYPE_NET,
         .min = net_min,
         .max = net_max,
         .def = net_def,
@@ -638,7 +634,7 @@ static struct sdc_rasd network = {
 };
 
 static struct sdc_rasd disk = {
-        .resource_type = CIM_RASD_TYPE_DISK,
+        .resource_type = CIM_RES_TYPE_DISK,
         .min = disk_min,
         .max = disk_max,
         .def = disk_def,
@@ -794,8 +790,6 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        CU_DEBUG("Getting ResourceType");
-
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -803,11 +797,9 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
  
-        type = device_type_from_poolid(id);
+        type = res_type_from_pool_id(id);
 
-        CU_DEBUG("ResourceType: %hi", type);
-
-        if (type == VIRT_DEV_UNKNOWN) {
+        if (type == CIM_RES_TYPE_UNKNOWN) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to determine resource type");

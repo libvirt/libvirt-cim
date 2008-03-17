@@ -292,17 +292,17 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         char *base;
         char *id;
 
-        if (dev->type == VIRT_DEV_DISK) {
-                type = CIM_RASD_TYPE_DISK;
+        if (dev->type == CIM_RES_TYPE_DISK) {
+                type = CIM_RES_TYPE_DISK;
                 base = "DiskResourceAllocationSettingData";
-        } else if (dev->type == VIRT_DEV_NET) {
-                type = CIM_RASD_TYPE_NET;
+        } else if (dev->type == CIM_RES_TYPE_NET) {
+                type = CIM_RES_TYPE_NET;
                 base = "NetResourceAllocationSettingData";
-        } else if (dev->type == VIRT_DEV_VCPU) {
-                type = CIM_RASD_TYPE_PROC;
+        } else if (dev->type == CIM_RES_TYPE_PROC) {
+                type = CIM_RES_TYPE_PROC;
                 base = "ProcResourceAllocationSettingData";
-        } else if (dev->type == VIRT_DEV_MEM) {
-                type = CIM_RASD_TYPE_MEM;
+        } else if (dev->type == CIM_RES_TYPE_MEM) {
+                type = CIM_RES_TYPE_MEM;
                 base = "MemResourceAllocationSettingData";
         } else {
                 return NULL;
@@ -329,7 +329,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         CMSetProperty(inst, "ResourceType",
                       (CMPIValue *)&type, CMPI_uint16);
 
-        if (dev->type == VIRT_DEV_DISK) {
+        if (dev->type == CIM_RES_TYPE_DISK) {
                 CMSetProperty(inst,
                               "VirtualDevice",
                               (CMPIValue *)dev->dev.disk.virtual_dev,
@@ -338,12 +338,12 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               "Address",
                               (CMPIValue *)dev->dev.disk.source,
                               CMPI_chars);
-        } else if (dev->type == VIRT_DEV_NET) {
+        } else if (dev->type == CIM_RES_TYPE_NET) {
                 CMSetProperty(inst,
                               "NetworkType",
                               (CMPIValue *)dev->dev.disk.type,
                               CMPI_chars);
-        } else if (dev->type == VIRT_DEV_MEM) {
+        } else if (dev->type == CIM_RES_TYPE_MEM) {
                 const char *units = "MegaBytes";
 
                 CMSetProperty(inst, "AllocationUnits",
@@ -354,7 +354,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               (CMPIValue *)&dev->dev.mem.size, CMPI_uint64);
                 CMSetProperty(inst, "Limit",
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
-        } else if (dev->type == VIRT_DEV_VCPU) {
+        } else if (dev->type == CIM_RES_TYPE_PROC) {
                 proc_rasd_from_vdev(broker, dev, host, ref, inst);
         }
 
@@ -433,14 +433,14 @@ CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
         uint16_t type;
 
         if (cu_get_str_path(reference, "InstanceID", &name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing InstanceID");
                 goto out;
         }
 
-        if (rasd_type_from_classname(CLASSNAME(reference), &type) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
+        if (res_type_from_rasd_classname(CLASSNAME(reference), &type) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to determine RASD type");
                 goto out;
@@ -460,7 +460,7 @@ CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
         return s;
 }
 
-CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type)
+CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
 {
        char *base = NULL;
        CMPIrc rc = CMPI_RC_ERR_FAILED;
@@ -470,13 +470,13 @@ CMPIrc rasd_type_from_classname(const char *cn, uint16_t *type)
                 goto out;
 
        if (STREQ(base, "DiskResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_DISK;
+               *type = CIM_RES_TYPE_DISK;
        else if (STREQ(base, "NetResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_NET;
+               *type = CIM_RES_TYPE_NET;
        else if (STREQ(base, "ProcResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_PROC;
+               *type = CIM_RES_TYPE_PROC;
        else if (STREQ(base, "MemResourceAllocationSettingData"))
-               *type = CIM_RASD_TYPE_MEM;
+               *type = CIM_RES_TYPE_MEM;
        else
                goto out;
 
@@ -493,16 +493,16 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
         CMPIrc rc = CMPI_RC_OK;
         
         switch(type) {
-        case CIM_RASD_TYPE_MEM:
+        case CIM_RES_TYPE_MEM:
                 *classname = "MemResourceAllocationSettingData";
                 break;
-        case CIM_RASD_TYPE_PROC:
+        case CIM_RES_TYPE_PROC:
                 *classname = "ProcResourceAllocationSettingData";
                 break;
-        case CIM_RASD_TYPE_NET:
+        case CIM_RES_TYPE_NET:
                 *classname = "NetResourceAllocationSettingData";
                 break;
-        case CIM_RASD_TYPE_DISK: 
+        case CIM_RES_TYPE_DISK: 
                 *classname = "DiskResourceAllocationSettingData";
                 break;
         default:
@@ -512,58 +512,114 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
         return rc;
 }
 
-static CMPIStatus _enum_rasds(const CMPIObjectPath *ref,
+static CMPIStatus _get_rasds(const CMPIBroker *broker,
+                             const CMPIObjectPath *reference,
+                             const virDomainPtr dom,
+                             const uint16_t type,
+                             const char **properties,
+                             struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int count;
+        int i;
+        struct virt_device *devs = NULL;
+
+        count = get_devices(dom, &devs, type);
+        if (count <= 0)
+                goto out;
+
+        for (i = 0; i < count; i++) {
+                CMPIInstance *dev = NULL;
+                const char *host = NULL;
+
+                host = virDomainGetName(dom);
+                if (host == NULL) {
+                        cleanup_virt_device(&devs[i]);
+                        continue;
+                }
+
+                dev = rasd_from_vdev(broker,
+                                     &devs[i],
+                                     host, 
+                                     reference,
+                                     properties);
+                if (dev)
+                        inst_list_add(list, dev);
+
+                cleanup_virt_device(&devs[i]);
+        }
+
+ out:
+        free(devs);
+        return s;
+}
+
+static CMPIStatus _enum_rasds(const CMPIBroker *broker,
+                              const CMPIObjectPath *reference,
+                              const virDomainPtr dom,
+                              const uint16_t type,
                               const char **properties,
                               struct inst_list *list)
 {
+        CMPIStatus s;
+        int i;
+
+        if (type == CIM_RES_TYPE_ALL) {
+                for (i=0; i<CIM_RES_TYPE_COUNT; i++)
+                        s = _get_rasds(broker,
+                                       reference,
+                                       dom, 
+                                       cim_res_types[i],
+                                       properties,
+                                       list);
+        }
+        else
+                s = _get_rasds(broker,
+                               reference,
+                               dom, 
+                               type,
+                               properties,
+                               list);
+
+        return s;
+}
+
+CMPIStatus enum_rasds(const CMPIBroker *broker,
+                      const CMPIObjectPath *ref,
+                      const char *domain,
+                      const uint16_t type,
+                      const char **properties,
+                      struct inst_list *list)
+{
         virConnectPtr conn = NULL;
         virDomainPtr *domains = NULL;
-        int count;
-        int i, j;
-        uint16_t type;
-        CMPIStatus s;
-        uint16_t types[] = {CIM_RASD_TYPE_PROC,
-                            CIM_RASD_TYPE_DISK,
-                            CIM_RASD_TYPE_NET,
-                            CIM_RASD_TYPE_MEM,
-                            0};
+        int count = 1;
+        int i;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
-                return s;
-
-        count = get_domain_list(conn, &domains);
-        if (count <= 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get domain list");
                 goto out;
-        }
 
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) == CMPI_RC_OK) {
-                types[0] = type;
-                types[1] = 0;
+        if (domain) {
+                domains = calloc(1, sizeof(virDomainPtr));
+                domains[0] = virDomainLookupByName(conn, domain);
         }
+        else
+                count = get_domain_list(conn, &domains);
 
         for (i = 0; i < count; i++) {
-                for (j = 0; types[j] != 0; j++) {
-                        CU_DEBUG("Doing RASD type %i for %s",
-                                  type, virDomainGetName(domains[i]));
-                        rasds_for_domain(_BROKER,
-                                         virDomainGetName(domains[i]),
-                                         types[j],
-                                         ref,
-                                         properties,
-                                         list);
-                }
+                _enum_rasds(broker,
+                            ref,
+                            domains[i], 
+                            type,
+                            properties,
+                            list);
                 virDomainFree(domains[i]);
         }
 
-        s = (CMPIStatus){CMPI_RC_OK, NULL};
-
  out:
         virConnectClose(conn);
-        free(domains);
 
         return s;
 }
@@ -575,17 +631,23 @@ static CMPIStatus return_enum_rasds(const CMPIObjectPath *ref,
 {
         struct inst_list list;
         CMPIStatus s;
+        uint16_t type;
 
         inst_list_init(&list);
 
-        s = _enum_rasds(ref, properties, &list);
-        if (s.rc == CMPI_RC_OK) {
-                if (names_only)
-                        cu_return_instance_names(results, &list);
-                else
-                        cu_return_instances(results, &list);
-        }
+        res_type_from_rasd_classname(CLASSNAME(ref), &type);
 
+        s = enum_rasds(_BROKER, ref, NULL, 
+                       type, properties, &list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        if (names_only)
+                cu_return_instance_names(results, &list);
+        else
+                cu_return_instances(results, &list);
+
+ out:
         inst_list_free(&list);
 
         return s;
@@ -626,41 +688,6 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
 
  out:
         return s;
-}
-
-int rasds_for_domain(const CMPIBroker *broker,
-                     const char *name,
-                     const uint16_t type,
-                     const CMPIObjectPath *ref,
-                     const char **properties,
-                     struct inst_list *_list)
-{
-        struct virt_device *list;
-        int count;
-        int i;
-        virConnectPtr conn;
-        CMPIStatus s;
-
-        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return 0;
-
-        count = list_devs(conn, type, name, &list);
-
-        for (i = 0; i < count; i++) {
-                CMPIInstance *inst;
-
-                inst = rasd_from_vdev(broker, &list[i], name, ref, properties);
-                if (inst != NULL)
-                        inst_list_add(_list, inst);
-        }
-
-        if (count > 0)
-                cleanup_virt_devices(&list, count);
-
-        virConnectClose(conn);
-
-        return count;
 }
 
 DEFAULT_CI();

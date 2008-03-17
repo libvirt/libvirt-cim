@@ -33,6 +33,7 @@
 
 #include "Virt_AllocationCapabilities.h"
 #include "Virt_DevicePool.h"
+#include "svpc_types.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -95,11 +96,11 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
                 if (id) 
                         cu_statusf(broker, &s,
                                    CMPI_RC_ERR_NOT_FOUND,
-                                   "Requested Object could not be found.");
+                                   "Instance not found.");
                 goto out;
         }
 
-        s = get_all_pools(broker, conn, NAMESPACE(ref), &device_pool_list);
+        s = enum_pools(broker, ref, CIM_RES_TYPE_ALL, &device_pool_list);
         if (s.rc != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -135,7 +136,7 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
         if (id && !inst_id) {
             cu_statusf(broker, &s,
                        CMPI_RC_ERR_NOT_FOUND,
-                       "Requested Object could not be found.");
+                       "Instance not found.");
             goto out; 
         }
         

@@ -27,19 +27,18 @@
  * Return a list of devices for a given domain
  *
  * @param broker A pointer to the CIM broker
- * @param dom The domain in question
- * @param ref The namespace
- * @param list A pointer to an array of CMPIInstance objects (should
- *             be NULL initially)
- * @param cur The number of items in the list (0 initially)
- * @param max The size of the list (0 initially)
- * @returns Nonzero on success
+ * @param reference Defines the libvirt connection to use
+ * @param domain The domain id (NULL means for all domains)
+ * @param type The device type or CIM_RES_TYPE_ALL to get 
+ *             all devices
+ * @param list A pointer to an array of CMPIInstance objects
+ *             (should be NULL initially)
  */
-int dom_devices(const CMPIBroker *broker,
-                virDomainPtr dom,
-                const char *ns,
-                int type,
-                struct inst_list *list);
+CMPIStatus enum_devices(const CMPIBroker *broker,
+                        const CMPIObjectPath *reference,
+                        const char *domain,
+                        const uint16_t type,
+                        struct inst_list *list);
 
 /**
  * Returns the device instance defined by the reference
@@ -70,7 +69,7 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
                               const uint16_t type,
                               CMPIInstance **_inst);
 
-uint16_t device_type_from_classname(const char *classname);
+uint16_t res_type_from_device_classname(const char *classname);
 
 #endif
 

@@ -34,6 +34,7 @@
 
 #include "Virt_HostSystem.h"
 #include "Virt_DevicePool.h"
+#include "svpc_types.h"
 
 static const CMPIBroker *_BROKER;
 
@@ -47,8 +48,8 @@ static CMPIStatus pool_to_sys(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = get_pool_inst(_BROKER, ref, &inst);
-        if ((s.rc != CMPI_RC_OK) || (inst == NULL))
+        s = get_pool_by_ref(_BROKER, ref, &inst);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
 
         s = get_host(_BROKER, ref, &inst, false);
@@ -67,8 +68,6 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        int i;
-        virConnectPtr conn;
 
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
@@ -77,16 +76,7 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                goto out;
-
-        for (i = 0; device_pool_names[i]; i++)
-                get_pool_by_type(_BROKER,
-                                 conn,
-                                 device_pool_names[i],
-                                 NAMESPACE(ref),
-                                 list);
+        s = enum_pools(_BROKER, ref, CIM_RES_TYPE_ALL, list);
 
  out:
         return s;

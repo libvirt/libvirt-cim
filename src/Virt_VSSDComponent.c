@@ -43,14 +43,6 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         char *name = NULL;
-        int i = 0;
-        int types[] = {
-                CIM_RASD_TYPE_PROC,
-                CIM_RASD_TYPE_NET,
-                CIM_RASD_TYPE_DISK,
-                CIM_RASD_TYPE_MEM,
-                -1
-        };
 
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
@@ -66,14 +58,12 @@ static CMPIStatus vssd_to_rasd(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        for (i = 0; types[i] > 0; i++) {
-                rasds_for_domain(_BROKER,
-                                 name,
-                                 types[i],
-                                 ref,
-                                 info->properties,
-                                 list);
-        }
+        s = enum_rasds(_BROKER,
+                       ref,
+                       name,
+                       CIM_RES_TYPE_ALL,
+                       info->properties,
+                       list);
 
         free(name);
 
@@ -86,7 +76,7 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
                                struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *vssd = NULL;
+        CMPIInstance *inst = NULL;
         const char *id = NULL;
         char *host = NULL;
         char *devid = NULL;
@@ -94,6 +84,10 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
+
+        s = get_rasd_by_ref(_BROKER, ref, info->properties, &inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (cu_get_str_path(ref, "InstanceID", &id) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -110,11 +104,11 @@ static CMPIStatus rasd_to_vssd(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = get_vssd_by_name(_BROKER, ref, host, &vssd);
+        s = get_vssd_by_name(_BROKER, ref, host, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        inst_list_add(list, vssd);
+        inst_list_add(list, inst);
 
  out:
         free(host);

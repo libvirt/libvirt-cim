@@ -46,6 +46,7 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_HostedDependency.la \
                        libVirt_RegisteredProfile.la \
                        libVirt_ElementConformsToProfile.la \
+                       libVirt_ReferencedProfile.la \
                        libVirt_SettingsDefineCapabilities.la \
                        libVirt_HostedResourcePool.la \
                        libVirt_ElementCapabilities.la \
@@ -98,6 +99,10 @@ libVirt_DevicePool_la_SOURCES = Virt_DevicePool.c
 libVirt_ElementConformsToProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la
 libVirt_ElementConformsToProfile_la_SOURCES = Virt_ElementConformsToProfile.c
 libVirt_ElementConformsToProfile_la_LIBADD = -lVirt_RegisteredProfile
+
+libVirt_ReferencedProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la
+libVirt_ReferencedProfile_la_SOURCES = Virt_ReferencedProfile.c
+libVirt_ReferencedProfile_la_LIBADD = -lVirt_RegisteredProfile
 
 libVirt_EnabledLogicalElementCapabilities_la_SOURCES = Virt_EnabledLogicalElementCapabilities.c
 
@@ -163,9 +168,9 @@ libVirt_ElementSettingData_la_LIBADD = -lVirt_VSSD -lVirt_RASD
 
 libVirt_VSMigrationCapabilities_la_SOURCES = Virt_VSMigrationCapabilities.c
 
-libVirt_VSMigrationService_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_VSMigrationSettingData.la
+libVirt_VSMigrationService_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_VSMigrationSettingData.la libVirt_ComputerSystem.la
 libVirt_VSMigrationService_la_SOURCES = Virt_VSMigrationService.c
-libVirt_VSMigrationService_la_LIBADD = -lVirt_HostSystem -lVirt_VSMigrationSettingData
+libVirt_VSMigrationService_la_LIBADD = -lVirt_HostSystem -lVirt_VSMigrationSettingData -lVirt_ComputerSystem
 
 libVirt_VSMigrationSettingData_la_SOURCES = Virt_VSMigrationSettingData.c
 

@@ -64,7 +64,7 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         s = get_rasd_by_name(_BROKER,
                              ref,
                              name,
-                             device_type_from_classname(CLASSNAME(ref)),
+                             res_type_from_device_classname(CLASSNAME(ref)),
                              NULL,
                              &inst);
         if (s.rc != CMPI_RC_OK)
@@ -99,7 +99,7 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        if (rasd_type_from_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
+        if (res_type_from_rasd_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing ResourceType");

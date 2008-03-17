@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2008
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_ReferencedProfile root/interop Virt_ReferencedProfile Virt_ReferencedProfile association
+KVM_ReferencedProfile root/interop Virt_ReferencedProfile Virt_ReferencedProfile association

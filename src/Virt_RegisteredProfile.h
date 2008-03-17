@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2008
  *
  * Authors:
  *  Heidi Eckhart <heidieck@linux.vnet.ibm.com>
@@ -21,11 +21,28 @@
 #ifndef __VIRT_REGISTERED_PROFILE_H
 #define __VIRT_REGISTERED_PROFILE_H
 
-CMPIInstance *reg_prof_instance(const CMPIBroker *broker,
-                                const char *namespace,
-                                const char **properties,
-                                virConnectPtr conn,
-                                struct reg_prof *profile);
+CMPIStatus enum_profiles(const CMPIBroker *broker,
+                         const CMPIObjectPath *reference,
+                         const char **properties,
+                         struct inst_list *list);
+
+CMPIStatus get_profile(const CMPIBroker *broker,
+                       const CMPIObjectPath *reference,
+                       const char **properties,
+                       const char* pfx,
+                       struct reg_prof *profile,
+                       CMPIInstance **_inst);
+
+CMPIStatus get_profile_by_name(const CMPIBroker *broker,
+                               const CMPIObjectPath *reference,
+                               const char *name,
+                               const char **properties,
+                               CMPIInstance **_inst);
+
+CMPIStatus get_profile_by_ref(const CMPIBroker *broker,
+                              const CMPIObjectPath *reference,
+                              const char **properties,
+                              CMPIInstance **_inst);
 
 #endif
 

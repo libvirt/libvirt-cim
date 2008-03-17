@@ -22,15 +22,30 @@
 #ifndef __SVPC_TYPES_H
 #define __SVPC_TYPES_H
 
-#define CIM_RASD_TYPE_PROC  3
-#define CIM_RASD_TYPE_MEM   4
-#define CIM_RASD_TYPE_NET  10
-#define CIM_RASD_TYPE_DISK 17
+#define CIM_RES_TYPE_ALL        0
+#define CIM_RES_TYPE_PROC       3
+#define CIM_RES_TYPE_MEM        4
+#define CIM_RES_TYPE_NET        10
+#define CIM_RES_TYPE_DISK       17
+#define CIM_RES_TYPE_EMU        1
+#define CIM_RES_TYPE_GRAPHICS   24
+#define CIM_RES_TYPE_UNKNOWN    1000
+
+#define CIM_RES_TYPE_COUNT 4
+const static int cim_res_types[CIM_RES_TYPE_COUNT] = 
+  {CIM_RES_TYPE_NET,
+   CIM_RES_TYPE_DISK,
+   CIM_RES_TYPE_MEM,
+   CIM_RES_TYPE_PROC,
+  };
 
 #define CIM_VSSD_RECOVERY_NONE       2
 #define CIM_VSSD_RECOVERY_RESTART    3
 /* Vendor-specific extension; should be documented somewhere */
 #define CIM_VSSD_RECOVERY_PRESERVE 123
+
+#define CIM_SVPC_RETURN_JOB_STARTED   4096
+#define CIM_SVPC_RETURN_COMPLETED        0
 
 #include <libcmpiutil/libcmpiutil.h>
 #include <string.h>
