@@ -316,7 +316,7 @@ static char **list_migration_checks(int *count)
                 CU_DEBUG("Unable to open migration checks dir: %s (%s)",
                          MIG_CHECKS_DIR,
                          strerror(errno));
-                *count = -1;
+                *count = 0;
                 return NULL;
         }
 
