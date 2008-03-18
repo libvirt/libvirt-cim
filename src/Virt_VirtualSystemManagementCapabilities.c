@@ -93,7 +93,7 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 
         CMSetArrayElementAt(array, 0, (CMPIValue *)&str, CMPI_string);
 
-        CMSetProperty(inst, "TypesSupported",
+        CMSetProperty(inst, "VirtualSystemTypesSupported",
                       (CMPIValue *)&array, CMPI_stringA);
 
  out:
