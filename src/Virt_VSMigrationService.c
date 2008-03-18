@@ -692,6 +692,9 @@ static bool raise_indication(const CMPIContext *context,
         CMPIStatus s;
         const char *ind_name = NULL;
 
+        if (ind == NULL)
+                return false;
+
         ind_name = ind_type_to_name(ind_type);
 
         CU_DEBUG("Setting SourceInstance");
@@ -730,6 +733,7 @@ static CMPIInstance *prepare_indication(const CMPIBroker *broker,
         if (ind == NULL) {
                 CU_DEBUG("Failed to create ind, type '%s:%s_%s'", 
                          ns, "Xen", ind_name);
+                goto out;
         }
 
         if (ind_type == MIG_MODIFIED) {
