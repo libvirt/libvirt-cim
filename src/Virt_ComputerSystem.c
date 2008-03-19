@@ -301,35 +301,6 @@ static int set_other_id_info(const CMPIBroker *broker,
         return 1;
 }
 
-static bool set_type(CMPIInstance *instance)
-{
-        CMPIObjectPath *op;
-        CMPIStatus s;
-        char *prefix = NULL;
-        bool rc = false;
-
-        op = CMGetObjectPath(instance, &s);
-        if ((s.rc != CMPI_RC_OK) || (op == NULL)) {
-                CU_DEBUG("Failed to get OP from CS instance to set type");
-                goto out;
-        }
-
-        prefix = class_prefix_name(CLASSNAME(op));
-        if (prefix == NULL) {
-                CU_DEBUG("Unknown prefix for class: %s", CLASSNAME(op));
-                goto out;
-        }
-
-        CMSetProperty(instance, "VirtualSystemType",
-                      prefix, CMPI_chars);
-
-        rc = true;
- out:
-        free(prefix);
-
-        return rc;
-}
-
 /* Populate an instance with information from a domain */
 static CMPIStatus set_properties(const CMPIBroker *broker,
                                  virDomainPtr dom,
@@ -366,10 +337,6 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
 
         if (!set_other_id_info(broker, uuid, prefix, instance)) {
                 /* Print trace error */
-                goto out;
-        }
-
-        if (!set_type(instance)) {
                 goto out;
         }
 
