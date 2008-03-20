@@ -854,7 +854,6 @@ static void migrate_job_set_state(struct migration_job *job,
 
 static CMPIStatus handle_migrate(virConnectPtr dconn,
                                  virDomainPtr dom,
-                                 char *uri,
                                  int type,
                                  struct migration_job *job)
 {
@@ -878,7 +877,7 @@ static CMPIStatus handle_migrate(virConnectPtr dconn,
                 goto out;
         }
 
-        CU_DEBUG("Migrating %s -> %s", job->domain, uri);
+        CU_DEBUG("Migrating %s", job->domain);
         ddom = virDomainMigrate(dom, dconn, type, NULL, NULL, 0);
         if (ddom == NULL) {
                 CU_DEBUG("Migration failed");
@@ -999,12 +998,12 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                 break;
         case CIM_MIGRATE_LIVE:
                 CU_DEBUG("Live migration");
-                s = handle_migrate(job->conn, dom, uri, VIR_MIGRATE_LIVE, job);
+                s = handle_migrate(job->conn, dom, VIR_MIGRATE_LIVE, job);
                 break;
         case CIM_MIGRATE_RESUME:
         case CIM_MIGRATE_RESTART:
                 CU_DEBUG("Static migration");
-                s = handle_migrate(job->conn, dom, uri, 0, job);
+                s = handle_migrate(job->conn, dom, 0, job);
                 break;
         default:
                 CU_DEBUG("Unsupported migration type (%d)", job->type);
