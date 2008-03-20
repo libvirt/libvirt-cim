@@ -523,6 +523,14 @@ static char *get_parms_file(const CMPIObjectPath *ref,
                 return NULL;
 }
 
+static void log_status(CMPIStatus *s, const char *prefix)
+{
+        CU_DEBUG("%s: %s", prefix, CMGetCharPtr(s->msg));
+
+        s->rc = CMPI_RC_OK;
+        s->msg = NULL;
+}
+
 static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                                 CMPIObjectPath *system,
                                 const char *destination,
@@ -557,8 +565,10 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                 goto out;
 
         s = check_hver(conn, dconn);
-        if (s.rc != CMPI_RC_OK)
+        if (s.rc != CMPI_RC_OK) {
+                log_status(&s, "Hypervisor version check failed");
                 goto out;
+        }
 
         dom = virDomainLookupByName(conn, domain);
         if (dom == NULL) {
@@ -574,13 +584,17 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                 goto out;
 
         s = check_caps(conn, dconn);
-        if (s.rc != CMPI_RC_OK)
+        if (s.rc != CMPI_RC_OK) {
+                log_status(&s, "Hypervisor capabilities check failed");
                 goto out;
+        }
 
         path = get_parms_file(ref, argsin);
         s = call_external_checks(dom, path);
-        if (s.rc != CMPI_RC_OK)
+        if (s.rc != CMPI_RC_OK) {
+                log_status(&s, "An external check failed");
                 goto out;
+        }
 
         retcode = CIM_SVPC_RETURN_COMPLETED;
         cu_statusf(_BROKER, &s,
