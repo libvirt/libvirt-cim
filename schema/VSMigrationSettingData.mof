@@ -1,6 +1,20 @@
 // Copyright IBM Corp. 2007
 
 class CIM_VirtualSystemMigrationSettingData : CIM_SettingData {
+  [ Description(
+      "MigrationType describes a type of migration operation "
+      "to be performed.\n"
+      "A value of 2 - Virtual System is to be migrated in a 'live' "
+      "manner such that the running of the Virtual System is "
+      "minimally impacted during the move.\n"
+      "A value of 3 - Virtual System will be temporarily paused "
+      "prior to migration and then resume running after it is "
+      "moved.\n"
+      "A value of 4 - The Virtual System will be quiesced to a "
+      "stopped state prior to migration and then restarted after "
+      "it is moved."),
+    ValueMap {"0","1","2","3","4"},
+    Values { "Unknown", "Other", "Live", "Resume", "Restart" }]
       uint16 MigrationType;
 
       uint16 Priority;
