@@ -71,6 +71,16 @@ static void _set_pv_prop(struct domain *dominfo,
                 CMSetProperty(inst, "BootloaderArgs",
                               (CMPIValue *)dominfo->bootloader_args,
                               CMPI_chars);
+
+        if (dominfo->os_info.pv.kernel != NULL)
+                CMSetProperty(inst, "Kernel",
+                              (CMPIValue *)dominfo->os_info.pv.kernel,
+                              CMPI_chars);
+
+        if (dominfo->os_info.pv.initrd != NULL)
+                CMSetProperty(inst, "Ramdisk",
+                              (CMPIValue *)dominfo->os_info.pv.initrd,
+                              CMPI_chars);
 }
 
 static int instance_from_dom(virDomainPtr dom,

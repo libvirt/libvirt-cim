@@ -90,19 +90,33 @@ static int xenpv_vssd_to_domain(CMPIInstance *inst,
 
         domain->type = DOMAIN_XENPV;
 
-        ret = cu_get_str_prop(inst, "Bootloader", &val);
-        if (ret != CMPI_RC_OK)
-                val = "";
-
         free(domain->bootloader);
-        domain->bootloader = strdup(val);
-
-        ret = cu_get_str_prop(inst, "BootloaderArgs", &val);
-        if (ret != CMPI_RC_OK)
-                val = "";
+        ret = cu_get_str_prop(inst, "Bootloader", &val);
+        if (ret == CMPI_RC_OK)
+                domain->bootloader = strdup(val);
+        else
+                domain->bootloader = NULL;
 
         free(domain->bootloader_args);
-        domain->bootloader_args = strdup(val);
+        ret = cu_get_str_prop(inst, "BootloaderArgs", &val);
+        if (ret == CMPI_RC_OK)
+                domain->bootloader_args = strdup(val);
+        else
+                domain->bootloader_args = NULL;
+
+        free(domain->os_info.pv.kernel);
+        ret = cu_get_str_prop(inst, "Kernel", &val);
+        if (ret == CMPI_RC_OK)
+                domain->os_info.pv.kernel = strdup(val);
+        else
+                domain->os_info.pv.kernel = NULL;
+
+        free(domain->os_info.pv.initrd);
+        ret = cu_get_str_prop(inst, "Ramdisk", &val);
+        if (ret == CMPI_RC_OK)
+                domain->os_info.pv.initrd = strdup(val);
+        else
+                domain->os_info.pv.initrd = NULL;
 
         return 1;
 }

@@ -16,6 +16,12 @@ class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
   string Bootloader;
   string BootloaderArgs;
 
+  [Description ("The direct-boot kernel for PV guests not using a bootloader")]
+  string Kernel;
+
+  [Description ("The direct-boot ramdisk for PV guests not using a bootloader")]
+  string Ramdisk;
+
   [Description ("The device to boot from when in fully-virtualized mode."
                 "One of hd,fd,cdrom.")]
   string BootDevice;
