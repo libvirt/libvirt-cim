@@ -55,6 +55,8 @@
 #define CIM_JOBSTATE_RUNNING 4
 #define CIM_JOBSTATE_COMPLETE 7
 
+#define MIGRATE_SHUTDOWN_TIMEOUT 120
+
 #define METHOD_RETURN(r, v) do {                                        \
                 uint32_t rc = v;                                        \
                 CMReturnData(r, (CMPIValue *)&rc, CMPI_uint32);         \
@@ -905,6 +907,46 @@ static CMPIStatus handle_migrate(virConnectPtr dconn,
         return s;
 }
 
+static CMPIStatus handle_restart_migrate(virConnectPtr dconn,
+                                         virDomainPtr dom,
+                                         struct migration_job *job)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+        int i;
+
+        CU_DEBUG("Shutting down domain for migration");
+        ret = virDomainShutdown(dom);
+        if (ret != 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to shutdown guest");
+                goto out;
+        }
+
+        for (i = 0; i < MIGRATE_SHUTDOWN_TIMEOUT; i++) {
+                if ((i % 30) == 0) {
+                        CU_DEBUG("Polling for shutdown completion...");
+                }
+
+                if (!domain_online(dom))
+                        goto out;
+
+                sleep(1);
+        }
+
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_ERR_FAILED,
+                   "Domain failed to shutdown in %i seconds",
+                   MIGRATE_SHUTDOWN_TIMEOUT);
+ out:
+        CU_DEBUG("Domain %s shutdown",
+                 s.rc == CMPI_RC_OK ? "did" : "did NOT");
+
+        return s;
+}
+
+
 static CMPIStatus prepare_migrate(virDomainPtr dom,
                                   char **xml)
 {
@@ -924,7 +966,8 @@ static CMPIStatus prepare_migrate(virDomainPtr dom,
 
 static CMPIStatus complete_migrate(virDomainPtr ldom,
                                    virConnectPtr rconn,
-                                   const char *xml)
+                                   const char *xml,
+                                   bool restart)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         virDomainPtr newdom = NULL;
@@ -942,6 +985,16 @@ static CMPIStatus complete_migrate(virDomainPtr ldom,
         }
 
         CU_DEBUG("Defined domain on destination host");
+
+        if (restart) {
+                CU_DEBUG("Restarting domain on remote host");
+                if (virDomainCreate(newdom) != 0) {
+                        CU_DEBUG("Failed to start domain on remote host");
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to start domain on remote host");
+                }
+        }
  out:
         virDomainFree(newdom);
 
@@ -1015,9 +1068,12 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                 s = handle_migrate(job->conn, dom, VIR_MIGRATE_LIVE, job);
                 break;
         case CIM_MIGRATE_RESUME:
-        case CIM_MIGRATE_RESTART:
                 CU_DEBUG("Static migration");
                 s = handle_migrate(job->conn, dom, 0, job);
+                break;
+        case CIM_MIGRATE_RESTART:
+                CU_DEBUG("Restart migration");
+                s = handle_restart_migrate(job->conn, dom, job);
                 break;
         default:
                 CU_DEBUG("Unsupported migration type (%d)", job->type);
@@ -1030,7 +1086,10 @@ static CMPIStatus migrate_vs(struct migration_job *job)
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = complete_migrate(dom, job->conn, xml);
+        s = complete_migrate(dom,
+                             job->conn,
+                             xml,
+                             job->type == CIM_MIGRATE_RESTART);
         if (s.rc == CMPI_RC_OK) {
                 CU_DEBUG("Migration succeeded");
         } else {
