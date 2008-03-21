@@ -378,12 +378,25 @@ CMPIInstance *make_reference(const CMPIBroker *broker,
 bool domain_online(virDomainPtr dom)
 {
         virDomainInfo info;
+        virDomainPtr _dom;
+        bool rc;
 
-        if (virDomainGetInfo(dom, &info) != 0)
+        _dom = virDomainLookupByName(virDomainGetConnect(dom),
+                                     virDomainGetName(dom));
+        if (_dom == NULL) {
+                CU_DEBUG("Unable to re-lookup domain");
                 return false;
+        }
 
-        return (info.state == VIR_DOMAIN_BLOCKED) ||
-                (info.state == VIR_DOMAIN_RUNNING);
+        if (virDomainGetInfo(_dom, &info) != 0)
+                rc = false;
+        else
+                rc = (info.state == VIR_DOMAIN_BLOCKED) ||
+                        (info.state == VIR_DOMAIN_RUNNING) ||
+                        (info.state == VIR_DOMAIN_NOSTATE);
+        virDomainFree(_dom);
+
+        return rc;
 }
 
 int parse_id(const char *id,
