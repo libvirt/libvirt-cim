@@ -13,3 +13,10 @@ class Xen_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool
 class KVM_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool
 {
 };
+
+[Association,
+ Provider("cmpi::Virt_ElementAllocatedFromPool")
+]
+class LXC_ElementAllocatedFromPool : CIM_ElementAllocatedFromPool
+{
+};

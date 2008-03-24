@@ -17,3 +17,12 @@ class Xen_HostedResourcePool : CIM_HostedResourcePool
 class KVM_HostedResourcePool : CIM_HostedResourcePool
 {
 };
+
+[Association,
+ Description (
+    "Associates a host system to its resource pools"),
+ Provider("cmpi::Virt_HostedResourcePool")
+]
+class LXC_HostedResourcePool : CIM_HostedResourcePool
+{
+};

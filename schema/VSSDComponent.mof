@@ -13,3 +13,10 @@ class Xen_VirtualSystemSettingDataComponent : CIM_Component
 class KVM_VirtualSystemSettingDataComponent : CIM_Component
 {
 };
+
+[Association,
+ Provider("cmpi::Virt_VSSDComponent")
+]
+class LXC_VirtualSystemSettingDataComponent : CIM_Component
+{
+};

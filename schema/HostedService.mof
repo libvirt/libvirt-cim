@@ -13,3 +13,10 @@ class Xen_HostedService : CIM_HostedService
 class KVM_HostedService : CIM_HostedService
 {
 };
+
+[Association,
+ Provider("cmpi::Virt_HostedService")
+]
+class LXC_HostedService : CIM_HostedService
+{
+};

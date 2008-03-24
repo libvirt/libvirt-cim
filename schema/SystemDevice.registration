@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_SystemDevice root/virt Virt_SystemDevice Virt_SystemDevice association
 KVM_SystemDevice root/virt Virt_SystemDevice Virt_SystemDevice association
+LXC_SystemDevice root/virt Virt_SystemDevice Virt_SystemDevice association

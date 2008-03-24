@@ -13,3 +13,10 @@ class Xen_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool
 class KVM_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool
 {
 };
+
+[Association,
+ Provider("cmpi::Virt_ResourceAllocationFromPool")
+]
+class LXC_ResourceAllocationFromPool : CIM_ResourceAllocationFromPool
+{
+};

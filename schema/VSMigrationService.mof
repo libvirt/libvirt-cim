@@ -76,3 +76,7 @@ class Xen_VirtualSystemMigrationService : CIM_VirtualSystemMigrationService {
 class KVM_VirtualSystemMigrationService : CIM_VirtualSystemMigrationService {
 };
 
+[Provider("cmpi::Virt_VSMigrationService")]
+class LXC_VirtualSystemMigrationService : CIM_VirtualSystemMigrationService {
+};
+

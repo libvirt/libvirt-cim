@@ -18,3 +18,12 @@ class KVM_ElementCapabilities : CIM_ElementCapabilities
 {
 };
 
+[Association,
+ Description (
+        "A class to associate a ManagedElement with its Capabilities."),
+ Provider("cmpi::Virt_ElementCapabilities")
+]
+class LXC_ElementCapabilities : CIM_ElementCapabilities
+{
+};
+

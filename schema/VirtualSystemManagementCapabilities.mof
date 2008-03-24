@@ -18,3 +18,11 @@ class KVM_VirtualSystemManagementCapabilities : CIM_VirtualSystemManagementCapab
 {
 };
 
+[Description (
+	"A class derived from CIM_Capabilities to represent "
+	"the management capabilities of a LXC virtual system."),
+ Provider("cmpi::Virt_VirtualSystemManagementCapabilities")
+]
+class LXC_VirtualSystemManagementCapabilities : CIM_VirtualSystemManagementCapabilities
+{
+};

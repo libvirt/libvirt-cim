@@ -9,3 +9,8 @@ class Xen_ResourcePoolConfigurationCapabilities : CIM_ResourcePoolConfigurationC
 class KVM_ResourcePoolConfigurationCapabilities : CIM_ResourcePoolConfigurationCapabilities
 {
 };
+
+[Provider("cmpi::Virt_ResourcePoolConfigurationCapabilities")]
+class LXC_ResourcePoolConfigurationCapabilities : CIM_ResourcePoolConfigurationCapabilities
+{
+};

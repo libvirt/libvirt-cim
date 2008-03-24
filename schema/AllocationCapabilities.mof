@@ -10,3 +10,8 @@ class KVM_AllocationCapabilities : CIM_AllocationCapabilities
 {
 };
 
+[Provider("cmpi::Virt_AllocationCapabilities")]
+class LXC_AllocationCapabilities : CIM_AllocationCapabilities
+{
+};
+

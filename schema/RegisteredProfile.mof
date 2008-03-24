@@ -18,3 +18,12 @@ class KVM_RegisteredProfile : CIM_RegisteredProfile
 {
 };
 
+[Description (
+	"A class derived from CIM_RegisteredProfile to represent "
+	"an advertised conformant profile."),
+ Provider("cmpi::Virt_RegisteredProfile")
+]
+class LXC_RegisteredProfile : CIM_RegisteredProfile
+{
+};
+

@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_HostedDependency root/virt Virt_HostedDependency Virt_HostedDependency association
 KVM_HostedDependency root/virt Virt_HostedDependency Virt_HostedDependency association
+LXC_HostedDependency root/virt Virt_HostedDependency Virt_HostedDependency association

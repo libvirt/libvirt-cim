@@ -18,3 +18,11 @@ class KVM_Memory : CIM_Memory
 {
 };
 
+[Description (
+        "A class derived from CIM_Memory to represent "
+        "the KVM virtual memory."),
+ Provider("cmpi::Virt_Device")
+]
+class LXC_Memory : CIM_Memory
+{
+};

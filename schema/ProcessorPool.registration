@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_ProcessorPool root/virt Virt_DevicePool Virt_DevicePool instance
 KVM_ProcessorPool root/virt Virt_DevicePool Virt_DevicePool instance
+LXC_ProcessorPool root/virt Virt_DevicePool Virt_DevicePool instance

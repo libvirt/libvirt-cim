@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_ElementCapabilities root/virt Virt_ElementCapabilities Virt_ElementCapabilities association
 KVM_ElementCapabilities root/virt Virt_ElementCapabilities Virt_ElementCapabilities association
+LXC_ElementCapabilities root/virt Virt_ElementCapabilities Virt_ElementCapabilities association

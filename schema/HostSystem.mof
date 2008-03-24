@@ -18,3 +18,11 @@ class KVM_HostSystem : CIM_ComputerSystem
 {
 };
 
+[Description (
+	"A class derived from CIM_ComputerSystem to represent "
+	"the LXC host system."),
+ Provider("cmpi::Virt_HostSystem")
+]
+class LXC_HostSystem : CIM_ComputerSystem
+{
+};

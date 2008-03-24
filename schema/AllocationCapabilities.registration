@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_AllocationCapabilities root/virt Virt_AllocationCapabilities Virt_AllocationCapabilities instance
 KVM_AllocationCapabilities root/virt Virt_AllocationCapabilities Virt_AllocationCapabilities instance
+LXC_AllocationCapabilities root/virt Virt_AllocationCapabilities Virt_AllocationCapabilities instance

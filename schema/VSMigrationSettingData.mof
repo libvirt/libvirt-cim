@@ -35,3 +35,11 @@ class KVM_VirtualSystemMigrationSettingData : CIM_VirtualSystemMigrationSettingD
     uint16 TransportType;
     string CheckParameters[];
 };
+
+[Provider("cmpi::Virt_VSMigrationSettingData")]
+class LXC_VirtualSystemMigrationSettingData : CIM_VirtualSystemMigrationSettingData {
+    [ ValueMap {"0","1","2","3","4","5","6"},
+      Values { "Unknown", "Other", "SSH", "TLS", "TLS Strict", "TCP", "UNIX" }]
+    uint16 TransportType;
+    string CheckParameters[];
+};

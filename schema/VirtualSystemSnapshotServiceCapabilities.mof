@@ -2,3 +2,4 @@
 
 class Xen_VirtualSystemSnapshotServiceCapabilities : CIM_VirtualSystemSnapshotServiceCapabilities {};
 class KVM_VirtualSystemSnapshotServiceCapabilities : CIM_VirtualSystemSnapshotServiceCapabilities {};
+class LXC_VirtualSystemSnapshotServiceCapabilities : CIM_VirtualSystemSnapshotServiceCapabilities {};

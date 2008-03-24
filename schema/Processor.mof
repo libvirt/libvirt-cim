@@ -18,3 +18,11 @@ class KVM_Processor : CIM_Processor
 {
 };
 
+[Description (
+	"A class derived from CIM_Processor to represent "
+	"the LXC virtual processors."),
+ Provider("cmpi::Virt_Device")
+]
+class LXC_Processor : CIM_Processor
+{
+};

@@ -5,3 +5,4 @@
 	       "32769: Memory-only, terminal (domain is offline after op)")]
 class Xen_VirtualSystemSnapshotService : CIM_VirtualSystemSnapshotService { };
 class KVM_VirtualSystemSnapshotService : CIM_VirtualSystemSnapshotService { };
+class LXC_VirtualSystemSnapshotService : CIM_VirtualSystemSnapshotService { };

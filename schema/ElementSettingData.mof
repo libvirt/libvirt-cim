@@ -13,3 +13,10 @@ class Xen_ElementSettingData : CIM_ElementSettingData
 class KVM_ElementSettingData : CIM_ElementSettingData
 {
 };
+
+[Association,
+ Provider("cmpi::Virt_ElementSettingData")
+]
+class LXC_ElementSettingData : CIM_ElementSettingData
+{
+};

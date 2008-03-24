@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_HostSystem root/virt Virt_HostSystem Virt_HostSystem instance
 KVM_HostSystem root/virt Virt_HostSystem Virt_HostSystem instance
+LXC_HostSystem root/virt Virt_HostSystem Virt_HostSystem instance

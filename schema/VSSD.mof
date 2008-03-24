@@ -40,3 +40,16 @@ class KVM_VirtualSystemSettingData : CIM_VirtualSystemSettingData
   string BootDevice;
 
 };
+
+[Description (
+	"A class derived from CIM_VirtualSystemSettingData to represent "
+	"the config of LXC containers running on the system."),
+ Provider("cmpi::Virt_VSSD")
+]
+class LXC_VirtualSystemSettingData : CIM_VirtualSystemSettingData
+{
+
+  [Description ("Path to the init process for the container")]
+  string InitPath;
+
+};

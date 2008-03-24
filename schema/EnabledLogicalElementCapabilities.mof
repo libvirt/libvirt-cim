@@ -18,3 +18,11 @@ class KVM_EnabledLogicalElementCapabilities : CIM_EnabledLogicalElementCapabilit
 {
 };
 
+[Description (
+	"A class derived from CIM_Capabilities to represent "
+	"the changes that can be made to a started LXC virtual system"),
+ Provider("cmpi::Virt_EnabledLogicalElementCapabilities")
+]
+class LXC_EnabledLogicalElementCapabilities : CIM_EnabledLogicalElementCapabilities
+{
+};

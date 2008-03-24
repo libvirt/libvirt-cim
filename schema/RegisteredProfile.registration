@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance
 KVM_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance
+LXC_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance

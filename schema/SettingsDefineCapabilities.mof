@@ -14,3 +14,10 @@ class KVM_SettingsDefineCapabilities : CIM_SettingsDefineCapabilities
 {
 };
 
+[Association,
+ Provider("cmpi::Virt_SettingsDefineCapabilities")
+]
+class LXC_SettingsDefineCapabilities : CIM_SettingsDefineCapabilities
+{
+};
+

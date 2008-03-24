@@ -9,3 +9,8 @@ class Xen_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 class KVM_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 {
 };
+
+[Provider("cmpi::Virt_VirtualSystemManagementService")]
+class LXC_VirtualSystemManagementService : CIM_VirtualSystemManagementService
+{
+};

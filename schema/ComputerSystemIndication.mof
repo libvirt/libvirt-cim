@@ -41,3 +41,24 @@ class KVM_ComputerSystemDeletedIndication : CIM_InstDeletion
 class KVM_ComputerSystemModifiedIndication : CIM_InstModification
 {
 };
+
+[Description ("LXC_ComputerSystem created"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
+class LXC_ComputerSystemCreatedIndication : CIM_InstCreation
+{
+};
+
+[Description ("LXC_ComputerSystem deleted"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
+class LXC_ComputerSystemDeletedIndication : CIM_InstDeletion
+{
+};
+
+[Description ("LXC_ComputerSystem modified"),
+ Provider("cmpi::Virt_ComputerSystemIndication")
+]
+class LXC_ComputerSystemModifiedIndication : CIM_InstModification
+{
+};

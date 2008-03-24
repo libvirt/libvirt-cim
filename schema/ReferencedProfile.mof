@@ -32,3 +32,18 @@ class KVM_ReferencedProfile : CIM_ReferencedProfile
 
 };
 
+[Association,
+ Description (
+        "Associates a RegisteredProfile with its scoping RegisteredProfile."),
+ Provider("cmpi::Virt_ReferencedProfile")
+]
+class LXC_ReferencedProfile : CIM_ReferencedProfile
+{
+
+  [Override ("Antecedent")]
+  LXC_RegisteredProfile REF Antecedent;
+
+  [Override ("Dependent")]
+  LXC_RegisteredProfile REF Dependent;
+
+};

@@ -18,3 +18,11 @@ class KVM_NetworkPort : CIM_NetworkPort
 {
 };
 
+[Description (
+	"A class derived from CIM_NetworkPort to represent "
+	"the LXC virtual network interfaces on the system."),
+ Provider("cmpi::Virt_Device")
+]
+class LXC_NetworkPort : CIM_NetworkPort
+{
+};

@@ -26,3 +26,15 @@ class KVM_ElementConformsToProfile : CIM_ElementConformsToProfile
 
 };
 
+[Association,
+ Description (
+        "A class to associate a ManagedElement with its RegisteredProfile."),
+ Provider("cmpi::Virt_ElementConformsToProfile")
+]
+class LXC_ElementConformsToProfile : CIM_ElementConformsToProfile
+{
+
+  [Override ("ConformantStandard")]
+  LXC_RegisteredProfile REF ConformantStandard;
+
+};

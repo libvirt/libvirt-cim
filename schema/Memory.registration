@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_Memory root/virt Virt_Device Virt_Device instance
 KVM_Memory root/virt Virt_Device Virt_Device instance
+LXC_Memory root/virt Virt_Device Virt_Device instance

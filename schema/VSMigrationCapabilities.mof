@@ -17,3 +17,7 @@ class Xen_VirtualSystemMigrationCapabilities : CIM_VirtualSystemMigrationCapabil
 [Provider("cmpi::Virt_VSMigrationCapabilities")]
 class KVM_VirtualSystemMigrationCapabilities : CIM_VirtualSystemMigrationCapabilities {
 };
+
+[Provider("cmpi::Virt_VSMigrationCapabilities")]
+class LXC_VirtualSystemMigrationCapabilities : CIM_VirtualSystemMigrationCapabilities {
+};

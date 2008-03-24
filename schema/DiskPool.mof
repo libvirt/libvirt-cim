@@ -10,3 +10,8 @@ class KVM_DiskPool : CIM_ResourcePool
 {
 };
 
+[Provider("cmpi::Virt_DevicePool")]
+class LXC_DiskPool : CIM_ResourcePool
+{
+};
+

@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_NetworkPort root/virt Virt_Device Virt_Device instance
 KVM_NetworkPort root/virt Virt_Device Virt_Device instance
+LXC_NetworkPort root/virt Virt_Device Virt_Device instance

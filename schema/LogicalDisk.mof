@@ -18,3 +18,12 @@ class KVM_LogicalDisk : CIM_LogicalDisk
 {
 };
 
+[Description (
+	"A class derived from CIM_LogicalDisk to represent "
+	"the KVM virtual disks on the system."),
+ Provider("cmpi::Virt_Device")
+]
+class LXC_LogicalDisk : CIM_LogicalDisk
+{
+};
+

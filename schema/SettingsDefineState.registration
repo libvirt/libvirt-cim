@@ -2,3 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_SettingsDefineState root/virt Virt_SettingsDefineState Virt_SettingsDefineState association
 KVM_SettingsDefineState root/virt Virt_SettingsDefineState Virt_SettingsDefineState association
+LXC_SettingsDefineState root/virt Virt_SettingsDefineState Virt_SettingsDefineState association

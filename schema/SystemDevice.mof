@@ -32,3 +32,18 @@ class KVM_SystemDevice : CIM_SystemDevice
 
 };
 
+[Association,
+ Description (
+        "A class to associate a LXC_ComputerSystem with its devices." ),
+ Provider("cmpi::Virt_SystemDevice")
+]
+class LXC_SystemDevice : CIM_SystemDevice
+{
+
+   [Override ( "GroupComponent" )]
+   LXC_ComputerSystem REF GroupComponent;
+
+   [Override ( "PartComponent" )]
+   CIM_LogicalDevice REF PartComponent;
+
+};

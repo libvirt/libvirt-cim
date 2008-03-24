@@ -8,6 +8,10 @@ class KVM_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData
 {
 };
 
+class LXC_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData
+{
+};
+
 [Description ("Xen virtual disk configuration"),
  Provider("cmpi::Virt_RASD")
 ]
@@ -28,6 +32,13 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       [Description ("Device as seen by the guest")]
       string VirtualDevice;
 
+};
+
+[Description ("LXC virtual disk configuration"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_DiskResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
 };
 
 [Description ("Xen virtual network configuration"),
@@ -52,6 +63,13 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
 };
 
+[Description ("LXC virtual network configuration"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_NetResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
+};
+
 [Description ("Xen virtual processor"),
  Provider("cmpi::Virt_RASD")
 ]
@@ -66,6 +84,13 @@ class KVM_ProcResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
 };
 
+[Description ("LXC virtual processor"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_ProcResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
+};
+
 [Description ("Xen virtual memory"),
  Provider("cmpi::Virt_RASD")
 ]
@@ -77,5 +102,12 @@ class Xen_MemResourceAllocationSettingData : Xen_ResourceAllocationSettingData
  Provider("cmpi::Virt_RASD")
 ]
 class KVM_MemResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+};
+
+[Description ("LXC virtual memory"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_MemResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
 };
