@@ -6,6 +6,7 @@ CIMOM=@CIMSERVER@
 SCHEMA_VERSION="2.16"
 
 TMPDIR=$(mktemp -d /tmp/cim_schema.XXXXX)
+chmod a+x $TMPDIR
 
 if [ ! -z "$CIM_DEBUG" ]; then
     set -x
