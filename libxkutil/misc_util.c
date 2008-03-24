@@ -46,6 +46,8 @@ static const char *cn_to_uri(const char *classname)
                 return "xen";
         else if (STARTS_WITH(classname, "KVM"))
                 return "qemu:///system";
+        else if (STARTS_WITH(classname, "LXC"))
+                return "lxc:///system";
         else
                 return NULL;
 }
@@ -200,6 +202,8 @@ const char *pfx_from_conn(virConnectPtr conn)
                 pfx = "Xen";
         else if (STARTS_WITH(uri, "qemu"))
                 pfx = "KVM";
+        else if (STARTS_WITH(uri, "lxc"))
+                pfx = "LXC";
 
         free(uri);
 
