@@ -44,6 +44,8 @@ static void print_os(struct domain *dom,
                 print_value(d, "Type", dom->os_info.fv.type);
                 print_value(d, "Loader", dom->os_info.fv.loader);
                 print_value(d, "Boot", dom->os_info.fv.boot);
+        } else if (dom->type == DOMAIN_LXC) {
+                print_value(d, "Init", dom->os_info.lxc.init);
         } else {
                 fprintf(d, "[ Unknown domain type %i ]\n", dom->type);
         }
