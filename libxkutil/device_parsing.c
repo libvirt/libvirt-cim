@@ -36,7 +36,8 @@
 #include "xmlgen.h"
 #include "../src/svpc_types.h"
 
-#define DISK_XPATH      (xmlChar *)"/domain/devices/disk"
+#define DISK_XPATH      (xmlChar *)"/domain/devices/disk | "\
+        "/domain/devices/filesystem"
 #define VCPU_XPATH      (xmlChar *)"/domain/vcpu"
 #define NET_XPATH       (xmlChar *)"/domain/devices/interface"
 #define EMU_XPATH       (xmlChar *)"/domain/devices/emulator"
@@ -135,7 +136,63 @@ static char *get_node_content(xmlNode *node)
         return buf;
 }
 
-static int parse_disk_device(xmlNode *dnode, struct virt_device **vdevs)
+static int parse_fs_device(xmlNode *dnode, struct virt_device **vdevs)
+{
+        struct virt_device *vdev = NULL;
+        struct disk_device *ddev = NULL;
+        xmlNode *child = NULL;
+
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        ddev = (&vdev->dev.disk);
+
+        ddev->type = get_attr_value(dnode, "type");
+        if (ddev->type == NULL) {
+                CU_DEBUG("No type");
+                goto err;
+        }
+
+        for (child = dnode->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "source")) {
+                        ddev->source = get_attr_value(child, "dir");
+                        if (ddev->source == NULL) {
+                                CU_DEBUG("No source dir");
+                                goto err;
+                        }
+                } else if (XSTREQ(child->name, "target")) {
+                        ddev->virtual_dev = get_attr_value(child, "dir");
+                        if (ddev->virtual_dev == NULL) {
+                                CU_DEBUG("No target dir");
+                                goto err;
+                        }
+                }
+        }
+
+        if ((ddev->source == NULL) || (ddev->virtual_dev == NULL)) {
+                CU_DEBUG("S: %s D: %s", ddev->source, ddev->virtual_dev);
+                goto err;
+        }
+
+        ddev->disk_type = DISK_FS;
+
+        vdev->type = CIM_RES_TYPE_DISK;
+        vdev->id = strdup(ddev->virtual_dev);
+
+        *vdevs = vdev;
+
+        return 1;
+
+ err:
+        CU_DEBUG("Error parsing fs");
+        cleanup_disk_device(ddev);
+        free(vdev);
+
+        return 0;
+}
+
+static int parse_block_device(xmlNode *dnode, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
         struct disk_device *ddev = NULL;
@@ -193,6 +250,20 @@ static int parse_disk_device(xmlNode *dnode, struct virt_device **vdevs)
         free(vdev);
 
         return 0;
+}
+
+static int parse_disk_device(xmlNode *dnode, struct virt_device **vdevs)
+{
+        CU_DEBUG("Disk node: %s", dnode->name);
+
+        if (XSTREQ(dnode->name, "disk"))
+                return parse_block_device(dnode, vdevs);
+        else if (XSTREQ(dnode->name, "filesystem"))
+                return parse_fs_device(dnode, vdevs);
+        else {
+                CU_DEBUG("Unknown disk device: %s", dnode->name);
+                return 0;
+        }
 }
 
 static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
@@ -668,6 +739,8 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
                 else if (XSTREQ(child->name, "boot"))
                         dominfo->os_info.fv.boot = get_attr_value(child,
                                                                      "dev");
+                else if (XSTREQ(child->name, "init"))
+                        STRPROP(dominfo, os_info.lxc.init, child);
         }
 
         if ((STREQC(dominfo->os_info.fv.type, "hvm")) &&
@@ -676,6 +749,8 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         else if ((STREQC(dominfo->typestr, "kvm")) ||
                  (STREQC(dominfo->typestr, "qemu")))
                 dominfo->type = DOMAIN_KVM;
+        else if (STREQC(dominfo->typestr, "lxc"))
+                dominfo->type = DOMAIN_LXC;
         else if (STREQC(dominfo->os_info.pv.type, "linux"))
                 dominfo->type = DOMAIN_XENPV;
         else
@@ -836,6 +911,8 @@ void cleanup_dominfo(struct domain **dominfo)
                 free(dom->os_info.fv.type);
                 free(dom->os_info.fv.loader);
                 free(dom->os_info.fv.boot);
+        } else if (dom->type == DOMAIN_LXC) {
+                free(dom->os_info.lxc.init);
         } else {
                 CU_DEBUG("Unknown domain type %i", dom->type);
         }

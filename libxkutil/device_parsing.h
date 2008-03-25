@@ -35,7 +35,7 @@ struct disk_device {
         char *driver;
         char *source;
         char *virtual_dev;
-        enum {DISK_UNKNOWN, DISK_PHY, DISK_FILE} disk_type;
+        enum {DISK_UNKNOWN, DISK_PHY, DISK_FILE, DISK_FS} disk_type;
 };
 
 struct net_device {
@@ -88,8 +88,12 @@ struct fv_os_info {
         char *boot;
 };
 
+struct lxc_os_info {
+        char *init;
+};
+
 struct domain {
-        enum { DOMAIN_XENPV, DOMAIN_XENFV, DOMAIN_KVM } type;
+        enum { DOMAIN_XENPV, DOMAIN_XENFV, DOMAIN_KVM, DOMAIN_LXC } type;
         char *name;
         char *typestr; /*xen, kvm, etc */
         char *uuid;
@@ -99,6 +103,7 @@ struct domain {
         union {
                 struct pv_os_info pv;
                 struct fv_os_info fv;
+                struct lxc_os_info lxc;
         } os_info;
 
         int on_poweroff;
