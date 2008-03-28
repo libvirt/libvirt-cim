@@ -479,54 +479,56 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
                                  CMPIArgs *argsout)
 {
         const char *dom_name = NULL;
-        CMPIStatus status = {CMPI_RC_OK, NULL};
-        CMPIValue rc;
+        CMPIStatus status;
+        uint32_t rc = IM_RC_FAILED;
         CMPIObjectPath *sys;
-
-        virConnectPtr conn;
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
 
         conn = connect_by_classname(_BROKER,
                                     CLASSNAME(reference),
                                     &status);
-        if (conn == NULL) {
-                rc.uint32 = IM_RC_FAILED;
-                goto error1;
-        }
+        if (conn == NULL)
+                goto error;
 
-        if (cu_get_ref_arg(argsin, "AffectedSystem", &sys) != CMPI_RC_OK) {
-                rc.uint32 = IM_RC_FAILED;
-                goto error2;
-        }
+        if (cu_get_ref_arg(argsin, "AffectedSystem", &sys) != CMPI_RC_OK)
+                goto error;
 
         dom_name = get_key_from_ref_arg(argsin, "AffectedSystem", "Name");
-        if (dom_name == NULL) {
-                rc.uint32 = IM_RC_FAILED;
-                goto error2;
-        }
+        if (dom_name == NULL)
+                goto error;
 
         // Make sure system exists and destroy it.
-        if (domain_exists(conn, dom_name)) {
-                virDomainPtr dom = virDomainLookupByName(conn, dom_name);
-                if (!virDomainDestroy(dom)) {
-                        rc.uint32 = IM_RC_OK;
-                } else {
-                        rc.uint32 = IM_RC_FAILED;
-                        cu_statusf(_BROKER, &status,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Domain already exists");
-                }
-                virDomainFree(dom);
+        if (!domain_exists(conn, dom_name))
+                goto error;
+
+        dom = virDomainLookupByName(conn, dom_name);
+        if (dom == NULL) {
+                CU_DEBUG("No such domain `%s', dom_name");
+                rc = IM_RC_SYS_NOT_FOUND;
+                goto error;
+        }
+
+        virDomainDestroy(dom); /* Okay for this to fail */
+        if (virDomainUndefine(dom) == 0) {
+                rc = IM_RC_OK;
                 trigger_indication(context,
                                    "ComputerSystemDeletedIndication",
                                    NAMESPACE(reference));
-        } else {
-                rc.uint32 = IM_RC_SYS_NOT_FOUND;
         }
 
- error2:
+error:
+        if (rc == IM_RC_SYS_NOT_FOUND)
+                cu_statusf(_BROKER, &status,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to find domain");
+        else if (rc == IM_RC_OK)
+                status = (CMPIStatus){CMPI_RC_OK, NULL};
+
+        virDomainFree(dom);
         virConnectClose(conn);
- error1:
         CMReturnData(results, &rc, CMPI_uint32);
+
         return status;
 }
 
