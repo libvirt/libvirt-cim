@@ -488,8 +488,10 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
         conn = connect_by_classname(_BROKER,
                                     CLASSNAME(reference),
                                     &status);
-        if (conn == NULL)
+        if (conn == NULL) {
+                rc = -1;
                 goto error;
+        }
 
         if (cu_get_ref_arg(argsin, "AffectedSystem", &sys) != CMPI_RC_OK)
                 goto error;
@@ -498,13 +500,9 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
         if (dom_name == NULL)
                 goto error;
 
-        // Make sure system exists and destroy it.
-        if (!domain_exists(conn, dom_name))
-                goto error;
-
         dom = virDomainLookupByName(conn, dom_name);
         if (dom == NULL) {
-                CU_DEBUG("No such domain `%s', dom_name");
+                CU_DEBUG("No such domain `%s'", dom_name);
                 rc = IM_RC_SYS_NOT_FOUND;
                 goto error;
         }
@@ -522,6 +520,10 @@ error:
                 cu_statusf(_BROKER, &status,
                            CMPI_RC_ERR_FAILED,
                            "Failed to find domain");
+        else if (rc == IM_RC_FAILED)
+                cu_statusf(_BROKER, &status,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to retrieve domain name.");
         else if (rc == IM_RC_OK)
                 status = (CMPIStatus){CMPI_RC_OK, NULL};
 
