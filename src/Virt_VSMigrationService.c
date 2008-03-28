@@ -543,7 +543,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         CMPIStatus s;
         virConnectPtr conn = NULL;
         virConnectPtr dconn = NULL;
-        uint32_t retcode = 1;
+        uint32_t retcode = CIM_SVPC_RETURN_COMPLETED;
         CMPIBoolean isMigratable = 0;
         uint16_t type;
         virDomainPtr dom = NULL;
@@ -598,14 +598,13 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        retcode = CIM_SVPC_RETURN_COMPLETED;
+        isMigratable = 1;
         cu_statusf(_BROKER, &s,
                    CMPI_RC_OK,
                    "");
  out:
         CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
 
-        isMigratable = (retcode == 0);
         CMAddArg(argsout, "IsMigratable",
                  (CMPIValue *)&isMigratable, CMPI_boolean);
 
