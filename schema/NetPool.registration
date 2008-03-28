@@ -1,4 +1,5 @@
 # Copyright IBM Corp. 2007
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_NetworkPool root/virt Virt_DevicePool Virt_DevicePool instance
-KVM_NetworkPool root/virt Virt_DevicePool Virt_DevicePool instanceLXC_NetworkPool root/virt Virt_DevicePool Virt_DevicePool instance
+KVM_NetworkPool root/virt Virt_DevicePool Virt_DevicePool instance
+LXC_NetworkPool root/virt Virt_DevicePool Virt_DevicePool instance
