@@ -116,7 +116,7 @@ static struct sdc_rasd_prop *mem_max(const CMPIObjectPath *ref,
 
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
-                {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"KiloBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&max_vq, CMPI_uint64},
                 PROP_END
         };
@@ -136,11 +136,11 @@ static struct sdc_rasd_prop *mem_min(const CMPIObjectPath *ref,
 {
         bool ret;
         struct sdc_rasd_prop *rasd = NULL;
-        uint64_t min_vq = 64;
+        uint64_t min_vq = 64 << 10;
 
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
-                {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"KiloBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&min_vq, CMPI_uint64},
                 PROP_END
         };
@@ -160,11 +160,11 @@ static struct sdc_rasd_prop *mem_def(const CMPIObjectPath *ref,
 {
         bool ret;
         struct sdc_rasd_prop *rasd = NULL;
-        uint64_t def_vq = 256;
+        uint64_t def_vq = 256 << 10;
 
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
-                {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"KiloBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&def_vq, CMPI_uint64},
                 PROP_END
         };
@@ -184,11 +184,11 @@ static struct sdc_rasd_prop *mem_inc(const CMPIObjectPath *ref,
 {
         bool ret;
         struct sdc_rasd_prop *rasd = NULL;
-        uint64_t inc_vq = 1;
+        uint64_t inc_vq = 1 << 10;
 
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
-                {"AllocationUnits", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"KiloBytes", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&inc_vq, CMPI_uint64},
                 PROP_END
         };

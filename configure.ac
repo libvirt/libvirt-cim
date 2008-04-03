@@ -61,9 +61,9 @@ AC_ARG_WITH([diskconfig],
             [DEFINE_DISK_CONFIG(/tmp/diskpool.conf)]
 )
 AC_ARG_WITH([maxmem], 
-            [  --with-maxmem=FOO	  Set max memory (MB) for a guest.], 
+            [  --with-maxmem=FOO	  Set max memory (KB) for a guest.], 
             [DEFINE_MAXMEM($with_maxmem)], 
-            [DEFINE_MAXMEM(4096)]
+            [DEFINE_MAXMEM(4194304)]
 )
 
 AC_ARG_WITH(html-dir,

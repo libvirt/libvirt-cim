@@ -344,7 +344,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.disk.type,
                               CMPI_chars);
         } else if (dev->type == CIM_RES_TYPE_MEM) {
-                const char *units = "MegaBytes";
+                const char *units = "KiloBytes";
 
                 CMSetProperty(inst, "AllocationUnits",
                               (CMPIValue *)units, CMPI_chars);
