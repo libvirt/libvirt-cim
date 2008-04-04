@@ -400,7 +400,7 @@ CMPIStatus enum_domains(const CMPIBroker *broker,
                 goto out;
 
         count = get_domain_list(conn, &list);
-        if (count <= 0) {
+        if (count < 0) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to get domain list");
