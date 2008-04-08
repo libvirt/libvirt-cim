@@ -337,7 +337,6 @@ static int parse_vcpu_device(xmlNode *node, struct virt_device **vdevs)
         struct virt_device *list = NULL;
         char *count_str;
         int count;
-        int i;
 
         count_str = get_node_content(node);
         if (count_str == NULL)
@@ -347,24 +346,15 @@ static int parse_vcpu_device(xmlNode *node, struct virt_device **vdevs)
 
         free(count_str);
 
-        list = calloc(count, sizeof(*list));
+        list = calloc(1, sizeof(*list));
         if (list == NULL)
                 goto err;
-
-        for (i = 0; i < count; i++) {
-                struct virt_device *vdev = &list[i];
-                struct vcpu_device *cdev = &vdev->dev.vcpu;
-
-                cdev->number = i;
-
-                vdev->type = CIM_RES_TYPE_PROC;
-                if (asprintf(&vdev->id, "%i", i) == -1)
-                        vdev->id = NULL;
-        }
+        
+        list->dev.vcpu.quantity = count;
 
         *vdevs = list;
 
-        return count;
+        return 1;
  err:
         free(list);
 
@@ -620,7 +610,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 dev->dev.mem.size = _dev->dev.mem.size;
                 dev->dev.mem.maxsize = _dev->dev.mem.maxsize;
         } else if (dev->type == CIM_RES_TYPE_PROC) {
-                dev->dev.vcpu.number = _dev->dev.vcpu.number;
+                dev->dev.vcpu.quantity = _dev->dev.vcpu.quantity;
         } else if (dev->type == CIM_RES_TYPE_EMU) {
                 DUP_FIELD(dev, _dev, dev.emu.path);
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
@@ -672,6 +662,32 @@ static int _get_mem_device(const char *xml, struct virt_device **list)
         return 1;
 }
 
+static int _get_proc_device(const char *xml, struct virt_device **list)
+{
+        struct virt_device *proc_devs = NULL;
+        struct virt_device *proc_dev = NULL;
+        int ret;
+
+        ret = parse_devices(xml, &proc_devs, CIM_RES_TYPE_PROC);
+        if (ret <= 0)
+                return ret;
+
+        proc_dev = malloc(sizeof(*proc_dev));
+        if (proc_dev == NULL)
+                return 0;
+
+        memset(proc_dev, 0, sizeof(*proc_dev));
+
+        proc_dev->type = CIM_RES_TYPE_PROC;
+        proc_dev->id = strdup("proc");
+        proc_dev->dev.vcpu.quantity = proc_devs[0].dev.vcpu.quantity;
+        *list = proc_dev;
+
+        cleanup_virt_devices(&proc_devs, ret);
+
+        return 1;
+};
+
 int get_devices(virDomainPtr dom, struct virt_device **list, int type)
 {
         char *xml;
@@ -683,6 +699,8 @@ int get_devices(virDomainPtr dom, struct virt_device **list, int type)
 
         if (type == CIM_RES_TYPE_MEM)
                 ret = _get_mem_device(xml, list);
+        else if (type == CIM_RES_TYPE_PROC)
+                ret = _get_proc_device(xml, list);
         else
                 ret = parse_devices(xml, list, type);
 

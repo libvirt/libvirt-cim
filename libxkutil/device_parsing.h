@@ -50,7 +50,7 @@ struct mem_device {
 };
 
 struct vcpu_device {
-        uint32_t number;
+        uint32_t quantity;
 };
 
 struct emu_device {
