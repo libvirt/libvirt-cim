@@ -78,6 +78,7 @@ static void print_dev_net(struct virt_device *dev,
 {
         print_value(d, "Type", dev->dev.net.type);
         print_value(d, "MAC", dev->dev.net.mac);
+        print_value(d, "Source", dev->dev.net.source);
 }
 
 static void print_dev_disk(struct virt_device *dev,
@@ -93,7 +94,7 @@ static void print_dev_disk(struct virt_device *dev,
 static void print_dev_vcpu(struct virt_device *dev,
                            FILE *d)
 {
-        print_u32(d, "Virtual CPU", dev->dev.vcpu.number);
+        print_u32(d, "Virtual CPUs", dev->dev.vcpu.quantity);
 }
 
 static void print_dev_emu(struct virt_device *dev,
