@@ -786,6 +786,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK};
         uint16_t type;
         const char *id = NULL;
+        int i;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -807,6 +808,10 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         }
 
         s = sdc_rasds_for_type(ref, list, type);
+
+        for (i = 0; i < list->cur; i++)
+                CMSetProperty(list->list[i], "PoolID",
+                              (CMPIValue *)id, CMPI_chars);
 
  out:
         return s;
