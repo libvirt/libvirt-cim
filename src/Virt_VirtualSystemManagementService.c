@@ -199,17 +199,17 @@ static int vssd_to_domain(CMPIInstance *inst,
         return ret;
 }
 
-static int xen_net_rasd_to_vdev(CMPIInstance *inst,
-                                struct virt_device *dev)
+static const char *xen_net_rasd_to_vdev(CMPIInstance *inst,
+                                        struct virt_device *dev)
 {
         free(dev->dev.net.type);
         dev->dev.net.type = strdup("bridge");
 
-        return 1;
+        return NULL;
 }
 
-static int kvm_net_rasd_to_vdev(CMPIInstance *inst,
-                                struct virt_device *dev)
+static const char *kvm_net_rasd_to_vdev(CMPIInstance *inst,
+                                        struct virt_device *dev)
 {
         free(dev->dev.net.type);
         dev->dev.net.type = strdup("network");
@@ -217,11 +217,11 @@ static int kvm_net_rasd_to_vdev(CMPIInstance *inst,
         free(dev->dev.net.source);
         dev->dev.net.source = strdup("default");
 
-        return 1;
+        return NULL;
 }
 
-static int rasd_to_vdev(CMPIInstance *inst,
-                        struct virt_device *dev)
+static const char *rasd_to_vdev(CMPIInstance *inst,
+                                struct virt_device *dev)
 {
         uint16_t type;
         const char *id = NULL;
@@ -229,6 +229,7 @@ static int rasd_to_vdev(CMPIInstance *inst,
         char *name = NULL;
         char *devid = NULL;
         CMPIObjectPath *op;
+        const char *msg = NULL;
 
         op = CMGetObjectPath(inst, NULL);
         if (op == NULL)
@@ -260,12 +261,11 @@ static int rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.net.mac = devid;
 
                 if (STARTS_WITH(CLASSNAME(op), "Xen"))
-                        xen_net_rasd_to_vdev(inst, dev);
+                        msg = xen_net_rasd_to_vdev(inst, dev);
                 else if (STARTS_WITH(CLASSNAME(op), "KVM"))
-                        kvm_net_rasd_to_vdev(inst, dev);
+                        msg = kvm_net_rasd_to_vdev(inst, dev);
                 else
-                        CU_DEBUG("Unknown class type for net device: %s",
-                                 CLASSNAME(op));
+                        msg = "Invalid domain type";
 
         } else if (type == CIM_RES_TYPE_MEM) {
                 cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
@@ -278,16 +278,16 @@ static int rasd_to_vdev(CMPIInstance *inst,
 
         free(name);
 
-        return 1;
+        return msg;
  err:
         free(name);
         free(devid);
 
-        return 0;
+        return msg;
 }
 
-static int classify_resources(CMPIArray *resources,
-                              struct domain *domain)
+static const char *classify_resources(CMPIArray *resources,
+                                      struct domain *domain)
 {
         int i;
         uint16_t type;
@@ -298,7 +298,7 @@ static int classify_resources(CMPIArray *resources,
   
         count = CMGetArrayCount(resources, NULL);
         if (count < 1)
-                return 0;
+                return "No resources specified";
 
         domain->dev_disk = calloc(count, sizeof(struct virt_device));
         domain->dev_vcpu = calloc(count, sizeof(struct virt_device));
@@ -308,34 +308,39 @@ static int classify_resources(CMPIArray *resources,
         for (i = 0; i < count; i++) {
                 CMPIObjectPath *op;
                 CMPIData item;
+                const char *msg = NULL;
 
                 item = CMGetArrayElementAt(resources, i, NULL);
                 if (CMIsNullObject(item.value.inst))
-                        return 0;
+                        return "Internal array error";
 
                 op = CMGetObjectPath(item.value.inst, NULL);
                 if (op == NULL)
-                        return 0;
+                        return "Unknown resource instance type";
 
                 if (res_type_from_rasd_classname(CLASSNAME(op), &type) != 
                     CMPI_RC_OK)
-                        return 0;
+                        return "Unable to determine resource type";
 
                 if (type == CIM_RES_TYPE_PROC)
-                        rasd_to_vdev(item.value.inst,
-                                     &domain->dev_vcpu[domain->dev_vcpu_ct++]);
+                        msg = rasd_to_vdev(item.value.inst,
+                                           &domain->dev_vcpu[domain->dev_vcpu_ct++]);
                 else if (type == CIM_RES_TYPE_MEM)
-                        rasd_to_vdev(item.value.inst,
-                                     &domain->dev_mem[domain->dev_mem_ct++]);
+                        msg = rasd_to_vdev(item.value.inst,
+                                           &domain->dev_mem[domain->dev_mem_ct++]);
                 else if (type == CIM_RES_TYPE_DISK)
-                        rasd_to_vdev(item.value.inst,
-                                     &domain->dev_disk[domain->dev_disk_ct++]);
+                        msg = rasd_to_vdev(item.value.inst,
+                                           &domain->dev_disk[domain->dev_disk_ct++]);
                 else if (type == CIM_RES_TYPE_NET)
-                        rasd_to_vdev(item.value.inst,
-                                     &domain->dev_net[domain->dev_net_ct++]);
+                        msg = rasd_to_vdev(item.value.inst,
+                                           &domain->dev_net[domain->dev_net_ct++]);
+
+                if (msg != NULL)
+                        return msg;
+
         }
 
-       return 1;
+       return NULL;
 }
 
 static CMPIInstance *connect_and_create(char *xml,
@@ -385,6 +390,7 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
 {
         CMPIInstance *inst = NULL;
         char *xml = NULL;
+        const char *msg = NULL;
 
         struct domain *domain;
 
@@ -396,8 +402,9 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
                 goto out;
         }
 
-        if (!classify_resources(resources, domain)) {
-                CU_DEBUG("Failed to classify resources");
+        msg = classify_resources(resources, domain);
+        if (msg != NULL) {
+                CU_DEBUG("Failed to classify resources: %s", msg);
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "ResourceSettings Error");
