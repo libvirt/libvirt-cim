@@ -673,6 +673,16 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
                                   refcn,
                                   "NetworkPool",
                                   ns);
+        if (inst == NULL) {
+                CMPIStatus s;
+
+                CU_DEBUG("Unable to get instance: %s:%s_NetworkPool",
+                         ns, refcn);
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error getting pool instance");
+                return s;
+        }
 
         if (asprintf(&str, "NetworkPool/%s", netname) == -1)
                 return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
