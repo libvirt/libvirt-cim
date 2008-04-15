@@ -173,8 +173,10 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 CMSetProperty(inst, "Limit",
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
         } else if (dev->type == CIM_RES_TYPE_PROC) {
+                /* This would be the place to set the virtualquantity. */
+                uint64_t quantity = dev->dev.vcpu.number + 1;
                 CMSetProperty(inst, "VirtualQuantity",
-                              (CMPIValue *)&dev->dev.vcpu.quantity, CMPI_uint32);
+                              (CMPIValue *)&quantity, CMPI_uint64);
         }
 
         /* FIXME: Put the HostResource in place */
@@ -346,6 +348,22 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
         count = get_devices(dom, &devs, type);
         if (count <= 0)
                 goto out;
+
+        /* Bit hackish, but for proc we need to cut list down to one. */
+        if (type == CIM_RES_TYPE_PROC) {
+                struct virt_device *tmp_dev = NULL;
+                tmp_dev = calloc(1, sizeof(*tmp_dev));
+                tmp_dev = virt_device_dup(&devs[count - 1]);
+
+                tmp_dev->id = strdup("proc");
+
+                for (i = 0; i < count; i++)
+                        cleanup_virt_device(&devs[i]);
+
+                free(devs);
+                devs = tmp_dev;
+                count = 1;
+        }
 
         for (i = 0; i < count; i++) {
                 CMPIInstance *dev = NULL;

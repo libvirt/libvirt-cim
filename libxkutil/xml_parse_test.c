@@ -18,10 +18,12 @@ static void print_u64(FILE *d, const char *name, uint64_t val)
         fprintf(d, "%-15s: %" PRIu64 "\n", name, val);
 }
 
+#if 0
 static void print_u32(FILE *d, const char *name, uint32_t val)
 {
         fprintf(d, "%-15s: %" PRIu32 "\n", name, val);
 }
+#endif
 
 static void print_os(struct domain *dom,
                      FILE *d)
@@ -94,7 +96,7 @@ static void print_dev_disk(struct virt_device *dev,
 static void print_dev_vcpu(struct virt_device *dev,
                            FILE *d)
 {
-        print_u32(d, "Virtual CPUs", dev->dev.vcpu.quantity);
+        print_u64(d, "Virtual CPU", dev->dev.vcpu.number);
 }
 
 static void print_dev_emu(struct virt_device *dev,
