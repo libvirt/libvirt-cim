@@ -105,6 +105,20 @@ CMPIStatus get_pool_by_name(const CMPIBroker *broker,
                             const char *id,
                             CMPIInstance **_inst);
 
+/**
+ * Get the default pool for a given device type
+ *
+ * @param broker A pointer to the current broker
+ * @param ref The object path containing namespace and prefix info
+ * @param type The device type in question
+ * @param status The returned status
+ * @returns Default instance of a pool
+ */
+CMPIInstance *default_device_pool(const CMPIBroker *broker,
+                                  const CMPIObjectPath *reference,
+                                  uint16_t type,
+                                  CMPIStatus *status);
+
 #endif
 
 /*

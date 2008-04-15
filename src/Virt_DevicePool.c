@@ -991,6 +991,39 @@ CMPIStatus enum_pools(const CMPIBroker *broker,
         return _get_pools(broker, reference, type, NULL, list);
 }
 
+CMPIInstance *default_device_pool(const CMPIBroker *broker,
+                                  const CMPIObjectPath *reference,
+                                  uint16_t type,
+                                  CMPIStatus *s)
+{
+        CMPIInstance *inst = NULL;
+        struct inst_list list;
+
+        inst_list_init(&list);
+
+        if (type == CIM_RES_TYPE_MEM) {
+                *s = get_pool_by_name(broker, reference, "MemoryPool/0", &inst);
+        } else if (type == CIM_RES_TYPE_PROC) {
+                *s = get_pool_by_name(broker, reference, "ProcessorPool/0", &inst);
+        } else if (type == CIM_RES_TYPE_DISK) {
+                *s = enum_pools(broker, reference, type, &list);
+                if (s->rc == CMPI_RC_OK)
+                        inst = list.list[0];
+        } else if (type == CIM_RES_TYPE_NET) {
+                *s = enum_pools(broker, reference, type, &list);
+                if (s->rc == CMPI_RC_OK)
+                        inst = list.list[0];
+        } else {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "No such device type `%s'", type);
+        }
+
+        inst_list_free(&list);
+
+        return inst;
+}
+
 static CMPIStatus return_pool(const CMPIObjectPath *ref,
                               const CMPIResult *results,
                               bool names_only)
