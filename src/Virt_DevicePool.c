@@ -500,6 +500,17 @@ uint16_t res_type_from_pool_id(const char *id)
                 return CIM_RES_TYPE_UNKNOWN;
 }
 
+char *name_from_pool_id(const char *id)
+{
+        char *s;
+
+        s = strchr(id, '/');
+        if (s == NULL)
+                return NULL;
+
+        return strdup((char *)s+1);
+}
+
 static bool mempool_set_total(CMPIInstance *inst, virConnectPtr conn)
 {
         virNodeInfo info;

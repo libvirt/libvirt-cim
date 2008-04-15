@@ -58,6 +58,14 @@ uint16_t res_type_from_pool_classname(const char *classname);
 uint16_t res_type_from_pool_id(const char *id);
 
 /**
+ * Get the pool name from a given pool's InstanceID
+ *
+ * @param id The InstanceID of the pool
+ * @returns the name (must be free'd by the caller)
+ */
+char *name_from_pool_id(const char *id);
+
+/**
  * Get all device pools on the system for the given type
  * 
  *
