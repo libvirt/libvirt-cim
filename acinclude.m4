@@ -314,3 +314,22 @@ AC_DEFUN([DEFINE_DISK_CONFIG],
     AC_DEFINE_UNQUOTED([DISK_POOL_CONFIG], "$1", [Disk pool config filepath.])
     ]
 )
+
+AC_DEFUN([SET_CSET],
+	[
+	if test -d .hg && test -x $(which hg); then
+	   cs='-DLIBVIRT_CIM_CS=\"`hg id -i`\"'
+	   rv='-DLIBVIRT_CIM_RV=\"`hg id -n`\"'
+	elif test -f .changeset; then
+	   cset=$(cat .changeset)
+	   revn=$(cat .revision)
+	   cs="-DLIBVIRT_CIM_CS=\\\"$cset\\\""
+	   rv="-DLIBVIRT_CIM_RV=\\\"$revn\\\""
+	else
+	   cs='-DLIBVIRT_CIM_CS=\"Unknown\"'
+	   rv='-DLIBVIRT_CIM_RV=\"0\"'
+ 	fi
+
+	CFLAGS="$CFLAGS $cs $rv"
+	]
+)

@@ -3,14 +3,29 @@
 [Provider("cmpi::Virt_VirtualSystemManagementService")]
 class Xen_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 {
+   [Description("HG changeset id of the providers")]
+   string Changeset;
+
+   [Description("HG revision number of the providers")]
+   string Revision;
 };
 
 [Provider("cmpi::Virt_VirtualSystemManagementService")]
 class KVM_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 {
+   [Description("HG changeset id of the providers")]
+   string Changeset;
+
+   [Description("HG revision number of the providers")]
+   string Revision;
 };
 
 [Provider("cmpi::Virt_VirtualSystemManagementService")]
 class LXC_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 {
+   [Description("HG changeset id of the providers")]
+   string Changeset;
+
+   [Description("HG revision number of the providers")]
+   string Revision;
 };

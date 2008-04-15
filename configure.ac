@@ -143,6 +143,7 @@ AC_ARG_ENABLE([werror],
 AC_SUBST(CFLAGS_STRICT)
 
 CFLAGS="$CFLAGS $CC_WARNINGS"
+SET_CSET
 
 # Display configuration options
 echo "----------------------------------------------------------"

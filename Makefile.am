@@ -98,7 +98,8 @@ pkgdata_SCRIPTS = provider-register.sh
 
 EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
              libvirt-cim.spec.in libvirt-cim.spec	\
-	     doc/CodingStyle doc/SubmittingPatches
+	     doc/CodingStyle doc/SubmittingPatches      \
+             .changeset .revision
 
 preinstall:
 	sh -x base_schema/install_base_schema.sh `pwd`/base_schema
