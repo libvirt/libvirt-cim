@@ -47,6 +47,7 @@
 #include "Virt_ComputerSystemIndication.h"
 #include "Virt_RASD.h"
 #include "Virt_HostSystem.h"
+#include "Virt_DevicePool.h"
 #include "svpc_types.h"
 
 const static CMPIBroker *_BROKER;
@@ -199,11 +200,50 @@ static int vssd_to_domain(CMPIInstance *inst,
         return ret;
 }
 
+static const char *_default_network(CMPIInstance *inst)
+{
+        CMPIInstance *pool;
+        CMPIObjectPath *op;
+        CMPIStatus s;
+        const char *poolid = NULL;
+
+        op = CMGetObjectPath(inst, &s);
+        if ((op == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get path for instance: %s",
+                         CMGetCharPtr(s.msg));
+                return NULL;
+        }
+
+        pool = default_device_pool(_BROKER, op, CIM_RES_TYPE_NET, &s);
+        if ((pool == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get default network pool: %s",
+                         CMGetCharPtr(s.msg));
+                return NULL;
+        }
+
+        if (cu_get_str_prop(pool, "InstanceID", &poolid) != CMPI_RC_OK) {
+                CU_DEBUG("Unable to get pool's InstanceID");
+        }
+
+        return poolid;
+}
+
 static const char *xen_net_rasd_to_vdev(CMPIInstance *inst,
                                         struct virt_device *dev)
 {
+        const char *val = NULL;
+
         free(dev->dev.net.type);
-        dev->dev.net.type = strdup("bridge");
+        dev->dev.net.type = strdup("network");
+
+        if (cu_get_str_prop(inst, "PoolID", &val) != CMPI_RC_OK)
+                val = _default_network(inst);
+
+        if (val == NULL)
+                return "No NetworkPool specified and no default available";
+
+        free(dev->dev.net.source);
+        dev->dev.net.source = name_from_pool_id(val);
 
         return NULL;
 }
@@ -211,11 +251,88 @@ static const char *xen_net_rasd_to_vdev(CMPIInstance *inst,
 static const char *kvm_net_rasd_to_vdev(CMPIInstance *inst,
                                         struct virt_device *dev)
 {
+        const char *val = NULL;
+
         free(dev->dev.net.type);
         dev->dev.net.type = strdup("network");
 
+        if (cu_get_str_prop(inst, "PoolID", &val) != CMPI_RC_OK)
+                val = _default_network(inst);
+
+        if (val == NULL)
+                return "No NetworkPool specified and no default available";
+
         free(dev->dev.net.source);
-        dev->dev.net.source = strdup("default");
+        dev->dev.net.source = name_from_pool_id(val);
+
+        return NULL;
+}
+
+static const char *net_rasd_to_vdev(CMPIInstance *inst,
+                                    struct virt_device *dev)
+{
+        const char *val = NULL;
+        CMPIObjectPath *op;
+        const char *msg = NULL;
+
+        if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
+                msg = "Required field `Address' missing from NetRASD";
+                goto out;
+        }
+
+        free(dev->dev.net.mac);
+        dev->dev.net.mac = strdup(val);
+
+        op = CMGetObjectPath(inst, NULL);
+        if (op == NULL) {
+                CU_DEBUG("Unable to get instance path");
+                goto out;
+        }
+
+        if (STARTS_WITH(CLASSNAME(op), "Xen"))
+                msg = xen_net_rasd_to_vdev(inst, dev);
+        else if (STARTS_WITH(CLASSNAME(op), "KVM"))
+                msg = kvm_net_rasd_to_vdev(inst, dev);
+        else {
+                msg = "Unknown class type for net device";
+                CU_DEBUG("Unknown class type for net device: %s",
+                         CLASSNAME(op));
+        }
+
+ out:
+        return msg;
+}
+
+static const char *disk_rasd_to_vdev(CMPIInstance *inst,
+                                     struct virt_device *dev)
+{
+        const char *val = NULL;
+
+        if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
+                val = "hda";
+
+        free(dev->dev.disk.virtual_dev);
+        dev->dev.disk.virtual_dev = strdup(val);
+
+        if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK)
+                val = "/dev/null";
+
+        free(dev->dev.disk.source);
+        dev->dev.disk.source = strdup(val);
+        dev->dev.disk.disk_type = disk_type_from_file(val);
+
+        return NULL;
+}
+
+static const char *mem_rasd_to_vdev(CMPIInstance *inst,
+                                    struct virt_device *dev)
+{
+        cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
+        cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
+        dev->dev.mem.maxsize = dev->dev.mem.size;
+        cu_get_u64_prop(inst, "Limit", &dev->dev.mem.maxsize);
+        dev->dev.mem.size <<= 10;
+        dev->dev.mem.maxsize <<= 10;
 
         return NULL;
 }
@@ -224,69 +341,38 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
                                 struct virt_device *dev)
 {
         uint16_t type;
-        const char *id = NULL;
-        const char *val = NULL;
-        char *name = NULL;
-        char *devid = NULL;
         CMPIObjectPath *op;
         const char *msg = NULL;
 
         op = CMGetObjectPath(inst, NULL);
-        if (op == NULL)
-                goto err;
+        if (op == NULL) {
+                msg = "Unable to get path for device instance";
+                goto out;
+        }
 
-        if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK)
-                goto err;
+        if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK) {
+                msg = "Unable to get device type";
+                goto out;
+        }
 
         dev->type = (int)type;
 
-        if (cu_get_str_prop(inst, "InstanceID", &id) != CMPI_RC_OK)
-                goto err;
-
-        if (!parse_fq_devid(id, &name, &devid))
-                goto err;
-
         if (type == CIM_RES_TYPE_DISK) {
-                free(dev->dev.disk.virtual_dev);
-                dev->dev.disk.virtual_dev = devid;
-
-                if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK)
-                        val = "/dev/null";
-
-                free(dev->dev.disk.source);
-                dev->dev.disk.source = strdup(val);
-                dev->dev.disk.disk_type = disk_type_from_file(val);
+                msg = disk_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_NET) {
-                free(dev->dev.net.mac);
-                dev->dev.net.mac = devid;
-
-                if (STARTS_WITH(CLASSNAME(op), "Xen"))
-                        msg = xen_net_rasd_to_vdev(inst, dev);
-                else if (STARTS_WITH(CLASSNAME(op), "KVM"))
-                        msg = kvm_net_rasd_to_vdev(inst, dev);
-                else
-                        msg = "Invalid domain type";
-
+                msg = net_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_MEM) {
-                cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
-                cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
-                dev->dev.mem.maxsize = dev->dev.mem.size;
-                cu_get_u64_prop(inst, "Limit", &dev->dev.mem.maxsize);
-                dev->dev.mem.size <<= 10;
-                dev->dev.mem.maxsize <<= 10;
+                msg = mem_rasd_to_vdev(inst, dev);
         }
-
-        free(name);
-
-        return msg;
- err:
-        free(name);
-        free(devid);
+ out:
+        if (msg)
+                CU_DEBUG("rasd_to_vdev(): %s", msg);
 
         return msg;
 }
 
 static const char *classify_resources(CMPIArray *resources,
+                                      const char *ns,
                                       struct domain *domain)
 {
         int i;
@@ -308,31 +394,37 @@ static const char *classify_resources(CMPIArray *resources,
         for (i = 0; i < count; i++) {
                 CMPIObjectPath *op;
                 CMPIData item;
+                CMPIInstance *inst;
                 const char *msg = NULL;
 
                 item = CMGetArrayElementAt(resources, i, NULL);
                 if (CMIsNullObject(item.value.inst))
                         return "Internal array error";
 
-                op = CMGetObjectPath(item.value.inst, NULL);
+                inst = item.value.inst;
+
+                op = CMGetObjectPath(inst, NULL);
                 if (op == NULL)
                         return "Unknown resource instance type";
+
+                CMSetNameSpace(op, ns);
+                CMSetObjectPath(inst, op);
 
                 if (res_type_from_rasd_classname(CLASSNAME(op), &type) != 
                     CMPI_RC_OK)
                         return "Unable to determine resource type";
 
                 if (type == CIM_RES_TYPE_PROC)
-                        msg = rasd_to_vdev(item.value.inst,
+                        msg = rasd_to_vdev(inst,
                                            &domain->dev_vcpu[domain->dev_vcpu_ct++]);
                 else if (type == CIM_RES_TYPE_MEM)
-                        msg = rasd_to_vdev(item.value.inst,
+                        msg = rasd_to_vdev(inst,
                                            &domain->dev_mem[domain->dev_mem_ct++]);
                 else if (type == CIM_RES_TYPE_DISK)
-                        msg = rasd_to_vdev(item.value.inst,
+                        msg = rasd_to_vdev(inst,
                                            &domain->dev_disk[domain->dev_disk_ct++]);
                 else if (type == CIM_RES_TYPE_NET)
-                        msg = rasd_to_vdev(item.value.inst,
+                        msg = rasd_to_vdev(inst,
                                            &domain->dev_net[domain->dev_net_ct++]);
 
                 if (msg != NULL)
@@ -402,12 +494,12 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
                 goto out;
         }
 
-        msg = classify_resources(resources, domain);
+        msg = classify_resources(resources, NAMESPACE(ref), domain);
         if (msg != NULL) {
                 CU_DEBUG("Failed to classify resources: %s", msg);
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
-                           "ResourceSettings Error");
+                           "ResourceSettings Error: %s", msg);
                 goto out;
         }
 
