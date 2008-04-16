@@ -438,14 +438,15 @@ static const char *_net_rand_mac(void)
         int r;
         int ret;
         unsigned int s;
-        char *mac = NULL;
+        char *tmp_mac = NULL;
+        const char *mac = NULL;
         CMPIString *str = NULL;
         CMPIStatus status;
 
         srand(time(NULL));
         r = rand_r(&s);
 
-        ret = asprintf(&mac,
+        ret = asprintf(&tmp_mac,
                        "%s:%02x:%02x:%02x",
                        DEFAULT_MAC_PREFIX,
                        r & 0xFF,
@@ -455,14 +456,14 @@ static const char *_net_rand_mac(void)
         if (ret == -1)
                 goto out;
 
-        str = CMNewString(_BROKER, mac, &status);
+        str = CMNewString(_BROKER, tmp_mac, &status);
         if ((str == NULL) || (status.rc != CMPI_RC_OK)) {
                 str = NULL;
                 CU_DEBUG("Failed to create string");
                 goto out;
         }
  out:
-        free(mac);
+        free(tmp_mac);
 
         if (str != NULL)
                 mac = CMGetCharPtr(str);
