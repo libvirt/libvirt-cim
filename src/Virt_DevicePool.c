@@ -786,6 +786,9 @@ static CMPIInstance *diskpool_from_path(struct disk_pool *pool,
         CMSetProperty(inst, "AllocationUnits",
                       (CMPIValue *)"Megabytes", CMPI_chars);
 
+        CMSetProperty(inst, "Caption",
+                      (CMPIValue *)pool->tag, CMPI_chars);
+
         if (!diskpool_set_capacity(conn, inst, pool))
                 CU_DEBUG("Failed to set capacity for disk pool: %s",
                          pool->tag);
