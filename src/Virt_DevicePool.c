@@ -1017,11 +1017,11 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
                 *s = get_pool_by_name(broker, reference, "ProcessorPool/0", &inst);
         } else if (type == CIM_RES_TYPE_DISK) {
                 *s = enum_pools(broker, reference, type, &list);
-                if (s->rc == CMPI_RC_OK)
+                if ((s->rc == CMPI_RC_OK) && (list.cur > 0))
                         inst = list.list[0];
         } else if (type == CIM_RES_TYPE_NET) {
                 *s = enum_pools(broker, reference, type, &list);
-                if (s->rc == CMPI_RC_OK)
+                if ((s->rc == CMPI_RC_OK) && (list.cur > 0))
                         inst = list.list[0];
         } else {
                 cu_statusf(broker, s,
@@ -1030,6 +1030,12 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
         }
 
         inst_list_free(&list);
+
+        if (inst == NULL) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_FAILED,
+                           "No default pool found for type %hi", type);
+        }
 
         return inst;
 }
