@@ -23,6 +23,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <limits.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>
@@ -33,10 +35,12 @@
 #include "cs_util.h"
 #include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
+#include "device_parsing.h"
 #include <libcmpiutil/std_invokemethod.h>
 #include <libcmpiutil/std_instance.h>
 
 #include "Virt_ComputerSystem.h"
+#include "Virt_HostSystem.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -90,13 +94,42 @@ static int set_uuid_from_dom(virDomainPtr dom,
         return 1;
 }
 
-static int set_capdesc_from_dom(virDomainPtr dom, CMPIInstance *instance)
+static int set_capdesc_from_dominfo(const CMPIBroker *broker,
+                                    struct domain *domain,
+                                    const CMPIObjectPath *ref,
+                                    CMPIInstance *instance)
 {
+        char *cap = NULL;
+        int ret;
+        char host[HOST_NAME_MAX];
+
+        if (gethostname(host, sizeof(host)) != 0) {
+                CU_DEBUG("Unable to get hostname: %m");
+                strcpy(host, "localhost");
+        }
+
+        if (domain->dev_graphics != NULL)
+                ret = asprintf(&cap,
+                               "Virtual System (Console on %s://%s:%s)",
+                               domain->dev_graphics->dev.graphics.type,
+                               host,
+                               domain->dev_graphics->dev.graphics.port);
+        else
+                ret = asprintf(&cap,
+                               "Virtual System (No console)");
+
+        if (ret == -1) {
+                CU_DEBUG("Failed to create caption string");
+                goto out;
+        }
+
         CMSetProperty(instance, "Caption",
-                      (CMPIValue *)"Virtual System", CMPI_chars);
+                      (CMPIValue *)cap, CMPI_chars);
 
         CMSetProperty(instance, "Description",
                       (CMPIValue *)"Virtual System", CMPI_chars);
+ out:
+        free(cap);
 
         return 1;
 }
@@ -309,6 +342,20 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
 {
         CMPIStatus s = {CMPI_RC_ERR_FAILED, NULL};
         char *uuid = NULL;
+        struct domain *domain = NULL;
+        CMPIObjectPath *ref = NULL;
+
+        ref = CMGetObjectPath(instance, &s);
+        if ((ref == NULL) || (s.rc != CMPI_RC_OK))
+                return s;
+
+        if (get_dominfo(dom, &domain) == 0) {
+                CU_DEBUG("Unable to get domain information");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get domain information");
+                goto out;
+        }
 
         if (!set_name_from_dom(dom, instance)) {
                 /* Print trace error */
@@ -320,7 +367,7 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
                 goto out;
         }
 
-        if (!set_capdesc_from_dom(dom, instance)) {
+        if (!set_capdesc_from_dominfo(broker, domain, ref, instance)) {
                 /* Print trace error */
                 goto out;
         }
@@ -348,6 +395,7 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
 
  out:
         free(uuid);
+        cleanup_dominfo(&domain);
 
         return s;
 }
