@@ -652,6 +652,7 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
                                        const char *refcn,
                                        const CMPIBroker *broker)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         char *str = NULL;
         char *bridge = NULL;
         uint16_t type = CIM_RES_TYPE_NET;
@@ -661,12 +662,10 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
         CU_DEBUG("Looking up network `%s'", netname);
         network = virNetworkLookupByName(conn, netname);
         if (network == NULL) {
-                CMPIStatus s;
-
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "No such NetworkPool: %s", netname);
-                return s;
+                goto out;
         }
 
         inst = get_typed_instance(broker,
@@ -674,26 +673,32 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
                                   "NetworkPool",
                                   ns);
         if (inst == NULL) {
-                CMPIStatus s;
-
                 CU_DEBUG("Unable to get instance: %s:%s_NetworkPool",
                          ns, refcn);
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Error getting pool instance");
-                return s;
+                goto out;
         }
 
-        if (asprintf(&str, "NetworkPool/%s", netname) == -1)
-                return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
+        if (asprintf(&str, "NetworkPool/%s", netname) == -1) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "");
+                goto out;
+        }
 
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)str, CMPI_chars);
         free(str);
 
         bridge = virNetworkGetBridgeName(network);
-        if (asprintf(&str, "Bridge: %s", bridge) == -1)
-                return (CMPIStatus){CMPI_RC_ERR_FAILED, NULL};
+        if (asprintf(&str, "Bridge: %s", bridge) == -1) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "");
+                goto out;
+        }
 
         CMSetProperty(inst, "Caption",
                       (CMPIValue *)str, CMPI_chars);
@@ -706,7 +711,10 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
 
         inst_list_add(list, inst);
 
-        return (CMPIStatus){CMPI_RC_OK, NULL};
+ out:
+        virNetworkFree(network);
+
+        return s;
 }
 
 static CMPIStatus netpool_instance(virConnectPtr conn,
