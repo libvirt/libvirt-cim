@@ -87,6 +87,13 @@ AC_ARG_WITH([migrate_check_dir],
 AC_SUBST(MIG_CHECKS_DIR)
 AC_DEFINE_UNQUOTED(MIG_CHECKS_DIR, "$MIG_CHECKS_DIR", [External migration check timeout])
 
+AC_ARG_WITH([xen_emulator],
+	    [  --with-xen_emulator=emu  Location of Xen FullVirt emulator],
+	    [test "x$withval" != "x" && XEN_EMULATOR="$withval"],
+	    [XEN_EMULATOR=/usr/lib/xen/bin/qemu-dm])
+AC_SUBST(XEN_EMULATOR)
+AC_DEFINE_UNQUOTED(XEN_EMULATOR, "$XEN_EMULATOR", [Location of Xen FullVirt emulator])
+
 # Autogenerate the autoconf header file to store build settings
 AC_CONFIG_HEADER([config.h])
 

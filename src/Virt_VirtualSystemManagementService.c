@@ -50,6 +50,8 @@
 #include "Virt_DevicePool.h"
 #include "svpc_types.h"
 
+#include "config.h"
+
 const static CMPIBroker *_BROKER;
 
 enum ResourceAction {
@@ -122,6 +124,25 @@ static int xenpv_vssd_to_domain(CMPIInstance *inst,
         return 1;
 }
 
+static bool fv_default_emulator(struct domain *domain)
+{
+        const char *emul = XEN_EMULATOR;
+
+        cleanup_virt_device(domain->dev_emu);
+
+        domain->dev_emu = calloc(1, sizeof(*domain->dev_emu));
+        if (domain->dev_emu == NULL) {
+                CU_DEBUG("Failed to allocate default emulator device");
+                return false;
+        }
+
+        domain->dev_emu->type = CIM_RES_TYPE_EMU;
+        domain->dev_emu->dev.emu.path = strdup(emul);
+        domain->dev_emu->id = strdup("emulator");
+
+        return true;
+}
+
 static int fv_vssd_to_domain(CMPIInstance *inst,
                              struct domain *domain,
                              const char *pfx)
@@ -129,11 +150,13 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
         int ret;
         const char *val;
 
-        if (STREQC(pfx, "KVM"))
+        if (STREQC(pfx, "KVM")) {
                 domain->type = DOMAIN_KVM;
-        else if (STREQC(pfx, "Xen"))
+        } else if (STREQC(pfx, "Xen")) {
                 domain->type = DOMAIN_XENFV;
-        else {
+                if (!fv_default_emulator(domain))
+                        return 0;
+        } else {
                 CU_DEBUG("Unknown fullvirt domain type: %s", pfx);
                 return 0;
         }
