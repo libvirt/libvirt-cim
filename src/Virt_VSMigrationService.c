@@ -76,6 +76,7 @@ struct migration_job {
         virConnectPtr conn;
         char *ref_cn;
         char *ref_ns;
+        char *host;
         uint16_t type;
         char uuid[33];
 };
@@ -1045,7 +1046,8 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                 goto out;
         }
 
-        if (domain_exists(job->conn, job->domain)) {
+        if ((!STREQ(job->host, "localhost"))  &&
+           (domain_exists(job->conn, job->domain))) {
                 CU_DEBUG("Remote domain `%s' exists", job->domain);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -1131,6 +1133,7 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
         free(job->domain);
         free(job->ref_cn);
         free(job->ref_ns);
+        free(job->host);
         free(job);
 
         return NULL;
@@ -1238,6 +1241,7 @@ static struct migration_job *migrate_job_prepare(const CMPIContext *context,
         job->domain = strdup(domain);
         job->ref_cn = strdup(CLASSNAME(ref));
         job->ref_ns = strdup(NAMESPACE(ref));
+        job->host = strdup(host);
 
         uuid_generate(uuid);
         uuid_unparse(uuid, job->uuid);
