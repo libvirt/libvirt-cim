@@ -30,39 +30,41 @@ AM_LDFLAGS = $(XKUADD)
 
 providerdir = $(PROVIDERDIR)
 
+# When adding new provider libraries, be sure place it in the list 
+# after any dependant libraries.
 provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_Device.la \
+                       libVirt_RASD.la \
+                       libVirt_HostSystem.la \
+                       libVirt_VSSD.la \
+                       libVirt_EnabledLogicalElementCapabilities.la \
+                       libVirt_DevicePool.la \
+                       libVirt_RegisteredProfile.la \
+                       libVirt_VSMigrationCapabilities.la \
+                       libVirt_VSMigrationSettingData.la \
+                       libVirt_VirtualSystemSnapshotServiceCapabilities.la \
                        libVirt_SystemDevice.la \
                        libVirt_ComputerSystemIndication.la \
                        libVirt_ComputerSystemMigrationIndication.la \
-                       libVirt_RASD.la \
-                       libVirt_HostSystem.la \
-                       libVirt_VirtualSystemManagementService.la \
                        libVirt_VirtualSystemManagementCapabilities.la \
-                       libVirt_EnabledLogicalElementCapabilities.la \
-                       libVirt_DevicePool.la \
                        libVirt_AllocationCapabilities.la \
-                       libVirt_VSSD.la \
-                       libVirt_HostedDependency.la \
-                       libVirt_RegisteredProfile.la \
-                       libVirt_ElementConformsToProfile.la \
                        libVirt_ReferencedProfile.la \
-                       libVirt_SettingsDefineCapabilities.la \
-                       libVirt_HostedResourcePool.la \
-                       libVirt_ElementCapabilities.la \
+                       libVirt_VirtualSystemSnapshotService.la \
+                       libVirt_VirtualSystemManagementService.la \
                        libVirt_ResourcePoolConfigurationService.la \
                        libVirt_ResourcePoolConfigurationCapabilities.la \
+                       libVirt_VSMigrationService.la \
+                       libVirt_SettingsDefineCapabilities.la \
+                       libVirt_HostedDependency.la \
+                       libVirt_ElementConformsToProfile.la \
+                       libVirt_HostedResourcePool.la \
+                       libVirt_ElementCapabilities.la \
                        libVirt_VSSDComponent.la \
                        libVirt_SettingsDefineState.la \
                        libVirt_ResourceAllocationFromPool.la \
                        libVirt_ElementAllocatedFromPool.la \
                        libVirt_HostedService.la \
-                       libVirt_ElementSettingData.la \
-                       libVirt_VSMigrationCapabilities.la \
-                       libVirt_VSMigrationSettingData.la \
-                       libVirt_VirtualSystemSnapshotService.la \
-                       libVirt_VSMigrationService.la \
-                       libVirt_VirtualSystemSnapshotServiceCapabilities.la
+                       libVirt_ElementSettingData.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_Device_la_SOURCES = Virt_Device.c
