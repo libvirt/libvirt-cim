@@ -452,7 +452,7 @@ bool parse_instanceid(const CMPIObjectPath *ref,
 
 bool libvirt_cim_init(void)
 {
-        return virInitialize == 0;
+        return virInitialize() == 0;
 }
 
 bool check_refs_pfx_match(const CMPIObjectPath *refa,
