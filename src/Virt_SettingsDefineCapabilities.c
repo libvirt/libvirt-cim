@@ -26,6 +26,7 @@
 #include <sys/vfs.h>
 #include <errno.h>
 #include <time.h>
+#include <uuid/uuid.h>
 
 #include <libvirt/libvirt.h>
 
@@ -55,6 +56,201 @@ const static CMPIBroker *_BROKER;
 #define SDC_DISK_INC 250
 
 #define DEFAULT_MAC_PREFIX "00:16:3e"
+
+static bool system_has_vt(virConnectPtr conn)
+{
+        char *caps = NULL;
+        bool vt = false;
+
+        caps = virConnectGetCapabilities(conn);
+        if (caps != NULL)
+                vt = (strstr(caps, "hvm") != NULL);
+
+        free(caps);
+
+        return vt;
+}
+
+static CMPIInstance *default_vssd_instance(const char *prefix,
+                                           const char *ns)
+{
+        CMPIInstance *inst = NULL;
+        uuid_t uuid;
+        char uuidstr[37];
+        char *iid = NULL;
+
+        uuid_generate(uuid);
+        uuid_unparse(uuid, uuidstr);
+
+        if (asprintf(&iid, "%s:%s", prefix, uuidstr) == -1) {
+                CU_DEBUG("Failed to generate InstanceID string");
+                goto out;
+        }
+
+        inst = get_typed_instance(_BROKER,
+                                  prefix,
+                                  "VirtualSystemSettingData",
+                                  ns);
+        if (inst == NULL) {
+                CU_DEBUG("Failed to create default VSSD instance");
+                goto out;
+        }
+
+        CMSetProperty(inst, "InstanceID",
+                      (CMPIValue *)iid, CMPI_chars);
+
+ out:
+        free(iid);
+
+        return inst;
+}
+
+static CMPIInstance *_xen_base_vssd(virConnectPtr conn,
+                                    const char *ns,
+                                    const char *name)
+{
+        CMPIInstance *inst;
+
+        inst = default_vssd_instance(pfx_from_conn(conn), ns);
+        if (inst == NULL)
+                return NULL;
+
+        CMSetProperty(inst, "VirtualSystemIdentifier",
+                      (CMPIValue *)name, CMPI_chars);
+
+        return inst;
+}
+
+static CMPIStatus _xen_vsmc_to_vssd(virConnectPtr conn,
+                                    const char *ns,
+                                    struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        int isfv = 0;
+
+        inst = _xen_base_vssd(conn, ns, "Xen_Paravirt_Guest");
+        if (inst == NULL)
+                goto error;
+
+        CMSetProperty(inst, "Bootloader",
+                      (CMPIValue *)"/usr/bin/pygrub", CMPI_chars);
+
+        CMSetProperty(inst, "isFullVirt",
+                      (CMPIValue *)&isfv, CMPI_boolean);
+
+        inst_list_add(list, inst);
+
+        if (system_has_vt(conn)) {
+                isfv = 1;
+
+                inst = _xen_base_vssd(conn, ns, "Xen_Fullvirt_Guest");
+                if (inst == NULL)
+                        goto error;
+
+                CMSetProperty(inst, "BootDevice",
+                              (CMPIValue *)"hda", CMPI_chars);
+
+                CMSetProperty(inst, "isFullVirt",
+                              (CMPIValue *)&isfv, CMPI_boolean);
+
+                inst_list_add(list, inst);
+        }
+
+        return s;
+
+ error:
+        cu_statusf(_BROKER, &s,
+                   CMPI_RC_ERR_FAILED,
+                   "Unable to create %s_VSSD instance",
+                   pfx_from_conn(conn));
+
+        return s;
+}
+
+static CMPIStatus _kvm_vsmc_to_vssd(virConnectPtr conn,
+                                    const char *ns,
+                                    struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+
+        inst = default_vssd_instance(pfx_from_conn(conn), ns);
+        if (inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to create %s_VSSD instance",
+                           pfx_from_conn(conn));
+                goto out;
+        }
+
+        CMSetProperty(inst, "VirtualSystemIdentifier",
+                      (CMPIValue *)"KVM_guest", CMPI_chars);
+
+        CMSetProperty(inst, "BootDevice",
+                      (CMPIValue *)"hda", CMPI_chars);
+
+        inst_list_add(list, inst);
+ out:
+        return s;
+}
+
+static CMPIStatus _lxc_vsmc_to_vssd(virConnectPtr conn,
+                                    const char *ns,
+                                    struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+
+        inst = default_vssd_instance(pfx_from_conn(conn), ns);
+        if (inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to create %s_VSSD instance",
+                           pfx_from_conn(conn));
+                goto out;
+        }
+
+        CMSetProperty(inst, "InitPath",
+                      (CMPIValue *)"/sbin/init", CMPI_chars);
+
+        inst_list_add(list, inst);
+ out:
+        return s;
+}
+
+static CMPIStatus vsmc_to_vssd(const CMPIObjectPath *ref,
+                               struct std_assoc_info *info,
+                               struct inst_list *list)
+{
+        CMPIStatus s;
+        virConnectPtr conn = NULL;
+        const char *cn;
+        const char *ns;
+
+        cn = CLASSNAME(ref);
+        ns = NAMESPACE(ref);
+
+        conn = connect_by_classname(_BROKER, cn, &s);
+        if (conn == NULL)
+                goto out;
+
+        if (STARTS_WITH(cn, "Xen"))
+                s = _xen_vsmc_to_vssd(conn, ns, list);
+        else if (STARTS_WITH(cn, "KVM"))
+                s = _kvm_vsmc_to_vssd(conn, ns, list);
+        else if (STARTS_WITH(cn, "LXC"))
+                s = _lxc_vsmc_to_vssd(conn, ns, list);
+        else
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid reference");
+
+ out:
+        virConnectClose(conn);
+
+        return s;
+}
 
 static bool rasd_prop_copy_value(struct sdc_rasd_prop src, 
                                  struct sdc_rasd_prop *dest)
@@ -1009,11 +1205,39 @@ static struct std_assoc _vsmsd_to_migrate_cap = {
         .make_ref = make_ref
 };
 
+static char *vsmc[] = {
+        "Xen_VirtualSystemManagementCapabilities",
+        "KVM_VirtualSystemManagementCapabilities",
+        "LXC_VirtualSystemManagementCapabilities",
+        NULL
+};
+
+static char *vssd[] = {
+        "Xen_VirtualSystemSettingData",
+        "KVM_VirtualSystemSettingData",
+        "LXC_VirtualSystemSettingData",
+        NULL
+};
+
+static struct std_assoc _vsmc_to_vssd = {
+        .source_class = (char**)&vsmc,
+        .source_prop = "GroupComponent",
+
+        .target_class = (char**)&vssd,
+        .target_prop = "PartComponent",
+
+        .assoc_class = (char**)&assoc_classname,
+
+        .handler = vsmc_to_vssd,
+        .make_ref = make_ref
+};
+
 static struct std_assoc *assoc_handlers[] = {
         &_alloc_cap_to_rasd,
         &_rasd_to_alloc_cap,
         &_migrate_cap_to_vsmsd,
         &_vsmsd_to_migrate_cap,
+        &_vsmc_to_vssd,
         NULL
 };
 
