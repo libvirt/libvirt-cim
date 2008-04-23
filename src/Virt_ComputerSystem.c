@@ -825,6 +825,7 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         uint16_t state;
         int ret;
         const char *name = NULL;
+        uint32_t rc = 1;
 
         ret = cu_get_u16_arg(argsin, "RequestedState", &state);
         if (ret != CMPI_RC_OK) {
@@ -843,7 +844,12 @@ static CMPIStatus state_change(CMPIMethodMI *self,
 
         s = __state_change(name, state, reference);
 
+        if (s.rc == CMPI_RC_OK)
+                rc = 0;
+
  out:
+        CMReturnData(results, &rc, CMPI_uint32);
+
         return s;
 }
 
