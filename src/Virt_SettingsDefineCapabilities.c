@@ -1120,6 +1120,7 @@ LIBVIRT_CIM_DEFAULT_MAKEREF()
 static char* group_component[] = {
         "Xen_AllocationCapabilities",
         "KVM_AllocationCapabilities",
+        "LXC_AllocationCapabilities",
         NULL
 };
 
@@ -1132,12 +1133,17 @@ static char* part_component[] = {
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
+        "LXC_DiskResourceAllocationSettingData",
+        "LXC_MemResourceAllocationSettingData",
+        "LXC_NetResourceAllocationSettingData",
+        "LXC_ProcResourceAllocationSettingData",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_SettingsDefineCapabilities",
-        "KVM_SettingsDefineCapabilities",        
+        "KVM_SettingsDefineCapabilities",
+        "LXC_SettingsDefineCapabilities",
         NULL
 };
 
@@ -1170,12 +1176,14 @@ static struct std_assoc _rasd_to_alloc_cap = {
 static char* migrate_cap[] = {
         "Xen_VirtualSystemMigrationCapabilities",
         "KVM_VirtualSystemMigrationCapabilities",
+        "LXC_VirtualSystemMigrationCapabilities",
         NULL
 };
 
 static char* migrate_sd[] = {
         "Xen_VirtualSystemMigrationSettingData",
         "KVM_VirtualSystemMigrationSettingData",
+        "LXC_VirtualSystemMigrationSettingData",
         NULL
 };
 

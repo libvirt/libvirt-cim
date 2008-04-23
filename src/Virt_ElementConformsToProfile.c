@@ -209,7 +209,8 @@ LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 static char* conformant_standard[] = {
         "Xen_RegisteredProfile",
-        "KVM_RegisteredProfile",        
+        "KVM_RegisteredProfile",
+        "LXC_RegisteredProfile",
         NULL
 };
 
@@ -218,12 +219,15 @@ static char* managed_element[] = {
         "Xen_ComputerSystem",
         "KVM_HostSystem",
         "KVM_ComputerSystem",
+        "LXC_HostSystem",
+        "LXC_ComputerSystem",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_ElementConformsToProfile",
-        "KVM_ElementConformsToProfile",        
+        "KVM_ElementConformsToProfile",
+        "LXC_ElementConformsToProfile",
         NULL
 };
 

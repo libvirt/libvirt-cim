@@ -176,13 +176,15 @@ static CMPIInstance *make_ref(const CMPIObjectPath *source_ref,
 
 static char* registered_profile[] = {
         "Xen_RegisteredProfile",
-        "KVM_RegisteredProfile",        
+        "KVM_RegisteredProfile",
+        "LXC_RegisteredProfile",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_ReferencedProfile",
-        "KVM_ReferencedProfile",        
+        "KVM_ReferencedProfile",
+        "LXC_ReferencedProfile",
         NULL
 };
 

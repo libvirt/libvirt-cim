@@ -122,6 +122,7 @@ LIBVIRT_CIM_DEFAULT_MAKEREF()
 static char* group_component[] = {
         "Xen_VirtualSystemSettingData",
         "KVM_VirtualSystemSettingData",
+        "LXC_VirtualSystemSettingData",
         NULL
 };
 
@@ -134,12 +135,17 @@ static char* part_component[] = {
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
+        "LXC_DiskResourceAllocationSettingData",
+        "LXC_MemResourceAllocationSettingData",
+        "LXC_NetResourceAllocationSettingData",
+        "LXC_ProcResourceAllocationSettingData",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_VirtualSystemSettingDataComponent",
-        "KVM_VirtualSystemSettingDataComponent",        
+        "KVM_VirtualSystemSettingDataComponent",
+        "LXC_VirtualSystemSettingDataComponent",
         NULL
 };
 

@@ -87,6 +87,7 @@ LIBVIRT_CIM_DEFAULT_MAKEREF()
 static char* group_component[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
+        "LXC_HostSystem",
         NULL
 };
 
@@ -99,12 +100,17 @@ static char* part_component[] = {
         "KVM_MemoryPool",
         "KVM_NetworkPool",
         "KVM_DiskPool",
+        "LXC_ProcessorPool",
+        "LXC_MemoryPool",
+        "LXC_NetworkPool",
+        "LXC_DiskPool",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_HostedResourcePool",
-        "KVM_HostedResourcePool",        
+        "KVM_HostedResourcePool",
+        "LXC_HostedResourcePool",
         NULL
 };
 

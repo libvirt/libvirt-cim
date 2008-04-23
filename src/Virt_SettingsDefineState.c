@@ -205,6 +205,10 @@ static char* logical_device[] = {
         "KVM_Memory",
         "KVM_NetworkPort",
         "KVM_LogicalDisk",
+        "LXC_Processor",
+        "LXC_Memory",
+        "LXC_NetworkPort",
+        "LXC_LogicalDisk",
         NULL
 };
 
@@ -217,24 +221,31 @@ static char* resource_allocation_setting_data[] = {
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
+        "LXC_DiskResourceAllocationSettingData",
+        "LXC_MemResourceAllocationSettingData",
+        "LXC_NetResourceAllocationSettingData",
+        "LXC_ProcResourceAllocationSettingData",
         NULL
 };
 
 static char* computer_system[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
+        "LXC_ComputerSystem",
         NULL
 };
 
 static char* virtual_system_setting_data[] = {
         "Xen_VirtualSystemSettingData",
-        "KVM_VirtualSystemSettingData",        
+        "KVM_VirtualSystemSettingData",
+        "LXC_VirtualSystemSettingData",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_SettingsDefineState",
-        "KVM_SettingsDefineState",        
+        "KVM_SettingsDefineState",
+        "LXC_VirtualSystemSettingData",
         NULL
 };
 

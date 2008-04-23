@@ -125,6 +125,7 @@ LIBVIRT_CIM_DEFAULT_MAKEREF()
 static char* group_component[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
+        "LXC_ComputerSystem",
         NULL
 };
 
@@ -137,12 +138,17 @@ static char* part_component[] = {
         "KVM_Memory",
         "KVM_NetworkPort",
         "KVM_LogicalDisk",
+        "LXC_Processor",
+        "LXC_Memory",
+        "LXC_NetworkPort",
+        "LXC_LogicalDisk",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_SystemDevice",
-        "KVM_SystemDevice",        
+        "KVM_SystemDevice",
+        "LXC_SystemDevice",
         NULL
 };
 

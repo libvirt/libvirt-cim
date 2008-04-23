@@ -183,6 +183,10 @@ static char* antecedent[] = {
         "KVM_MemoryPool",
         "KVM_NetworkPool",
         "KVM_DiskPool",
+        "LXC_ProcessorPool",
+        "LXC_MemoryPool",
+        "LXC_NetworkPool",
+        "LXC_DiskPool",
         NULL
 };
 
@@ -195,12 +199,17 @@ static char* dependent[] = {
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
+        "LXC_DiskResourceAllocationSettingData",
+        "LXC_MemResourceAllocationSettingData",
+        "LXC_NetResourceAllocationSettingData",
+        "LXC_ProcResourceAllocationSettingData",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_ResourceAllocationFromPool",
-        "KVM_ResourceAllocationFromPool",        
+        "KVM_ResourceAllocationFromPool",
+        "LXC_ResourceAllocationFromPool",
         NULL
 };
 

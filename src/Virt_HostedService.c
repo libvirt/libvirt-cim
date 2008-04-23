@@ -119,6 +119,7 @@ LIBVIRT_CIM_DEFAULT_MAKEREF()
 static char* antecedent[] = {  
         "Xen_HostSystem",
         "KVM_HostSystem",
+        "LXC_HostSystem",
         NULL
 };
 
@@ -129,12 +130,16 @@ static char* dependent[] = {
         "KVM_ResourcePoolConfigurationService",
         "KVM_VirtualSystemManagementService",
         "KVM_VirtualSystemMigrationService",
+        "LXC_ResourcePoolConfigurationService",
+        "LXC_VirtualSystemManagementService",
+        "LXC_VirtualSystemMigrationService",
         NULL
 };
 
 static char* assoc_classname[] = {
         "Xen_HostedService",
-        "KVM_HostedService",        
+        "KVM_HostedService",
+        "LXC_HostedService",
         NULL
 };
 

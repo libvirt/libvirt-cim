@@ -295,23 +295,28 @@ LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 static char* assoc_classname[] = {
         "Xen_ElementCapabilities",
-        "KVM_ElementCapabilities",        
+        "KVM_ElementCapabilities",
+        "LXC_ElementCapabilities",
         NULL
 };
 
 static char* host_system[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
+        "LXC_HostSystem",
         NULL
 };
 
 static char* host_sys_and_service[] = {
         "Xen_HostSystem",
-        "KVM_HostSystem",
         "Xen_VirtualSystemManagementService",
-        "KVM_VirtualSystemManagementService",
         "Xen_VirtualSystemMigrationService",
+        "KVM_HostSystem",
+        "KVM_VirtualSystemManagementService",
         "KVM_VirtualSystemMigrationService",
+        "LXC_HostSystem",
+        "LXC_VirtualSystemManagementService",
+        "LXC_VirtualSystemMigrationService",
         NULL
 };
 
@@ -320,6 +325,8 @@ static char* virtual_system_management_capabilities[] = {
         "Xen_VirtualSystemMigrationCapabilities",
         "KVM_VirtualSystemManagementCapabilities",
         "KVM_VirtualSystemMigrationCapabilities",
+        "LXC_VirtualSystemManagementCapabilities",
+        "LXC_VirtualSystemMigrationCapabilities",
         NULL,
 };
 
@@ -354,6 +361,7 @@ static char* service[] = {
         "KVM_VirtualSystemManagementService",
         "Xen_VirtualSystemMigrationService",
         "KVM_VirtualSystemMigrationService",
+        "LXC_VirtualSystemMigrationService",
         NULL
 };
 
@@ -373,12 +381,14 @@ static struct std_assoc _service_to_cap = {
 static char* computer_system[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
+        "LXC_ComputerSystem",
         NULL
 };
 
 static char* enabled_logical_element_capabilities[] = {
         "Xen_EnabledLogicalElementCapabilities",
         "KVM_EnabledLogicalElementCapabilities",
+        "LXC_EnabledLogicalElementCapabilities",
         NULL
 };
 
@@ -411,6 +421,7 @@ static struct std_assoc cs_to_ele_cap = {
 static char* allocation_capabilities[] = {
         "Xen_AllocationCapabilities",
         "KVM_AllocationCapabilities",
+        "LXC_AllocationCapabilities",
         NULL
 };
 
@@ -423,6 +434,10 @@ static char* resource_pool[] = {
         "KVM_MemoryPool",
         "KVM_NetworkPool",
         "KVM_DiskPool",
+        "LXC_ProcessorPool",
+        "LXC_MemoryPool",
+        "LXC_NetworkPool",
+        "LXC_DiskPool",
         NULL
 };
 
