@@ -41,6 +41,8 @@
 #include "Virt_VSMigrationCapabilities.h"
 #include "Virt_AllocationCapabilities.h"
 
+#include "svpc_types.h"
+
 /* Associate an XXX_Capabilities to the proper XXX_ManagedElement.
  *
  *  -- or --
@@ -143,6 +145,11 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
+        s = enum_alloc_cap_instances(_BROKER, ref, NULL, NULL, list);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to enum AC: %s",
+                         CMGetCharPtr(s.msg));
+        }
  out:
         return s;
 }
@@ -256,12 +263,38 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus alloc_to_pool(const CMPIObjectPath *ref,
-                                struct std_assoc_info *info,
-                                struct inst_list *list)
+static CMPIStatus alloc_to_pool_and_sys(const CMPIObjectPath *ref,
+                                        struct std_assoc_info *info,
+                                        struct inst_list *list)
 {
-        /* Pool to alloc is more important.  That will be done first. */
-        RETURN_UNSUPPORTED();
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *host;
+        CMPIInstance *ac;
+        const char *poolid;
+
+        if (!match_hypervisor_prefix(ref, info))
+                goto out;
+
+        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }
+
+        /* Pool part not yet implemented */
+
+        s = get_alloc_cap_by_id(_BROKER, ref, poolid, &ac);
+        if ((ac == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
+
+        s = get_host(_BROKER, ref, &host, false);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        inst_list_add(list, host);
+ out:
+        return s;
 }
 
 static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
@@ -289,6 +322,37 @@ static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
         
  out:
         return s;
+}
+
+static CMPIInstance *make_ref_default(const CMPIObjectPath *source_ref,
+                                      const CMPIInstance *target_inst,
+                                      struct std_assoc_info *info,
+                                      struct std_assoc *assoc)
+{
+        CMPIInstance *ref_inst = NULL;
+        CMPIArray *array = NULL;
+        CMPIStatus s;
+        uint16_t val = CIM_EC_CHAR_DEFAULT;
+
+        ref_inst = make_reference(_BROKER,
+                                  source_ref,
+                                  target_inst,
+                                  info,
+                                  assoc);
+
+        array = CMNewArray(_BROKER, 1, CMPI_uint16, &s);
+        if ((array == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Unable to allocate Characteristics array");
+                goto out;
+        }
+
+        CMSetArrayElementAt(array, 0, &val, CMPI_uint16);
+
+        CMSetProperty(ref_inst, "Characteristics",
+                      (CMPIValue *)&array, CMPI_uint16A);
+
+ out:
+        return ref_inst;
 }
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
@@ -330,17 +394,30 @@ static char* virtual_system_management_capabilities[] = {
         NULL,
 };
 
+static char *host_caps[] = {
+        "Xen_VirtualSystemManagementCapabilities",
+        "Xen_VirtualSystemMigrationCapabilities",
+        "KVM_VirtualSystemManagementCapabilities",
+        "KVM_VirtualSystemMigrationCapabilities",
+        "LXC_VirtualSystemManagementCapabilities",
+        "LXC_VirtualSystemMigrationCapabilities",
+        "Xen_MemoryAllocationCapabilities",
+        "KVM_MemoryAllocationCapabilities",
+        "LXC_MemoryAllocationCapabilities",
+        NULL,
+};
+
 static struct std_assoc system_to_vsm_cap = {
         .source_class = (char**)&host_system,
         .source_prop = "ManagedElement",
 
-        .target_class = (char**)&virtual_system_management_capabilities,
+        .target_class = (char**)&host_caps,
         .target_prop = "Capabilities",
 
         .assoc_class = (char**)&assoc_classname,
 
         .handler = sys_to_cap,
-        .make_ref = make_ref
+        .make_ref = make_ref_default
 };
 
 static struct std_assoc vsm_cap_to_sys_or_service = {
@@ -441,16 +518,36 @@ static char* resource_pool[] = {
         NULL
 };
 
+static char* resource_pool_and_host[] = {
+        "Xen_ProcessorPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_DiskPool",
+        "Xen_HostSystem",
+        "KVM_ProcessorPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_DiskPool",
+        "KVM_HostSystem",
+        "LXC_ProcessorPool",
+        "LXC_MemoryPool",
+        "LXC_NetworkPool",
+        "LXC_DiskPool",
+        "LXC_HostSystem",
+        NULL
+};
+
+
 static struct std_assoc alloc_cap_to_resource_pool = {
         .source_class = (char**)&allocation_capabilities,
         .source_prop = "Capabilities",
 
-        .target_class = (char**)&resource_pool,
+        .target_class = (char**)&resource_pool_and_host,
         .target_prop = "ManagedElement",
 
         .assoc_class = (char**)&assoc_classname,
 
-        .handler = alloc_to_pool,
+        .handler = alloc_to_pool_and_sys,
         .make_ref = make_ref
 };
 
