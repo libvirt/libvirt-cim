@@ -171,6 +171,24 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
         return 1;
 }
 
+static int lxc_vssd_to_domain(CMPIInstance *inst,
+                              struct domain *domain)
+{
+        int ret;
+        const char *val;
+
+        domain->type = DOMAIN_LXC;
+
+        ret = cu_get_str_prop(inst, "InitPath", &val);
+        if (ret != CMPI_RC_OK)
+                val = "/bin/false";
+
+        free(domain->os_info.lxc.init);
+        domain->os_info.lxc.init = strdup(val);
+
+        return 1;
+}
+
 static int vssd_to_domain(CMPIInstance *inst,
                           struct domain *domain)
 {
@@ -207,16 +225,18 @@ static int vssd_to_domain(CMPIInstance *inst,
 
         domain->on_crash = (int)tmp;
 
-        if (STREQC(pfx, "KVM"))
-                fullvirt = true;
-        else if (cu_get_bool_prop(inst, "IsFullVirt", &fullvirt) != CMPI_RC_OK)
+        if (cu_get_bool_prop(inst, "IsFullVirt", &fullvirt) != CMPI_RC_OK)
                 fullvirt = false;
 
-        if (fullvirt)
+        if (fullvirt || STREQC(pfx, "KVM"))
                 ret = fv_vssd_to_domain(inst, domain, pfx);
-        else
+        else if (STREQC(pfx, "Xen"))
                 ret = xenpv_vssd_to_domain(inst, domain);
-
+        else if (STREQC(pfx, "LXC"))
+                ret = lxc_vssd_to_domain(inst, domain);
+        else {
+                CU_DEBUG("Unknown domain prefix: %s", pfx);
+        }
  out:
         free(pfx);
 
