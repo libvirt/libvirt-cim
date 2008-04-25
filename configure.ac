@@ -56,9 +56,9 @@ AC_SUBST(CIM_VIRT_NS)
 AC_DEFINE_UNQUOTED(CIM_VIRT_NS, "$CIM_VIRT_NS", [Namespace for provider source])
 
 AC_ARG_WITH([diskconfig], 
-            [  --with-diskconfig=PATH  Set config file for disk pool. (default=/tmp/diskpool.conf)], 
+            [  --with-diskconfig=PATH  Set config file for disk pool. (default=/etc/libvirt/diskpool.conf)], 
             [DEFINE_DISK_CONFIG($with_diskconfig)], 
-            [DEFINE_DISK_CONFIG(/tmp/diskpool.conf)]
+            [DEFINE_DISK_CONFIG(/etc/libvirt/diskpool.conf)]
 )
 AC_ARG_WITH([maxmem], 
             [  --with-maxmem=FOO	  Set max memory (KB) for a guest.], 
