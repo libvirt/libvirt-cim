@@ -147,6 +147,21 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
         return s;
 }
 
+CMPIStatus get_alloc_cap_by_id(const CMPIBroker *broker,
+                               const CMPIObjectPath *ref,
+                               const char *poolid,
+                               CMPIInstance **inst)
+{
+        CMPIInstance *pool;
+        CMPIStatus s;
+
+        s = get_pool_by_name(broker, ref, poolid, &pool);
+        if ((pool == NULL) || (s.rc != CMPI_RC_OK))
+                return s;
+
+        return ac_from_pool(broker, ref, pool, inst);
+}
+
 static CMPIStatus return_alloc_cap_instances(const CMPIBroker *broker,
                                              const CMPIObjectPath *ref,
                                              const CMPIResult *results,

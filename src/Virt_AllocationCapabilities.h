@@ -40,6 +40,11 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
                                     const char *id,
                                     struct inst_list *list);
 
+CMPIStatus get_alloc_cap_by_id(const CMPIBroker *broker,
+                               const CMPIObjectPath *ref,
+                               const char *poolid,
+                               CMPIInstance **inst);
+
 #endif
 
 /*
