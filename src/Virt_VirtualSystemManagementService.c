@@ -360,7 +360,34 @@ static const char *mem_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
+                                         struct virt_device *dev,
+                                         uint16_t type)
+{
+        if (type == CIM_RES_TYPE_DISK) {
+                return disk_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_NET) {
+                return net_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_MEM) {
+                return mem_rasd_to_vdev(inst, dev);
+        }
+
+        return "Resource type not supported on this platform";
+}
+
+static const char *_container_rasd_to_vdev(CMPIInstance *inst,
+                                           struct virt_device *dev,
+                                           uint16_t type)
+{
+        if (type == CIM_RES_TYPE_MEM) {
+                return mem_rasd_to_vdev(inst, dev);
+        }
+
+        return "Resource type not supported on this platform";
+}
+
 static const char *rasd_to_vdev(CMPIInstance *inst,
+                                struct domain *domain,
                                 struct virt_device *dev)
 {
         uint16_t type;
@@ -380,16 +407,13 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
 
         dev->type = (int)type;
 
-        if (type == CIM_RES_TYPE_DISK) {
-                msg = disk_rasd_to_vdev(inst, dev);
-        } else if (type == CIM_RES_TYPE_NET) {
-                msg = net_rasd_to_vdev(inst, dev);
-        } else if (type == CIM_RES_TYPE_MEM) {
-                msg = mem_rasd_to_vdev(inst, dev);
-        }
+        if (domain->type == DOMAIN_LXC)
+                msg = _container_rasd_to_vdev(inst, dev, type);
+        else
+                msg = _sysvirt_rasd_to_vdev(inst, dev, type);
  out:
         if (msg)
-                CU_DEBUG("rasd_to_vdev(): %s", msg);
+                CU_DEBUG("rasd_to_vdev(%s): %s", CLASSNAME(op), msg);
 
         return msg;
 }
@@ -439,15 +463,19 @@ static const char *classify_resources(CMPIArray *resources,
 
                 if (type == CIM_RES_TYPE_PROC)
                         msg = rasd_to_vdev(inst,
+                                           domain,
                                            &domain->dev_vcpu[domain->dev_vcpu_ct++]);
                 else if (type == CIM_RES_TYPE_MEM)
                         msg = rasd_to_vdev(inst,
+                                           domain,
                                            &domain->dev_mem[domain->dev_mem_ct++]);
                 else if (type == CIM_RES_TYPE_DISK)
                         msg = rasd_to_vdev(inst,
+                                           domain,
                                            &domain->dev_disk[domain->dev_disk_ct++]);
                 else if (type == CIM_RES_TYPE_NET)
                         msg = rasd_to_vdev(inst,
+                                           domain,
                                            &domain->dev_net[domain->dev_net_ct++]);
 
                 if (msg != NULL)
@@ -933,7 +961,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
 
         dev->type = type;
         dev->id = strdup(devid);
-        rasd_to_vdev(rasd, dev);
+        rasd_to_vdev(rasd, dominfo, dev);
 
         s = _resource_dynamic(dominfo, dev, RESOURCE_ADD, CLASSNAME(op));
         if (s.rc != CMPI_RC_OK)
@@ -982,7 +1010,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        rasd_to_vdev(rasd, dev);
+                        rasd_to_vdev(rasd, dominfo, dev);
                         s = _resource_dynamic(dominfo,
                                               dev,
                                               RESOURCE_MOD,
