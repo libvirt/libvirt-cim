@@ -40,6 +40,7 @@
 #include "Virt_HostSystem.h"
 #include "Virt_VSMigrationCapabilities.h"
 #include "Virt_AllocationCapabilities.h"
+#include "Virt_DevicePool.h"
 
 #include "svpc_types.h"
 
@@ -270,6 +271,7 @@ static CMPIStatus alloc_to_pool_and_sys(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *host;
         CMPIInstance *ac;
+        CMPIInstance *pool;
         const char *poolid;
 
         if (!match_hypervisor_prefix(ref, info))
@@ -282,7 +284,9 @@ static CMPIStatus alloc_to_pool_and_sys(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        /* Pool part not yet implemented */
+        s = get_pool_by_name(_BROKER, ref, poolid, &pool);
+        if ((pool == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         s = get_alloc_cap_by_id(_BROKER, ref, poolid, &ac);
         if ((ac == NULL) || (s.rc != CMPI_RC_OK))
@@ -293,6 +297,7 @@ static CMPIStatus alloc_to_pool_and_sys(const CMPIObjectPath *ref,
                 goto out;
 
         inst_list_add(list, host);
+        inst_list_add(list, pool);
  out:
         return s;
 }
