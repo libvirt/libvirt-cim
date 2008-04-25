@@ -533,6 +533,23 @@ static char *_kvm_os_xml(struct domain *domain)
         return xml;
 }
 
+static char *_lxc_os_xml(struct domain *domain)
+{
+        struct lxc_os_info *os = &domain->os_info.lxc;
+        int ret;
+        char *xml = NULL;
+
+        ret = asprintf(&xml,
+                       "<os>\n"
+                       "  <init>%s</init>\n"
+                       "</os>\n",
+                       os->init);
+        if (ret == -1)
+                xml = NULL;
+
+        return xml;
+}
+
 static char *os_xml(struct domain *domain)
 {
         if (domain->type == DOMAIN_XENPV)
@@ -541,6 +558,8 @@ static char *os_xml(struct domain *domain)
                 return _xenfv_os_xml(domain);
         else if (domain->type == DOMAIN_KVM)
                 return _kvm_os_xml(domain);
+        else if (domain->type == DOMAIN_LXC)
+                return _lxc_os_xml(domain);
         else
                 return strdup("<!-- unsupported domain type -->\n");
 }
@@ -561,6 +580,8 @@ char *system_to_xml(struct domain *dominfo)
                 domtype = "xen";
         else if (dominfo->type == DOMAIN_KVM)
                 domtype = "kvm";
+        else if (dominfo->type == DOMAIN_LXC)
+                domtype = "lxc";
         else
                 domtype = "unknown";
 
