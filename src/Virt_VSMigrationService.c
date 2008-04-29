@@ -267,9 +267,6 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
                            remote, local);
         }
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
  out:
         return s;
 }
