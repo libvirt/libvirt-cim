@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <time.h>
 #include <libvirt/libvirt.h>
 
 #include "cmpidt.h"
@@ -51,6 +52,8 @@
 #include "svpc_types.h"
 
 #include "config.h"
+
+#define DEFAULT_MAC_PREFIX "00:16:3e"
 
 const static CMPIBroker *_BROKER;
 
@@ -311,6 +314,45 @@ static const char *kvm_net_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *_net_rand_mac(void)
+{
+        int r;
+        int ret;
+        unsigned int s;
+        char *mac = NULL;
+        CMPIString *str = NULL;
+        CMPIStatus status;
+
+        srand(time(NULL));
+        r = rand_r(&s);
+
+        ret = asprintf(&mac,
+                       "%s:%02x:%02x:%02x",
+                       DEFAULT_MAC_PREFIX,
+                       r & 0xFF,
+                       (r & 0xFF00) >> 8,
+                       (r & 0xFF0000) >> 16);
+
+        if (ret == -1)
+                goto out;
+
+        str = CMNewString(_BROKER, mac, &status);
+        if ((str == NULL) || (status.rc != CMPI_RC_OK)) {
+                str = NULL;
+                CU_DEBUG("Failed to create string");
+                goto out;
+        }
+ out:
+        free(mac);
+
+        if (str != NULL)
+                mac = CMGetCharPtr(str);
+        else
+                mac = NULL;
+
+        return mac;
+}
+
 static const char *net_rasd_to_vdev(CMPIInstance *inst,
                                     struct virt_device *dev)
 {
@@ -319,8 +361,11 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         const char *msg = NULL;
 
         if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
-                msg = "Required field `Address' missing from NetRASD";
-                goto out;
+                val = _net_rand_mac();
+                if (val == NULL) {
+                        msg = "Unable to generate a MAC address";
+                        goto out;
+                }
         }
 
         free(dev->dev.net.mac);
