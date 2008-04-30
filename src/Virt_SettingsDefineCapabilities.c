@@ -25,7 +25,6 @@
 #include <stdbool.h>
 #include <sys/vfs.h>
 #include <errno.h>
-#include <time.h>
 #include <uuid/uuid.h>
 
 #include <libvirt/libvirt.h>
@@ -54,8 +53,6 @@ const static CMPIBroker *_BROKER;
 #define SDC_DISK_MIN 2000
 #define SDC_DISK_DEF 5000
 #define SDC_DISK_INC 250
-
-#define DEFAULT_MAC_PREFIX "00:16:3e"
 
 static bool system_has_vt(virConnectPtr conn)
 {
@@ -629,66 +626,17 @@ static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
         return rasd;
 }
 
-static const char *_net_rand_mac(void)
-{
-        int r;
-        int ret;
-        unsigned int s;
-        char *tmp_mac = NULL;
-        const char *mac = NULL;
-        CMPIString *str = NULL;
-        CMPIStatus status;
-
-        srand(time(NULL));
-        r = rand_r(&s);
-
-        ret = asprintf(&tmp_mac,
-                       "%s:%02x:%02x:%02x",
-                       DEFAULT_MAC_PREFIX,
-                       r & 0xFF,
-                       (r & 0xFF00) >> 8,
-                       (r & 0xFF0000) >> 16);
-
-        if (ret == -1)
-                goto out;
-
-        str = CMNewString(_BROKER, tmp_mac, &status);
-        if ((str == NULL) || (status.rc != CMPI_RC_OK)) {
-                str = NULL;
-                CU_DEBUG("Failed to create string");
-                goto out;
-        }
- out:
-        free(tmp_mac);
-
-        if (str != NULL)
-                mac = CMGetCharPtr(str);
-        else
-                mac = NULL;
-
-        return mac;
-}
-
 static struct sdc_rasd_prop *net_def(const CMPIObjectPath *ref,
                                      CMPIStatus *s)
 {
         bool ret;
         uint16_t num_nics = 1;
         struct sdc_rasd_prop *rasd = NULL;
-        const char *mac = _net_rand_mac();
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
                 {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
-                {"Address", (CMPIValue *)mac, CMPI_chars},
                 PROP_END
         };
-
-        if (mac == NULL) {
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to generate new MAC address");
-                goto out;
-        }
 
         ret = dup_rasd_prop_list(tmp, &rasd);
         if (!ret) {
@@ -696,7 +644,7 @@ static struct sdc_rasd_prop *net_def(const CMPIObjectPath *ref,
                            CMPI_RC_ERR_FAILED,
                            "Could not copy RASD");
         }
- out:
+
         return rasd;
 }
  
