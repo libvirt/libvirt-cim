@@ -862,7 +862,7 @@ static struct method_handler RequestStateChange = {
         .name = "RequestStateChange",
         .handler = state_change,
         .args = {{"RequestedState", CMPI_uint16, false},
-                 {"TimeoutPeriod", CMPI_dateTime, false},
+                 {"TimeoutPeriod", CMPI_dateTime, true},
                  ARG_END
         }
 };
