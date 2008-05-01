@@ -856,10 +856,6 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
         const char *inst_id = NULL;
         const char *base = NULL;
         uint16_t resource_type;
-        /* Defaults for the following are from 
-           CIM_SettingsDefineCapabilities.mof. */
-        uint16_t policy = SDC_POLICY_INDEPENDENT;
-        uint16_t role = SDC_ROLE_SUPPORTED;
 
         switch(type) {
         case SDC_RASD_MIN:
@@ -867,29 +863,24 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
                         goto out;
                 prop_list = rasd->min(ref, s);
                 inst_id = "Minimum";
-                range = SDC_RANGE_MIN;
                 break;
         case SDC_RASD_MAX:
                 if (rasd->max == NULL)
                         goto out;
                 prop_list = rasd->max(ref, s);
                 inst_id = "Maximum";
-                range = SDC_RANGE_MAX;
                 break;
         case SDC_RASD_INC:
                 if (rasd->inc == NULL)
                         goto out;
                 prop_list = rasd->inc(ref, s);
                 inst_id = "Increment";
-                range = SDC_RANGE_INC;
                 break;
         case SDC_RASD_DEF:
                 if (rasd->def == NULL)
                         goto out;
                 prop_list = rasd->def(ref, s);
                 inst_id = "Default";
-                role = SDC_ROLE_DEFAULT;
-                range = SDC_RANGE_POINT;
                 break;
         default:
                 cu_statusf(broker, s, 
@@ -913,9 +904,6 @@ static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
                                   NAMESPACE(ref));
         
         CMSetProperty(inst, "InstanceID", inst_id, CMPI_chars);
-        CMSetProperty(inst, "PropertyPolicy", &policy, CMPI_uint16);
-        CMSetProperty(inst, "ValueRole", &role, CMPI_uint16);
-        CMSetProperty(inst, "ValueRange", &range, CMPI_uint16);
 
         resource_type = rasd->resource_type;
         CMSetProperty(inst, "ResourceType", &resource_type, CMPI_uint16);
