@@ -134,7 +134,6 @@ CHECK_PROVIDERDIR
 CHECK_CIMSERVER
 
 # Check for presence of libraries
-PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 CHECK_LIBVIRT
 CHECK_LIBXML2
 CHECK_LIBCU
