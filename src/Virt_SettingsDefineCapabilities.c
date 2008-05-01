@@ -1063,6 +1063,52 @@ static CMPIStatus vsmsd_to_migrate_cap(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIInstance *make_ref_valuerole(const CMPIObjectPath *source_ref,
+                                        const CMPIInstance *target_inst,
+                                        struct std_assoc_info *info,
+                                        struct std_assoc *assoc)
+{
+        CMPIInstance *ref_inst = NULL;
+        uint16_t valuerole = SDC_ROLE_SUPPORTED;
+        uint16_t valuerange;
+        uint16_t ppolicy = SDC_POLICY_INDEPENDENT;
+        const char *iid = NULL;
+
+        ref_inst = make_reference(_BROKER,
+                                  source_ref,
+                                  target_inst,
+                                  info,
+                                  assoc);
+
+        if (cu_get_str_prop(target_inst, "InstanceID", &iid) != CMPI_RC_OK) {
+                CU_DEBUG("Target instance does not have an InstanceID");
+                goto out;
+        }
+
+        if (strstr("Default", iid) != NULL)
+                valuerange = SDC_RANGE_POINT;
+        else if (strstr("Increment", iid) != NULL)
+                valuerange = SDC_RANGE_INC;
+        else if (strstr("Maximum", iid) != NULL)
+                valuerange = SDC_RANGE_MAX;
+        else if (strstr("Minimum", iid) != NULL)
+                valuerange = SDC_RANGE_MIN;
+        else
+                CU_DEBUG("Unknown default RASD type: `%s'", iid);
+
+        if (valuerange == SDC_RANGE_POINT)
+                valuerole = SDC_ROLE_DEFAULT;
+
+        CMSetProperty(ref_inst, "ValueRole",
+                      (CMPIValue *)&valuerole, CMPI_uint16);
+        CMSetProperty(ref_inst, "ValueRange",
+                      (CMPIValue *)&valuerange, CMPI_uint16);
+        CMSetProperty(ref_inst, "PropertyPolicy",
+                      (CMPIValue *)&ppolicy, CMPI_uint16);
+ out:
+        return ref_inst;
+}
+
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 static char* group_component[] = {
@@ -1105,7 +1151,7 @@ static struct std_assoc _alloc_cap_to_rasd = {
         .assoc_class = (char**)&assoc_classname,
 
         .handler = alloc_cap_to_rasd,
-        .make_ref = make_ref
+        .make_ref = make_ref_valuerole
 };
 
 static struct std_assoc _rasd_to_alloc_cap = {
