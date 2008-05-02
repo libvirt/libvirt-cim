@@ -1,0 +1,74 @@
+<html>
+  <body>
+    <h1>Schema</h1>
+    <p>
+      The libvirt-cim provider depends on an installed 
+      <a href="http://www.dmtf.org/standards/cim/cim_schema_v216/">DMTF 
+      CIM v2.16</a> Experimental schema.  The package can be obtained
+      <a href="http://www.dmtf.org/standards/cim/cim_schema_v216/cimv216Experimental-MOFs.zip">
+        here
+      </a>.
+    </p>
+    
+    <h4>To install the schema in Pegasus:</h4>
+    <pre>
+      $ PEGASUS_REPO=/var/lib/Pegasus # adjust this as needed
+      $ mkdir cim216
+      $ cd cim216
+      $ unzip $PATH_TO_ZIPFILE
+      $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/virt cimv216.mof
+      $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/virt qualifiers.mof
+      $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/virt qualifiers_optional.mof
+      $ sudo cimmofl -uc -aEV -R$PEGASUS_REPO -n /root/interop cimv216-interop.mof
+    </pre>
+    
+    <h4>To install the schema in SFCB:</h4>
+    <pre>
+      $ SFCB_CIM=/usr/local/share/sfcb/CIM # adjust this as needed
+      $ mkdir cim216
+      $ cd cim216
+      $ unzip $PATH_TO_ZIPFILE
+      $ mv cimv216.mof CIM_Schema.mof
+      $ sudo cp * $SFCB_CIM
+      $ sudo sfcbrepos
+    </pre>
+    <p>
+      <strong>Note:</strong> in both cases, the CIM v2.16 schema seems to have a
+      few classes that don't register correctly.  You may need to
+      disable installation of classes with something like the
+      following:
+    </p>
+    <pre>
+      --- CIM_Schema.mof      2007-10-15 00:15:44.000000000 -0700
+      +++ cimv216.mof 2007-10-22 10:11:19.000000000 -0700
+      @@ -507,3 +507,3 @@
+      #pragma include ("Policy/CIM_SharedSecretAuthentication.mof")
+      -#pragma include ("Security/CIM_SecurityIndication.mof")
+      +//#pragma include ("Security/CIM_SecurityIndication.mof")
+      #pragma include ("Support/PRS_Activity.mof")
+      @@ -728,4 +728,4 @@
+      #pragma include ("Policy/CIM_PolicyConditionInPolicyRule.mof")
+      -#pragma include ("Security/CIM_IPNetworkSecurityIndication.mof")
+      -#pragma include ("Security/CIM_IPPacketFilterIndication.mof")
+      +//#pragma include ("Security/CIM_IPNetworkSecurityIndication.mof")
+      +//#pragma include ("Security/CIM_IPPacketFilterIndication.mof")
+      #pragma include ("Support/PRS_ActivityContact.mof")
+    </pre>
+    <p>
+      <strong>cimv216-interop.mof</strong> is not part of the official DMTF 
+      CIM v2.16 schema package. Please create with the following content:
+    </p>
+    <pre>
+      #pragma locale ("en_US")
+      #pragma include ("qualifiers.mof")
+      #pragma include ("qualifiers_optional.mof")
+      #pragma include ("Core/CIM_ManagedElement.mof")
+      #pragma include ("Interop/CIM_RegisteredProfile.mof")
+      #pragma include ("Interop/CIM_RegisteredSubProfile.mof")
+      #pragma include ("Core/CIM_Dependency.mof")
+      #pragma include ("Interop/CIM_ElementConformsToProfile.mof")
+      #pragma include ("Interop/CIM_ReferencedProfile.mof")
+      #pragma include ("Interop/CIM_SubProfileRequiresProfile.mof")
+    </pre>
+  </body>
+</html>

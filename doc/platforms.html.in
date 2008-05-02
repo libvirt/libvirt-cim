@@ -1,0 +1,47 @@
+<html>
+  <body>
+    <h1>Platform Support</h1>
+    <p>
+      Currently, libvirt-cim is targeting Xen as its primary support
+      platform because is has the largest installed user base.  The
+      long-term plan is to support many others (hopefully any that libvirt
+      supports).  This includes KVM and containers.
+    </p>
+    <p>
+      The code base currently has many Xen-specific "shortcuts" that need
+      to be resolved and generalized in order to support other platforms.
+      A short list of these may include:
+    </p>
+    <ul>
+      <li>
+        The XML generation and parsing code and the related device
+        modeling code.
+      </li>
+      <li>
+        The libvirt connection logic.  Right now, (in most places) we
+        detect the current hypervisor in use and connect to libvirt
+        appropriately.  This may or may not be the correct behavior in a
+        situation where you could need to support containers and QEMU
+        virtual machines.
+      </li>
+      <li>
+        Some lingering hard-coded "Xen_Foo" class names.
+      </li>
+    </ul>
+    <p>
+      Further, supporting new platforms have some registration and
+      modeling implications:
+    </p>
+    <ul>
+      <li>
+        Additions to the MOF and registration files for "branded"
+        classes (Xen_Foo, KVM_Foo, etc)
+      </li>
+      <li>
+        Modifications to some of the association providers that register
+        separate CMPI provider structures for each class type they handle
+        (to avoid duplicate results in the general case)
+      </li>
+    </ul>
+  </body>
+</html>

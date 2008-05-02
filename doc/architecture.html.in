@@ -1,0 +1,30 @@
+<html>
+  <body>
+    <h1>Architecture</h1>
+
+    <p>
+      The libvirt-cim provider consists of two major parts:
+    </p>
+    <ul>
+      <li>
+        The provider classes themselves (<tt>src/</tt>)
+      </li>
+      <li>
+        A helper library of common components (<tt>libxkutil/</tt>)
+      </li>
+    </ul>
+    <p>
+      The provider classes implement the actual CIM class model.  Some of
+      the provider libraries implement one CIM class and one providier.
+      However, many of them perform more than one task.  For example,
+      the <tt>Virt_Device</tt> and <tt>Virt_DevicePool</tt> providers
+      implement the device and device pool classes for each of the major
+      device types: Memory, Processor, Network, and Disk.
+    </p>
+    <p>
+      The helper library contains common routines that almost all of the
+      providers use, such as libvirt connection type detection and device
+      and system XML parsing.
+    </p>
+  </body>
+</html>
