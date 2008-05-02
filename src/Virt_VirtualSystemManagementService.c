@@ -320,6 +320,7 @@ static const char *_net_rand_mac(void)
         int ret;
         unsigned int s;
         char *mac = NULL;
+        const char *_mac = NULL;
         CMPIString *str = NULL;
         CMPIStatus status;
 
@@ -346,11 +347,11 @@ static const char *_net_rand_mac(void)
         free(mac);
 
         if (str != NULL)
-                mac = CMGetCharPtr(str);
+                _mac = CMGetCharPtr(str);
         else
-                mac = NULL;
+                _mac = NULL;
 
-        return mac;
+        return _mac;
 }
 
 static const char *net_rasd_to_vdev(CMPIInstance *inst,
