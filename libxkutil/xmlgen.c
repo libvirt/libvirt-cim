@@ -329,7 +329,8 @@ static bool concat_devxml(char **xml,
                         func(&_xml, &list[i]);
         }
 
-        astrcat(xml, _xml);
+        if (_xml != NULL)
+                astrcat(xml, _xml);
         free(_xml);
 
         return true;
