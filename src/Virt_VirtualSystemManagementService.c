@@ -413,6 +413,27 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *lxc_disk_rasd_to_vdev(CMPIInstance *inst,
+                                         struct virt_device *dev)
+{
+        const char *val = NULL;
+
+        if (cu_get_str_prop(inst, "MountPoint", &val) != CMPI_RC_OK)
+                return "Missing `MountPoint' field";
+
+        free(dev->dev.disk.virtual_dev);
+        dev->dev.disk.virtual_dev = strdup(val);
+
+        if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK)
+                return "Missing `Address' field";
+
+        free(dev->dev.disk.source);
+        dev->dev.disk.source = strdup(val);
+        dev->dev.disk.disk_type = DISK_FS;
+
+        return NULL;
+}
+
 static const char *mem_rasd_to_vdev(CMPIInstance *inst,
                                     struct virt_device *dev)
 {
@@ -447,6 +468,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
 {
         if (type == CIM_RES_TYPE_MEM) {
                 return mem_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_DISK) {
+                return lxc_disk_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
@@ -611,20 +634,20 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
                 goto out;
         }
 
+        if (!vssd_to_domain(vssd, domain)) {
+                CU_DEBUG("Failed to create domain from VSSD");
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "SystemSettings Error");
+                goto out;
+        }
+
         msg = classify_resources(resources, NAMESPACE(ref), domain);
         if (msg != NULL) {
                 CU_DEBUG("Failed to classify resources: %s", msg);
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "ResourceSettings Error: %s", msg);
-                goto out;
-        }
-
-        if (!vssd_to_domain(vssd, domain)) {
-                CU_DEBUG("Failed to create domain from VSSD");
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "SystemSettings Error");
                 goto out;
         }
 
