@@ -149,6 +149,24 @@ static char *disk_file_xml(const char *path, const char *vdev)
         return xml;
 }
 
+static char *disk_fs_xml(const char *path, const char *vdev)
+{
+        char *xml;
+        int ret;
+
+        ret = asprintf(&xml,
+                       "<filesystem type='mount'>\n"
+                       "  <source dir='%s'/>\n"
+                       "  <target dir='%s'/>\n"
+                       "</filesystem>\n",
+                       path,
+                       vdev);
+        if (ret == -1)
+                xml = NULL;
+
+        return xml;
+}
+
 static bool disk_to_xml(char **xml, struct virt_device *dev)
 {
         char *_xml = NULL;
@@ -160,6 +178,8 @@ static bool disk_to_xml(char **xml, struct virt_device *dev)
                 /* If it's not a block device, we assume a file,
                    which should be a reasonable fail-safe */
                 _xml = disk_file_xml(disk->source, disk->virtual_dev);
+        else if (disk->disk_type == DISK_FS)
+                _xml = disk_fs_xml(disk->source, disk->virtual_dev);
         else
                 return false;
 
