@@ -39,6 +39,10 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 ]
 class LXC_DiskResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
+
+      [Description ("Mount point within the container")]
+      string MountPoint;
+
 };
 
 [Description ("Xen virtual network configuration"),
