@@ -78,7 +78,7 @@ install_schema_sfcb() {
     local dir=$(detect_sfcb_dir)
 
     mkdir ${dir}/CIM
-    if [ -d "${dir}/CIM" ]; then
+    if [ ! -d "${dir}/CIM" ]; then
 	echo "Unable to determine SFCB directory"
 	echo "set SFCB_DIR"
 	return
@@ -94,7 +94,7 @@ install_schema_openwbem() {
     local schema_dir=$dir/cimv$SCHEMA_VERSION
 
     mkdir $schema_dir
-    if [ -d "$schema_dir" ]; then
+    if [ ! -d "$schema_dir" ]; then
 	echo "Unable to determine openwbem schema directory"
 	return
     fi
