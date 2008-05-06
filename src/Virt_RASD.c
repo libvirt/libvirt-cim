@@ -105,6 +105,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         uint16_t type;
         char *base;
         char *id;
+        const char *keys[] = {"InstanceID", NULL};
 
         if (dev->type == CIM_RES_TYPE_DISK) {
                 type = CIM_RES_TYPE_DISK;
@@ -129,7 +130,6 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         if (inst == NULL)
                 return inst;
 
-        const char *keys[] = {"InstanceID", NULL};
         s = CMSetPropertyFilter(inst, properties, keys);
 
         if (s.rc != CMPI_RC_OK)
