@@ -561,13 +561,28 @@ static bool procpool_set_total(CMPIInstance *inst, virConnectPtr conn)
         return procs != 0;
 }
 
-static bool set_units(CMPIInstance *inst,
-                      const char *units)
+static void set_params(CMPIInstance *inst,
+                       uint16_t type,
+                       const char *id,
+                       const char *units,
+                       const char *caption)
 {
-        CMSetProperty(inst, "AllocationUnits",
-                      (CMPIValue *)units, CMPI_chars);
+        CMSetProperty(inst, "InstanceID",
+                      (CMPIValue *)id, CMPI_chars);
 
-        return true;
+        CMSetProperty(inst, "PoolID",
+                      (CMPIValue *)id, CMPI_chars);
+
+        CMSetProperty(inst, "ResourceType",
+                      (CMPIValue *)&type, CMPI_uint16);
+
+        if (units != NULL)
+                CMSetProperty(inst, "AllocationUnits",
+                              (CMPIValue *)units, CMPI_chars);
+
+        if (caption != NULL)
+                CMSetProperty(inst, "Caption",
+                              (CMPIValue *)caption, CMPI_chars);
 }
 
 static CMPIStatus mempool_instance(virConnectPtr conn,
@@ -577,7 +592,6 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
                                    const CMPIBroker *broker)
 {
         const char *id = "MemoryPool/0";
-        uint16_t type = CIM_RES_TYPE_MEM;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -595,13 +609,8 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
 
         mempool_set_total(inst, conn);
         mempool_set_reserved(inst, conn);
-        set_units(inst, "KiloBytes");
 
-        CMSetProperty(inst, "InstanceID",
-                      (CMPIValue *)id, CMPI_chars);
-
-        CMSetProperty(inst, "ResourceType",
-                      (CMPIValue *)&type, CMPI_uint16);
+        set_params(inst, CIM_RES_TYPE_MEM, id, "KiloBytes", NULL);
 
         inst_list_add(list, inst);
 
@@ -615,7 +624,6 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
                                     const CMPIBroker *broker)
 {
         const char *id = "ProcessorPool/0";
-        uint16_t type = CIM_RES_TYPE_PROC;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -632,13 +640,8 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
                                   ns);
 
         procpool_set_total(inst, conn);
-        set_units(inst, "Processors");
 
-        CMSetProperty(inst, "InstanceID",
-                      (CMPIValue *)id, CMPI_chars);
-
-        CMSetProperty(inst, "ResourceType",
-                      (CMPIValue *)&type, CMPI_uint16);
+        set_params(inst, CIM_RES_TYPE_PROC, id, "Processors", NULL);
 
         inst_list_add(list, inst);
 
@@ -653,9 +656,9 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
                                        const CMPIBroker *broker)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        char *str = NULL;
+        char *id = NULL;
+        char *cap = NULL;
         char *bridge = NULL;
-        uint16_t type = CIM_RES_TYPE_NET;
         CMPIInstance *inst;
         virNetworkPtr network = NULL;
 
@@ -681,36 +684,27 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
                 goto out;
         }
 
-        if (asprintf(&str, "NetworkPool/%s", netname) == -1) {
+        if (asprintf(&id, "NetworkPool/%s", netname) == -1) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "");
                 goto out;
         }
-
-        CMSetProperty(inst, "InstanceID",
-                      (CMPIValue *)str, CMPI_chars);
-        free(str);
 
         bridge = virNetworkGetBridgeName(network);
-        if (asprintf(&str, "Bridge: %s", bridge) == -1) {
+        if (asprintf(&cap, "Bridge: %s", bridge) == -1) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "");
                 goto out;
         }
 
-        CMSetProperty(inst, "Caption",
-                      (CMPIValue *)str, CMPI_chars);
-        free(str);
+        set_params(inst, CIM_RES_TYPE_NET, id, NULL, cap);
+        free(id);
+        free(cap);
         free(bridge);
 
-        CMSetProperty(inst, "ResourceType",
-                      (CMPIValue *)&type, CMPI_uint16);
-
-
         inst_list_add(list, inst);
-
  out:
         virNetworkFree(network);
 
@@ -778,24 +772,13 @@ static CMPIInstance *diskpool_from_path(struct disk_pool *pool,
 {
         CMPIInstance *inst;
         char *poolid = NULL;
-        const uint16_t type = CIM_RES_TYPE_DISK;
 
         inst = get_typed_instance(broker, refcn, "DiskPool", ns);
 
         if (asprintf(&poolid, "DiskPool/%s", pool->tag) == -1)
                 return NULL;
 
-        CMSetProperty(inst, "InstanceID",
-                      (CMPIValue *)poolid, CMPI_chars);
-
-        CMSetProperty(inst, "ResourceType",
-                      (CMPIValue *)&type, CMPI_uint16);
-
-        CMSetProperty(inst, "AllocationUnits",
-                      (CMPIValue *)"Megabytes", CMPI_chars);
-
-        CMSetProperty(inst, "Caption",
-                      (CMPIValue *)pool->tag, CMPI_chars);
+        set_params(inst, CIM_RES_TYPE_DISK, poolid, "Megabytes", pool->tag);
 
         if (!diskpool_set_capacity(conn, inst, pool))
                 CU_DEBUG("Failed to set capacity for disk pool: %s",
