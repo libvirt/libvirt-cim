@@ -1371,7 +1371,7 @@ static struct method_handler DefineSystem = {
         .handler = define_system,
         .args = {{"SystemSettings", CMPI_instance, false},
                  {"ResourceSettings", CMPI_instanceA, false},
-                 {"ReferenceConfiguration", CMPI_string, false},
+                 {"ReferenceConfiguration", CMPI_ref, false},
                  ARG_END
         }
 };
