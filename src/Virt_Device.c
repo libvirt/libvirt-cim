@@ -141,8 +141,8 @@ static int mem_set_size(CMPIInstance *instance,
 {
         uint64_t consumableblocks, numberofblocks;
 
-        consumableblocks = dev->size/XEN_MEM_BLOCKSIZE;
-        numberofblocks = dev->maxsize/XEN_MEM_BLOCKSIZE;
+        consumableblocks = (dev->size << 10) / XEN_MEM_BLOCKSIZE;
+        numberofblocks = (dev->maxsize << 10) / XEN_MEM_BLOCKSIZE;
 
         CMSetProperty(instance, "BlockSize",
                       (CMPIValue *)&XEN_MEM_BLOCKSIZE, CMPI_uint64);
