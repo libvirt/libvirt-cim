@@ -457,6 +457,8 @@ static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                 return net_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_MEM) {
                 return mem_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_PROC) {
+                return NULL; /* FIXME: replace when processor is done */
         }
 
         return "Resource type not supported on this platform";
