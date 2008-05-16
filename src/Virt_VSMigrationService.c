@@ -109,14 +109,24 @@ static CMPIStatus get_migration_type(CMPIInstance *msd,
                                      uint16_t *type)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret;
+        uint16_t _type;
 
-        ret = cu_get_u16_prop(msd, "MigrationType", type);
-        if (ret != CMPI_RC_OK) {
+        if (cu_get_u16_prop(msd, "MigrationType", &_type) != CMPI_RC_OK) {
                 CU_DEBUG("Using default MigrationType: %d", CIM_MIGRATE_LIVE);
-                *type = CIM_MIGRATE_LIVE;
+                _type = CIM_MIGRATE_LIVE;
         }
 
+        if ((_type < CIM_MIGRATE_OTHER) || (_type > CIM_MIGRATE_RESTART)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported migration type %d", _type);
+                goto out;
+        }
+
+        if (type != NULL)
+                *type = _type;
+
+ out:
         return s;
 }
 
@@ -543,7 +553,6 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
         virConnectPtr dconn = NULL;
         uint32_t retcode = CIM_SVPC_RETURN_COMPLETED;
         CMPIBoolean isMigratable = 0;
-        uint16_t type;
         virDomainPtr dom = NULL;
         CMPIInstance *dominst;
         const char *domain;
@@ -556,7 +565,7 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = get_msd_values(ref, destination, argsin, &type, &dconn);
+        s = get_msd_values(ref, destination, argsin, NULL, &dconn);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
