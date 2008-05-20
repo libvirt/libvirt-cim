@@ -31,7 +31,6 @@
 #include <libcmpiutil/libcmpiutil.h>
 #include <libcmpiutil/std_instance.h>
 
-#include "device_parsing.h"
 #include "misc_util.h"
 #include "cs_util.h"
 
@@ -56,10 +55,10 @@ static struct virt_device *_find_dev(struct virt_device *list,
         return NULL;
 }
 
-static int list_devs(virConnectPtr conn,
-                     const uint16_t type,
-                     const char *host,
-                     struct virt_device **list)
+int list_rasds(virConnectPtr conn,
+              const uint16_t type,
+              const char *host,
+              struct virt_device **list)
 {
         virDomainPtr dom;
 
@@ -79,7 +78,7 @@ static struct virt_device *find_dev(virConnectPtr conn,
         struct virt_device *list = NULL;
         struct virt_device *dev = NULL;
 
-        count = list_devs(conn, type, host, &list);
+        count = list_rasds(conn, type, host, &list);
         if (count > 0) {
                 dev = _find_dev(list, count, devid);
                 cleanup_virt_devices(&list, count);
@@ -173,10 +172,8 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 CMSetProperty(inst, "Limit",
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
         } else if (dev->type == CIM_RES_TYPE_PROC) {
-                /* This would be the place to set the virtualquantity. */
-                uint64_t quantity = dev->dev.vcpu.number + 1;
                 CMSetProperty(inst, "VirtualQuantity",
-                              (CMPIValue *)&quantity, CMPI_uint64);
+                              (CMPIValue *)&dev->dev.vcpu.quantity, CMPI_uint64);
         }
 
         /* FIXME: Put the HostResource in place */
