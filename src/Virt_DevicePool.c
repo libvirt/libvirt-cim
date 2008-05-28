@@ -378,13 +378,20 @@ static virNetworkPtr bridge_to_network(virConnectPtr conn,
 }
 
 static char *_netpool_member_of(virConnectPtr conn,
-                                const char *bridge)
+                                const struct net_device *ndev)
 {
         virNetworkPtr net = NULL;
         const char *netname;
         char *pool = NULL;
 
-        net = bridge_to_network(conn, bridge);
+        if (STREQ(ndev->type, "bridge"))
+                net = bridge_to_network(conn, ndev->source);
+        else if (STREQ(ndev->type, "network"))
+                net = virNetworkLookupByName(conn, ndev->source);
+        else {
+                CU_DEBUG("Unhandled network type `%s'", ndev->type);
+        }
+
         if (net == NULL)
                 goto out;
 
@@ -395,7 +402,7 @@ static char *_netpool_member_of(virConnectPtr conn,
         if (asprintf(&pool, "NetworkPool/%s", netname) == -1)
                 pool = NULL;
 
-        CU_DEBUG("Determined pool: %s (%s, %s)", pool, bridge, netname);
+        CU_DEBUG("Determined pool: %s (%s, %s)", pool, ndev->source, netname);
 
  out:
         virNetworkFree(net);
@@ -435,7 +442,7 @@ static char *netpool_member_of(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].id), dev)) {
                         result = _netpool_member_of(conn,
-                                                    devs[i].dev.net.source);
+                                                    &devs[i].dev.net);
                         break;
                 }
         }
