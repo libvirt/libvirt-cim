@@ -352,6 +352,9 @@ static int parse_vcpu_device(xmlNode *node, struct virt_device **vdevs)
         
         list->dev.vcpu.quantity = count;
 
+        list->type = CIM_RES_TYPE_PROC;
+        list->id = strdup("proc");
+
         *vdevs = list;
 
         return 1;
