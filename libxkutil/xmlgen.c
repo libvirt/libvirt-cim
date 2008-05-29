@@ -254,21 +254,17 @@ static bool net_to_xml(char **xml, struct virt_device *dev)
 
 static bool vcpu_to_xml(char **xml, struct virt_device *dev)
 {
-        int count;
         int ret;
+        char *_xml;
 
-        if (*xml == NULL) {
-                ret = asprintf(xml, "<vcpu>1</vcpu>");
-                return ret != -1;
-        }
-
-        if (sscanf(*xml, "<vcpu>%i</vcpu>\n", &count) != 1)
+        ret = asprintf(&_xml, "<vcpu>%" PRIu64 "</vcpu>\n",
+                       dev->dev.vcpu.quantity);
+        if (ret == -1)
                 return false;
+        else
+                astrcat(xml, _xml);
 
-        free(*xml);
-        ret = asprintf(xml, "<vcpu>%i</vcpu>\n", count + 1);
-
-        return ret != -1;
+        return true;
 }
 
 static bool mem_to_xml(char **xml, struct virt_device *dev)

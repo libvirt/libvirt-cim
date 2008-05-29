@@ -447,6 +447,14 @@ static const char *mem_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *proc_rasd_to_vdev(CMPIInstance *inst,
+                                     struct virt_device *dev)
+{
+        cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.vcpu.quantity);
+
+        return NULL;
+}
+
 static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev,
                                          uint16_t type)
@@ -458,7 +466,7 @@ static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
         } else if (type == CIM_RES_TYPE_MEM) {
                 return mem_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_PROC) {
-                return NULL; /* FIXME: replace when processor is done */
+                return proc_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";

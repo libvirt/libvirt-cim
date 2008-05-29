@@ -1002,29 +1002,26 @@ static int change_memory(virDomainPtr dom,
         return 1;
 }
 
-static int change_vcpus(virDomainPtr dom, int delta)
+static int change_vcpus(virDomainPtr dom, struct virt_device *dev)
 {
         int ret;
-        virDomainInfo info;
 
-        ret = virDomainGetInfo(dom, &info);
-        if (ret == -1) {
-                CU_DEBUG("Failed to get domain info for %s",
-                         virDomainGetName(dom));
+        if (dev->dev.vcpu.quantity <= 0) {
+                CU_DEBUG("Unable to set VCPU count to %i",
+                         dev->dev.vcpu.quantity);
                 return 0;
         }
 
-        ret = virDomainSetVcpus(dom, info.nrVirtCpu + delta);
+        ret = virDomainSetVcpus(dom, dev->dev.vcpu.quantity);
         if (ret == -1) {
                 CU_DEBUG("Failed to set domain vcpus to %i",
-                         info.nrVirtCpu + delta);
+                         dev->dev.vcpu.quantity);
                 return 0;
         }
 
-        CU_DEBUG("Changed %s vcpus from %i to %i",
+        CU_DEBUG("Changed %s vcpus to %i",
                  virDomainGetName(dom),
-                 info.nrVirtCpu,
-                 info.nrVirtCpu + delta);
+                 dev->dev.vcpu.quantity);
 
         return 1;
 }
@@ -1034,8 +1031,6 @@ int attach_device(virDomainPtr dom, struct virt_device *dev)
         if ((dev->type == CIM_RES_TYPE_NET) ||
             (dev->type == CIM_RES_TYPE_DISK))
                 return _change_device(dom, dev, true);
-        else if (dev->type == CIM_RES_TYPE_PROC)
-                return change_vcpus(dom, 1);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 
@@ -1047,8 +1042,6 @@ int detach_device(virDomainPtr dom, struct virt_device *dev)
         if ((dev->type == CIM_RES_TYPE_NET) ||
             (dev->type == CIM_RES_TYPE_DISK))
                 return _change_device(dom, dev, false);
-        else if (dev->type == CIM_RES_TYPE_PROC)
-                return change_vcpus(dom, -1);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 
@@ -1059,6 +1052,8 @@ int change_device(virDomainPtr dom, struct virt_device *dev)
 {
         if (dev->type == CIM_RES_TYPE_MEM)
                 return change_memory(dom, dev);
+        else if (dev->type == CIM_RES_TYPE_PROC)
+                return change_vcpus(dom, dev);
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 
