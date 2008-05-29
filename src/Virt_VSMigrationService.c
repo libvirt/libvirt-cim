@@ -977,8 +977,34 @@ static CMPIStatus complete_migrate(virDomainPtr ldom,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         virDomainPtr newdom = NULL;
+        virDomainPtr dom;
+        int i;
+        int ret;
 
-        if (virDomainUndefine(ldom) == -1) {
+        for (i = 0; i < MIGRATE_SHUTDOWN_TIMEOUT; i++) {
+                if ((i % 30) == 0) {
+                        CU_DEBUG("Polling to undefine guest %s...", 
+                                 virDomainGetName(ldom));
+                }
+
+                dom = virDomainLookupByName(virDomainGetConnect(ldom),
+                                            virDomainGetName(ldom));
+                if (dom == NULL) {
+                        CU_DEBUG("Unable to re-lookup domain");
+                        ret = -1;
+                        break;
+                }
+
+                ret = virDomainUndefine(dom);
+                virDomainFree(dom);
+
+                if (ret == 0)
+                        break;
+
+                sleep(1);
+        }
+
+        if (ret != 0) {
                 CU_DEBUG("Undefine of local domain failed");
         }
 
