@@ -487,7 +487,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
 
 static const char *rasd_to_vdev(CMPIInstance *inst,
                                 struct domain *domain,
-                                struct virt_device *dev)
+                                struct virt_device *dev,
+                                const char *ns)
 {
         uint16_t type;
         CMPIObjectPath *op;
@@ -498,6 +499,9 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
                 msg = "Unable to get path for device instance";
                 goto out;
         }
+
+        CMSetNameSpace(op, ns);
+        CMSetObjectPath(inst, op);
 
         if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK) {
                 msg = "Unable to get device type";
@@ -553,9 +557,6 @@ static const char *classify_resources(CMPIArray *resources,
                 if (op == NULL)
                         return "Unknown resource instance type";
 
-                CMSetNameSpace(op, ns);
-                CMSetObjectPath(inst, op);
-
                 if (res_type_from_rasd_classname(CLASSNAME(op), &type) != 
                     CMPI_RC_OK)
                         return "Unable to determine resource type";
@@ -563,19 +564,23 @@ static const char *classify_resources(CMPIArray *resources,
                 if (type == CIM_RES_TYPE_PROC)
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_vcpu[domain->dev_vcpu_ct++]);
+                                           &domain->dev_vcpu[domain->dev_vcpu_ct++],
+                                           ns);
                 else if (type == CIM_RES_TYPE_MEM)
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_mem[domain->dev_mem_ct++]);
+                                           &domain->dev_mem[domain->dev_mem_ct++],
+                                           ns);
                 else if (type == CIM_RES_TYPE_DISK)
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_disk[domain->dev_disk_ct++]);
+                                           &domain->dev_disk[domain->dev_disk_ct++],
+                                           ns);
                 else if (type == CIM_RES_TYPE_NET)
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_net[domain->dev_net_ct++]);
+                                           &domain->dev_net[domain->dev_net_ct++],
+                                           ns);
 
                 if (msg != NULL)
                         return msg;
@@ -872,7 +877,8 @@ static CMPIStatus mod_system_settings(CMPIMethodMI *self,
 typedef CMPIStatus (*resmod_fn)(struct domain *,
                                 CMPIInstance *,
                                 uint16_t,
-                                const char *);
+                                const char *,
+                                const char*);
 
 static struct virt_device **find_list(struct domain *dominfo,
                                       uint16_t type,
@@ -966,7 +972,8 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
 static CMPIStatus resource_del(struct domain *dominfo,
                                CMPIInstance *rasd,
                                uint16_t type,
-                               const char *devid)
+                               const char *devid,
+                               const char *ns)
 {
         CMPIStatus s;
         CMPIObjectPath *op;
@@ -1013,7 +1020,8 @@ static CMPIStatus resource_del(struct domain *dominfo,
 static CMPIStatus resource_add(struct domain *dominfo,
                                CMPIInstance *rasd,
                                uint16_t type,
-                               const char *devid)
+                               const char *devid,
+                               const char *ns)
 {
         CMPIStatus s;
         CMPIObjectPath *op;
@@ -1060,7 +1068,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
 
         dev->type = type;
         dev->id = strdup(devid);
-        rasd_to_vdev(rasd, dominfo, dev);
+        rasd_to_vdev(rasd, dominfo, dev, ns);
 
         s = _resource_dynamic(dominfo, dev, RESOURCE_ADD, CLASSNAME(op));
         if (s.rc != CMPI_RC_OK)
@@ -1078,7 +1086,8 @@ static CMPIStatus resource_add(struct domain *dominfo,
 static CMPIStatus resource_mod(struct domain *dominfo,
                                CMPIInstance *rasd,
                                uint16_t type,
-                               const char *devid)
+                               const char *devid,
+                               const char *ns)
 {
         CMPIStatus s;
         CMPIObjectPath *op;
@@ -1109,7 +1118,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        rasd_to_vdev(rasd, dominfo, dev);
+                        rasd_to_vdev(rasd, dominfo, dev, ns);
                         s = _resource_dynamic(dominfo,
                                               dev,
                                               RESOURCE_MOD,
@@ -1156,7 +1165,7 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = func(dominfo, rasd, type, devid);
+        s = func(dominfo, rasd, type, devid, NAMESPACE(ref));
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("Resource transform function failed");
                 goto out;
