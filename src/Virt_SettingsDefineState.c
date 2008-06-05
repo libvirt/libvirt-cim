@@ -370,7 +370,7 @@ static char* virtual_system_setting_data[] = {
 static char* assoc_classname[] = {
         "Xen_SettingsDefineState",
         "KVM_SettingsDefineState",
-        "LXC_VirtualSystemSettingData",
+        "LXC_SettingsDefineState",
         NULL
 };
 
