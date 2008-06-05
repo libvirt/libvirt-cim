@@ -189,7 +189,7 @@ static bool disk_to_xml(char **xml, struct virt_device *dev)
         return true;
 }
 
-static bool xen_net_to_xml(char **xml, struct virt_device *dev)
+static bool bridge_net_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
         char *_xml;
@@ -198,10 +198,12 @@ static bool xen_net_to_xml(char **xml, struct virt_device *dev)
 
         ret = asprintf(&_xml,
                        "<interface type='%s'>\n"
+                       "  <source bridge='%s'/>\n"
                        "  <mac address='%s'/>\n"
                        "  <script path='%s'/>\n"
                        "</interface>\n",
                        net->type,
+                       net->source,
                        net->mac,
                        script);
 
@@ -215,7 +217,7 @@ static bool xen_net_to_xml(char **xml, struct virt_device *dev)
         return true;
 }
 
-static bool kvm_net_to_xml(char **xml, struct virt_device *dev)
+static bool network_net_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
         char *_xml;
@@ -245,9 +247,9 @@ static bool kvm_net_to_xml(char **xml, struct virt_device *dev)
 static bool net_to_xml(char **xml, struct virt_device *dev)
 {
         if (STREQ(dev->dev.net.type, "network"))
-                return kvm_net_to_xml(xml, dev);
+                return network_net_to_xml(xml, dev);
         else if (STREQ(dev->dev.net.type, "bridge"))
-                return xen_net_to_xml(xml, dev);
+                return bridge_net_to_xml(xml, dev);
         else
                 return false;
 }
