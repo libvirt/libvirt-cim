@@ -979,7 +979,7 @@ static CMPIStatus resource_del(struct domain *dominfo,
         CMPIObjectPath *op;
         struct virt_device **_list;
         struct virt_device *list;
-        int *count;
+        int *count = NULL;
         int i;
 
         op = CMGetObjectPath(rasd, &s);
@@ -987,7 +987,8 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 goto out;
 
         _list = find_list(dominfo, type, &count);
-        if ((type == CIM_RES_TYPE_MEM) || (_list != NULL))
+        if ((type == CIM_RES_TYPE_MEM) || (type == CIM_RES_TYPE_PROC) ||
+           (_list != NULL))
                 list = *_list;
         else {
                 cu_statusf(_BROKER, &s,
@@ -1028,14 +1029,15 @@ static CMPIStatus resource_add(struct domain *dominfo,
         struct virt_device **_list;
         struct virt_device *list;
         struct virt_device *dev;
-        int *count;
+        int *count = NULL;
 
         op = CMGetObjectPath(rasd, &s);
         if ((op == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
         _list = find_list(dominfo, type, &count);
-        if ((type == CIM_RES_TYPE_MEM) || (_list == NULL)) {
+        if ((type == CIM_RES_TYPE_MEM) || (type == CIM_RES_TYPE_PROC) ||
+           (_list == NULL)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Cannot add resources of type %" PRIu16, type);
