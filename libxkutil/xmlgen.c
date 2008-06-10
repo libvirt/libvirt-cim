@@ -502,7 +502,12 @@ static char *_xenfv_os_xml(struct domain *domain)
                        "  %s\n"
                        "  %s\n"
                        "  %s\n"
-                       "</os>\n",
+                       "</os>\n"
+                       "<features>\n"
+                       "  <pae/>\n"
+                       "  <acpi/>\n"
+                       "  <apic/>\n"
+                       "</features>\n",
                        type,
                        loader,
                        boot);
