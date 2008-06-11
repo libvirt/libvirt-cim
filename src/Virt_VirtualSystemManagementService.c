@@ -192,6 +192,22 @@ static int lxc_vssd_to_domain(CMPIInstance *inst,
         return 1;
 }
 
+static bool default_graphics_device(CMPIInstance *inst,
+                                    struct domain *domain)
+{
+        free(domain->dev_graphics);
+        domain->dev_graphics = calloc(1, sizeof(*domain->dev_graphics));
+        if (domain->dev_graphics == NULL) {
+                CU_DEBUG("Failed to allocate default graphics device");
+                return false;
+        }
+
+        domain->dev_graphics->dev.graphics.type = strdup("vnc");
+        domain->dev_graphics->dev.graphics.port = strdup("-1");
+
+        return true;
+}
+
 static int vssd_to_domain(CMPIInstance *inst,
                           struct domain *domain)
 {
@@ -240,6 +256,10 @@ static int vssd_to_domain(CMPIInstance *inst,
         else {
                 CU_DEBUG("Unknown domain prefix: %s", pfx);
         }
+
+        if (!default_graphics_device(inst, domain))
+                ret = 0;
+
  out:
         free(pfx);
 
