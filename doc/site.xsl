@@ -70,12 +70,10 @@
 <!--
   the main menu box
  -->
-  <xsl:template name="linkList">
-  <div class="linkList2">
-    <div class="llinks2">
-      <h3 class="links2"><span>main menu</span></h3>
-      <ul>
-        <li><a href="{$href_base}index.html">Home</a></li>
+  <xsl:template name="menu">
+      <ul class="l0">
+        <li><div><a href="{$href_base}index.html" class="inactive">Home</a></div></li>
+	<li> <a href="http://libvirt.org/" class="inactive">libvirt</a></li>
     <xsl:for-each select="/html/body/h2">
     <xsl:variable name="filename">
       <xsl:call-template name="filename">
@@ -84,30 +82,20 @@
     </xsl:variable>
     <xsl:if test="$filename != ''">
       <li>
+        <div>
 	<xsl:element name="a">
 	  <xsl:attribute name="href">
 	    <xsl:value-of select="$filename"/>
 	  </xsl:attribute>
-	  <xsl:if test="$filename = 'docs.html'">
-	      <xsl:attribute name="style">font-weight:bold</xsl:attribute>
-	  </xsl:if>
+	  <xsl:attribute name="class">inactive</xsl:attribute>
 	  <xsl:value-of select="."/>
 	</xsl:element>
+        </div>
       </li>
     </xsl:if>
     </xsl:for-each>
+        <li> <a href="https://www.redhat.com/mailman/listinfo/libvirt-cim/" class="inactive">Mailing list</a></li>
       </ul>
-    </div>
-    <div class="llinks2">
-      <h3 class="links2"><span>related links</span></h3>
-      <ul>
-        <li> <a href="https://www.redhat.com/mailman/listinfo/libvirt-cim/">Mailing list</a></li>
-	<li> <a href="http://libvirt.org/">libvirt</a></li>
-        <li><a href="http://xmlsoft.org/"> <img src="http://libvirt.org/Libxml2-Logo-90x34.gif" alt="Made with Libxml2 Logo" /></a></li>
-      </ul>
-      <p class='credits'>Graphics and design by <a href="mail:dfong@redhat.com">Diana Fong</a></p>
-    </div>
-  </div>
   </xsl:template>
 
 <!--
@@ -123,7 +111,7 @@
  - Write the styles in the head
  -->
   <xsl:template name="style">
-    <link rel="stylesheet" type="text/css" href="http://libvirt.org/libvirt.css" />
+    <link rel="stylesheet" type="text/css" href="http://libvirt.org/CIM/main.css" />
     <link rel="SHORTCUT ICON" href="/32favicon.png" />
   </xsl:template>
 
@@ -177,22 +165,37 @@
           <xsl:element name="title">
             <xsl:value-of select="$title"/>
           </xsl:element>
+          <meta name="description" content="libvirt, virtualization, virtualization API, CIM"/>
         </head>
 	<body>
-	<div id="container">
-	  <div id="intro">
-	    <div id="adjustments"/>
-	    <div id="pageHeader"/>
-	    <div id="content2">
+          <div id="header">
+            <div id="headerLogo"/>
+            <div id="headerSearch">
+              <form action="{$href_base}search.php" enctype="application/x-www-form-urlencoded" method="get">
+                <div>
+                  <input id="query" name="query" type="text" size="12" value=""/>
+                  <input id="submit" name="submit" type="submit" value="Search"/>
+                </div>
+              </form>
+            </div>
+          </div>
+	  <div id="body">
+            <div id="menu">
+              <xsl:call-template name="menu"/>
+            </div>
+            <div id="content">
 	      <xsl:call-template name="titlebox">
 		<xsl:with-param name="title" select="$title"/>
 	      </xsl:call-template>
 	      <xsl:apply-templates mode="subfile" select="$header/following-sibling::*[preceding-sibling::h2[1] = $header and name() != 'h2' ]"/>
 	    </div>
 	  </div>
-	  <xsl:call-template name="linkList"/>
-	  <xsl:call-template name="bottom"/>
-	</div>
+	  <div id="footer">
+            <p id="sponsor">
+              Sponsored by:<br/>
+              IBM
+            </p>
+          </div>
 	</body>
       </html>
     </xsl:document>
@@ -224,12 +227,22 @@
   <xsl:template match="body">
     <xsl:variable name="firsth2" select="./h2[1]"/>
     <body>
-    <div id="container">
-      <div id="intro">
-	<div id="adjustments">
-	  <p class="p1"></p>
-	</div>
-	<div id="content">
+      <div id="header">
+        <div id="headerLogo"/>
+        <div id="headerSearch">
+          <form action="{$href_base}search.php" enctype="application/x-www-form-urlencoded" method="get">
+            <div>
+              <input id="query" name="query" type="text" size="12" value=""/>
+              <input id="submit" name="submit" type="submit" value="Search"/>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div id="body">
+        <div id="menu">
+          <xsl:call-template name="menu"/>
+        </div>
+        <div id="content">
           <xsl:apply-templates mode="content" select="($firsth2/preceding-sibling::*)"/>
           <xsl:for-each select="./h2">
             <xsl:call-template name="subfile">
@@ -238,11 +251,15 @@
           </xsl:for-each>
 	</div>
       </div>
-      <xsl:call-template name="linkList"/>
-      <xsl:call-template name="bottom"/>
-    </div>
+      <div id="footer">
+        <p id="sponsor">
+          Sponsored by:<br/>
+          IBM
+        </p>
+      </div>
     </body>
   </xsl:template>
+
   <xsl:template match="head">
   </xsl:template>
   <xsl:template match="html">
@@ -250,7 +267,8 @@
     <html>
       <head>
         <xsl:call-template name="style"/>
-        <title>the virtualization API</title>
+        <title>the virtualization CIM API</title>
+        <meta name="description" content="libvirt, virtualization, virtualization API, CIM"/>
       </head>
       <xsl:apply-templates/>
     </html>
