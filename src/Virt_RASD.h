@@ -21,6 +21,8 @@
 #ifndef __VIRT_RASD_H
 #define __VIRT_RASD_H
 
+#include "device_parsing.h"
+
 char *rasd_to_xml(CMPIInstance *rasd);
 
 /**
@@ -55,6 +57,10 @@ CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
                            const char **properties,
                            CMPIInstance **_inst);
 
+int list_rasds(virConnectPtr conn,
+               const uint16_t type,
+               const char *host,
+               struct virt_device **list);
 #endif
 
 /*

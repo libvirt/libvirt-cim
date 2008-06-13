@@ -1,0 +1,50 @@
+<html>
+  <body>
+    <h1>Sitemap</h1>
+
+    <div id="sitemap">
+    <ul>
+      <li>
+        <a href="index.html">CIM</a>
+        <span>The libvirt-cim CIM providers</span>
+        <ul>
+          <li>
+            <a href="releases.html">Releases</a>
+            <span>Official releases</span>
+          </li>
+          <li>
+            <a href="downloads.html">Downloads</a>
+            <span>Development code</span>
+          </li>
+          <li>
+            <a href="patches.html">Patches</a>
+            <span>How to contribute</span>
+          </li>
+          <li>
+            <a href="schema.html">Schema</a>
+            <span>Required CIM Schema for the providers</span>
+          </li>
+          <li>
+            <a href="platforms.html">Platform Support</a>
+            <span>Target platforms</span>
+          </li>
+          <li>
+            <a href="architecture.html">Architecture</a>
+            <span>Basic code structure</span>
+          </li>
+          <li>
+            <a href="https://www.redhat.com/mailman/listinfo/libvirt-cim/">
+              Mailing List
+            </a>
+            <span>Report bugs, discuss development</span>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <a href="sitemap.html">Sitemap</a>
+        <span>Overview of all content on the website</span>
+      </li>
+    </ul>
+    </div>
+  </body>
+</html>

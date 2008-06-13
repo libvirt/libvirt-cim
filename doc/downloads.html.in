@@ -1,0 +1,27 @@
+<html>
+  <body>
+    <h1>Downloads</h1>
+
+    <p>
+      Official releases can be found on the libvirt.org 
+      <a href="ftp://libvirt.org/libvirt-cim">FTP</a> server. Alternatively, 
+      you can grab a 
+      <a href="http://libvirt.org/hg/libvirt-cim/archive/tip.tar.gz">tarball</a> or 
+      <a href="http://libvirt.org/hg/libvirt-cim/archive/tip.zip">zip</a> file 
+      snapshot of the development repository. These snapshots will have the 
+      latest features (and bugs).
+    </p>
+    <p>
+      The libvirt-cim development tree can be found in the 
+      <a href="http://libvirt.org/hg">libvirt.org/hg</a> repository.
+    </p>
+    <p>
+      To get a copy of the development tree, use 
+      <a href="http://www.selenic.com/mercurial/wiki/">mercurial</a>'s clone 
+      feature:
+    </p>
+    <pre>
+      $ hg clone http://libvirt.org/hg/libvirt-cim
+    </pre>
+  </body>
+</html>

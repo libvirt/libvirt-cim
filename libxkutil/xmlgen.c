@@ -149,6 +149,24 @@ static char *disk_file_xml(const char *path, const char *vdev)
         return xml;
 }
 
+static char *disk_fs_xml(const char *path, const char *vdev)
+{
+        char *xml;
+        int ret;
+
+        ret = asprintf(&xml,
+                       "<filesystem type='mount'>\n"
+                       "  <source dir='%s'/>\n"
+                       "  <target dir='%s'/>\n"
+                       "</filesystem>\n",
+                       path,
+                       vdev);
+        if (ret == -1)
+                xml = NULL;
+
+        return xml;
+}
+
 static bool disk_to_xml(char **xml, struct virt_device *dev)
 {
         char *_xml = NULL;
@@ -160,6 +178,8 @@ static bool disk_to_xml(char **xml, struct virt_device *dev)
                 /* If it's not a block device, we assume a file,
                    which should be a reasonable fail-safe */
                 _xml = disk_file_xml(disk->source, disk->virtual_dev);
+        else if (disk->disk_type == DISK_FS)
+                _xml = disk_fs_xml(disk->source, disk->virtual_dev);
         else
                 return false;
 
@@ -169,7 +189,7 @@ static bool disk_to_xml(char **xml, struct virt_device *dev)
         return true;
 }
 
-static bool xen_net_to_xml(char **xml, struct virt_device *dev)
+static bool bridge_net_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
         char *_xml;
@@ -178,10 +198,12 @@ static bool xen_net_to_xml(char **xml, struct virt_device *dev)
 
         ret = asprintf(&_xml,
                        "<interface type='%s'>\n"
+                       "  <source bridge='%s'/>\n"
                        "  <mac address='%s'/>\n"
                        "  <script path='%s'/>\n"
                        "</interface>\n",
                        net->type,
+                       net->source,
                        net->mac,
                        script);
 
@@ -195,7 +217,7 @@ static bool xen_net_to_xml(char **xml, struct virt_device *dev)
         return true;
 }
 
-static bool kvm_net_to_xml(char **xml, struct virt_device *dev)
+static bool network_net_to_xml(char **xml, struct virt_device *dev)
 {
         int ret;
         char *_xml;
@@ -225,30 +247,26 @@ static bool kvm_net_to_xml(char **xml, struct virt_device *dev)
 static bool net_to_xml(char **xml, struct virt_device *dev)
 {
         if (STREQ(dev->dev.net.type, "network"))
-                return kvm_net_to_xml(xml, dev);
+                return network_net_to_xml(xml, dev);
         else if (STREQ(dev->dev.net.type, "bridge"))
-                return xen_net_to_xml(xml, dev);
+                return bridge_net_to_xml(xml, dev);
         else
                 return false;
 }
 
 static bool vcpu_to_xml(char **xml, struct virt_device *dev)
 {
-        int count;
         int ret;
+        char *_xml;
 
-        if (*xml == NULL) {
-                ret = asprintf(xml, "<vcpu>1</vcpu>");
-                return ret != -1;
-        }
-
-        if (sscanf(*xml, "<vcpu>%i</vcpu>\n", &count) != 1)
+        ret = asprintf(&_xml, "<vcpu>%" PRIu64 "</vcpu>\n",
+                       dev->dev.vcpu.quantity);
+        if (ret == -1)
                 return false;
+        else
+                astrcat(xml, _xml);
 
-        free(*xml);
-        ret = asprintf(xml, "<vcpu>%i</vcpu>\n", count + 1);
-
-        return ret != -1;
+        return true;
 }
 
 static bool mem_to_xml(char **xml, struct virt_device *dev)
@@ -329,7 +347,8 @@ static bool concat_devxml(char **xml,
                         func(&_xml, &list[i]);
         }
 
-        astrcat(xml, _xml);
+        if (_xml != NULL)
+                astrcat(xml, _xml);
         free(_xml);
 
         return true;
@@ -483,7 +502,12 @@ static char *_xenfv_os_xml(struct domain *domain)
                        "  %s\n"
                        "  %s\n"
                        "  %s\n"
-                       "</os>\n",
+                       "</os>\n"
+                       "<features>\n"
+                       "  <pae/>\n"
+                       "  <acpi/>\n"
+                       "  <apic/>\n"
+                       "</features>\n",
                        type,
                        loader,
                        boot);

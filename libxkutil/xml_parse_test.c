@@ -96,7 +96,7 @@ static void print_dev_disk(struct virt_device *dev,
 static void print_dev_vcpu(struct virt_device *dev,
                            FILE *d)
 {
-        print_u64(d, "Virtual CPU", dev->dev.vcpu.number);
+        print_u64(d, "Virtual CPU", dev->dev.vcpu.quantity);
 }
 
 static void print_dev_emu(struct virt_device *dev,

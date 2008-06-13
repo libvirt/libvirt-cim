@@ -403,13 +403,13 @@ static struct sdc_rasd_prop *proc_min(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
         bool ret;
-        uint16_t num_procs = 1;
+        uint64_t num_procs = 1;
         struct sdc_rasd_prop *rasd = NULL;
  
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint64},
                 PROP_END
         };
  
@@ -428,7 +428,7 @@ static struct sdc_rasd_prop *proc_max(const CMPIObjectPath *ref,
 {
         bool ret;
         virConnectPtr conn;
-        uint16_t num_procs = 0;
+        uint64_t num_procs = 0;
         struct sdc_rasd_prop *rasd = NULL;
         
         CU_DEBUG("In proc_max()");
@@ -447,7 +447,7 @@ static struct sdc_rasd_prop *proc_max(const CMPIObjectPath *ref,
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint64},
                 PROP_END
         };
  
@@ -466,13 +466,13 @@ static struct sdc_rasd_prop *proc_def(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
         bool ret;
-        uint16_t num_procs = 1;
+        uint64_t num_procs = 1;
         struct sdc_rasd_prop *rasd = NULL;
  
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint64},
                 PROP_END
         };
  
@@ -490,13 +490,13 @@ static struct sdc_rasd_prop *proc_inc(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
         bool ret;
-        uint16_t num_procs = 1;
+        uint64_t num_procs = 1;
         struct sdc_rasd_prop *rasd = NULL;
  
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
                 {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint64},
                 PROP_END
         };
  
@@ -514,12 +514,12 @@ static struct sdc_rasd_prop *net_min(const CMPIObjectPath *ref,
                                      CMPIStatus *s)
 {
         bool ret;
-        uint16_t num_nics = 0;
+        uint64_t num_nics = 0;
         struct sdc_rasd_prop *rasd = NULL;
  
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint64},
                 PROP_END
         };
  
@@ -533,19 +533,19 @@ static struct sdc_rasd_prop *net_min(const CMPIObjectPath *ref,
         return rasd;
 }
 
-static uint16_t net_max_kvm(const CMPIObjectPath *ref,
+static uint64_t net_max_kvm(const CMPIObjectPath *ref,
                             CMPIStatus *s)
 {
         /* This appears to not require anything dynamic. */
         return KVM_MAX_NICS;
 }
-static uint16_t net_max_xen(const CMPIObjectPath *ref,
+static uint64_t net_max_xen(const CMPIObjectPath *ref,
                             CMPIStatus *s)
 {
         int rc;
         virConnectPtr conn;
         unsigned long version;
-        uint16_t num_nics = -1;
+        uint64_t num_nics = -1;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (s->rc != CMPI_RC_OK) {
@@ -579,7 +579,7 @@ static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
 {
         bool ret;
         char *prefix;
-        uint16_t num_nics;
+        uint64_t num_nics;
         struct sdc_rasd_prop *rasd = NULL;
 
         prefix = class_prefix_name(CLASSNAME(ref));
@@ -611,7 +611,7 @@ static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
  
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint64},
                 PROP_END
         };
  
@@ -630,11 +630,11 @@ static struct sdc_rasd_prop *net_def(const CMPIObjectPath *ref,
                                      CMPIStatus *s)
 {
         bool ret;
-        uint16_t num_nics = 1;
+        uint64_t num_nics = 1;
         struct sdc_rasd_prop *rasd = NULL;
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint64},
                 PROP_END
         };
 
@@ -652,12 +652,12 @@ static struct sdc_rasd_prop *net_inc(const CMPIObjectPath *ref,
                                      CMPIStatus *s)
 {
         bool ret;
-        uint16_t num_nics = 1;
+        uint64_t num_nics = 1;
         struct sdc_rasd_prop *rasd = NULL;
  
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint64},
                 PROP_END
         };
  
@@ -675,13 +675,13 @@ static struct sdc_rasd_prop *disk_min(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
         bool ret;
-        uint16_t disk_size = SDC_DISK_MIN;
+        uint64_t disk_size = SDC_DISK_MIN;
         struct sdc_rasd_prop *rasd = NULL;
 
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Minimum", CMPI_chars},
                 {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint64},
                 PROP_END
         };
 
@@ -701,8 +701,7 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         bool ret;
         const char *inst_id;
         CMPIrc prop_ret;
-        uint16_t free_space;
-        uint64_t free_64;
+        uint64_t free_space;
         virConnectPtr conn;
         CMPIInstance *pool_inst;
         struct sdc_rasd_prop *rasd = NULL;
@@ -728,20 +727,19 @@ static struct sdc_rasd_prop *disk_max(const CMPIObjectPath *ref,
         if (s->rc != CMPI_RC_OK)
                 goto out;
 
-        prop_ret = cu_get_u64_prop(pool_inst, "Capacity", &free_64);
+        prop_ret = cu_get_u64_prop(pool_inst, "Capacity", &free_space);
         if (prop_ret != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
                            "Could not get capacity from instance");
                 goto out;
         }
-        CU_DEBUG("Got capacity from pool_inst: %lld", free_64);
-        
-        free_space = (uint16_t)free_64;
+        CU_DEBUG("Got capacity from pool_inst: %lld", free_space);
+
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Maximum", CMPI_chars},
                 {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&free_space, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&free_space, CMPI_uint64},
                 PROP_END
         };
 
@@ -760,13 +758,13 @@ static struct sdc_rasd_prop *disk_def(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
         bool ret;
-        uint16_t disk_size = SDC_DISK_DEF;
+        uint64_t disk_size = SDC_DISK_DEF;
         struct sdc_rasd_prop *rasd = NULL;
 
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Default", CMPI_chars},
                 {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint64},
                 PROP_END
         };
 
@@ -784,13 +782,13 @@ static struct sdc_rasd_prop *disk_inc(const CMPIObjectPath *ref,
                                       CMPIStatus *s)
 {
         bool ret;
-        uint16_t disk_size = SDC_DISK_INC;
+        uint64_t disk_size = SDC_DISK_INC;
         struct sdc_rasd_prop *rasd = NULL;
 
         struct sdc_rasd_prop tmp[] = {
                 {"InstanceID", (CMPIValue *)"Increment", CMPI_chars},
                 {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
-                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint16},
+                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint64},
                 PROP_END
         };
 

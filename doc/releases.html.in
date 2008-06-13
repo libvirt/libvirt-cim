@@ -1,0 +1,25 @@
+<html>
+  <body>
+    <h1>Releases</h1>
+
+    <p>
+      <strong>livirt-cim-0.1: Jan 14 2008</strong>
+    </p>
+    <ul>
+      <li>
+        Initial Release
+      </li>
+      <li>
+        Focused on Xen paravirtual guest support
+      </li>
+    </ul>
+    <p>
+      <strong>libcmpiutil-0.1: Nov 30 2007</strong>
+    </p>
+    <ul>
+      <li>
+        Initial Release
+      </li>
+    </ul>
+  </body>
+</html>

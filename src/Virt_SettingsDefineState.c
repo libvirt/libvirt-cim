@@ -39,13 +39,95 @@
 
 const static CMPIBroker *_BROKER;
 
+static int get_proc_dev_count(const char *name, 
+                              const char *cn,
+                              uint16_t type,
+                              char *host,
+                              CMPIStatus *s)
+{
+        virConnectPtr conn = NULL;
+        struct virt_device *list = NULL;
+        struct virt_device *dev = NULL;
+        int dev_count = -1;
+        int count = -1;
+
+        conn = connect_by_classname(_BROKER, cn, s);
+        if (conn == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           name);
+                goto out;
+        }
+
+        dev_count = list_rasds(conn, type, host, &list);
+        if (dev_count <= 0) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get list of processors");
+                goto out;
+        }
+
+        dev = &list[0];
+        count = dev->dev.vcpu.quantity;
+
+        cleanup_virt_devices(&list, dev_count);
+
+ out:
+        virConnectClose(conn);
+        return count;
+}
+
+static char *get_rasd_id(const CMPIInstance *inst, uint16_t type)
+{
+        char *id = NULL;
+        int ret;
+        const char *tmp;
+
+        if (type == CIM_RES_TYPE_PROC) {
+                ret = cu_get_str_prop(inst, "SystemName", &tmp);
+                if (ret != CMPI_RC_OK) {
+                        CU_DEBUG("No SystemName in device instance");
+                        goto out;
+                }
+
+                ret = asprintf(&id, "%s/proc", tmp);
+                if (ret == -1) {
+                        id = NULL;
+                        goto out;
+                }
+        } else {
+                ret = cu_get_str_prop(inst, "DeviceID", &tmp);
+                if (ret != CMPI_RC_OK) {
+                        CU_DEBUG("No DeviceID in device instance");
+                        id = NULL;
+                        goto out;
+                }
+
+                id = strdup(tmp);
+        }
+
+ out:
+        return id;
+}
+
+static char *get_dev_id(const char *host, int devid)
+{
+        char *id = NULL;
+
+        if (asprintf(&id, "%s/%d", host, devid) == -1)
+                id = NULL;
+
+        return id;
+}
+
 static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
                               struct std_assoc_info *info,
                               struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
-        const char *name = NULL;
+        char *id = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -54,16 +136,18 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        if (cu_get_str_path(ref, "DeviceID", &name) != CMPI_RC_OK) {
+        id = get_rasd_id(inst,
+                         res_type_from_device_classname(CLASSNAME(ref)));
+        if (id == NULL) {
                 cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing DeviceID");
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Unable to get RASD id from DeviceID");
                 goto out;
-        }        
+        }
 
         s = get_rasd_by_name(_BROKER,
                              ref,
-                             name,
+                             id,
                              res_type_from_device_classname(CLASSNAME(ref)),
                              NULL,
                              &inst);
@@ -73,6 +157,7 @@ static CMPIStatus dev_to_rasd(const CMPIObjectPath *ref,
         inst_list_add(list, inst);
 
  out:
+        free(id);
         return s;
 }
 
@@ -83,7 +168,12 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         const char *name = NULL;
+        char *host = NULL;
+        char *devid = NULL;
+        char *id = NULL;
         uint16_t type;
+        int count = 1;
+        int i; 
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -92,13 +182,6 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        if (cu_get_str_path(ref, "InstanceID", &name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
-                goto out;
-        }
-
         if (res_type_from_rasd_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -106,13 +189,55 @@ static CMPIStatus rasd_to_dev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = get_device_by_name(_BROKER, ref, name, type, &inst);
-        if (s.rc != CMPI_RC_OK)
+        if (cu_get_str_path(ref, "InstanceID", &name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
                 goto out;
+        }
 
-        inst_list_add(list, inst);
+        if (type == CIM_RES_TYPE_PROC) {
+                if (parse_fq_devid((char *)name, &host, &devid) != 1) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "No such instance (%s)",
+                                   name);
+                        goto out;
+                }
+
+                count = get_proc_dev_count(name, 
+                                           CLASSNAME(ref), 
+                                           type, 
+                                           host, 
+                                           &s); 
+                if (count <= 0)
+                        goto out;
+        }
+
+        for (i = 0; i < count; i++) {
+                if (type == CIM_RES_TYPE_PROC)
+                        id = get_dev_id(host, i); 
+                else 
+                        id = strdup(name);
+
+                if (id == NULL) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "Unable to get RASD id from DeviceID");
+                        goto out;
+                }
+
+                s = get_device_by_name(_BROKER, ref, id, type, &inst);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+
+                inst_list_add(list, inst);
+                free(id);
+        }
 
  out:
+        free(host);
+        free(devid);
         return s;
 }
 
@@ -245,7 +370,7 @@ static char* virtual_system_setting_data[] = {
 static char* assoc_classname[] = {
         "Xen_SettingsDefineState",
         "KVM_SettingsDefineState",
-        "LXC_VirtualSystemSettingData",
+        "LXC_SettingsDefineState",
         NULL
 };
 

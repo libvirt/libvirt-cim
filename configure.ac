@@ -1,6 +1,6 @@
 # (C) Copyright IBM Corp. 2005
 
-AC_INIT(libvirt CMPI provider, 0.4, danms@us.ibm.com, libvirt-cim)
+AC_INIT(libvirt CMPI provider, 0.5, danms@us.ibm.com, libvirt-cim)
 
 AC_CONFIG_SRCDIR([src/Virt_ComputerSystem.c])
 
@@ -87,10 +87,18 @@ AC_ARG_WITH([migrate_check_dir],
 AC_SUBST(MIG_CHECKS_DIR)
 AC_DEFINE_UNQUOTED(MIG_CHECKS_DIR, "$MIG_CHECKS_DIR", [External migration check timeout])
 
+if test -x /usr/lib64/xen/bin/qemu-dm; then
+   default_xen_emulator=/usr/lib64/xen/bin/qemu-dm
+elif test -x /usr/lib/xen/bin/qemu-dm; then
+   default_xen_emulator=/usr/lib/xen/bin/qemu-dm
+else
+   default_xen_emulator=/bin/false
+fi
+
 AC_ARG_WITH([xen_emulator],
 	    [  --with-xen_emulator=emu  Location of Xen FullVirt emulator],
 	    [test "x$withval" != "x" && XEN_EMULATOR="$withval"],
-	    [XEN_EMULATOR=/usr/lib/xen/bin/qemu-dm])
+	    [XEN_EMULATOR=$default_xen_emulator])
 AC_SUBST(XEN_EMULATOR)
 AC_DEFINE_UNQUOTED(XEN_EMULATOR, "$XEN_EMULATOR", [Location of Xen FullVirt emulator])
 

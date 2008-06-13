@@ -1,0 +1,25 @@
+<html>
+  <body>
+    <h1>What is <strong>libvirt-cim</strong>?</h1>
+    <p>
+      Libvirt-CIM is a CIM provider for managing linux virtualization platforms 
+      using libvirt. It is written in C and should work in any CIMOM that 
+      supports CMPI 2.0 providers. The intent is to implement the SVPC 
+      virtualization class model currently available in the DMTF Experimental 
+      2.16 schema.
+    </p>
+    <p>
+      Libvirt-CIM is a CIM provider for managing linux virtualization platforms 
+      using libvirt. It is written in C and should work in any CIMOM that 
+      supports CMPI 2.0 providers. The intent is to implement the SVPC 
+      virtualization class model currently available in the DMTF Experimental 2.
+      16 schema.
+    </p>
+    <p>
+      The providers are currently under heavy development. Focus is on Xen 
+      support right now, which means some of the providers have some "shortcuts" 
+      hard-coded to Xen right now. The long-term goal is to support all of the 
+      platforms that libvirt supports with minimal differences. 
+    </p>
+  </body>
+</html>

@@ -49,6 +49,7 @@ static int net_set_type(CMPIInstance *instance,
         uint16_t cim_type;
 
         if (STREQC(dev->type, "ethernet") ||
+            STREQC(dev->type, "network") ||
             STREQC(dev->type, "bridge"))
                 cim_type = CIM_NET_ETHERNET;
         else
@@ -141,8 +142,8 @@ static int mem_set_size(CMPIInstance *instance,
 {
         uint64_t consumableblocks, numberofblocks;
 
-        consumableblocks = dev->size/XEN_MEM_BLOCKSIZE;
-        numberofblocks = dev->maxsize/XEN_MEM_BLOCKSIZE;
+        consumableblocks = (dev->size << 10) / XEN_MEM_BLOCKSIZE;
+        numberofblocks = (dev->maxsize << 10) / XEN_MEM_BLOCKSIZE;
 
         CMSetProperty(instance, "BlockSize",
                       (CMPIValue *)&XEN_MEM_BLOCKSIZE, CMPI_uint64);
@@ -170,23 +171,6 @@ static CMPIInstance *mem_instance(const CMPIBroker *broker,
 
         if (!mem_set_size(inst, dev))
                 return NULL;
-
-        return inst;
-}
-
-static CMPIInstance *vcpu_instance(const CMPIBroker *broker,
-                                   struct vcpu_device *dev,
-                                   const virDomainPtr dom,
-                                   const char *ns)
-{
-        CMPIInstance *inst;
-        virConnectPtr conn;
-
-        conn = virDomainGetConnect(dom);
-        inst = get_typed_instance(broker,
-                                  pfx_from_conn(conn),
-                                  "Processor",
-                                  ns);
 
         return inst;
 }
@@ -229,43 +213,127 @@ static int device_set_systemname(CMPIInstance *instance,
         return 1;
 }
 
-static CMPIInstance *device_instance(const CMPIBroker *broker,
-                                     struct virt_device *dev,
-                                     const virDomainPtr dom,
-                                     const char *ns)
+static char *get_vcpu_inst_id(const virDomainPtr dom,
+                              int proc_num)
 {
-        CMPIInstance *instance;
+        int rc;
+        char *id_num = NULL;
+        char *dev_id = NULL;
 
-        if (dev->type == CIM_RES_TYPE_NET)
-                instance = net_instance(broker,
-                                        &dev->dev.net,
-                                        dom,
-                                        ns);
-        else if (dev->type == CIM_RES_TYPE_DISK)
-                instance = disk_instance(broker,
-                                         &dev->dev.disk,
-                                         dom,
-                                         ns);
-        else if (dev->type == CIM_RES_TYPE_MEM)
-                instance = mem_instance(broker,
-                                        &dev->dev.mem,
-                                        dom,
-                                        ns);
-        else if (dev->type == CIM_RES_TYPE_PROC)
-                instance = vcpu_instance(broker,
-                                         &dev->dev.vcpu,
-                                         dom,
-                                         ns);
-        else
-                return NULL;
+        rc = asprintf(&id_num, "%d", proc_num);
+        if (rc == -1) {
+                free(dev_id);
+                dev_id = NULL;
+                goto out;
+        }
+        
+        dev_id = get_fq_devid((char *)virDomainGetName(dom), id_num);
+        free(id_num);
 
-        if (!instance)
-                return NULL;
+ out:
+        return dev_id;
+}                    
 
-        device_set_devid(instance, dev, dom);
-        device_set_systemname(instance, dom);
+static bool vcpu_inst(const CMPIBroker *broker,
+                      const virDomainPtr dom,
+                      const char *ns,
+                      int dev_id_num,
+                      struct inst_list *list)
+{
+        char *dev_id;
+        CMPIInstance *inst;
+        virConnectPtr conn = NULL;
 
-        return instance;
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "Processor",
+                                  ns);
+        if (inst == NULL)
+                return false;
+
+        dev_id = get_vcpu_inst_id(dom, dev_id_num);
+        CMSetProperty(inst, "DeviceID",
+                      (CMPIValue *)dev_id, CMPI_chars);
+        free(dev_id);
+                
+        device_set_systemname(inst, dom);
+        inst_list_add(list, inst);
+
+        return true;
+}
+
+static bool vcpu_instances(const CMPIBroker *broker,
+                           const virDomainPtr dom,
+                           const char *ns,
+                           uint64_t proc_count,
+                           struct inst_list *list)
+{
+        int i;
+        bool rc;
+
+        for (i = 0; i < proc_count; i++) {
+                rc = vcpu_inst(broker, dom, ns, i, list);
+                if (!rc)
+                        return false;
+        }
+
+        return true;
+}
+
+static bool device_instances(const CMPIBroker *broker,
+                             struct virt_device *devs,
+                             int count,
+                             const virDomainPtr dom,
+                             const char *ns,
+                             struct inst_list *list)
+{
+        int i;
+        bool ret;
+        uint64_t proc_count = 0;
+        CMPIInstance *instance = NULL;
+
+        for (i = 0; i < count; i++) {
+                struct virt_device *dev = &devs[i];
+
+                if (dev->type == CIM_RES_TYPE_NET)
+                        instance = net_instance(broker,
+                                                &dev->dev.net,
+                                                dom,
+                                                ns);
+                else if (dev->type == CIM_RES_TYPE_DISK)
+                        instance = disk_instance(broker,
+                                                 &dev->dev.disk,
+                                                 dom,
+                                                 ns);
+                else if (dev->type == CIM_RES_TYPE_MEM)
+                        instance = mem_instance(broker,
+                                                &dev->dev.mem,
+                                                dom,
+                                                ns);
+                else if (dev->type == CIM_RES_TYPE_PROC) {
+                        proc_count = dev->dev.vcpu.quantity;
+                        continue;
+                } else
+                        return false;
+
+                if (!instance)
+                        return false;
+                
+                device_set_devid(instance, dev, dom);
+                device_set_systemname(instance, dom);
+                inst_list_add(list, instance);
+        }
+
+        if (proc_count) {
+                ret = vcpu_instances(broker,
+                                     dom,
+                                     ns,
+                                     proc_count,
+                                     list);
+        }
+
+        return true;
 }
 
 uint16_t res_type_from_device_classname(const char *classname)
@@ -290,25 +358,27 @@ static CMPIStatus _get_devices(const CMPIBroker *broker,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int count;
-        int i;
+        bool rc;
         struct virt_device *devs = NULL;
 
         count = get_devices(dom, &devs, type);
         if (count <= 0)
                 goto out;
 
-        for (i = 0; i < count; i++) {
-                CMPIInstance *dev = NULL;
+        rc = device_instances(broker, 
+                              devs, 
+                              count,
+                              dom, 
+                              NAMESPACE(reference),
+                              list);
 
-                dev = device_instance(broker,
-                                      &devs[i],
-                                      dom,
-                                      NAMESPACE(reference));
-                if (dev)
-                        inst_list_add(list, dev);
-
-                cleanup_virt_device(&devs[i]);
+        if (!rc) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Couldn't get device instances");
         }
+
+        cleanup_virt_devices(&devs, count);
 
  out:
         free(devs);
@@ -427,6 +497,29 @@ static int parse_devid(const char *devid, char **dom, char **dev)
         return 1;
 }
 
+static int proc_dev_list(uint64_t quantity,
+                         struct virt_device **list)
+{
+        int i;
+        int rc;
+        
+
+        *list = (struct virt_device *)calloc(quantity, 
+                                             sizeof(struct virt_device));
+
+        for (i = 0; i < quantity; i++) {
+                char *dev_num;
+
+                rc = asprintf(&dev_num, "%d", i);
+
+                (*list)[i].id = strdup(dev_num);
+
+                free(dev_num);
+        }
+
+        return quantity;
+}
+
 static struct virt_device *find_dom_dev(virDomainPtr dom, 
                                         char *device,
                                         int type)
@@ -439,6 +532,17 @@ static struct virt_device *find_dom_dev(virDomainPtr dom,
         count = get_devices(dom, &list, type);
         if (!count)
                 goto out;
+
+        if (type == CIM_RES_TYPE_PROC) {
+                struct virt_device *tmp_list;
+                int tmp_count;
+
+                tmp_count = proc_dev_list(list[0].dev.vcpu.quantity,
+                                          &tmp_list);
+                cleanup_virt_devices(&list, count);
+                list = tmp_list;
+                count = tmp_count;
+        }
 
         for (i = 0; i < count; i++) {
                 if (STREQC(device, list[i].id))
@@ -462,10 +566,13 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         char *domain = NULL;
         char *device = NULL;
-        CMPIInstance *instance = NULL;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
         struct virt_device *dev = NULL;
+        struct inst_list tmp_list;
+        bool rc;
+
+        inst_list_init(&tmp_list);
 
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL) {
@@ -501,13 +608,30 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
                 goto err;
         }
 
-        instance = device_instance(broker, 
-                                   dev, 
-                                   dom, 
-                                   NAMESPACE(reference));
+        if (type == CIM_RES_TYPE_PROC) {
+                int ret;
+                int dev_id_num;
+                
+                ret = sscanf(dev->id, "%d", &dev_id_num);
+
+                rc = vcpu_inst(broker,
+                               dom,
+                               NAMESPACE(reference),
+                               dev_id_num,
+                               &tmp_list);
+        } else {
+                
+                rc = device_instances(broker, 
+                                      dev, 
+                                      1,
+                                      dom, 
+                                      NAMESPACE(reference),
+                                      &tmp_list);
+        }
+
         cleanup_virt_device(dev);
 
-        *_inst = instance;
+        *_inst = tmp_list.list[0];
 
  err:
         virDomainFree(dom);
@@ -515,6 +639,7 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         free(device);
 
  out:
+        inst_list_free(&tmp_list);
         virConnectClose(conn);
 
         return s;        

@@ -95,13 +95,14 @@ INTEROP_REGS = \
 	schema/ElementConformsToProfile.registration \
 	schema/ReferencedProfile.registration
 
-pkgdata_DATA = $(MOFS) $(REGS) $(INTEROP_REGS)
+pkgdata_DATA = $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)
 pkgdata_SCRIPTS = provider-register.sh
 
 EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
              libvirt-cim.spec.in libvirt-cim.spec	\
 	     doc/CodingStyle doc/SubmittingPatches      \
-             .changeset .revision
+             .changeset .revision 			\
+	     examples/diskpool.conf
 
 preinstall:
 	sh -x base_schema/install_base_schema.sh `pwd`/base_schema
@@ -111,6 +112,7 @@ preinstall:
 postinstall:
 	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
+	virsh -v | grep -q '^0.3' && cp examples/diskpool.conf $(DISK_POOL_CONFIG) || true
 
 preuninstall:
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)

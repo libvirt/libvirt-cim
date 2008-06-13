@@ -1,23 +1,26 @@
 XSLTPROC = /usr/bin/xsltproc
+XMLLINT = /usr/bin/xmllint
 
-WEB_PAGES = index.html \
-            architecture.html \
-            downloads.html \
-            intro.html \
-            news.html \
-            patches.html \
-            platforms.html \
-            schema.html
+dot_html_in = $(wildcard *.html.in)
+dot_html = $(dot_html_in:%.html.in=%.html)
 
-EXTRA_DIST = site.xsl libvirt-cim.html $(WEB_PAGES)
-
-$(WEB_PAGES): libvirt-cim.html site.xsl
-	-@(if [ -x $(XSLTPROC) ]; then \
-	   $(XSLTPROC) --nonet --html $(top_srcdir)/doc/site.xsl $(top_srcdir)/doc/libvirt-cim.html > index.html; \
-	   fi);
+EXTRA_DIST = site.xsl $(dot_html) $(dot_html_in)
 
 install-data-local:
 	$(mkinstalldirs) $(DESTDIR)$(HTML_DIR)
 	@INSTALL@ -m 0644 $(srcdir)/*.html $(DESTDIR)$(HTML_DIR)
 
-all: $(WEB_PAGES)
+all: $(dot_html)
+
+%.html.tmp:	%.html.in site.xsl page.xsl sitemap.html.in
+		@(if [ -x $(XSLTPROC) ] ; then \
+		echo "Generating $@"; \
+		name=`echo $@ | sed -e 's/.tmp//'`; \
+		echo "name: $$name"; \
+		$(XSLTPROC) --stringparam pagename $$name --nonet --html $(top_srcdir)/doc/site.xsl $< > $@ || (rm $@ && exit 1) ; fi )
+
+
+%.html:	%.html.tmp
+	@(if [ -x $(XMLLINT) ] ; then \
+	echo "Validating $@" ; \
+	$(XMLLINT) --nonet --format --valid $< > $@ || : ; fi );
