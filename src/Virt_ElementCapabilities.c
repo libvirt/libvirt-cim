@@ -441,7 +441,7 @@ static struct std_assoc vsm_cap_to_sys_or_service = {
 static char* service[] = {
         "Xen_VirtualSystemManagementService",
         "KVM_VirtualSystemManagementService",
-        "LXC_VirtualSystemManagementService"
+        "LXC_VirtualSystemManagementService",
         "Xen_VirtualSystemMigrationService",
         "KVM_VirtualSystemMigrationService",
         "LXC_VirtualSystemMigrationService",
