@@ -42,6 +42,7 @@
 #include <libcmpiutil/std_instance.h>
 
 #include "misc_util.h"
+#include "infostore.h"
 
 #include "Virt_VirtualSystemManagementService.h"
 #include "Virt_ComputerSystem.h"
@@ -471,6 +472,8 @@ static const char *proc_rasd_to_vdev(CMPIInstance *inst,
                                      struct virt_device *dev)
 {
         cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.vcpu.quantity);
+        cu_get_u64_prop(inst, "Limit", &dev->dev.vcpu.limit);
+        cu_get_u32_prop(inst, "Weight", &dev->dev.vcpu.weight);
 
         return NULL;
 }
@@ -650,6 +653,54 @@ static CMPIInstance *connect_and_create(char *xml,
         return inst;
 }
 
+static CMPIStatus update_dominfo(const struct domain *dominfo,
+                                 const char *refcn)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        struct infostore_ctx *ctx = NULL;
+        struct virt_device *dev = dominfo->dev_vcpu;
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
+
+        if (dominfo->dev_vcpu_ct != 1) {
+                /* Right now, we only have extra info for processors */
+                CU_DEBUG("Domain has no vcpu devices!");
+                return s;
+        }
+
+        conn = connect_by_classname(_BROKER, refcn, &s);
+        if (conn == NULL) {
+                CU_DEBUG("Failed to connnect by %s", refcn);
+                return s;
+        }
+
+        dom = virDomainLookupByName(conn, dominfo->name);
+        if (dom == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Unable to lookup domain `%s'", dominfo->name);
+                goto out;
+        }
+
+        ctx = infostore_open(dom);
+        if (ctx == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to open infostore");
+                goto out;
+        }
+
+        infostore_set_u64(ctx, "weight", dev->dev.vcpu.weight);
+        infostore_set_u64(ctx, "limit", dev->dev.vcpu.limit);
+ out:
+        infostore_close(ctx);
+
+        virDomainFree(dom);
+        virConnectClose(conn);
+
+        return s;
+}
+
 static CMPIInstance *create_system(CMPIInstance *vssd,
                                    CMPIArray *resources,
                                    const CMPIObjectPath *ref,
@@ -690,6 +741,8 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         CU_DEBUG("System XML:\n%s", xml);
 
         inst = connect_and_create(xml, ref, s);
+        if (inst != NULL)
+                update_dominfo(domain, CLASSNAME(ref));
 
  out:
         cleanup_dominfo(&domain);
@@ -780,6 +833,8 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
                 rc = IM_RC_SYS_NOT_FOUND;
                 goto error;
         }
+
+        infostore_delete(virConnectGetType(conn), dom_name);
 
         virDomainDestroy(dom); /* Okay for this to fail */
         if (virDomainUndefine(dom) == 0) {
@@ -961,6 +1016,8 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
                            "Virtual System `%s' not found", dominfo->name);
                 goto out;
         }
+
+        update_dominfo(dominfo, refcn);
 
         if (!domain_online(dom)) {
                 CU_DEBUG("VS `%s' not online; skipping dynamic update",
