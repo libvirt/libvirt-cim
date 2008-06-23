@@ -33,6 +33,7 @@
 
 #include "misc_util.h"
 #include "cs_util.h"
+#include "infostore.h"
 
 #include "Virt_RASD.h"
 #include "svpc_types.h"
@@ -91,6 +92,54 @@ char *rasd_to_xml(CMPIInstance *rasd)
 {
         /* FIXME: Remove this */
         return NULL;
+}
+
+static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
+                                       const CMPIObjectPath *ref,
+                                       const char *domain,
+                                       CMPIInstance *inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
+        struct infostore_ctx *info;
+        uint32_t weight;
+        uint64_t limit;
+
+        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return s;
+
+        dom = virDomainLookupByName(conn, domain);
+        if (dom == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Domain `%s' not found while getting info", domain);
+                goto out;
+        }
+
+        info = infostore_open(dom);
+        if (info == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to open domain information store");
+                goto out;
+        }
+
+        weight = (uint32_t)infostore_get_u64(info, "weight");
+        limit = infostore_get_u64(info, "limit");
+
+        CMSetProperty(inst, "Weight",
+                      (CMPIValue *)&weight, CMPI_uint32);
+        CMSetProperty(inst, "Limit",
+                      (CMPIValue *)&limit, CMPI_uint64);
+
+ out:
+        virDomainFree(dom);
+        virConnectClose(conn);
+        infostore_close(info);
+
+        return s;
 }
 
 static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
@@ -174,6 +223,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         } else if (dev->type == CIM_RES_TYPE_PROC) {
                 CMSetProperty(inst, "VirtualQuantity",
                               (CMPIValue *)&dev->dev.vcpu.quantity, CMPI_uint64);
+                set_proc_rasd_params(broker, ref, host, inst);
         }
 
         /* FIXME: Put the HostResource in place */
