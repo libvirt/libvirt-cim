@@ -408,8 +408,8 @@ int parse_id(const char *id,
              char **name)
 {
         int ret;
-        char *tmp_pfx;
-        char *tmp_name;
+        char *tmp_pfx = NULL;
+        char *tmp_name = NULL;
 
         ret = sscanf(id, "%a[^:]:%as", &tmp_pfx, &tmp_name);
         if (ret != 2) {
