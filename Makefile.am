@@ -113,6 +113,7 @@ postinstall:
 	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
 	virsh -v | grep -q '^0.3' && cp examples/diskpool.conf $(DISK_POOL_CONFIG) || true
+	mkdir -p $(INFO_STORE)
 
 preuninstall:
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)

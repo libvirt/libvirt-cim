@@ -317,6 +317,17 @@ AC_DEFUN([DEFINE_DISK_CONFIG],
     ]
 )
 
+#
+# Define info store location.
+#
+AC_DEFUN([DEFINE_INFO_STORE],
+    [
+    AC_DEFINE_UNQUOTED([INFO_STORE], "$1", [Info store location])
+    INFO_STORE=$1
+    AC_SUBST(INFO_STORE)
+    ]
+)
+
 AC_DEFUN([SET_CSET],
 	[
 	if test -d .hg && test -x $(which hg); then

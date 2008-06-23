@@ -60,6 +60,13 @@ AC_ARG_WITH([diskconfig],
             [DEFINE_DISK_CONFIG($with_diskconfig)], 
             [DEFINE_DISK_CONFIG(/etc/libvirt/diskpool.conf)]
 )
+
+AC_ARG_WITH([info_store],
+	    [  --with-info-store=PATH  Set information store location (default=/etc/libvirt/cim)],
+	    [DEFINE_INFO_STORE($withval)],
+	    [DEFINE_INFO_STORE(/etc/libvirt/cim)]
+)
+
 AC_ARG_WITH([maxmem], 
             [  --with-maxmem=FOO	  Set max memory (KB) for a guest.], 
             [DEFINE_MAXMEM($with_maxmem)], 
