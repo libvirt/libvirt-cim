@@ -51,6 +51,8 @@ struct mem_device {
 
 struct vcpu_device {
         uint64_t quantity;
+        uint32_t weight;
+        uint64_t limit;
 };
 
 struct emu_device {
