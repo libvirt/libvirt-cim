@@ -35,6 +35,7 @@
 #include "cs_util.h"
 #include <libcmpiutil/libcmpiutil.h>
 #include "misc_util.h"
+#include "infostore.h"
 #include "device_parsing.h"
 #include <libcmpiutil/std_invokemethod.h>
 #include <libcmpiutil/std_instance.h>
@@ -620,6 +621,40 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
+static void set_scheduler_params(virDomainPtr dom)
+{
+        struct infostore_ctx *ctx;
+        virConnectPtr conn = NULL;
+        virSchedParameter params[] =
+                {{ "weight", VIR_DOMAIN_SCHED_FIELD_UINT },
+                 { "cap", VIR_DOMAIN_SCHED_FIELD_UINT },
+                };
+
+        conn = virDomainGetConnect(dom);
+        if (conn == NULL) {
+                CU_DEBUG("Unable to get connection from domain");
+                return;
+        }
+
+        if (!STREQC(virConnectGetType(conn), "xen")) {
+                CU_DEBUG("Not setting sched params for this domain type");
+                return;
+        }
+
+        ctx = infostore_open(dom);
+        if (ctx == NULL) {
+                CU_DEBUG("Unable to open infostore for domain");
+                return;
+        }
+
+        params[0].value.ui = infostore_get_u64(ctx, "weight");
+        params[1].value.ui = infostore_get_u64(ctx, "limit");
+
+        virDomainSetSchedulerParameters(dom, params, 2);
+
+        infostore_close(ctx);
+}
+
 /* This composite operation may be supported as a flag to reboot */
 static int domain_reset(virDomainPtr dom)
 {
@@ -643,6 +678,7 @@ static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
         case VIR_DOMAIN_SHUTOFF:
                 CU_DEBUG("Start domain");
                 ret = virDomainCreate(dom);
+                set_scheduler_params(dom);
                 break;
         case VIR_DOMAIN_PAUSED:
                 CU_DEBUG("Unpause domain");
