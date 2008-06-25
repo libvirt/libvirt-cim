@@ -1248,11 +1248,12 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
                  CMGetCharPtr(CMObjectPathToString(*job_op, NULL)));
 
         *job_op = CBCreateInstance(_BROKER, context, *job_op, jobinst, &s);
-        CMSetNameSpace(*job_op, job->ref_ns);
         if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(*job_op))) {
                 CU_DEBUG("Failed to create job instance: %i", s.rc);
                 goto out;
         }
+
+        CMSetNameSpace(*job_op, job->ref_ns);
 
  out:
         return s;
