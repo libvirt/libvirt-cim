@@ -55,6 +55,7 @@
 #include "config.h"
 
 #define DEFAULT_MAC_PREFIX "00:16:3e"
+#define DEFAULT_XEN_WEIGHT 1024
 
 const static CMPIBroker *_BROKER;
 
@@ -471,9 +472,29 @@ static const char *mem_rasd_to_vdev(CMPIInstance *inst,
 static const char *proc_rasd_to_vdev(CMPIInstance *inst,
                                      struct virt_device *dev)
 {
+        CMPIObjectPath *op = NULL;
+        CMPIrc rc;
+        uint32_t def_weight = 0;
+        uint64_t def_limit = 0;
+
         cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.vcpu.quantity);
-        cu_get_u64_prop(inst, "Limit", &dev->dev.vcpu.limit);
-        cu_get_u32_prop(inst, "Weight", &dev->dev.vcpu.weight);
+
+        op = CMGetObjectPath(inst, NULL);
+        if (op == NULL) {
+                CU_DEBUG("Unable to determine class of ProcRASD");
+                return NULL;
+        }
+
+        if (STARTS_WITH(CLASSNAME(op), "Xen")) 
+                def_weight = DEFAULT_XEN_WEIGHT;
+
+        rc = cu_get_u64_prop(inst, "Limit", &dev->dev.vcpu.limit);
+        if (rc != CMPI_RC_OK)
+                dev->dev.vcpu.limit = def_limit;
+
+        rc = cu_get_u32_prop(inst, "Weight", &dev->dev.vcpu.weight);
+        if (rc != CMPI_RC_OK)
+                dev->dev.vcpu.weight = def_weight;
 
         return NULL;
 }
