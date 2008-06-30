@@ -39,6 +39,7 @@
 #include "device_parsing.h"
 #include <libcmpiutil/std_invokemethod.h>
 #include <libcmpiutil/std_instance.h>
+#include <libcmpiutil/std_indication.h>
 
 #include "Virt_ComputerSystem.h"
 #include "Virt_HostSystem.h"
@@ -880,9 +881,19 @@ static CMPIStatus state_change(CMPIMethodMI *self,
 
         s = __state_change(name, state, reference);
 
-        if (s.rc == CMPI_RC_OK)
-                rc = 0;
+        if (s.rc == CMPI_RC_OK) {
+                char *type;
 
+                type = get_typed_class(CLASSNAME(reference),
+                                       "ComputerSystemModifiedIndication");
+
+                /* Failure to raise the indication is okay */
+                stdi_trigger_indication(_BROKER,
+                                        context,
+                                        type,
+                                        NAMESPACE(reference));
+                rc = 0;
+        }
  out:
         CMReturnData(results, &rc, CMPI_uint32);
 
