@@ -62,6 +62,12 @@ static bool lifecycle_enabled = 0;
 struct dom_xml {
         char uuid[VIR_UUID_STRING_BUFLEN];
         char *xml;
+        enum {DOM_OFFLINE,
+              DOM_ONLINE,
+              DOM_PAUSED,
+              DOM_CRASHED,
+              DOM_GONE,
+        } state;
 };
 
 static void free_dom_xml (struct dom_xml dom)
@@ -85,6 +91,35 @@ static char *sys_name_from_xml(char *xml)
 
  out:        
         return name;
+}
+
+static int dom_state(virDomainPtr dom)
+{
+        virDomainInfo info;
+        int ret;
+
+        ret = virDomainGetInfo(dom, &info);
+        if (ret != 0)
+                return DOM_GONE;
+
+        switch (info.state) {
+        case VIR_DOMAIN_NOSTATE:
+        case VIR_DOMAIN_RUNNING:
+        case VIR_DOMAIN_BLOCKED:
+                return DOM_ONLINE;
+
+        case VIR_DOMAIN_PAUSED:
+                return DOM_PAUSED;
+
+        case VIR_DOMAIN_SHUTOFF:
+                return DOM_OFFLINE;
+
+        case VIR_DOMAIN_CRASHED:
+                return DOM_CRASHED;
+
+        default:
+                return DOM_GONE;
+        };
 }
 
 static CMPIStatus doms_to_xml(struct dom_xml **dom_xml_list, 
@@ -115,6 +150,8 @@ static CMPIStatus doms_to_xml(struct dom_xml **dom_xml_list,
                                    "Failed to get xml desc");
                         break;
                 }
+
+                (*dom_xml_list)[i].state = dom_state(dom_ptr_list[i]);
         }
         
         return s;
@@ -131,8 +168,15 @@ static bool dom_changed(struct dom_xml prev_dom,
                 if (strcmp(cur_xml[i].uuid, prev_dom.uuid) != 0)
                         continue;
                 
-                if (strcmp(cur_xml[i].xml, prev_dom.xml) != 0)
+                if (strcmp(cur_xml[i].xml, prev_dom.xml) != 0) {
+                        CU_DEBUG("Domain config changed");
                         ret = true;
+                }
+
+                if (prev_dom.state != cur_xml[i].state) {
+                        CU_DEBUG("Domain state changed");
+                        ret = true;
+                }
 
                 break;
         }
