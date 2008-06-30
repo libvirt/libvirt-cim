@@ -505,11 +505,23 @@ static struct std_indication_handler csi = {
 DECLARE_FILTER(xen_created, "Xen_ComputerSystemCreatedIndication");
 DECLARE_FILTER(xen_deleted, "Xen_ComputerSystemDeletedIndication");
 DECLARE_FILTER(xen_modified, "Xen_ComputerSystemModifiedIndication");
+DECLARE_FILTER(kvm_created, "KVM_ComputerSystemCreatedIndication");
+DECLARE_FILTER(kvm_deleted, "KVM_ComputerSystemDeletedIndication");
+DECLARE_FILTER(kvm_modified, "KVM_ComputerSystemModifiedIndication");
+DECLARE_FILTER(lxc_created, "LXC_ComputerSystemCreatedIndication");
+DECLARE_FILTER(lxc_deleted, "LXC_ComputerSystemDeletedIndication");
+DECLARE_FILTER(lxc_modified, "LXC_ComputerSystemModifiedIndication");
 
 static struct std_ind_filter *filters[] = {
         &xen_created,
         &xen_deleted,
         &xen_modified,
+        &kvm_created,
+        &kvm_deleted,
+        &kvm_modified,
+        &lxc_created,
+        &lxc_deleted,
+        &lxc_modified,
         NULL,
 };
 
