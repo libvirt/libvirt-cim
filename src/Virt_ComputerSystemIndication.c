@@ -56,7 +56,7 @@ static pthread_cond_t lifecycle_cond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t lifecycle_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool lifecycle_enabled = 0;
 
-#define WAIT_TIME 180
+#define WAIT_TIME 60
 #define FAIL_WAIT_TIME 2
 
 struct dom_xml {
