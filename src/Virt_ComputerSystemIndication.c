@@ -339,7 +339,8 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
 
         conn = connect_by_classname(_BROKER, args->classname, &s);
         if (conn == NULL) {
-                CU_DEBUG("Failed to connect: %s", CMGetCharPtr(s.msg));
+                CU_DEBUG("Unable to start lifecycle thread: "
+                         "Failed to connect (cn: %s)", args->classname);
                 goto out;
         }
 
