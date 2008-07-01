@@ -774,14 +774,14 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
 
 static bool trigger_indication(const CMPIContext *context,
                                const char *base_type,
-                               const char *ns)
+                               const CMPIObjectPath *ref)
 {
         char *type;
         CMPIStatus s;
 
-        type = get_typed_class("Xen", base_type);
+        type = get_typed_class(CLASSNAME(ref), base_type);
 
-        s = stdi_trigger_indication(_BROKER, context, type, ns);
+        s = stdi_trigger_indication(_BROKER, context, type, NAMESPACE(ref));
 
         free(type);
 
@@ -814,7 +814,7 @@ static CMPIStatus define_system(CMPIMethodMI *self,
 
         trigger_indication(context,
                            "ComputerSystemCreatedIndication",
-                           NAMESPACE(reference));
+                           reference);
  out:
         return s;
 }
@@ -862,7 +862,7 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
                 rc = IM_RC_OK;
                 trigger_indication(context,
                                    "ComputerSystemDeletedIndication",
-                                   NAMESPACE(reference));
+                                   reference);
         }
 
 error:
@@ -936,7 +936,7 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         if (s.rc == CMPI_RC_OK) {
                 trigger_indication(context,
                                    "ComputerSystemModifiedIndication",
-                                   NAMESPACE(ref));
+                                   ref);
         }
 
  out:
