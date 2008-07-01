@@ -240,8 +240,12 @@ static bool _do_indication(const CMPIBroker *broker,
         CU_DEBUG("Delivering Indication: %s",
                  CMGetCharPtr(CMObjectPathToString(ind_op, NULL)));
 
-        stdi_deliver(broker, ctx, args, ind);
-        CU_DEBUG("Delivered");
+        s = stdi_deliver(broker, ctx, args, ind);
+        if (s.rc == CMPI_RC_OK) {
+                CU_DEBUG("Indication delivered");
+        } else {
+                CU_DEBUG("Not delivered: %s", CMGetCharPtr(s.msg));
+        }
 
  out:
         return ret;
