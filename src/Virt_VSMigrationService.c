@@ -712,12 +712,47 @@ static bool raise_indication(const CMPIContext *context,
 {
         char *type;
         CMPIStatus s;
+        CMPIObjectPath *ref;
         const char *ind_name = NULL;
+        const char *host = NULL;
+        const char *ccname = NULL;
 
         if (ind == NULL)
                 return false;
 
         ind_name = ind_type_to_name(ind_type);
+
+        /* FIXME: This is a hack until we un-Xenify this provider */
+        ref = CMNewObjectPath(_BROKER, ns, "Xen_Foo", &s);
+        if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get job reference");
+        } else {
+                s = get_host_system_properties(&host, &ccname, ref, _BROKER);
+                if (s.rc == CMPI_RC_OK) {
+                        CMSetProperty(ind, "SourceInstanceHost",
+                                      (CMPIValue *)host, CMPI_chars);
+                } else {
+                        CU_DEBUG("Unable to get HostSystem properties");
+                }
+        }
+
+        /* FIXME: This should be merged with above once the job path is
+         *        properly typed
+         */
+        ref = CMGetObjectPath(inst, &s);
+        if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Failed to get job reference");
+        } else {
+                CMPIString *str;
+
+                str = CMObjectPathToString(ref, &s);
+                if ((str == NULL) || (s.rc != CMPI_RC_OK)) {
+                        CU_DEBUG("Failed to get path string");
+                } else {
+                        CMSetProperty(ind, "SourceInstanceModelPath",
+                                      (CMPIValue *)&str, CMPI_string);
+                }
+        }
 
         CU_DEBUG("Setting SourceInstance");
         CMSetProperty(ind, "SourceInstance",
