@@ -46,7 +46,13 @@
 
 static const CMPIBroker *_BROKER;
 
-static CMPI_THREAD_TYPE lifecycle_thread_id = 0;
+#define CSI_NUM_PLATFORMS 3
+enum CSI_PLATFORMS {CSI_XEN,
+                    CSI_KVM,
+                    CSI_LXC,
+};
+
+static CMPI_THREAD_TYPE thread_id[CSI_NUM_PLATFORMS];
 
 enum CS_EVENTS {CS_CREATED,
                 CS_DELETED,
@@ -362,6 +368,18 @@ static bool async_ind(CMPIContext *context,
         return rc;
 }
 
+static int platform_from_class(const char *cn)
+{
+        if (STARTS_WITH(cn, "Xen"))
+                return CSI_XEN;
+        else if (STARTS_WITH(cn, "KVM"))
+                return CSI_KVM;
+        else if (STARTS_WITH(cn, "LXC"))
+                return CSI_LXC;
+        else
+                return -1;
+}
+
 static CMPI_THREAD_RETURN lifecycle_thread(void *params)
 {
         struct ind_args *args = (struct ind_args *)params;
@@ -374,6 +392,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         struct dom_xml *prev_xml = NULL;
         virConnectPtr conn;
         char *prefix = class_prefix_name(args->classname);
+        int platform = platform_from_class(args->classname);
 
         conn = connect_by_classname(_BROKER, args->classname, &s);
         if (conn == NULL) {
@@ -393,7 +412,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         free_domain_list(tmp_list, prev_count);
         free(tmp_list);
 
-        CU_DEBUG("entering event loop");
+        CU_DEBUG("Entering CSI event loop (%s)", prefix);
         while (lifecycle_enabled) {
                 int i;
                 bool res;
@@ -449,12 +468,12 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         }
 
  out:
+        thread_id[platform] = 0;
+
         pthread_mutex_unlock(&lifecycle_mutex);
         stdi_free_ind_args(&args);
         free(prefix);
         virConnectClose(conn);
-
-        lifecycle_thread_id = 0;
 
         return NULL;
 }
@@ -469,7 +488,8 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
         CU_DEBUG("ActivateFilter");
         CMPIStatus s = {CMPI_RC_OK, NULL};
         struct std_indication_ctx *_ctx;
-        struct ind_args *args = malloc(sizeof(struct ind_args));
+        struct ind_args *args;
+        int platform;
 
         _ctx = (struct std_indication_ctx *)mi->hdl;
 
@@ -479,14 +499,41 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
                            "No ObjectPath given");
                 goto out;
         }
-        args->ns = strdup(NAMESPACE(op));
-        args->classname = strdup(CLASSNAME(op));
-        args->_ctx = _ctx;
 
-        if (lifecycle_thread_id == 0) {
+        /* FIXME: op is stale the second time around, for some reason */
+        platform = platform_from_class(CLASSNAME(op));
+        if (platform < 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unknown platform");
+                goto out;
+        }
+
+        if (thread_id[platform] == 0) {
+                args = malloc(sizeof(struct ind_args));
+                if (args == NULL) {
+                        CU_DEBUG("Failed to allocate ind_args");
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to allocate ind_args");
+                        goto out;
+                }
+
                 args->context = CBPrepareAttachThread(_BROKER, ctx);
+                if (args->context == NULL) {
+                        CU_DEBUG("Failed to create thread context");
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to create thread context");
+                        free(args);
+                        goto out;
+                }
 
-                lifecycle_thread_id = _BROKER->xft->newThread(lifecycle_thread,
+                args->ns = strdup(NAMESPACE(op));
+                args->classname = strdup(CLASSNAME(op));
+                args->_ctx = _ctx;
+
+                thread_id[platform] = _BROKER->xft->newThread(lifecycle_thread,
                                                               args,
                                                               0);
         }
@@ -508,6 +555,7 @@ static CMPIStatus DeActivateFilter(CMPIIndicationMI* mi,
 static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
                                    const CMPIContext *ctx)
 {
+        CU_DEBUG("EnableIndications");
         pthread_mutex_lock(&lifecycle_mutex);
         lifecycle_enabled = true;
         pthread_mutex_unlock(&lifecycle_mutex);
