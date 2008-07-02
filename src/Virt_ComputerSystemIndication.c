@@ -42,6 +42,7 @@
 
 #include "Virt_ComputerSystem.h"
 #include "Virt_ComputerSystemIndication.h"
+#include "Virt_HostSystem.h"
 
 static const CMPIBroker *_BROKER;
 
@@ -184,6 +185,33 @@ static bool dom_changed(struct dom_xml prev_dom,
         return ret;
 }
 
+static void set_source_inst_props(const CMPIBroker *broker,
+                                  CMPIObjectPath *ref,
+                                  CMPIInstance *ind)
+{
+        const char *host;
+        const char *hostccn;
+        CMPIStatus s;
+        CMPIString *str;
+
+        str = CMObjectPathToString(ref, &s);
+        if ((str == NULL) || (s.rc != CMPI_RC_OK)) {
+                CU_DEBUG("Unable to get path string");
+        } else {
+                CMSetProperty(ind, "SourceInstanceModelPath",
+                              (CMPIValue *)&str, CMPI_string);
+        }
+
+        s = get_host_system_properties(&host, &hostccn, ref, broker);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Unable to get host properties (%s): %s",
+                         CLASSNAME(ref), CMGetCharPtr(s.msg));
+        } else {
+                CMSetProperty(ind, "SourceInstanceHost",
+                              (CMPIValue *)host, CMPI_chars);
+        }
+}
+
 static bool _do_indication(const CMPIBroker *broker,
                            const CMPIContext *ctx,
                            CMPIInstance *affected_inst,
@@ -217,17 +245,21 @@ static bool _do_indication(const CMPIBroker *broker,
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("Failed to get ind_op.  Error: '%s'", s.msg);
                 ret = false;
+                goto out;
         }
+        CMSetNameSpace(ind_op, args->ns);
+
+        affected_op = CMGetObjectPath(affected_inst, &s);
+        if (s.rc != CMPI_RC_OK) {
+                ret = false;
+                CU_DEBUG("problem getting affected_op: '%s'", s.msg);
+                goto out;
+        }
+        CMSetNameSpace(affected_op, args->ns);
 
         switch (ind_type) {
         case CS_CREATED:
         case CS_DELETED:
-                affected_op = CMGetObjectPath(affected_inst, &s);
-                if (s.rc != CMPI_RC_OK) {
-                        ret = false;
-                        CU_DEBUG("problem getting affected_op: '%s'", s.msg);
-                        goto out;
-                }
                 CMSetProperty(ind, "AffectedSystem",
                               (CMPIValue *)&affected_op, CMPI_ref);
                 break;
@@ -236,6 +268,8 @@ static bool _do_indication(const CMPIBroker *broker,
                               (CMPIValue *)&affected_inst, CMPI_instance);
                 break;
         }
+
+        set_source_inst_props(broker, affected_op, ind);
 
         CU_DEBUG("Delivering Indication: %s",
                  CMGetCharPtr(CMObjectPathToString(ind_op, NULL)));
