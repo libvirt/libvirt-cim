@@ -53,6 +53,7 @@ enum CSI_PLATFORMS {CSI_XEN,
 };
 
 static CMPI_THREAD_TYPE thread_id[CSI_NUM_PLATFORMS];
+static int active_filters[CSI_NUM_PLATFORMS];
 
 enum CS_EVENTS {CS_CREATED,
                 CS_DELETED,
@@ -331,6 +332,11 @@ static bool async_ind(CMPIContext *context,
         char *type_name = NULL;
         CMPIInstance *affected_inst;
 
+        if (!lifecycle_enabled) {
+                CU_DEBUG("CSI not enabled, skipping indication delivery");
+                return false;
+        }
+
         affected_inst = get_typed_instance(_BROKER,
                                            prefix,
                                            "ComputerSystem",
@@ -413,7 +419,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         free(tmp_list);
 
         CU_DEBUG("Entering CSI event loop (%s)", prefix);
-        while (lifecycle_enabled) {
+        while (active_filters[platform] > 0) {
                 int i;
                 bool res;
                 bool failure = false;
@@ -468,6 +474,8 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         }
 
  out:
+        CU_DEBUG("Exiting CSI event loop (%s)", prefix);
+
         thread_id[platform] = 0;
 
         pthread_mutex_unlock(&lifecycle_mutex);
@@ -485,11 +493,14 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
                                  const CMPIObjectPath* op,
                                  CMPIBoolean first)
 {
-        CU_DEBUG("ActivateFilter");
         CMPIStatus s = {CMPI_RC_OK, NULL};
         struct std_indication_ctx *_ctx;
         struct ind_args *args;
         int platform;
+
+        CU_DEBUG("ActivateFilter for %s", CLASSNAME(op));
+
+        pthread_mutex_lock(&lifecycle_mutex);
 
         _ctx = (struct std_indication_ctx *)mi->hdl;
 
@@ -533,12 +544,17 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
                 args->classname = strdup(CLASSNAME(op));
                 args->_ctx = _ctx;
 
+                active_filters[platform] += 1;
+
                 thread_id[platform] = _BROKER->xft->newThread(lifecycle_thread,
                                                               args,
                                                               0);
-        }
+        } else
+                active_filters[platform] += 1;
 
  out:
+        pthread_mutex_unlock(&lifecycle_mutex);
+
         return s;
 }
 
@@ -549,7 +565,26 @@ static CMPIStatus DeActivateFilter(CMPIIndicationMI* mi,
                                    const CMPIObjectPath* op,
                                    CMPIBoolean last)
 {
-        return (CMPIStatus){CMPI_RC_OK, NULL};
+        int platform;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CU_DEBUG("DeActivateFilter for %s", CLASSNAME(op));
+
+        platform = platform_from_class(CLASSNAME(op));
+        if (platform < 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unknown platform");
+                goto out;
+        }
+
+        pthread_mutex_lock(&lifecycle_mutex);
+        active_filters[platform] -= 1;
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        pthread_cond_signal(&lifecycle_cond);
+ out:
+        return s;
 }
 
 static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
@@ -566,6 +601,7 @@ static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
 static _EI_RTYPE DisableIndications(CMPIIndicationMI* mi,
                                     const CMPIContext *ctx)
 {
+        CU_DEBUG("DisableIndications");
         pthread_mutex_lock(&lifecycle_mutex);
         lifecycle_enabled = false;
         pthread_mutex_unlock(&lifecycle_mutex);
