@@ -858,11 +858,17 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
         infostore_delete(virConnectGetType(conn), dom_name);
 
         virDomainDestroy(dom); /* Okay for this to fail */
-        if (virDomainUndefine(dom) == 0) {
+
+        dom = virDomainLookupByName(conn, dom_name);
+        if (dom == NULL) {
+                CU_DEBUG("Domain successfully destroyed");
                 rc = IM_RC_OK;
-                trigger_indication(context,
-                                   "ComputerSystemDeletedIndication",
-                                   reference);
+                goto error;
+        }
+
+        if (virDomainUndefine(dom) == 0) {
+                CU_DEBUG("Domain successfully destroyed and undefined");
+                rc = IM_RC_OK;
         }
 
 error:
@@ -874,8 +880,12 @@ error:
                 cu_statusf(_BROKER, &status,
                            CMPI_RC_ERR_FAILED,
                            "Unable to retrieve domain name.");
-        else if (rc == IM_RC_OK)
+        else if (rc == IM_RC_OK) {
                 status = (CMPIStatus){CMPI_RC_OK, NULL};
+                trigger_indication(context,
+                                   "ComputerSystemDeletedIndication",
+                                   reference);
+        }
 
         virDomainFree(dom);
         virConnectClose(conn);
