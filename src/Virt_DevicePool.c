@@ -108,6 +108,8 @@ static bool diskpool_set_capacity(virConnectPtr conn,
         bool result = false;
         virStoragePoolPtr pool;
         virStoragePoolInfo info;
+        uint64_t cap;
+        uint64_t res;
 
         pool = virStoragePoolLookupByName(conn, _pool->tag);
         if (pool == NULL) {
@@ -120,11 +122,14 @@ static bool diskpool_set_capacity(virConnectPtr conn,
                 goto out;
         }
 
+        cap = info.capacity >> 20;
+        res = info.allocation >> 20;
+
         CMSetProperty(inst, "Capacity",
-                      (CMPIValue *)&info.capacity, CMPI_uint64);
+                      (CMPIValue *)&cap, CMPI_uint64);
 
         CMSetProperty(inst, "Reserved",
-                      (CMPIValue *)&info.allocation, CMPI_uint64);
+                      (CMPIValue *)&res, CMPI_uint64);
 
         result = true;
  out:
