@@ -237,9 +237,11 @@ static int set_state_from_dom(const CMPIBroker *broker,
         int ret;
         uint16_t cim_state;
         uint16_t health_state;
+        uint16_t req_state;
         uint16_t op_status;
         CMPIArray *array;
         CMPIStatus s;
+        struct infostore_ctx *infostore = NULL;
 
         ret = virDomainGetInfo(dom, &info);
         if (ret != 0)
@@ -262,6 +264,17 @@ static int set_state_from_dom(const CMPIBroker *broker,
 
         CMSetProperty(instance, "OperationalStatus",
                       (CMPIValue *)&array, CMPI_uint16A);
+
+        infostore = infostore_open(dom);
+        if (infostore != NULL)
+                req_state = (uint16_t)infostore_get_u64(infostore, "reqstate");
+        else
+                req_state = CIM_STATE_UNKNOWN;
+
+        CMSetProperty(instance, "RequestedState",
+                      (CMPIValue *)&req_state, CMPI_uint16);
+
+        infostore_close(infostore);
 
         return 1;
 }
@@ -809,6 +822,7 @@ static CMPIStatus __state_change(const char *name,
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
         virDomainInfo info;
+        struct infostore_ctx *infostore = NULL;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL)
@@ -843,6 +857,12 @@ static CMPIStatus __state_change(const char *name,
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_SUPPORTED,
                            "State not supported");
+
+        infostore = infostore_open(dom);
+        if (infostore != NULL) {
+                infostore_set_u64(infostore, "reqstate", (uint64_t)state);
+                infostore_close(infostore);
+        }
 
  out:
         virDomainFree(dom);
