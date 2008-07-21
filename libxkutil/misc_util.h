@@ -34,6 +34,12 @@
 #include <libcmpiutil/libcmpiutil.h>
 #include <libcmpiutil/std_association.h>
 
+#undef CMSetObjectPath
+#define CMSetObjectPath(i,p) do { \
+        if (i->ft->setObjectPath != NULL)  \
+          i->ft->setObjectPath(i, p); \
+        } while (0);
+
 /* Check if the provider is reponsible for the given class:
  * e.g. Xen is running on the system and KVM_... is asked for,
  * the provider is not responsible for the request -> 
