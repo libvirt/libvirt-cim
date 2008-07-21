@@ -68,24 +68,34 @@ enum ResourceAction {
 static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                                            CMPIInstance **sys,
                                            const char *ns,
-                                           CMPIArray **res)
+                                           CMPIArray **res,
+                                           CMPIObjectPath **refconf)
 {
-        CMPIStatus s = {CMPI_RC_ERR_FAILED, NULL};
+        CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (cu_get_inst_arg(argsin, "SystemSettings", sys) != CMPI_RC_OK) {
                 CU_DEBUG("No SystemSettings string argument");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `SystemSettings'");
                 goto out;
         }
 
         if (cu_get_array_arg(argsin, "ResourceSettings", res) !=
             CMPI_RC_OK) {
                 CU_DEBUG("Failed to get array arg");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `ResourceSettings'");
                 goto out;
         }
 
-        cu_statusf(_BROKER, &s,
-                   CMPI_RC_OK,
-                   "");
+        if (cu_get_ref_arg(argsin, "ReferenceConfiguration", refconf) !=
+            CMPI_RC_OK) {
+                CU_DEBUG("Did not get ReferenceConfiguration arg");
+                *refconf = NULL;
+                goto out;
+        }
  out:
         return s;
 }
@@ -565,6 +575,20 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
         return msg;
 }
 
+static bool make_space(struct virt_device **list, int cur, int new)
+{
+        struct virt_device *tmp;
+
+        tmp = calloc(cur + new, sizeof(*tmp));
+        if (tmp == NULL)
+                return false;
+
+        memcpy(tmp, *list, sizeof(*tmp) * cur);
+        *list = tmp;
+
+        return true;
+}
+
 static const char *classify_resources(CMPIArray *resources,
                                       const char *ns,
                                       struct domain *domain)
@@ -573,17 +597,21 @@ static const char *classify_resources(CMPIArray *resources,
         uint16_t type;
         int count;
 
-        domain->dev_disk_ct = domain->dev_net_ct = 0;
-        domain->dev_vcpu_ct = domain->dev_mem_ct = 0;
-  
         count = CMGetArrayCount(resources, NULL);
         if (count < 1)
                 return "No resources specified";
 
-        domain->dev_disk = calloc(count, sizeof(struct virt_device));
-        domain->dev_vcpu = calloc(count, sizeof(struct virt_device));
-        domain->dev_mem = calloc(count, sizeof(struct virt_device));
-        domain->dev_net = calloc(count, sizeof(struct virt_device));
+        if (!make_space(&domain->dev_disk, domain->dev_disk_ct, count))
+                return "Failed to alloc disk list";
+
+        if (!make_space(&domain->dev_vcpu, domain->dev_vcpu_ct, count))
+                return "Failed to alloc vcpu list";
+
+        if (!make_space(&domain->dev_mem, domain->dev_mem_ct, count))
+                return "Failed to alloc mem list";
+
+        if (!make_space(&domain->dev_net, domain->dev_net_ct, count))
+                return "Failed to alloc net list";
 
         for (i = 0; i < count; i++) {
                 CMPIObjectPath *op;
@@ -605,27 +633,29 @@ static const char *classify_resources(CMPIArray *resources,
                     CMPI_RC_OK)
                         return "Unable to determine resource type";
 
-                if (type == CIM_RES_TYPE_PROC)
+                if (type == CIM_RES_TYPE_PROC) {
+                        domain->dev_vcpu_ct = 1;
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_vcpu[domain->dev_vcpu_ct++],
+                                           &domain->dev_vcpu[0],
                                            ns);
-                else if (type == CIM_RES_TYPE_MEM)
+                } else if (type == CIM_RES_TYPE_MEM) {
+                        domain->dev_mem_ct = 1;
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_mem[domain->dev_mem_ct++],
+                                           &domain->dev_mem[0],
                                            ns);
-                else if (type == CIM_RES_TYPE_DISK)
+                } else if (type == CIM_RES_TYPE_DISK) {
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &domain->dev_disk[domain->dev_disk_ct++],
                                            ns);
-                else if (type == CIM_RES_TYPE_NET)
+                } else if (type == CIM_RES_TYPE_NET) {
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &domain->dev_net[domain->dev_net_ct++],
                                            ns);
-
+                }
                 if (msg != NULL)
                         return msg;
 
@@ -722,23 +752,125 @@ static CMPIStatus update_dominfo(const struct domain *dominfo,
         return s;
 }
 
+static CMPIStatus match_prefixes(const CMPIObjectPath *a,
+                                 const CMPIObjectPath *b)
+{
+        char *pfx1;
+        char *pfx2;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        pfx1 = class_prefix_name(CLASSNAME(a));
+        pfx2 = class_prefix_name(CLASSNAME(b));
+
+        if ((pfx1 == NULL) || (pfx2 == NULL)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable compare ReferenceConfiguration prefix");
+                goto out;
+        }
+
+        if (!STREQ(pfx1, pfx2)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_CLASS,
+                           "ReferenceConfiguration domain is not compatible");
+                goto out;
+        }
+ out:
+        free(pfx1);
+        free(pfx2);
+
+        return s;
+}
+
+static CMPIStatus get_reference_domain(struct domain **domain,
+                                       const CMPIObjectPath *ref,
+                                       const CMPIObjectPath *refconf)
+{
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
+        const char *name;
+        CMPIStatus s;
+        int ret;
+
+        s = match_prefixes(ref, refconf);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(refconf), &s);
+        if (conn == NULL) {
+                if (s.rc != CMPI_RC_OK)
+                        return s;
+                else {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to connect to libvirt");
+                        return s;
+                }
+        }
+
+        if (cu_get_str_path(refconf, "Name", &name) != CMPI_RC_OK) {
+                CU_DEBUG("Missing Name parameter");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing `Name' from ReferenceConfiguration");
+                goto out;
+        }
+
+        CU_DEBUG("Referenced domain: %s", name);
+
+        dom = virDomainLookupByName(conn, name);
+        if (dom == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Referenced domain `%s' does not exist", name);
+                goto out;
+        }
+
+        ret = get_dominfo(dom, domain);
+        if (ret == 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error getting referenced configuration");
+                goto out;
+        }
+
+        /* Scrub the unique bits out of the reference domain config */
+        free((*domain)->name);
+        (*domain)->name = NULL;
+        free((*domain)->uuid);
+        (*domain)->uuid = NULL;
+
+ out:
+        virDomainFree(dom);
+        virConnectClose(conn);
+
+        return s;
+}
+
 static CMPIInstance *create_system(CMPIInstance *vssd,
                                    CMPIArray *resources,
                                    const CMPIObjectPath *ref,
+                                   const CMPIObjectPath *refconf,
                                    CMPIStatus *s)
 {
         CMPIInstance *inst = NULL;
         char *xml = NULL;
         const char *msg = NULL;
 
-        struct domain *domain;
+        struct domain *domain = NULL;
 
-        domain = calloc(1, sizeof(*domain));
-        if (domain == NULL) {
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to allocate memory");
-                goto out;
+        if (refconf != NULL) {
+                *s = get_reference_domain(&domain, ref, refconf);
+                if (s->rc != CMPI_RC_OK)
+                        goto out;
+        } else {
+                domain = calloc(1, sizeof(*domain));
+                if (domain == NULL) {
+                        cu_statusf(_BROKER, s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to allocate memory");
+                        goto out;
+                }
         }
 
         if (!vssd_to_domain(vssd, domain)) {
@@ -795,6 +927,7 @@ static CMPIStatus define_system(CMPIMethodMI *self,
                                 const CMPIArgs *argsin,
                                 CMPIArgs *argsout)
 {
+        CMPIObjectPath *refconf;
         CMPIInstance *vssd;
         CMPIInstance *sys;
         CMPIArray *res;
@@ -802,11 +935,15 @@ static CMPIStatus define_system(CMPIMethodMI *self,
 
         CU_DEBUG("DefineSystem");
 
-        s = define_system_parse_args(argsin, &vssd, NAMESPACE(reference), &res);
+        s = define_system_parse_args(argsin,
+                                     &vssd,
+                                     NAMESPACE(reference),
+                                     &res,
+                                     &refconf);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        sys = create_system(vssd, res, reference, &s);
+        sys = create_system(vssd, res, reference, refconf, &s);
         if (sys == NULL)
                 goto out;
 
