@@ -673,12 +673,45 @@ static void set_scheduler_params(virDomainPtr dom)
 static int domain_reset(virDomainPtr dom)
 {
         int ret;
+        virConnectPtr conn = NULL;
+        virDomainInfo info;
+        char *xml = NULL;
+
+        conn = virDomainGetConnect(dom);
+        if (conn == NULL) {
+                CU_DEBUG("Unable to get connection from domain");
+                return 1;
+        }
+
+        xml = virDomainGetXMLDesc(dom, 0);
+        if (xml == NULL) {
+                CU_DEBUG("Unable to retrieve domain XML");
+                return 1;
+        }
 
         ret = virDomainDestroy(dom);
         if (ret)
-                return ret;
+                goto out;
+
+        dom = virDomainLookupByName(virDomainGetConnect(dom),
+                                     virDomainGetName(dom));
+
+        if (dom == NULL) {
+            dom = virDomainDefineXML(conn, xml);
+            if (dom == NULL) {
+                CU_DEBUG("Failed to define domain from XML");
+                ret = 1;
+                goto out;
+            }
+        }
+
+        if (!domain_online(dom))
+            CU_DEBUG("Guest is now offline");
 
         ret = virDomainCreate(dom);
+
+ out:
+        free(xml);
 
         return ret;
 }
