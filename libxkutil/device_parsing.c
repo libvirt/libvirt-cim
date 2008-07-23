@@ -310,6 +310,8 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         ndev->source = strdup(DEFAULT_NETWORK);
                         CU_DEBUG("No network, taking default of `%s'\n",
                                  ndev->source);
+                } else if (STREQC(ndev->type, "user")){
+                        CU_DEBUG("Leaving source blank for user net type");
                 } else {
                         /* This likely indicates an unsupported
                          * network configuration

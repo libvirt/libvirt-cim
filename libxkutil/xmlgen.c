@@ -244,12 +244,36 @@ static bool network_net_to_xml(char **xml, struct virt_device *dev)
         return true;
 }
 
+static bool user_net_to_xml(char **xml, struct virt_device *dev)
+{
+        int ret;
+        char *_xml;
+        struct net_device *net = &dev->dev.net;
+
+        ret = asprintf(&_xml,
+                       "<interface type='%s'>\n"
+                       "  <mac address='%s'/>\n"
+                       "</interface>\n",
+                       net->type,
+                       net->mac);
+        if (ret == -1)
+                return false;
+        else
+                astrcat(xml, _xml);
+
+        free(_xml);
+
+        return true;
+}
+
 static bool net_to_xml(char **xml, struct virt_device *dev)
 {
         if (STREQ(dev->dev.net.type, "network"))
                 return network_net_to_xml(xml, dev);
         else if (STREQ(dev->dev.net.type, "bridge"))
                 return bridge_net_to_xml(xml, dev);
+        else if (STREQ(dev->dev.net.type, "user"))
+                return user_net_to_xml(xml, dev);
         else
                 return false;
 }
