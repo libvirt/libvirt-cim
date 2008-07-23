@@ -674,7 +674,6 @@ static int domain_reset(virDomainPtr dom)
 {
         int ret;
         virConnectPtr conn = NULL;
-        virDomainInfo info;
         char *xml = NULL;
 
         conn = virDomainGetConnect(dom);
