@@ -1706,6 +1706,9 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         const char *name = NULL;
         const char *ccname = NULL;
         virConnectPtr conn = NULL;
+        unsigned long hv_version = 0;
+        const char * hv_type = NULL;
+        char *caption = NULL;
 
         *_inst = NULL;
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
@@ -1742,6 +1745,30 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                 goto out;
         }
 
+        hv_type = virConnectGetType(conn);
+        if (hv_type == NULL)
+                hv_type = "Unkown";
+
+        if (virConnectGetVersion(conn, &hv_version) < 0) {
+                CU_DEBUG("Unable to get hypervisor version");
+                hv_version = 0;
+        }
+
+        if (asprintf(&caption,
+                     "%s %lu.%lu.%lu",
+                     hv_type,
+                     hv_version / 1000000,
+                     (hv_version % 1000000) / 1000,
+                     (hv_version % 1000000) % 1000) == -1)
+                caption = NULL;
+
+        if (caption != NULL)
+                CMSetProperty(inst, "Caption",
+                              (CMPIValue *)caption, CMPI_chars);
+        else
+                CMSetProperty(inst, "Caption",
+                              (CMPIValue *)"Unknown Hypervisor", CMPI_chars);
+
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"Management Service", CMPI_chars);
 
@@ -1767,6 +1794,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                    CMPI_RC_OK,
                    "");
  out:
+        free(caption);
         virConnectClose(conn);
         *_inst = inst;
 
