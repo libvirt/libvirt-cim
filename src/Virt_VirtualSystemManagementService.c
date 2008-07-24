@@ -1258,14 +1258,14 @@ static CMPIStatus resource_del(struct domain *dominfo,
 
         _list = find_list(dominfo, type, &count);
         if ((type == CIM_RES_TYPE_MEM) || (type == CIM_RES_TYPE_PROC) ||
-           (_list != NULL))
-                list = *_list;
-        else {
+            (*_list == NULL)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Cannot delete resources of type %" PRIu16, type);
                 goto out;
         }
+
+        list = *_list;
 
         cu_statusf(_BROKER, &s,
                    CMPI_RC_ERR_FAILED,
