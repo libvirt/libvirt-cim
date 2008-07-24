@@ -383,21 +383,53 @@ bool domain_online(virDomainPtr dom)
 {
         virDomainInfo info;
         virDomainPtr _dom;
-        bool rc;
+        bool rc = false;
+        virConnectPtr conn = NULL;
+        int flags[] = {VIR_DOMAIN_BLOCKED,
+                       VIR_DOMAIN_RUNNING,
+                       VIR_DOMAIN_NOSTATE,
+        };
+        int compare_flags = 3;
+        int i;
+
+        conn = virDomainGetConnect(dom);
+        if (conn == NULL) {
+                CU_DEBUG("Unknown connection type, assuming RUNNING,BLOCKED");
+                compare_flags = 2;
+        } else if (STREQC(virConnectGetType(conn), "Xen")) {
+                CU_DEBUG("Type is Xen");
+                compare_flags = 3;
+        } else if (STREQC(virConnectGetType(conn), "QEMU")) {
+                CU_DEBUG("Type is KVM");
+                compare_flags = 2;
+        } else if (STREQC(virConnectGetType(conn), "LXC")) {
+                CU_DEBUG("Type is LXC");
+                compare_flags = 2;
+        } else {
+                CU_DEBUG("Unknown type `%s', assuming RUNNING,BLOCKED",
+                         virConnectGetType(conn));
+                compare_flags = 2;
+        }
 
         _dom = virDomainLookupByName(virDomainGetConnect(dom),
                                      virDomainGetName(dom));
         if (_dom == NULL) {
                 CU_DEBUG("Unable to re-lookup domain");
-                return false;
+                goto out;
         }
 
-        if (virDomainGetInfo(_dom, &info) != 0)
+        if (virDomainGetInfo(_dom, &info) != 0) {
                 rc = false;
-        else
-                rc = (info.state == VIR_DOMAIN_BLOCKED) ||
-                        (info.state == VIR_DOMAIN_RUNNING) ||
-                        (info.state == VIR_DOMAIN_NOSTATE);
+                goto out;
+        }
+
+        for (i = 0; i < compare_flags; i++) {
+                if (info.state == flags[i]) {
+                        rc = true;
+                        break;
+                }
+        }
+ out:
         virDomainFree(_dom);
 
         return rc;
