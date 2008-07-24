@@ -469,12 +469,37 @@ static const char *lxc_disk_rasd_to_vdev(CMPIInstance *inst,
 static const char *mem_rasd_to_vdev(CMPIInstance *inst,
                                     struct virt_device *dev)
 {
+        const char *units;
+        int shift;
+
         cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
         cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
         dev->dev.mem.maxsize = dev->dev.mem.size;
         cu_get_u64_prop(inst, "Limit", &dev->dev.mem.maxsize);
-        dev->dev.mem.size <<= 10;
-        dev->dev.mem.maxsize <<= 10;
+
+        if (cu_get_str_prop(inst, "AllocationUnits", &units) != CMPI_RC_OK) {
+                CU_DEBUG("Memory RASD has no units, assuming bytes");
+                units = "Bytes";
+        }
+
+        if (STREQC(units, "Bytes"))
+                shift = -10;
+        else if (STREQC(units, "KiloBytes"))
+                shift = 0;
+        else if (STREQC(units, "MegaBytes"))
+                shift = 10;
+        else if (STREQC(units, "GigaBytes"))
+                shift = 20;
+        else
+                return "Unknown AllocationUnits in Memory RASD";
+
+        if (shift < 0) {
+                dev->dev.mem.size >>= -shift;
+                dev->dev.mem.maxsize >>= -shift;
+        } else {
+                dev->dev.mem.size <<= shift;
+                dev->dev.mem.maxsize <<= shift;
+        }
 
         return NULL;
 }
