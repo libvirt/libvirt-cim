@@ -974,8 +974,10 @@ static CMPIStatus define_system(CMPIMethodMI *self,
                 goto out;
 
         result = CMGetObjectPath(sys, &s);
-        if ((result != NULL) && (s.rc == CMPI_RC_OK))
+        if ((result != NULL) && (s.rc == CMPI_RC_OK)) {
+                CMSetNameSpace(result, NAMESPACE(reference));
                 CMAddArg(argsout, "ResultingSystem", &result, CMPI_ref);
+        }
 
         trigger_indication(context,
                            "ComputerSystemCreatedIndication",
