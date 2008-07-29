@@ -953,6 +953,7 @@ static CMPIStatus define_system(CMPIMethodMI *self,
                                 CMPIArgs *argsout)
 {
         CMPIObjectPath *refconf;
+        CMPIObjectPath *result;
         CMPIInstance *vssd;
         CMPIInstance *sys;
         CMPIArray *res;
@@ -972,7 +973,9 @@ static CMPIStatus define_system(CMPIMethodMI *self,
         if (sys == NULL)
                 goto out;
 
-        CMAddArg(argsout, "ResultingSystem", &sys, CMPI_instance);
+        result = CMGetObjectPath(sys, &s);
+        if ((result != NULL) && (s.rc == CMPI_RC_OK))
+                CMAddArg(argsout, "ResultingSystem", &result, CMPI_ref);
 
         trigger_indication(context,
                            "ComputerSystemCreatedIndication",
