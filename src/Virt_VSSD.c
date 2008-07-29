@@ -81,6 +81,11 @@ static void _set_pv_prop(struct domain *dominfo,
                 CMSetProperty(inst, "Ramdisk",
                               (CMPIValue *)dominfo->os_info.pv.initrd,
                               CMPI_chars);
+
+        if (dominfo->os_info.pv.cmdline != NULL)
+                CMSetProperty(inst, "CommandLine",
+                              (CMPIValue *)dominfo->os_info.pv.cmdline,
+                              CMPI_chars);
 }
 
 static int instance_from_dom(virDomainPtr dom,

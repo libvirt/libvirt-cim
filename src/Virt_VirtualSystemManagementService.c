@@ -136,6 +136,13 @@ static int xenpv_vssd_to_domain(CMPIInstance *inst,
         else
                 domain->os_info.pv.initrd = NULL;
 
+        free(domain->os_info.pv.cmdline);
+        ret = cu_get_str_prop(inst, "CommandLine", &val);
+        if (ret == CMPI_RC_OK)
+                domain->os_info.pv.cmdline = strdup(val);
+        else
+                domain->os_info.pv.cmdline = NULL;
+
         return 1;
 }
 
