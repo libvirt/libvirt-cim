@@ -3,20 +3,20 @@
 [Association,
  Provider("cmpi::Virt_VSSDComponent")
 ]
-class Xen_VirtualSystemSettingDataComponent : CIM_Component
+class Xen_VirtualSystemSettingDataComponent : CIM_VirtualSystemSettingDataComponent
 {
 };
 
 [Association,
  Provider("cmpi::Virt_VSSDComponent")
 ]
-class KVM_VirtualSystemSettingDataComponent : CIM_Component
+class KVM_VirtualSystemSettingDataComponent : CIM_VirtualSystemSettingDataComponent
 {
 };
 
 [Association,
  Provider("cmpi::Virt_VSSDComponent")
 ]
-class LXC_VirtualSystemSettingDataComponent : CIM_Component
+class LXC_VirtualSystemSettingDataComponent : CIM_VirtualSystemSettingDataComponent
 {
 };
