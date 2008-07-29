@@ -142,6 +142,98 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
         return s;
 }
 
+static bool get_file_size(const CMPIBroker *broker,
+                          const CMPIObjectPath *ref,
+                          const char *image,
+                          uint64_t *size)
+{
+        struct stat st;
+
+        if (stat(image, &st) == -1)
+                return false;
+
+        *size = st.st_size;
+
+        return true;
+}
+
+#if LIBVIR_VERSION_NUMBER > 4000
+static bool get_vol_size(const CMPIBroker *broker,
+                         const CMPIObjectPath *ref,
+                         const char *image,
+                         uint64_t *size)
+{
+        virConnectPtr conn = NULL;
+        virStorageVolPtr vol = NULL;
+        virStorageVolInfo volinfo;
+        CMPIStatus s;
+        bool ret = false;
+
+        *size = 0;
+
+        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return false;
+
+        vol = virStorageVolLookupByPath(conn, image);
+        if (vol != NULL) {
+                if (virStorageVolGetInfo(vol, &volinfo) != 0) {
+                        CU_DEBUG("Failed to get info for volume %s", image);
+                } else {
+                        *size = volinfo.capacity;
+                        ret = true;
+                }
+        } else {
+                CU_DEBUG("Failed to lookup pool for volume %s", image);
+        }
+
+        virStorageVolFree(vol);
+        virConnectClose(conn);
+
+        if (!ret)
+                return get_file_size(broker, ref, image, size);
+        else
+                return true;
+}
+#else
+static bool get_vol_size(const CMPIBroker *broker,
+                         const CMPIObjectPath *ref,
+                         const char *image,
+                         uint64_t *size)
+{
+        return get_file_size(broker, ref, image, size);
+}
+#endif
+
+static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
+                                       const CMPIObjectPath *ref,
+                                       const struct virt_device *dev,
+                                       CMPIInstance *inst)
+{
+        uint64_t cap = 0;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        get_vol_size(broker, ref, dev->dev.disk.source, &cap);
+
+        CMSetProperty(inst, "VirtualQuantity",
+                      (CMPIValue *)&cap, CMPI_uint64);
+
+        CMSetProperty(inst, "AllocationUnits",
+                      (CMPIValue *)"Bytes", CMPI_chars);
+
+        CMSetProperty(inst,
+                      "VirtualDevice",
+                      (CMPIValue *)dev->dev.disk.virtual_dev,
+                      CMPI_chars);
+
+        CMSetProperty(inst,
+                      "Address",
+                      (CMPIValue *)dev->dev.disk.source,
+                      CMPI_chars);
+
+        return s;
+}
+
 static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                     struct virt_device *dev,
                                     const char *host,
@@ -192,14 +284,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                       (CMPIValue *)&type, CMPI_uint16);
 
         if (dev->type == CIM_RES_TYPE_DISK) {
-                CMSetProperty(inst,
-                              "VirtualDevice",
-                              (CMPIValue *)dev->dev.disk.virtual_dev,
-                              CMPI_chars);
-                CMSetProperty(inst,
-                              "Address",
-                              (CMPIValue *)dev->dev.disk.source,
-                              CMPI_chars);
+                s = set_disk_rasd_params(broker, ref, dev, inst);
         } else if (dev->type == CIM_RES_TYPE_NET) {
                 CMSetProperty(inst,
                               "NetworkType",
