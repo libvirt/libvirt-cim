@@ -813,7 +813,8 @@ static CMPIStatus get_reference_domain(struct domain **domain,
 {
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
-        const char *name;
+        char *name = NULL;
+        const char *iid;
         CMPIStatus s;
         int ret;
 
@@ -833,11 +834,19 @@ static CMPIStatus get_reference_domain(struct domain **domain,
                 }
         }
 
-        if (cu_get_str_path(refconf, "Name", &name) != CMPI_RC_OK) {
-                CU_DEBUG("Missing Name parameter");
+        if (cu_get_str_path(refconf, "InstanceID", &iid) != CMPI_RC_OK) {
+                CU_DEBUG("Missing InstanceID parameter");
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
-                           "Missing `Name' from ReferenceConfiguration");
+                           "Missing `InstanceID' from ReferenceConfiguration");
+                goto out;
+        }
+
+        if (!parse_id(iid, NULL, &name)) {
+                CU_DEBUG("Failed to parse InstanceID: %s", iid);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Invalid `InstanceID' from ReferenceConfiguration");
                 goto out;
         }
 
@@ -868,6 +877,7 @@ static CMPIStatus get_reference_domain(struct domain **domain,
  out:
         virDomainFree(dom);
         virConnectClose(conn);
+        free(name);
 
         return s;
 }
