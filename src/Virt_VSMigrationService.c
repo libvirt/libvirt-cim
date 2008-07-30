@@ -857,7 +857,7 @@ static void raise_deleted_ind(struct migration_job *job)
 
         ind = prepare_indication(_BROKER, inst, job->ref_ns, MIG_DELETED, &s);
         
-        rc = raise_indication(job->context, MIG_MODIFIED, job->ref_ns, 
+        rc = raise_indication(job->context, MIG_DELETED, job->ref_ns,
                               inst, ind);
         if (!rc)
                 CU_DEBUG("Failed to raise indication");
