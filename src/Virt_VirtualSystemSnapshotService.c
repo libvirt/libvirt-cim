@@ -195,6 +195,9 @@ static void do_snapshot(struct snap_context *ctx,
                 snap_job_set_status(ctx,
                                     CIM_JOBSTATE_RUNNING,
                                     "Restore finished");
+
+                if (!ctx->save)
+                        vsss_delete_snapshot(virDomainGetName(dom));
         }
 
         CU_DEBUG("Snapshot (%s/%s) completed",
