@@ -43,6 +43,7 @@
 
 #include "Virt_ComputerSystem.h"
 #include "Virt_HostSystem.h"
+#include "Virt_VirtualSystemSnapshotService.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -229,6 +230,18 @@ static uint16_t state_lv_to_cim_os(const char lv_state)
         }
 }
 
+static uint16_t adjust_state_if_saved(const char *name,
+                                      uint16_t state)
+{
+        if (state != CIM_STATE_DISABLED)
+                return state;
+
+        if (vsss_has_save_image(name))
+                return CIM_STATE_SUSPENDED;
+
+        return state;
+}
+
 static int set_state_from_dom(const CMPIBroker *broker,
                               virDomainPtr dom,
                               CMPIInstance *instance)
@@ -248,6 +261,7 @@ static int set_state_from_dom(const CMPIBroker *broker,
                 return 0;
 
         cim_state = state_lv_to_cim((const int)info.state);
+        cim_state = adjust_state_if_saved(virDomainGetName(dom), cim_state);
         CMSetProperty(instance, "EnabledState",
                       (CMPIValue *)&cim_state, CMPI_uint16);
 
@@ -715,6 +729,29 @@ static int domain_reset(virDomainPtr dom)
         return ret;
 }
 
+static CMPIStatus start_domain(virDomainPtr dom)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (vsss_has_save_image(virDomainGetName(dom))) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_SUPPORTED,
+                           "Domain has a snapshot");
+                return s;
+        }
+
+        if (virDomainCreate(dom) != 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to start domain");
+                return s;
+        }
+
+        set_scheduler_params(dom);
+
+        return s;
+}
+
 static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -723,8 +760,7 @@ static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
         switch (info->state) {
         case VIR_DOMAIN_SHUTOFF:
                 CU_DEBUG("Start domain");
-                ret = virDomainCreate(dom);
-                set_scheduler_params(dom);
+                s = start_domain(dom);
                 break;
         case VIR_DOMAIN_PAUSED:
                 CU_DEBUG("Unpause domain");

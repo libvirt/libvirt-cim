@@ -21,6 +21,8 @@
 
 /* Returns a malloc()'d string; caller must free() */
 char *vsss_get_save_path(const char *domname);
+bool vsss_has_save_image(const char *domname);
+CMPIStatus vsss_delete_snapshot(const char *domname);
 
 CMPIStatus get_vsss(const CMPIBroker *broker,
                     const CMPIObjectPath *ref,

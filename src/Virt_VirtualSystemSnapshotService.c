@@ -321,6 +321,24 @@ char *vsss_get_save_path(const char *domname)
         return path;
 }
 
+bool vsss_has_save_image(const char *domname)
+{
+        char *path = NULL;
+        bool result = false;
+
+        path = vsss_get_save_path(domname);
+        if (path == NULL) {
+                CU_DEBUG("Failed top get save path for %s", domname);
+                return false;
+        }
+
+        result = access(path, R_OK | W_OK | F_OK) == 0;
+
+        free(path);
+
+        return result;
+}
+
 static struct snap_context *new_context(const char *name,
                                         CMPIStatus *s)
 {
@@ -445,6 +463,30 @@ static CMPIStatus create_snapshot(CMPIMethodMI *self,
         return s;
 }
 
+CMPIStatus vsss_delete_snapshot(const char *domname)
+{
+        CMPIStatus s;
+        char *path = NULL;
+
+        path = vsss_get_save_path(domname);
+        if (path == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get save_path");
+                goto out;
+        }
+
+        if (unlink(path) == -1) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to remove snapshot: %s", path);
+        }
+ out:
+        free(path);
+
+        return s;
+}
+
 static CMPIStatus destroy_snapshot(CMPIMethodMI *self,
                                    const CMPIContext *context,
                                    const CMPIResult *results,
@@ -455,7 +497,6 @@ static CMPIStatus destroy_snapshot(CMPIMethodMI *self,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIObjectPath *snap;
         char *name = NULL;
-        char *path = NULL;
         uint32_t retcode = CIM_RETURN_FAILED;
 
         if (cu_get_ref_arg(argsin, "AffectedSnapshot", &snap) != CMPI_RC_OK) {
@@ -472,25 +513,15 @@ static CMPIStatus destroy_snapshot(CMPIMethodMI *self,
                 goto out;
         }
 
-        path = vsss_get_save_path(name);
-        if (path == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get save_path");
-                goto out;
-        }
+        s = vsss_delete_snapshot(name);
 
-        if (unlink(path) == -1) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to remove snapshot: %s", path);
-        }
-
-        retcode = CIM_RETURN_COMPLETED;
+        if (s.rc == CMPI_RC_OK)
+                retcode = CIM_RETURN_COMPLETED;
+        else
+                retcode = CIM_RETURN_FAILED;
  out:
         CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
 
-        free(path);
         free(name);
 
         return s;

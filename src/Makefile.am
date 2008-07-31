@@ -67,6 +67,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_ElementSettingData.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
+libVirt_ComputerSystem_la_DEPENDENCIES = libVirt_VirtualSystemSnapshotService.la
+libVirt_ComputerSystem_la_LIBADD = -lVirt_VirtualSystemSnapshotService
 libVirt_Device_la_SOURCES = Virt_Device.c
 
 libVirt_ComputerSystemIndication_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_HostSystem.la
