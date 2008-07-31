@@ -1,6 +1,6 @@
 # (C) Copyright IBM Corp. 2005
 
-AC_INIT(libvirt CMPI provider, 0.6, danms@us.ibm.com, libvirt-cim)
+AC_INIT(libvirt CMPI provider, 0.5.1, danms@us.ibm.com, libvirt-cim)
 
 AC_CONFIG_SRCDIR([src/Virt_ComputerSystem.c])
 
