@@ -151,6 +151,9 @@ static bool save_xml(struct infostore_ctx *ctx)
 
         lseek(ctx->fd, 0, SEEK_SET);
 
+        if (ftruncate(ctx->fd, 0) != 0)
+                CU_DEBUG("Unable to truncate infostore");
+
         save = xmlSaveToFd(ctx->fd, NULL, 0);
         if (save == NULL) {
                 CU_DEBUG("Failed to allocate save context");
