@@ -78,7 +78,7 @@ struct migration_job {
         char *ref_ns;
         char *host;
         uint16_t type;
-        char uuid[33];
+        char uuid[VIR_UUID_STRING_BUFLEN];
 };
 
 static CMPIStatus get_msd(const CMPIObjectPath *ref,

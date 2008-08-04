@@ -51,7 +51,7 @@ static const CMPIBroker *_BROKER;
 struct snap_context {
         CMPIContext *context;
         char *domain;
-        char uuid[33];
+        char uuid[VIR_UUID_STRING_BUFLEN];
         char *save_path;
         char *ref_ns;
         char *ref_cn;
