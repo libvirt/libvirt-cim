@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <inttypes.h>
 #include <sys/file.h>
+#include <string.h>
 
 #include <libvirt/libvirt.h>
 #include <libxml/parser.h>
@@ -164,7 +165,7 @@ static bool save_xml(struct infostore_ctx *ctx)
         return size >= 0;
 }
 
-struct infostore_ctx *infostore_open(virDomainPtr dom)
+static struct infostore_ctx *_infostore_open(virDomainPtr dom)
 {
         struct infostore_ctx *isc;
         struct stat s;
@@ -228,6 +229,58 @@ struct infostore_ctx *infostore_open(virDomainPtr dom)
         free(filename);
 
         return NULL;
+}
+
+static struct infostore_ctx *delete_and_open(virDomainPtr dom)
+{
+        char *filename = NULL;
+
+        filename = make_filename(dom);
+        if (filename == NULL) {
+                CU_DEBUG("Failed to make filename for domain");
+                return NULL;
+        }
+
+        if (unlink(filename) != 0) {
+                CU_DEBUG("Unable to delete %s: %m", filename);
+        } else {
+                CU_DEBUG("Deleted %s", filename);
+        }
+
+        free(filename);
+
+        return _infostore_open(dom);
+}
+
+struct infostore_ctx *infostore_open(virDomainPtr dom)
+{
+        struct infostore_ctx *isc;
+        char uuid[VIR_UUID_STRING_BUFLEN];
+        char *_uuid = NULL;
+
+        isc = _infostore_open(dom);
+        if (isc == NULL)
+                return NULL;
+
+        if (virDomainGetUUIDString(dom, uuid) != 0) {
+                CU_DEBUG("Failed to get UUID string for comparison");
+                infostore_close(isc);
+                isc = delete_and_open(dom);
+                return isc;
+        }
+
+        _uuid = infostore_get_str(isc, "uuid");
+        if (_uuid == NULL)
+                goto out;
+
+        if (!STREQ(uuid, _uuid)) {
+                infostore_close(isc);
+                isc = delete_and_open(dom);
+        }
+ out:
+        free(_uuid);
+        infostore_set_str(isc, "uuid", uuid);
+        return isc;
 }
 
 void infostore_close(struct infostore_ctx *ctx)
