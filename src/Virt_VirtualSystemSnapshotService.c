@@ -397,7 +397,7 @@ static CMPIStatus start_snapshot_job(const CMPIObjectPath *ref,
         }
 
         ctx->save = (type != 0);
-        ctx->restore = (type != VIR_VSSS_SNAPSHOT_MEM);
+        ctx->restore = (type != VIR_VSSS_SNAPSHOT_MEMT);
 
         s = create_job(context, ref, ctx, &job);
 
