@@ -230,6 +230,22 @@ static uint16_t state_lv_to_cim_os(const char lv_state)
         }
 }
 
+static unsigned char adjust_state_xen(virDomainPtr dom,
+                                      unsigned char state)
+{
+        virConnectPtr conn;
+
+        if (state != VIR_DOMAIN_NOSTATE)
+                return state;
+
+        conn = virDomainGetConnect(dom);
+
+        if (STREQC(virConnectGetType(conn), "Xen"))
+           return VIR_DOMAIN_RUNNING;
+
+        return state;
+}
+
 static uint16_t adjust_state_if_saved(const char *name,
                                       uint16_t state)
 {
@@ -259,6 +275,8 @@ static int set_state_from_dom(const CMPIBroker *broker,
         ret = virDomainGetInfo(dom, &info);
         if (ret != 0)
                 return 0;
+
+        info.state = adjust_state_xen(dom, info.state);
 
         cim_state = state_lv_to_cim((const int)info.state);
         cim_state = adjust_state_if_saved(virDomainGetName(dom), cim_state);
@@ -812,6 +830,8 @@ static CMPIStatus state_change_pause(virDomainPtr dom, virDomainInfoPtr info)
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret = 0;
 
+        info->state = adjust_state_xen(dom, info->state);
+
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
         case VIR_DOMAIN_BLOCKED:
@@ -837,9 +857,12 @@ static CMPIStatus state_change_reboot(virDomainPtr dom, virDomainInfoPtr info)
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret = 0;
 
+        info->state = adjust_state_xen(dom, info->state);
+
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
         case VIR_DOMAIN_BLOCKED:
+        case VIR_DOMAIN_PAUSED:
                 CU_DEBUG("Reboot domain");
                 ret = virDomainReboot(dom, 0);
                 break;
@@ -862,9 +885,12 @@ static CMPIStatus state_change_reset(virDomainPtr dom, virDomainInfoPtr info)
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret = 0;
 
+        info->state = adjust_state_xen(dom, info->state);
+
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
         case VIR_DOMAIN_BLOCKED:
+        case VIR_DOMAIN_PAUSED:
                 CU_DEBUG("Reset domain");
                 ret = domain_reset(dom);
                 break;
