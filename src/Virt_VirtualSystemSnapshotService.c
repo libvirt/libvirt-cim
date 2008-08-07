@@ -542,7 +542,7 @@ static CMPIStatus apply_snapshot(CMPIMethodMI *self,
         char *name = NULL;
         uint32_t retcode = CIM_RETURN_FAILED;
 
-        if (cu_get_ref_arg(argsin, "AffectedSnapshot", &snap) != CMPI_RC_OK) {
+        if (cu_get_ref_arg(argsin, "Snapshot", &snap) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
                            "Missing Snapshot");
@@ -587,7 +587,7 @@ static struct method_handler DestroySnapshot = {
 static struct method_handler ApplySnapshot = {
         .name = "ApplySnapshot",
         .handler = apply_snapshot,
-        .args = {{"AffectedSnapshot", CMPI_ref, false},
+        .args = {{"Snapshot", CMPI_ref, false},
                  ARG_END}
 };
 
