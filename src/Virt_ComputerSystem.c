@@ -804,6 +804,8 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret = 0;
 
+        info->state = adjust_state_xen(dom, info->state);
+
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
         case VIR_DOMAIN_BLOCKED:
@@ -811,7 +813,8 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
                 ret = virDomainShutdown(dom);
                 break;
         default:
-                CU_DEBUG("Cannot go to disabled state from %i", info->state);
+                CU_DEBUG("Cannot go to disabled/shutdown state from %i", 
+                         info->state);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid state transition");
@@ -939,7 +942,7 @@ static CMPIStatus __state_change(const char *name,
 
         if (state == CIM_STATE_ENABLED)
                 s = state_change_enable(dom, &info);
-        else if (state == CIM_STATE_DISABLED)
+        else if ((state == CIM_STATE_DISABLED) || (state == CIM_STATE_SHUTDOWN))
                 s = state_change_disable(dom, &info);
         else if (state == CIM_STATE_PAUSED)
                 s = state_change_pause(dom, &info);
