@@ -58,21 +58,27 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)"ManagementCapabilities", CMPI_chars);
 
-        array = CMNewArray(broker, 4, CMPI_uint16, &s);
+        array = CMNewArray(broker, 6, CMPI_uint16, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(array))
                 goto out;
-        
-        element = (uint16_t)DEFINE_SYSTEM;
+
+        element = (uint16_t)ADD_RESOURCES;
         CMSetArrayElementAt(array, 0, &element, CMPI_uint16);
 
-        element = (uint16_t)DESTROY_SYSTEM;
+        element = (uint16_t)DEFINE_SYSTEM;
         CMSetArrayElementAt(array, 1, &element, CMPI_uint16);
 
-        element = (uint16_t)MOD_RESOURCE_SETTINGS;
+        element = (uint16_t)DESTROY_SYSTEM;
         CMSetArrayElementAt(array, 2, &element, CMPI_uint16);
 
-        element = (uint16_t)MOD_SYS_SETTINGS;
+        element = (uint16_t)MOD_RESOURCE_SETTINGS;
         CMSetArrayElementAt(array, 3, &element, CMPI_uint16);
+
+        element = (uint16_t)MOD_SYS_SETTINGS;
+        CMSetArrayElementAt(array, 4, &element, CMPI_uint16);
+
+        element = (uint16_t)RM_RESOURCES;
+        CMSetArrayElementAt(array, 5, &element, CMPI_uint16);
 
         CMSetProperty(inst, "SynchronousMethodsSupported",
                       (CMPIValue *)&array, CMPI_uint16A);
