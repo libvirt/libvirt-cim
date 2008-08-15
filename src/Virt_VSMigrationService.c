@@ -722,8 +722,7 @@ static bool raise_indication(const CMPIContext *context,
 
         ind_name = ind_type_to_name(ind_type);
 
-        /* FIXME: This is a hack until we un-Xenify this provider */
-        ref = CMNewObjectPath(_BROKER, ns, "Xen_Foo", &s);
+        ref = CMGetObjectPath(inst, &s);
         if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
                 CU_DEBUG("Failed to get job reference");
         } else {
@@ -734,15 +733,7 @@ static bool raise_indication(const CMPIContext *context,
                 } else {
                         CU_DEBUG("Unable to get HostSystem properties");
                 }
-        }
 
-        /* FIXME: This should be merged with above once the job path is
-         *        properly typed
-         */
-        ref = CMGetObjectPath(inst, &s);
-        if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
-                CU_DEBUG("Failed to get job reference");
-        } else {
                 CMPIString *str;
 
                 str = CMObjectPathToString(ref, &s);
@@ -758,8 +749,7 @@ static bool raise_indication(const CMPIContext *context,
         CMSetProperty(ind, "SourceInstance",
                       (CMPIValue *)&inst, CMPI_instance);
 
-        /* Seems like this shouldn't be hardcoded. */
-        type = get_typed_class("Xen", ind_name);
+        type = get_typed_class(CLASSNAME(ref), ind_name);
 
         s = stdi_raise_indication(_BROKER, context, type, ns, ind);
 
@@ -770,33 +760,35 @@ static bool raise_indication(const CMPIContext *context,
 
 static CMPIInstance *prepare_indication(const CMPIBroker *broker,
                                         CMPIInstance *inst,
-                                        char *ns,
+                                        struct migration_job *job,
                                         int ind_type,
                                         CMPIStatus *s)
 {
         const char *ind_name = NULL;
         CMPIInstance *ind = NULL;
         CMPIInstance *prev_inst = NULL;
+        const char *pfx = NULL;
 
         ind_name = ind_type_to_name(ind_type);
 
         CU_DEBUG("Creating indication.");
-        /* Prefix needs to be dynamic */
+
+        pfx = pfx_from_conn(job->conn);
+
         ind = get_typed_instance(broker, 
-                                 "Xen", 
+                                 pfx, 
                                  ind_name, 
-                                 ns);
-        /* Prefix needs to be dynamic */
+                                 job->ref_ns);
         if (ind == NULL) {
                 CU_DEBUG("Failed to create ind, type '%s:%s_%s'", 
-                         ns, "Xen", ind_name);
+                         job->ref_ns, pfx, ind_name);
                 goto out;
         }
 
         if (ind_type == MIG_MODIFIED) {
-                /* Need to copy job inst before attaching as PreviousInstance because 
-                   otherwise the changes we are about to make to job inst are made 
-                   to PreviousInstance as well. */
+                /* Need to copy job inst before attaching as PreviousInstance 
+                   because otherwise the changes we are about to make to job
+                   inst are made to PreviousInstance as well. */
                 prev_inst = cu_dup_instance(_BROKER, inst, s);
                 if (s->rc != CMPI_RC_OK || prev_inst == NULL) {
                         CU_DEBUG("dup_instance failed (%i:%s)", s->rc, s->msg);
@@ -816,10 +808,13 @@ static CMPIObjectPath *ref_from_job(struct migration_job *job,
                                     CMPIStatus *s)
 {
         CMPIObjectPath *ref = NULL;
+        char *type;
+        
+        type = get_typed_class(job->ref_cn, "MigrationJob");
         
         ref = CMNewObjectPath(_BROKER,
                               job->ref_ns,
-                              "Virt_MigrationJob",
+                              type,
                               s);
         if (s->rc != CMPI_RC_OK) {
                 CU_DEBUG("Failed to create job ref for update");
@@ -833,6 +828,8 @@ static CMPIObjectPath *ref_from_job(struct migration_job *job,
                  CMGetCharPtr(CMObjectPathToString(ref, NULL)));
         
  out:
+        free(type);
+
         return ref;
 }
 
@@ -855,7 +852,7 @@ static void raise_deleted_ind(struct migration_job *job)
                 return;
         }
 
-        ind = prepare_indication(_BROKER, inst, job->ref_ns, MIG_DELETED, &s);
+        ind = prepare_indication(_BROKER, inst, job, MIG_DELETED, &s);
         
         rc = raise_indication(job->context, MIG_DELETED, job->ref_ns,
                               inst, ind);
@@ -886,7 +883,7 @@ static void migrate_job_set_state(struct migration_job *job,
                 return;
         }
 
-        ind = prepare_indication(_BROKER, inst, job->ref_ns, MIG_MODIFIED, &s);
+        ind = prepare_indication(_BROKER, inst, job, MIG_MODIFIED, &s);
 
         CMSetProperty(inst, "JobState",
                       (CMPIValue *)&state, CMPI_uint16);
@@ -1238,6 +1235,7 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
         CMPIDateTime *start;
         CMPIBoolean autodelete = true;
         uint16_t state = CIM_JOBSTATE_STARTING;
+        char *type = NULL;
 
         start = CMNewDateTime(_BROKER, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(start)) {
@@ -1246,9 +1244,10 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
                            "Failed to get job start time");
                 goto out;
         }
+        
+        type = get_typed_class(job->ref_cn, "MigrationJob");
 
-        jobinst = _migrate_job_new_instance("Virt_MigrationJob",
-                                            job->ref_ns);
+        jobinst = _migrate_job_new_instance(type, job->ref_ns);
         if (jobinst == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -1291,6 +1290,8 @@ static CMPIStatus migrate_create_job_instance(const CMPIContext *context,
         CMSetNameSpace(*job_op, job->ref_ns);
 
  out:
+        free(type);
+
         return s;
 }
 
@@ -1362,7 +1363,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        ind = prepare_indication(_BROKER, inst, job->ref_ns, MIG_CREATED, &s);
+        ind = prepare_indication(_BROKER, inst, job, MIG_CREATED, &s);
         rc = raise_indication(job->context, MIG_CREATED, job->ref_ns, 
                               inst, ind);
         if (!rc)

@@ -65,7 +65,7 @@ class CIM_VirtualSystemMigrationService : CIM_Service {
       );
 };
 
-class Virt_MigrationJob : CIM_ConcreteJob {
+class Xen_MigrationJob : CIM_ConcreteJob {
 };
 
 [Provider("cmpi::Virt_VSMigrationService")]
