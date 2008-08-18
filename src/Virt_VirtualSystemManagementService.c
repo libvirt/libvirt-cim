@@ -411,6 +411,9 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         free(dev->dev.net.mac);
         dev->dev.net.mac = strdup(val);
 
+        free(dev->id);
+        dev->id = strdup(dev->dev.net.mac);
+
         op = CMGetObjectPath(inst, NULL);
         if (op == NULL) {
                 CU_DEBUG("Unable to get instance path");
@@ -449,6 +452,9 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         dev->dev.disk.source = strdup(val);
         dev->dev.disk.disk_type = disk_type_from_file(val);
 
+        free(dev->id);
+        dev->id = strdup(dev->dev.disk.virtual_dev);
+
         return NULL;
 }
 
@@ -469,6 +475,9 @@ static const char *lxc_disk_rasd_to_vdev(CMPIInstance *inst,
         free(dev->dev.disk.source);
         dev->dev.disk.source = strdup(val);
         dev->dev.disk.disk_type = DISK_FS;
+
+        free(dev->id);
+        dev->id = strdup(dev->dev.disk.virtual_dev);
 
         return NULL;
 }
@@ -621,6 +630,33 @@ static bool make_space(struct virt_device **list, int cur, int new)
         return true;
 }
 
+static char *add_device_nodup(struct virt_device *dev,
+                              struct virt_device *list,
+                              int max,
+                              int *index)
+{
+        int i;
+
+        for (i = 0; i < *index; i++) {
+                struct virt_device *ptr = &list[i];
+
+                if (STREQC(ptr->id, dev->id)) {
+                        CU_DEBUG("Overriding device %s from refconf", ptr->id);
+                        cleanup_virt_device(ptr);
+                        memcpy(ptr, dev, sizeof(*ptr));
+                        return NULL;
+                }
+        }
+
+        if (*index == max)
+                return "Internal error: no more device slots";
+
+        memcpy(&list[*index], dev, sizeof(list[*index]));
+        *index += 1;
+
+        return NULL;
+}
+
 static const char *classify_resources(CMPIArray *resources,
                                       const char *ns,
                                       struct domain *domain)
@@ -678,15 +714,33 @@ static const char *classify_resources(CMPIArray *resources,
                                            &domain->dev_mem[0],
                                            ns);
                 } else if (type == CIM_RES_TYPE_DISK) {
+                        struct virt_device dev;
+                        int dcount = count + domain->dev_disk_ct;
+
+                        memset(&dev, 0, sizeof(dev));
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_disk[domain->dev_disk_ct++],
+                                           &dev,
                                            ns);
+                        if (msg == NULL)
+                                msg = add_device_nodup(&dev,
+                                                       domain->dev_disk,
+                                                       dcount,
+                                                       &domain->dev_disk_ct);
                 } else if (type == CIM_RES_TYPE_NET) {
+                        struct virt_device dev;
+                        int ncount = count + domain->dev_net_ct;
+
+                        memset(&dev, 0, sizeof(dev));
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_net[domain->dev_net_ct++],
+                                           &dev,
                                            ns);
+                        if (msg == NULL)
+                                msg = add_device_nodup(&dev,
+                                                       domain->dev_net,
+                                                       ncount,
+                                                       &domain->dev_net_ct);
                 }
                 if (msg != NULL)
                         return msg;
