@@ -97,6 +97,7 @@ DEFAULT_INST_CLEANUP();
 CMPIStatus get_rpcs(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
                     const CMPIBroker *broker,
+                    const CMPIContext *context,
                     bool is_get_inst)
 {
         CMPIInstance *inst;
@@ -129,7 +130,8 @@ CMPIStatus get_rpcs(const CMPIObjectPath *reference,
         s = get_host_system_properties(&name, 
                                        &ccname, 
                                        reference, 
-                                       broker);
+                                       broker,
+                                       context);
         if (s.rc != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -160,7 +162,8 @@ CMPIStatus get_rpcs(const CMPIObjectPath *reference,
         return s;
 }
 
-static CMPIStatus return_rpcs(const CMPIResult *results,
+static CMPIStatus return_rpcs(const CMPIContext *context,
+                              const CMPIResult *results,
                               const CMPIObjectPath *reference,
                               bool names_only,
                               bool is_get_inst)
@@ -168,7 +171,7 @@ static CMPIStatus return_rpcs(const CMPIResult *results,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         
-        s = get_rpcs(reference, &inst, _BROKER, is_get_inst);
+        s = get_rpcs(reference, &inst, _BROKER, context, is_get_inst);
         if (s.rc != CMPI_RC_OK || inst == NULL)
                 goto out;
         
@@ -187,7 +190,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_rpcs(results, reference, false, true);
+        return return_rpcs(context, results, reference, false, true);
 }
 
 static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
@@ -195,7 +198,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_rpcs(results, reference, true, false);
+        return return_rpcs(context, results, reference, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -204,7 +207,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const CMPIObjectPath *reference,
                                 const char **properties)
 {
-        return return_rpcs(results, reference, false, false);
+        return return_rpcs(context, results, reference, false, false);
 }
 
 

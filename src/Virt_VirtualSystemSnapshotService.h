@@ -25,6 +25,7 @@ bool vsss_has_save_image(const char *domname);
 CMPIStatus vsss_delete_snapshot(const char *domname);
 
 CMPIStatus get_vsss(const CMPIBroker *broker,
+                    const CMPIContext *context,
                     const CMPIObjectPath *ref,
                     CMPIInstance **_inst,
                     bool is_get_inst);

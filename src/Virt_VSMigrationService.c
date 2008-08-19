@@ -726,7 +726,11 @@ static bool raise_indication(const CMPIContext *context,
         if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
                 CU_DEBUG("Failed to get job reference");
         } else {
-                s = get_host_system_properties(&host, &ccname, ref, _BROKER);
+                s = get_host_system_properties(&host,
+                                               &ccname,
+                                               ref,
+                                               _BROKER,
+                                               context);
                 if (s.rc == CMPI_RC_OK) {
                         CMSetProperty(ind, "SourceInstanceHost",
                                       (CMPIValue *)host, CMPI_chars);
@@ -1510,6 +1514,7 @@ STDIM_MethodMIStub(, Virt_VSMigrationService, _BROKER,
 CMPIStatus get_migration_service(const CMPIObjectPath *ref,
                                  CMPIInstance **_inst,
                                  const CMPIBroker *broker,
+                                 const CMPIContext *context,
                                  bool is_get_inst)
 {
         CMPIInstance *inst;
@@ -1541,7 +1546,8 @@ CMPIStatus get_migration_service(const CMPIObjectPath *ref,
         s = get_host_system_properties(&name, 
                                        &ccname, 
                                        ref, 
-                                       broker);
+                                       broker,
+                                       context);
         if (s.rc != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -1576,7 +1582,8 @@ CMPIStatus get_migration_service(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus return_vsms(const CMPIObjectPath *ref,
+static CMPIStatus return_vsms(const CMPIContext *context,
+                              const CMPIObjectPath *ref,
                               const CMPIResult *results,
                               bool name_only,
                               bool is_get_inst)
@@ -1584,7 +1591,7 @@ static CMPIStatus return_vsms(const CMPIObjectPath *ref,
         CMPIInstance *inst = NULL;
         CMPIStatus s;
 
-        s = get_migration_service(ref, &inst, _BROKER, is_get_inst);
+        s = get_migration_service(ref, &inst, _BROKER, context, is_get_inst);
         if ((s.rc != CMPI_RC_OK) || (inst == NULL))
                 goto out;
 
@@ -1601,7 +1608,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *ref)
 {
-        return return_vsms(ref, results, true, false);
+        return return_vsms(context, ref, results, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -1611,7 +1618,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_vsms(ref, results, false, false);
+        return return_vsms(context, ref, results, false, false);
 }
 
 
@@ -1621,7 +1628,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *ref,
                               const char **properties)
 {
-        return return_vsms(ref, results, false, true);
+        return return_vsms(context, ref, results, false, true);
 }
 
 DEFAULT_CI();

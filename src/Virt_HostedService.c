@@ -37,7 +37,8 @@
 
 const static CMPIBroker *_BROKER;
 
-static CMPIStatus validate_service_ref(const CMPIObjectPath *ref)
+static CMPIStatus validate_service_ref(const CMPIContext *context,
+                                       const CMPIObjectPath *ref)
 {      
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
@@ -46,11 +47,11 @@ static CMPIStatus validate_service_ref(const CMPIObjectPath *ref)
         classname = class_base_name(CLASSNAME(ref));
 
         if (STREQC(classname, "VirtualSystemManagementService")) {
-                s = get_vsms(ref, &inst, _BROKER, true);
+                s = get_vsms(ref, &inst, _BROKER, context, true);
         } else if (STREQC(classname, "ResourcePoolConfigurationService")) {
-                s = get_rpcs(ref, &inst, _BROKER, true);
+                s = get_rpcs(ref, &inst, _BROKER, context, true);
         } else if (STREQC(classname, "VirtualSystemMigrationService")) {
-                s = get_migration_service(ref, &inst, _BROKER, true);
+                s = get_migration_service(ref, &inst, _BROKER, context, true);
         }
         
         free(classname);
@@ -68,11 +69,11 @@ static CMPIStatus service_to_host(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        s = validate_service_ref(ref);
+        s = validate_service_ref(info->context, ref);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        s = get_host(_BROKER, ref, &instance, false);
+        s = get_host(_BROKER, info->context, ref, &instance, false);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, instance);
 
@@ -89,23 +90,23 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 return s;
 
-        s = get_host(_BROKER, ref, &inst, true);
+        s = get_host(_BROKER, info->context, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        s = get_rpcs(ref, &inst, _BROKER, false);
+        s = get_rpcs(ref, &inst, _BROKER, info->context, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
                 inst_list_add(list, inst);
 
-        s = get_vsms(ref, &inst, _BROKER, false);
+        s = get_vsms(ref, &inst, _BROKER, info->context, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
             inst_list_add(list, inst);
 
-        s = get_migration_service(ref, &inst, _BROKER, false);
+        s = get_migration_service(ref, &inst, _BROKER, info->context, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))

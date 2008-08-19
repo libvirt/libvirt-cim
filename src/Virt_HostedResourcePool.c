@@ -52,7 +52,7 @@ static CMPIStatus pool_to_sys(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = get_host(_BROKER, ref, &inst, false);
+        s = get_host(_BROKER, info->context, ref, &inst, false);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -72,7 +72,7 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = get_host(_BROKER, ref, &inst, true);
+        s = get_host(_BROKER, info->context, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 

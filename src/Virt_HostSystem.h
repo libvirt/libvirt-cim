@@ -22,6 +22,7 @@
 #define __VIRT_HOSTSYSTEM_H
 
 CMPIStatus get_host(const CMPIBroker *broker,
+                    const CMPIContext *context,
                     const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
                     bool is_get_inst);
@@ -29,6 +30,7 @@ CMPIStatus get_host(const CMPIBroker *broker,
 CMPIStatus get_host_system_properties(const char **name,
                                       const char **ccname,
                                       const CMPIObjectPath *ref,
-                                      const CMPIBroker *broker);
+                                      const CMPIBroker *broker,
+                                      const CMPIContext *context);
 
 #endif

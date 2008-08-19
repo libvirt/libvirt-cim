@@ -193,6 +193,7 @@ static bool dom_changed(struct dom_xml prev_dom,
 }
 
 static void set_source_inst_props(const CMPIBroker *broker,
+                                  const CMPIContext *context,
                                   CMPIObjectPath *ref,
                                   CMPIInstance *ind)
 {
@@ -209,7 +210,7 @@ static void set_source_inst_props(const CMPIBroker *broker,
                               (CMPIValue *)&str, CMPI_string);
         }
 
-        s = get_host_system_properties(&host, &hostccn, ref, broker);
+        s = get_host_system_properties(&host, &hostccn, ref, broker, context);
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("Unable to get host properties (%s): %s",
                          CLASSNAME(ref), CMGetCharPtr(s.msg));
@@ -276,7 +277,7 @@ static bool _do_indication(const CMPIBroker *broker,
                 break;
         }
 
-        set_source_inst_props(broker, affected_op, ind);
+        set_source_inst_props(broker, ctx, affected_op, ind);
 
         CU_DEBUG("Delivering Indication: %s",
                  CMGetCharPtr(CMObjectPathToString(ind_op, NULL)));

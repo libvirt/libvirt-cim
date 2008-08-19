@@ -53,7 +53,8 @@
 
 const static CMPIBroker *_BROKER;
 
-static CMPIStatus validate_caps_get_service(const CMPIObjectPath *ref,
+static CMPIStatus validate_caps_get_service(const CMPIContext *context,
+                                            const CMPIObjectPath *ref,
                                             CMPIInstance **inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -67,13 +68,13 @@ static CMPIStatus validate_caps_get_service(const CMPIObjectPath *ref,
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
-                s = get_vsms(ref, &_inst, _BROKER, false);
+                s = get_vsms(ref, &_inst, _BROKER, context, false);
         } else if (STREQC(classname, "VirtualSystemMigrationCapabilities")) {
                 s = get_migration_caps(ref, &_inst, _BROKER, true);
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
-                s = get_migration_service(ref, &_inst, _BROKER, false);
+                s = get_migration_service(ref, &_inst, _BROKER, context, false);
         } else
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
@@ -90,7 +91,8 @@ static CMPIStatus validate_caps_get_service(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus validate_service_get_caps(const CMPIObjectPath *ref,
+static CMPIStatus validate_service_get_caps(const CMPIContext *context,
+                                            const CMPIObjectPath *ref,
                                             CMPIInstance **inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -100,13 +102,13 @@ static CMPIStatus validate_service_get_caps(const CMPIObjectPath *ref,
         classname = class_base_name(CLASSNAME(ref));
 
         if (STREQC(classname, "VirtualSystemManagementService")) {
-                s = get_vsms(ref, &_inst, _BROKER, true);
+                s = get_vsms(ref, &_inst, _BROKER, context, true);
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
                 s = get_vsm_cap(_BROKER, ref, &_inst, false);
         } else if (STREQC(classname, "VirtualSystemMigrationService")) {
-                s = get_migration_service(ref, &_inst, _BROKER, true);
+                s = get_migration_service(ref, &_inst, _BROKER, context, true);
                 if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
                         goto out;
 
@@ -134,7 +136,7 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = get_host(_BROKER, ref, &inst, true);
+        s = get_host(_BROKER, info->context, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -165,14 +167,14 @@ static CMPIStatus cap_to_sys_or_service(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = validate_caps_get_service(ref, &inst);
+        s = validate_caps_get_service(info->context, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
         
         if (inst != NULL)
                 inst_list_add(list, inst);
 
-        s = get_host(_BROKER, ref, &inst, false);
+        s = get_host(_BROKER, info->context, ref, &inst, false);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -192,7 +194,7 @@ static CMPIStatus service_to_cap(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = validate_service_get_caps(ref, &inst);
+        s = validate_service_get_caps(info->context, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
@@ -292,7 +294,7 @@ static CMPIStatus alloc_to_pool_and_sys(const CMPIObjectPath *ref,
         if ((ac == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
-        s = get_host(_BROKER, ref, &host, false);
+        s = get_host(_BROKER, info->context, ref, &host, false);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 

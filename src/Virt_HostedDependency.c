@@ -50,7 +50,7 @@ static CMPIStatus vs_to_host(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = get_host(_BROKER, ref, &instance, false);
+        s = get_host(_BROKER, info->context, ref, &instance, false);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, instance);
 
@@ -68,7 +68,7 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = get_host(_BROKER, ref, &instance, true);
+        s = get_host(_BROKER, info->context, ref, &instance, true);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 

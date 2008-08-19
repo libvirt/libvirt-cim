@@ -602,6 +602,7 @@ STDIM_MethodMIStub(, Virt_VirtualSystemSnapshotService,
                    _BROKER, libvirt_cim_init(), handlers);
 
 static CMPIStatus set_inst_properties(const CMPIBroker *broker,
+                                      const CMPIContext *context,
                                       const CMPIObjectPath *reference,
                                       CMPIInstance *inst)
 {
@@ -612,7 +613,8 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         s = get_host_system_properties(&name,
                                        &ccname,
                                        reference,
-                                       broker);
+                                       broker,
+                                       context);
         if (s.rc != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -634,6 +636,7 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
 }
 
 CMPIStatus get_vsss(const CMPIBroker *broker,
+                    const CMPIContext *context,
                     const CMPIObjectPath *ref,
                     CMPIInstance **_inst,
                     bool is_get_inst)
@@ -662,7 +665,7 @@ CMPIStatus get_vsss(const CMPIBroker *broker,
                 goto out;
         }
 
-        s = set_inst_properties(broker, ref, inst);
+        s = set_inst_properties(broker, context, ref, inst);
 
         if (is_get_inst) {
                 s = cu_validate_ref(broker, ref, inst);
@@ -677,7 +680,8 @@ CMPIStatus get_vsss(const CMPIBroker *broker,
         return s;
 }
 
-static CMPIStatus return_vsss(const CMPIObjectPath *ref,
+static CMPIStatus return_vsss(const CMPIContext *context,
+                              const CMPIObjectPath *ref,
                               const CMPIResult *results,
                               bool names_only,
                               bool is_get_inst)
@@ -685,7 +689,7 @@ static CMPIStatus return_vsss(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
 
-        s = get_vsss(_BROKER, ref, &inst, is_get_inst);
+        s = get_vsss(_BROKER, context, ref, &inst, is_get_inst);
         if ((s.rc != CMPI_RC_OK) || (inst == NULL))
                 goto out;
 
@@ -702,7 +706,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_vsss(reference, results, true, false);
+        return return_vsss(context, reference, results, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -712,7 +716,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_vsss(reference, results, false, false);
+        return return_vsss(context, reference, results, false, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -721,7 +725,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *reference,
                               const char **properties)
 {
-        return return_vsss(reference, results, false, true);
+        return return_vsss(context, reference, results, false, true);
 }
 
 DEFAULT_CI();

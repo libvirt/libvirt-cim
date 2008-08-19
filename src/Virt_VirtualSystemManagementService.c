@@ -1800,6 +1800,7 @@ STDIM_MethodMIStub(, Virt_VirtualSystemManagementService,
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
                     const CMPIBroker *broker,
+                    const CMPIContext *context,
                     bool is_get_inst)
 { 
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -1838,7 +1839,8 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         s = get_host_system_properties(&name, 
                                        &ccname, 
                                        reference,
-                                       broker);
+                                       broker,
+                                       context);
         if (s.rc != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -1902,7 +1904,8 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         return s;
 }
 
-static CMPIStatus return_vsms(const CMPIObjectPath *reference,
+static CMPIStatus return_vsms(const CMPIContext *context,
+                              const CMPIObjectPath *reference,
                               const CMPIResult *results,
                               bool name_only,
                               bool is_get_inst)
@@ -1910,7 +1913,7 @@ static CMPIStatus return_vsms(const CMPIObjectPath *reference,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
 
-        s = get_vsms(reference, &inst, _BROKER, is_get_inst);
+        s = get_vsms(reference, &inst, _BROKER, context, is_get_inst);
         if (s.rc != CMPI_RC_OK || inst == NULL)
                 goto out;
 
@@ -1927,7 +1930,7 @@ static CMPIStatus EnumInstanceNames(CMPIInstanceMI *self,
                                     const CMPIResult *results,
                                     const CMPIObjectPath *reference)
 {
-        return return_vsms(reference, results, true, false);
+        return return_vsms(context, reference, results, true, false);
 }
 
 static CMPIStatus EnumInstances(CMPIInstanceMI *self,
@@ -1937,7 +1940,7 @@ static CMPIStatus EnumInstances(CMPIInstanceMI *self,
                                 const char **properties)
 {
 
-        return return_vsms(reference, results, false, false);
+        return return_vsms(context, reference, results, false, false);
 }
 
 static CMPIStatus GetInstance(CMPIInstanceMI *self,
@@ -1946,7 +1949,7 @@ static CMPIStatus GetInstance(CMPIInstanceMI *self,
                               const CMPIObjectPath *ref,
                               const char **properties)
 {
-        return return_vsms(ref, results, false, true);
+        return return_vsms(context, ref, results, false, true);
 }
 
 DEFAULT_CI();
