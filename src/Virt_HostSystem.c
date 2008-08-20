@@ -198,9 +198,18 @@ static CMPIStatus return_host(const CMPIContext *context,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
+        CMPIObjectPath *path = NULL;
 
         s = get_host(_BROKER, context, reference, &inst, is_get_inst);
         if (s.rc != CMPI_RC_OK || inst == NULL)
+                goto out;
+
+        path = CMGetObjectPath(inst, &s);
+        if ((path == NULL) || (s.rc != CMPI_RC_OK))
+                return s;
+
+        if (STARTS_WITH(CLASSNAME(path), "Linux_"))
+                /* Don't return SBLIM instances */
                 goto out;
 
         if (name_only)
