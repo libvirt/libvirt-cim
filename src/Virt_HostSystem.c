@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
+#include <netdb.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>
@@ -36,6 +38,39 @@
 
 const static CMPIBroker *_BROKER;
 
+static int resolve_host(char *host, char *buf, int size)
+{
+        struct hostent *he;
+
+        he = gethostbyname(host);
+        if (he == NULL) {
+                CU_DEBUG("gethostbyname(%s): %m", host);
+                return -1;
+        }
+
+        strncpy(buf, he->h_name, size);
+
+        return 0;
+}
+
+static int get_fqdn(char *buf, int size)
+{
+        char host[256];
+        int ret = 0;
+
+        if (gethostname(host, sizeof(host)) != 0) {
+                CU_DEBUG("gethostname(): %m");
+                return -1;
+        }
+
+        if (strchr(host, '.') != NULL)
+                strncpy(buf, host, size);
+        else
+                ret = resolve_host(host, buf, size);
+
+        return 0;
+}
+
 static int set_host_system_properties(CMPIInstance *instance)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -48,7 +83,7 @@ static int set_host_system_properties(CMPIInstance *instance)
                               (CMPIValue *)CLASSNAME(op), CMPI_chars);
         }
 
-        if (gethostname(hostname, sizeof(hostname) - 1) != 0)
+        if (get_fqdn(hostname, sizeof(hostname)) != 0)
                 strcpy(hostname, "unknown");
 
         CMSetProperty(instance, "Name",
@@ -57,11 +92,9 @@ static int set_host_system_properties(CMPIInstance *instance)
         return 1;
 }
 
-CMPIStatus get_host(const CMPIBroker *broker,
-                    const CMPIContext *context,
-                    const CMPIObjectPath *reference,
-                    CMPIInstance **_inst,
-                    bool is_get_inst)
+static CMPIStatus fake_host(const CMPIBroker *broker,
+                            const CMPIObjectPath *reference,
+                            CMPIInstance **_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
@@ -69,10 +102,9 @@ CMPIStatus get_host(const CMPIBroker *broker,
 
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL) {
-                if (is_get_inst)
-                        cu_statusf(broker, &s,
-                                   CMPI_RC_ERR_NOT_FOUND,
-                                   "No such instance");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance");
                 goto out;
         }
 
@@ -89,17 +121,71 @@ CMPIStatus get_host(const CMPIBroker *broker,
         }
 
         set_host_system_properties(inst);
-
-        if (is_get_inst) {
-                s = cu_validate_ref(broker, reference, inst);
-                if (s.rc != CMPI_RC_OK)
-                        goto out;
-        }
-
         *_inst = inst;
-
  out:
         virConnectClose(conn);
+
+        return s;
+}
+
+static CMPIStatus sblim_host(const CMPIBroker *broker,
+                             const CMPIContext *context,
+                             const CMPIObjectPath *ref,
+                             CMPIInstance **inst)
+{
+        CMPIObjectPath *path;
+        CMPIStatus s;
+        const char *cn = "Linux_ComputerSystem";
+        char name[256];
+
+        if (get_fqdn(name, sizeof(name)) != 0) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get hostname: %m");
+                return s;
+        }
+
+        path = CMNewObjectPath(broker, "root/cimv2", cn, &s);
+        if ((path == NULL) || (s.rc != CMPI_RC_OK)) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to create HostSystem path");
+                return s;
+        }
+
+        CMAddKey(path, "CreationClassName", cn, CMPI_chars);
+        CMAddKey(path, "Name", name, CMPI_chars);
+
+        *inst = CBGetInstance(broker, context, path, NULL, &s);
+
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("SBLIM: %i %s", s.rc, CMGetCharPtr(s.msg));
+        } else {
+                CU_DEBUG("SBLIM: Returned instance");
+        }
+
+        return s;
+}
+
+CMPIStatus get_host(const CMPIBroker *broker,
+                    const CMPIContext *context,
+                    const CMPIObjectPath *reference,
+                    CMPIInstance **_inst,
+                    bool is_get_inst)
+{
+        CMPIStatus s;
+
+        s = sblim_host(broker, context, reference, _inst);
+        if (s.rc != CMPI_RC_OK)
+                s = fake_host(broker, reference, _inst);
+
+        if (!is_get_inst && (s.rc == CMPI_RC_ERR_NOT_FOUND)) {
+                /* This is not an error */
+                return (CMPIStatus){CMPI_RC_OK, NULL};
+        }
+
+        if ((s.rc == CMPI_RC_OK) && is_get_inst)
+                s = cu_validate_ref(broker, reference, *_inst);
 
         return s;
 }
