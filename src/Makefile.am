@@ -64,7 +64,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_ResourceAllocationFromPool.la \
                        libVirt_ElementAllocatedFromPool.la \
                        libVirt_HostedService.la \
-                       libVirt_ElementSettingData.la
+                       libVirt_ElementSettingData.la \
+                       libVirt_ConcreteComponent.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_ComputerSystem_la_DEPENDENCIES = libVirt_VirtualSystemSnapshotService.la
@@ -186,3 +187,7 @@ libVirt_VirtualSystemSnapshotService_la_LIBADD = -lVirt_HostSystem
 libVirt_VirtualSystemSnapshotServiceCapabilities_la_DEPENDENCIES = 
 libVirt_VirtualSystemSnapshotServiceCapabilities_la_SOURCES = Virt_VirtualSystemSnapshotServiceCapabilities.c
 libVirt_VirtualSystemSnapshotServiceCapabilities_la_LIBADD =
+
+libVirt_ConcreteComponent_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_DevicePool.la
+libVirt_ConcreteComponent_la_SOURCES = Virt_ConcreteComponent.c
+libVirt_ConcreteComponent_la_LIBADD = -lVirt_HostSystem -lVirt_DevicePool

@@ -1,0 +1,5 @@
+// Copyright IBM Corp. 2008
+
+class Xen_ConcreteComponent : CIM_ConcreteComponent { };
+class KVM_ConcreteComponent : CIM_ConcreteComponent { };
+class LXC_ConcreteComponent : CIM_ConcreteComponent { };
