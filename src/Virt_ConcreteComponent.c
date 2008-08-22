@@ -138,6 +138,75 @@ static CMPIStatus netpool_to_port(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus list_sblim_procs(const CMPIContext *context,
+                                   const CMPIObjectPath *ref,
+                                   struct inst_list *list)
+{
+        CMPIEnumeration *procs;
+        CMPIObjectPath *path;
+        CMPIStatus s;
+
+        path = CMNewObjectPath(_BROKER, "root/cimv2", "Linux_Processor", &s);
+        if ((path == NULL) || (s.rc != CMPI_RC_OK))
+                return s;
+
+        procs = CBEnumInstances(_BROKER, context, path, NULL, &s);
+        if ((procs == NULL) || (s.rc != CMPI_RC_OK))
+                return s;
+
+        while (CMHasNext(procs, NULL)) {
+                CMPIData data = CMGetNext(procs, &s);
+
+                if (data.type != CMPI_instance) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "SBLIM gave us back a non-instance");
+                        return s;
+                }
+
+                inst_list_add(list, data.value.inst);
+        }
+
+        return (CMPIStatus){CMPI_RC_OK, NULL};
+}
+
+static CMPIStatus procpool_to_proc(const CMPIObjectPath *ref,
+                                   struct std_assoc_info *info,
+                                   struct inst_list *list)
+{
+        virConnectPtr conn = NULL;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *poolid;
+
+        if (!match_hypervisor_prefix(ref, info))
+                return s;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL)
+                return s;
+
+        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get InstanceID from NetworkPool");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID in NetworkPool");
+                goto out;
+        }
+
+        if (!STREQ(poolid, "ProcessorPool/0")) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Processor pool instance not found");
+                goto out;
+        }
+
+        s = list_sblim_procs(info->context, ref, list);
+ out:
+        virConnectClose(conn);
+
+        return s;
+}
+
 static CMPIStatus port_to_netpool(const CMPIObjectPath *ref,
                                   struct std_assoc_info *info,
                                   struct inst_list *list)
@@ -223,9 +292,35 @@ static struct std_assoc _port_to_netpool = {
         .make_ref = make_ref
 };
 
+static char *procpool[] = {
+        "Xen_ProcessorPool",
+        "KVM_ProcessorPool",
+        "LXC_ProcessorPool",
+        NULL
+};
+
+static char *proc[] = {
+        "Linux_Processor",
+        NULL
+};
+
+static struct std_assoc _procpool_to_proc = {
+        .source_class = (char **)&procpool,
+        .source_prop = "GroupComponent",
+
+        .target_class = (char **)&proc,
+        .target_prop = "PartComponent",
+
+        .assoc_class = (char **)&assoc_classname,
+
+        .handler = procpool_to_proc,
+        .make_ref = make_ref
+};
+
 static struct std_assoc *handlers[] = {
         &_netpool_to_port,
         &_port_to_netpool,
+        &_procpool_to_proc,
         NULL
 };
 
