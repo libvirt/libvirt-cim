@@ -49,7 +49,7 @@ class CIM_VirtualSystemMigrationService : CIM_Service {
 	       CIM_ConcreteJob REF Job
       );
 
-      uint32 MigrateVirtualSystemToHost(
+      uint32 MigrateVirtualSystemToSystem(
 	     [In]
 	       CIM_ComputerSystem REF ComputerSystem,
 	     [In]
