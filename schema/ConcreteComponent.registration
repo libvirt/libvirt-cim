@@ -2,4 +2,4 @@
 # Classname Namespace ProviderName ProviderModule ProviderTypes
 Xen_ConcreteComponent root/virt Virt_ConcreteComponent Virt_ConcreteComponent association
 KVM_ConcreteComponent root/virt Virt_ConcreteComponent Virt_ConcreteComponent association
-KVM_ConcreteComponent root/virt Virt_ConcreteComponent Virt_ConcreteComponent association
+LXC_ConcreteComponent root/virt Virt_ConcreteComponent Virt_ConcreteComponent association
