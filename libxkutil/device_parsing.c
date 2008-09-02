@@ -407,9 +407,9 @@ static int parse_mem_device(xmlNode *node, struct virt_device **vdevs)
 
         content = get_node_content(node);
 
-        if (XSTREQ(node->name, "memory"))
+        if (XSTREQ(node->name, "currentMemory"))
                 sscanf(content, "%" PRIu64, &mdev->size);
-        else if (XSTREQ(node->name, "currentMemory"))
+        else if (XSTREQ(node->name, "memory"))
                 sscanf(content, "%" PRIu64, &mdev->maxsize);
 
         free(content);
