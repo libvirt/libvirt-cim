@@ -1029,6 +1029,7 @@ static CMPIStatus define_system(CMPIMethodMI *self,
         CMPIInstance *sys;
         CMPIArray *res;
         CMPIStatus s;
+        uint32_t rc = CIM_SVPC_RETURN_FAILED;
 
         CU_DEBUG("DefineSystem");
 
@@ -1054,6 +1055,10 @@ static CMPIStatus define_system(CMPIMethodMI *self,
                            "ComputerSystemCreatedIndication",
                            reference);
  out:
+        if (s.rc == CMPI_RC_OK)
+                rc = CIM_SVPC_RETURN_COMPLETED;
+        CMReturnData(results, &rc, CMPI_uint32);
+
         return s;
 }
 
@@ -1538,16 +1543,22 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
 
 static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
                                             CMPIArray *resources,
+                                            const CMPIResult *results,
                                             resmod_fn func)
 {
         int i;
         virConnectPtr conn = NULL;
         CMPIStatus s;
         int count;
+        uint32_t rc = CIM_SVPC_RETURN_FAILED;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
+        if (conn == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to connect to hypervisor");
                 goto out;
+        }
 
         count = CMGetArrayCount(resources, NULL);
 
@@ -1596,6 +1607,11 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
 
         }
  out:
+        if (s.rc == CMPI_RC_OK)
+                rc = CIM_SVPC_RETURN_COMPLETED;
+
+        CMReturnData(results, &rc, CMPI_uint32);
+
         virConnectClose(conn);
 
         return s;
@@ -1603,6 +1619,7 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
 
 static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
                                            const CMPIArgs *argsin,
+                                           const CMPIResult *results,
                                            resmod_fn func)
 {
         CMPIArray *arr;
@@ -1615,7 +1632,7 @@ static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        s = _update_resource_settings(ref, arr, func);
+        s = _update_resource_settings(ref, arr, results, func);
 
  out:
         return s;
@@ -1689,7 +1706,10 @@ static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                                         const CMPIArgs *argsin,
                                         CMPIArgs *argsout)
 {
-        return update_resource_settings(reference, argsin, resource_add);
+        return update_resource_settings(reference,
+                                        argsin,
+                                        results,
+                                        resource_add);
 }
 
 static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
@@ -1699,7 +1719,10 @@ static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
                                         const CMPIArgs *argsin,
                                         CMPIArgs *argsout)
 {
-        return update_resource_settings(reference, argsin, resource_mod);
+        return update_resource_settings(reference,
+                                        argsin,
+                                        results,
+                                        resource_mod);
 }
 
 static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
@@ -1728,7 +1751,10 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = _update_resource_settings(reference, resource_arr, resource_del);
+        s = _update_resource_settings(reference,
+                                      resource_arr,
+                                      results,
+                                      resource_del);
  out:
         return s;
 }

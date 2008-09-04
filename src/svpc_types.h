@@ -45,6 +45,7 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
 #define CIM_VSSD_RECOVERY_PRESERVE 123
 
 #define CIM_SVPC_RETURN_JOB_STARTED   4096
+#define CIM_SVPC_RETURN_FAILED           2
 #define CIM_SVPC_RETURN_COMPLETED        0
 
 #define CIM_EC_CHAR_DEFAULT 2
