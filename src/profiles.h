@@ -73,9 +73,9 @@ struct reg_prof MemoryResourceVirtualization = {
 
 struct reg_prof VirtualSystemMigration = {
         .reg_org = 2,
-        .reg_id = "CIM:DSP1081-VirtualSystemMigration-1.0",
+        .reg_id = "CIM:DSP1081-VirtualSystemMigration-0.8.1",
         .reg_name = "Virtual System Migration",
-        .reg_version = "1.0",
+        .reg_version = "0.8.1",
         .scoping_class = NULL,
         .scoping_profile = &SystemVirtualization
 };
