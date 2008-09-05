@@ -50,8 +50,8 @@ const static CMPIBroker *_BROKER;
 static CMPIStatus elem_instances(const CMPIObjectPath *ref,
                                  struct std_assoc_info *info,
                                  struct inst_list *list,
-                                 struct reg_prof *profile,
-                                 virConnectPtr conn)
+                                 virConnectPtr conn,
+                                 const char *class)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIObjectPath *op;
@@ -59,11 +59,11 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         CMPIData data ;
         char *classname;
 
-        if (profile->scoping_class == NULL)
+        if (class == NULL)
                 return s;
 
         classname = get_typed_class(pfx_from_conn(conn), 
-                                    profile->scoping_class);
+                                    class);
         if (classname == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED, 
@@ -134,8 +134,13 @@ static CMPIStatus prof_to_elem(const CMPIObjectPath *ref,
                         s = elem_instances(ref,
                                            info,
                                            list, 
-                                           profiles[i],
-                                           conn);
+                                           conn,
+                                           profiles[i]->scoping_class);
+                        s = elem_instances(ref,
+                                           info,
+                                           list, 
+                                           conn,
+                                           profiles[i]->central_class);
                         break;
                 }
         }

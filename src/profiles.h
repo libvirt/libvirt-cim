@@ -32,6 +32,7 @@ struct reg_prof {
         char *other_reg_org;
         char *ad_type_descriptions;
         char *scoping_class;
+        char *central_class;
         struct reg_prof *scoping_profile;
 };
 
@@ -53,11 +54,32 @@ struct reg_prof SystemVirtualization = {
         .scoping_profile = &VirtualSystem
 };
 
-struct reg_prof GenericDeviceResourceVirtualization = {
+struct reg_prof GDRVP_Disk = {
         .reg_org = 2,
-        .reg_id = "CIM:DSP1059-GenericDeviceResourceVirtualization-1.0.0",
+        .reg_id = "CIM:DSP1059-GenericDeviceResourceVirtualization-1.0.0_d",
         .reg_name = "Generic Device Resource Virtualization",
         .reg_version = "1.0.0",
+        .central_class = "DiskPool",
+        .scoping_class = NULL,
+        .scoping_profile = &SystemVirtualization
+};
+
+struct reg_prof GDRVP_Net = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1059-GenericDeviceResourceVirtualization-1.0.0_n",
+        .reg_name = "Generic Device Resource Virtualization",
+        .reg_version = "1.0.0",
+        .central_class = "NetworkPool",
+        .scoping_class = NULL,
+        .scoping_profile = &SystemVirtualization
+};
+
+struct reg_prof GDRVP_Proc = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1059-GenericDeviceResourceVirtualization-1.0.0_p",
+        .reg_name = "Generic Device Resource Virtualization",
+        .reg_version = "1.0.0",
+        .central_class = "ProcessorPool",
         .scoping_class = NULL,
         .scoping_profile = &SystemVirtualization
 };
@@ -68,6 +90,7 @@ struct reg_prof MemoryResourceVirtualization = {
         .reg_name = "Memory Resource Virtualization",
         .reg_version = "1.0.0",
         .scoping_class = NULL,
+        .central_class = "MemoryPool",
         .scoping_profile = &SystemVirtualization
 };
 
@@ -77,6 +100,7 @@ struct reg_prof VirtualSystemMigration = {
         .reg_name = "Virtual System Migration",
         .reg_version = "0.8.1",
         .scoping_class = NULL,
+        .central_class = "VirtualSystemMigrationService",
         .scoping_profile = &SystemVirtualization
 };
 
@@ -84,7 +108,9 @@ struct reg_prof VirtualSystemMigration = {
 struct reg_prof *profiles[] = {
         &SystemVirtualization,
         &VirtualSystem,
-        &GenericDeviceResourceVirtualization,
+        &GDRVP_Disk,
+        &GDRVP_Net,
+        &GDRVP_Proc,
         &MemoryResourceVirtualization,
         &VirtualSystemMigration,
         NULL
