@@ -75,9 +75,7 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
 
         poolid = pool_member_of(_BROKER, CLASSNAME(ref), type, id);
         if (poolid == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unknown pool membership for `%s'", id);
+                CU_DEBUG("No pool membership for `%s'", id);
                 goto out;
         }
 
