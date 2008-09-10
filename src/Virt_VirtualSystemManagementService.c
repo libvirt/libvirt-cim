@@ -440,7 +440,7 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         const char *val = NULL;
 
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
-                val = "hda";
+                return "Missing `VirtualDevice' property";
 
         free(dev->dev.disk.virtual_dev);
         dev->dev.disk.virtual_dev = strdup(val);
