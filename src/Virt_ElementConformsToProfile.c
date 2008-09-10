@@ -185,11 +185,14 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         }
 
         for (i = 0; profiles[i] != NULL; i++) {
-                if (profiles[i]->scoping_class == NULL)
-                        continue;
 
-                if (!STREQC(profiles[i]->scoping_class, classname))
+                if ((profiles[i]->scoping_class == NULL) || 
+                   (!STREQC(profiles[i]->scoping_class, classname))) {
+
+                   if ((profiles[i]->central_class == NULL) || 
+                      (!STREQC(profiles[i]->central_class, classname)))
                         continue;
+                }
 
                 s = get_profile(_BROKER,
                                 ref, 
@@ -222,10 +225,25 @@ static char* conformant_standard[] = {
 static char* managed_element[] = {
         "Xen_HostSystem",
         "Xen_ComputerSystem",
+        "Xen_DiskPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_ProcessorPool",
+        "Xen_VirtualSystemMigrationService",
         "KVM_HostSystem",
         "KVM_ComputerSystem",
+        "KVM_DiskPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_ProcessorPool",
+        "KVM_VirtualSystemMigrationService",
         "LXC_HostSystem",
         "LXC_ComputerSystem",
+        "LXC_DiskPool",
+        "LXC_MemoryPool",
+        "LXC_NetworkPool",
+        "LXC_ProcessorPool",
+        "LXC_VirtualSystemMigrationService",
         NULL
 };
 
