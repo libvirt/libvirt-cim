@@ -1002,7 +1002,7 @@ static CMPIStatus rasd_to_alloc_cap(const CMPIObjectPath *ref,
                                     struct std_assoc_info *info,
                                     struct inst_list *list)
 {
-        RETURN_UNSUPPORTED();
+        return (CMPIStatus){CMPI_RC_OK, NULL};
 }
 
 static CMPIStatus migrate_cap_to_vsmsd(const CMPIObjectPath *ref,
