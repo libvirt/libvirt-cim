@@ -530,8 +530,10 @@ static struct virt_device *find_dom_dev(virDomainPtr dom,
         int i;
 
         count = get_devices(dom, &list, type);
-        if (!count)
+        if (!count) {
+                CU_DEBUG("No devices for %i", type);
                 goto out;
+        }
 
         if (type == CIM_RES_TYPE_PROC) {
                 struct virt_device *tmp_list;
@@ -585,7 +587,7 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         if (parse_devid(name, &domain, &device) != 1) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", 
+                           "No such instance (bad id %s)", 
                            name);
                 goto out;
         }
@@ -594,7 +596,7 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         if (dom == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)",
+                           "No such instance (no domain for %s)",
                            name);
                 goto err;
         }
@@ -603,7 +605,7 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         if (!dev) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)",
+                           "No such instance (no device %s)",
                            name);
                 goto err;
         }
