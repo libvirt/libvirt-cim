@@ -48,6 +48,11 @@ INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
 	schema/HostSystem.mof \
 	schema/RegisteredProfile.mof \
+	schema/DiskPool.mof \
+	schema/MemoryPool.mof \
+	schema/NetPool.mof \
+	schema/ProcessorPool.mof \
+	schema/VSMigrationService.mof \
 	schema/ElementConformsToProfile.mof \
 	schema/ReferencedProfile.mof
 
