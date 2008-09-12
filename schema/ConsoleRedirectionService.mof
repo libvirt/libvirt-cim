@@ -1,0 +1,16 @@
+// Copyright IBM Corp. 2007
+
+[Provider("cmpi::Virt_ConsoleRedirectionService")]
+class Xen_ConsoleRedirectionService : CIM_RedirectionService
+{
+};
+
+[Provider("cmpi::Virt_ConsoleRedirectionService")]
+class KVM_ConsoleRedirectionService : CIM_RedirectionService
+{
+};
+
+[Provider("cmpi::Virt_ConsoleRedirectionService")]
+class LXC_ConsoleRedirectionService : CIM_RedirectionService
+{
+};

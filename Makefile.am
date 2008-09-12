@@ -42,7 +42,8 @@ MOFS = \
 	schema/VSMigrationSettingData.mof \
 	schema/VirtualSystemSnapshotService.mof \
 	schema/VirtualSystemSnapshotServiceCapabilities.mof \
-	schema/ConcreteComponent.mof
+	schema/ConcreteComponent.mof \
+	schema/ConsoleRedirectionService.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -95,7 +96,8 @@ REGS = \
 	schema/VSMigrationSettingData.registration \
 	schema/VirtualSystemSnapshotService.registration \
 	schema/VirtualSystemSnapshotServiceCapabilities.registration \
-	schema/ConcreteComponent.registration
+	schema/ConcreteComponent.registration \
+	schema/ConsoleRedirectionService.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
