@@ -50,6 +50,12 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
 
 #define CIM_EC_CHAR_DEFAULT 2
 
+/* ConsoleRedirectionService values */
+#define CIM_CRS_SERVICE_TYPE  3
+#define CIM_CRS_SHARING_MODE  3
+#define CIM_CRS_ENABLED_STATE   2
+#define CIM_CRS_REQUESTED_STATE 12
+
 #include <libcmpiutil/libcmpiutil.h>
 #include <string.h>
 
