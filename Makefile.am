@@ -44,7 +44,8 @@ MOFS = \
 	schema/VirtualSystemSnapshotServiceCapabilities.mof \
 	schema/ConcreteComponent.mof \
 	schema/ConsoleRedirectionService.mof \
-        schema/ConsoleRedirectionServiceCapabilities.mof
+        schema/ConsoleRedirectionServiceCapabilities.mof \
+        schema/ServiceAffectsElement.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -99,7 +100,8 @@ REGS = \
 	schema/VirtualSystemSnapshotServiceCapabilities.registration \
 	schema/ConcreteComponent.registration \
 	schema/ConsoleRedirectionService.registration \
-        schema/ConsoleRedirectionServiceCapabilities.registration
+        schema/ConsoleRedirectionServiceCapabilities.registration \
+        schema/ServiceAffectsElement.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \

@@ -68,7 +68,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_ElementAllocatedFromPool.la \
                        libVirt_HostedService.la \
                        libVirt_ElementSettingData.la \
-                       libVirt_ConcreteComponent.la
+                       libVirt_ConcreteComponent.la \
+                       libVirt_ServiceAffectsElement.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_ComputerSystem_la_DEPENDENCIES = libVirt_VirtualSystemSnapshotService.la
@@ -200,4 +201,8 @@ libVirt_ConsoleRedirectionService_la_SOURCES = Virt_ConsoleRedirectionService.c
 libVirt_ConsoleRedirectionService_la_LIBADD = -lVirt_HostSystem
 
 libVirt_ConsoleRedirectionServiceCapabilities_la_SOURCES = Virt_ConsoleRedirectionServiceCapabilities.c
+
+libVirt_ServiceAffectsElement_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_ConsoleRedirectionService.la
+libVirt_ServiceAffectsElement_la_SOURCES = Virt_ServiceAffectsElement.c
+libVirt_ServiceAffectsElement_la_LIBADD = -lVirt_ComputerSystem -lVirt_ConsoleRedirectionService
 
