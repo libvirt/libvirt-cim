@@ -55,6 +55,7 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_ResourcePoolConfigurationCapabilities.la \
                        libVirt_VSMigrationService.la \
                        libVirt_ConsoleRedirectionService.la \
+                       libVirt_ConsoleRedirectionServiceCapabilities.la \
                        libVirt_SettingsDefineCapabilities.la \
                        libVirt_HostedDependency.la \
                        libVirt_ElementConformsToProfile.la \
@@ -196,4 +197,6 @@ libVirt_ConcreteComponent_la_LIBADD = -lVirt_HostSystem -lVirt_DevicePool
 libVirt_ConsoleRedirectionService_la_DEPENDENCIES = libVirt_HostSystem.la
 libVirt_ConsoleRedirectionService_la_SOURCES = Virt_ConsoleRedirectionService.c
 libVirt_ConsoleRedirectionService_la_LIBADD = -lVirt_HostSystem
+
+libVirt_ConsoleRedirectionServiceCapabilities_la_SOURCES = Virt_ConsoleRedirectionServiceCapabilities.c
 
