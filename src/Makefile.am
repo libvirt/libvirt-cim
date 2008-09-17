@@ -20,7 +20,8 @@ noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_AllocationCapabilities.h               \
     Virt_VirtualSystemSnapshotService.h         \
     Virt_VirtualSystemSnapshotServiceCapabilities.h \
-    Virt_VSMigrationSettingData.h
+    Virt_VSMigrationSettingData.h \
+    Virt_ConsoleRedirectionService.h
 
 XKUADD = $(top_builddir)/libxkutil/libxkutil.la
 

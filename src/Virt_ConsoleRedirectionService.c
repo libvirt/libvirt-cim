@@ -36,6 +36,7 @@
 #include <libcmpiutil/std_instance.h>
 
 #include "Virt_HostSystem.h"
+#include "Virt_ConsoleRedirectionService.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -112,11 +113,11 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         return s;
 }
 
-static CMPIStatus get_console_rs(const CMPIObjectPath *reference,
-                                 CMPIInstance **_inst,
-                                 const CMPIBroker *broker,
-                                 const CMPIContext *context,
-                                 bool is_get_inst)
+CMPIStatus get_console_rs(const CMPIObjectPath *reference,
+                          CMPIInstance **_inst,
+                          const CMPIBroker *broker,
+                          const CMPIContext *context,
+                          bool is_get_inst)
 { 
         CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn = NULL;
