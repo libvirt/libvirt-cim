@@ -29,6 +29,10 @@ class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
                 "One of hd,fd,cdrom.")]
   string BootDevice;
 
+  [Override, ValueMap { "2", "3", ".." }, 
+             Values { "Turn Off", "Save state", "DMTF Reserved" }]
+  uint16 AutomaticShutdownAction;
+
 };
 
 [Description (
@@ -42,6 +46,10 @@ class KVM_VirtualSystemSettingData : CIM_VirtualSystemSettingData
   [Description ("The device to boot from.  One of hd,fd,cdrom.")]
   string BootDevice;
 
+  [Override, ValueMap { "2", "3", ".." }, 
+             Values { "Turn Off", "Save state", "DMTF Reserved" }]
+  uint16 AutomaticShutdownAction;
+
 };
 
 [Description (
@@ -54,5 +62,9 @@ class LXC_VirtualSystemSettingData : CIM_VirtualSystemSettingData
 
   [Description ("Path to the init process for the container")]
   string InitPath;
+
+  [Override, ValueMap { "2", "3", ".." }, 
+             Values { "Turn Off", "Save state", "DMTF Reserved" }]
+  uint16 AutomaticShutdownAction;
 
 };
