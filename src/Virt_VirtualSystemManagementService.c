@@ -1333,6 +1333,13 @@ static CMPIStatus resource_del(struct domain *dominfo,
         int *count = NULL;
         int i;
 
+        if (devid == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing or incomplete InstanceID");
+                goto out;
+        }
+
         op = CMGetObjectPath(rasd, &s);
         if ((op == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
@@ -1420,7 +1427,6 @@ static CMPIStatus resource_add(struct domain *dominfo,
         dev = &list[*count];
 
         dev->type = type;
-        dev->id = strdup(devid);
         rasd_to_vdev(rasd, dominfo, dev, ns);
 
         s = _resource_dynamic(dominfo, dev, RESOURCE_ADD, CLASSNAME(op));
@@ -1448,6 +1454,13 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         struct virt_device *list;
         int *count;
         int i;
+
+        if (devid == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing or incomplete InstanceID");
+                goto out;
+        }
 
         op = CMGetObjectPath(rasd, &s);
         if ((op == NULL) || (s.rc != CMPI_RC_OK))
@@ -1541,7 +1554,32 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus get_instanceid(CMPIInstance *rasd,
+                                 char **domain,
+                                 char **devid)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *id;
+
+        if (cu_get_str_prop(rasd, "InstanceID", &id) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing InstanceID in RASD");
+                return s;
+        }
+
+        if (!parse_fq_devid(id, domain, devid)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Invalid InstanceID `%s'", id);
+                return s;
+        }
+
+        return s;
+}
+
 static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
+                                            const char *domain,
                                             CMPIArray *resources,
                                             const CMPIResult *results,
                                             resmod_fn func)
@@ -1565,7 +1603,6 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
         for (i = 0; i < count; i++) {
                 CMPIData item;
                 CMPIInstance *inst;
-                const char *id = NULL;
                 char *name = NULL;
                 char *devid = NULL;
                 virDomainPtr dom = NULL;
@@ -1573,18 +1610,17 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
                 item = CMGetArrayElementAt(resources, i, NULL);
                 inst = item.value.inst;
 
-                if (cu_get_str_prop(inst, "InstanceID", &id) != CMPI_RC_OK) {
-                        cu_statusf(_BROKER, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Missing InstanceID");
-                        goto end;
-                }
-
-                if (!parse_fq_devid(id, &name, &devid)) {
-                        cu_statusf(_BROKER, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Bad InstanceID `%s'", id);
-                        goto end;
+                /* If we were passed a domain name, then we're doing
+                 * an AddResources, which means we ignore the InstanceID
+                 * of the RASD.  If not, then we get the domain name
+                 * from the InstanceID of the RASD each time through.
+                 */
+                if (domain == NULL) {
+                        s = get_instanceid(inst, &name, &devid);
+                        if (s.rc != CMPI_RC_OK)
+                                break;
+                } else {
+                        name = strdup(domain);
                 }
 
                 dom = virDomainLookupByName(conn, name);
@@ -1614,27 +1650,6 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
 
         virConnectClose(conn);
 
-        return s;
-}
-
-static CMPIStatus update_resource_settings(const CMPIObjectPath *ref,
-                                           const CMPIArgs *argsin,
-                                           const CMPIResult *results,
-                                           resmod_fn func)
-{
-        CMPIArray *arr;
-        CMPIStatus s;
-
-        if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing ResourceSettings");
-                goto out;
-        }
-
-        s = _update_resource_settings(ref, arr, results, func);
-
- out:
         return s;
 }
 
@@ -1706,10 +1721,40 @@ static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                                         const CMPIArgs *argsin,
                                         CMPIArgs *argsout)
 {
-        return update_resource_settings(reference,
-                                        argsin,
-                                        results,
-                                        resource_add);
+        CMPIArray *arr;
+        CMPIStatus s;
+        CMPIObjectPath *sys;
+        char *domain = NULL;
+
+        if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing ResourceSettings");
+                return s;
+        }
+
+        if (cu_get_ref_arg(argsin, "AffectedConfiguration", &sys) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing AffectedConfiguration parameter");
+                return s;
+        }
+
+        if (!parse_instanceid(sys, NULL, &domain)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "AffectedConfiguration has invalid InstanceID");
+                return s;
+        }
+
+        s = _update_resource_settings(reference,
+                                      domain,
+                                      arr,
+                                      results,
+                                      resource_add);
+        free(domain);
+
+        return s;
 }
 
 static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
@@ -1719,10 +1764,21 @@ static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
                                         const CMPIArgs *argsin,
                                         CMPIArgs *argsout)
 {
-        return update_resource_settings(reference,
-                                        argsin,
-                                        results,
-                                        resource_mod);
+        CMPIArray *arr;
+        CMPIStatus s;
+
+        if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing ResourceSettings");
+                return s;
+        }
+
+        return _update_resource_settings(reference,
+                                         NULL,
+                                         arr,
+                                         results,
+                                         resource_mod);
 }
 
 static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
@@ -1752,6 +1808,7 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
                 goto out;
 
         s = _update_resource_settings(reference,
+                                      NULL,
                                       resource_arr,
                                       results,
                                       resource_del);
