@@ -1173,17 +1173,27 @@ static CMPIStatus mod_system_settings(CMPIMethodMI *self,
                                       CMPIArgs *argsout)
 {
         CMPIInstance *inst;
+        CMPIStatus s;
+        uint32_t rc;
 
         if (cu_get_inst_arg(argsin, "SystemSettings", &inst) != CMPI_RC_OK) {
-                CMPIStatus s;
 
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Missing SystemSettings");
-                return s;
+                goto out;
         }
 
-        return update_system_settings(context, reference, inst);
+        s = update_system_settings(context, reference, inst);
+ out:
+        if (s.rc == CMPI_RC_OK)
+                rc = CIM_SVPC_RETURN_COMPLETED;
+        else
+                rc = CIM_SVPC_RETURN_FAILED;
+
+        CMReturnData(results, &rc, CMPI_uint32);
+
+        return s;
 }
 
 typedef CMPIStatus (*resmod_fn)(struct domain *,
