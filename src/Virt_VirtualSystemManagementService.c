@@ -285,7 +285,8 @@ static int vssd_to_domain(CMPIInstance *inst,
         return ret;
 }
 
-static const char *_default_network(CMPIInstance *inst)
+static const char *_default_network(CMPIInstance *inst,
+                                    const char* ns)
 {
         CMPIInstance *pool;
         CMPIObjectPath *op;
@@ -299,6 +300,13 @@ static const char *_default_network(CMPIInstance *inst)
                 return NULL;
         }
 
+        s = CMSetNameSpace(op, ns);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to set the namespace of net objectpath");
+                return NULL;
+        }
+
+        CU_DEBUG("No PoolID specified, looking up default network pool");
         pool = default_device_pool(_BROKER, op, CIM_RES_TYPE_NET, &s);
         if ((pool == NULL) || (s.rc != CMPI_RC_OK)) {
                 CU_DEBUG("Failed to get default network pool: %s",
@@ -311,46 +319,6 @@ static const char *_default_network(CMPIInstance *inst)
         }
 
         return poolid;
-}
-
-static const char *xen_net_rasd_to_vdev(CMPIInstance *inst,
-                                        struct virt_device *dev)
-{
-        const char *val = NULL;
-
-        free(dev->dev.net.type);
-        dev->dev.net.type = strdup("network");
-
-        if (cu_get_str_prop(inst, "PoolID", &val) != CMPI_RC_OK)
-                val = _default_network(inst);
-
-        if (val == NULL)
-                return "No NetworkPool specified and no default available";
-
-        free(dev->dev.net.source);
-        dev->dev.net.source = name_from_pool_id(val);
-
-        return NULL;
-}
-
-static const char *kvm_net_rasd_to_vdev(CMPIInstance *inst,
-                                        struct virt_device *dev)
-{
-        const char *val = NULL;
-
-        free(dev->dev.net.type);
-        dev->dev.net.type = strdup("network");
-
-        if (cu_get_str_prop(inst, "PoolID", &val) != CMPI_RC_OK)
-                val = _default_network(inst);
-
-        if (val == NULL)
-                return "No NetworkPool specified and no default available";
-
-        free(dev->dev.net.source);
-        dev->dev.net.source = name_from_pool_id(val);
-
-        return NULL;
 }
 
 static const char *_net_rand_mac(void)
@@ -394,10 +362,10 @@ static const char *_net_rand_mac(void)
 }
 
 static const char *net_rasd_to_vdev(CMPIInstance *inst,
-                                    struct virt_device *dev)
+                                    struct virt_device *dev,
+                                    const char *ns)
 {
         const char *val = NULL;
-        CMPIObjectPath *op;
         const char *msg = NULL;
 
         if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
@@ -414,21 +382,17 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         free(dev->id);
         dev->id = strdup(dev->dev.net.mac);
 
-        op = CMGetObjectPath(inst, NULL);
-        if (op == NULL) {
-                CU_DEBUG("Unable to get instance path");
-                goto out;
-        }
+        free(dev->dev.net.type);
+        dev->dev.net.type = strdup("network");
 
-        if (STARTS_WITH(CLASSNAME(op), "Xen"))
-                msg = xen_net_rasd_to_vdev(inst, dev);
-        else if (STARTS_WITH(CLASSNAME(op), "KVM"))
-                msg = kvm_net_rasd_to_vdev(inst, dev);
-        else {
-                msg = "Unknown class type for net device";
-                CU_DEBUG("Unknown class type for net device: %s",
-                         CLASSNAME(op));
-        }
+        if (cu_get_str_prop(inst, "PoolID", &val) != CMPI_RC_OK)
+                val = _default_network(inst, ns);
+
+        if (val == NULL)
+                return "No NetworkPool specified and no default available";
+
+        free(dev->dev.net.source);
+        dev->dev.net.source = name_from_pool_id(val);
 
  out:
         return msg;
@@ -552,12 +516,13 @@ static const char *proc_rasd_to_vdev(CMPIInstance *inst,
 
 static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev,
-                                         uint16_t type)
+                                         uint16_t type,
+                                         const char *ns)
 {
         if (type == CIM_RES_TYPE_DISK) {
                 return disk_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_NET) {
-                return net_rasd_to_vdev(inst, dev);
+                return net_rasd_to_vdev(inst, dev, ns);
         } else if (type == CIM_RES_TYPE_MEM) {
                 return mem_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_PROC) {
@@ -569,7 +534,8 @@ static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
 
 static const char *_container_rasd_to_vdev(CMPIInstance *inst,
                                            struct virt_device *dev,
-                                           uint16_t type)
+                                           uint16_t type,
+                                           const char *ns)
 {
         if (type == CIM_RES_TYPE_MEM) {
                 return mem_rasd_to_vdev(inst, dev);
@@ -595,9 +561,6 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
                 goto out;
         }
 
-        CMSetNameSpace(op, ns);
-        CMSetObjectPath(inst, op);
-
         if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK) {
                 msg = "Unable to get device type";
                 goto out;
@@ -606,9 +569,9 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
         dev->type = (int)type;
 
         if (domain->type == DOMAIN_LXC)
-                msg = _container_rasd_to_vdev(inst, dev, type);
+                msg = _container_rasd_to_vdev(inst, dev, type, ns);
         else
-                msg = _sysvirt_rasd_to_vdev(inst, dev, type);
+                msg = _sysvirt_rasd_to_vdev(inst, dev, type, ns);
  out:
         if (msg)
                 CU_DEBUG("rasd_to_vdev(%s): %s", CLASSNAME(op), msg);
