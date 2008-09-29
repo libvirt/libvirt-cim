@@ -34,6 +34,7 @@
 #include "Virt_VirtualSystemManagementService.h"
 #include "Virt_ResourcePoolConfigurationService.h"
 #include "Virt_VSMigrationService.h"
+#include "Virt_ConsoleRedirectionService.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -52,6 +53,8 @@ static CMPIStatus validate_service_ref(const CMPIContext *context,
                 s = get_rpcs(ref, &inst, _BROKER, context, true);
         } else if (STREQC(classname, "VirtualSystemMigrationService")) {
                 s = get_migration_service(ref, &inst, _BROKER, context, true);
+        } else if (STREQC(classname, "ConsoleRedirectionService")) {
+                s = get_console_rs(ref, &inst, _BROKER, context, true);
         }
         
         free(classname);
@@ -112,6 +115,12 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
         if (!CMIsNullObject(inst))
                 inst_list_add(list, inst);
 
+        s = get_console_rs(ref, &inst, _BROKER, info->context, false);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+        if (!CMIsNullObject(inst))
+                inst_list_add(list, inst);
+
         return s;
 }
 
@@ -128,12 +137,15 @@ static char* dependent[] = {
         "Xen_ResourcePoolConfigurationService",
         "Xen_VirtualSystemManagementService",
         "Xen_VirtualSystemMigrationService",
+        "Xen_ConsoleRedirectionService",
         "KVM_ResourcePoolConfigurationService",
         "KVM_VirtualSystemManagementService",
         "KVM_VirtualSystemMigrationService",
+        "KVM_ConsoleRedirectionService",
         "LXC_ResourcePoolConfigurationService",
         "LXC_VirtualSystemManagementService",
         "LXC_VirtualSystemMigrationService",
+        "LXC_ConsoleRedirectionService",
         NULL
 };
 
