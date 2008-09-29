@@ -935,6 +935,7 @@ void cleanup_dominfo(struct domain **dominfo)
                 free(dom->os_info.fv.loader);
                 free(dom->os_info.fv.boot);
         } else if (dom->type == DOMAIN_LXC) {
+                free(dom->os_info.lxc.type);
                 free(dom->os_info.lxc.init);
         } else {
                 CU_DEBUG("Unknown domain type %i", dom->type);

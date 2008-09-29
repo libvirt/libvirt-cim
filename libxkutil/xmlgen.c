@@ -587,11 +587,16 @@ static char *_lxc_os_xml(struct domain *domain)
         int ret;
         char *xml = NULL;
 
+        if (os->type == NULL)
+                os->type = strdup("exe");
+
         ret = asprintf(&xml,
                        "<os>\n"
                        "  <init>%s</init>\n"
+                       "  <type>%s</type>\n"
                        "</os>\n",
-                       os->init);
+                       os->init,
+                       os->type);
         if (ret == -1)
                 xml = NULL;
 

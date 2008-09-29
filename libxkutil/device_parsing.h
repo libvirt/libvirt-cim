@@ -91,6 +91,7 @@ struct fv_os_info {
 };
 
 struct lxc_os_info {
+        char *type; /* Should always be 'exe' */
         char *init;
 };
 
