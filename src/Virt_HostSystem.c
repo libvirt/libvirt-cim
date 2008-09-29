@@ -41,6 +41,7 @@ const static CMPIBroker *_BROKER;
 static int resolve_host(char *host, char *buf, int size)
 {
         struct hostent *he;
+        int i;
 
         he = gethostbyname(host);
         if (he == NULL) {
@@ -48,6 +49,15 @@ static int resolve_host(char *host, char *buf, int size)
                 return -1;
         }
 
+        for (i = 0; he->h_aliases[i] != NULL; i++) {
+               if ((strchr(he->h_aliases[i], '.') != NULL) &&
+                   (strstr(he->h_aliases[i], "localhost") == NULL)) {
+                           strncpy(buf, he->h_aliases[i], size);
+                           return 0;
+                   }
+        }
+
+        CU_DEBUG("Unable to find FQDN, using hostname.");
         strncpy(buf, he->h_name, size);
 
         return 0;
