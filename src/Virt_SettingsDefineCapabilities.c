@@ -303,6 +303,57 @@ static void free_rasd_prop_list(struct sdc_rasd_prop *prop_list)
         free (prop_list);
 }
 
+static struct sdc_rasd_prop *mem_template(const CMPIObjectPath *ref,
+                                          int template_type,
+                                          CMPIStatus *s)
+{
+        bool ret;
+        uint64_t mem_size;
+        const char *id;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        switch (template_type) {
+        case SDC_RASD_MIN:
+                mem_size = 64 << 10;
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                mem_size = MAX_MEM;
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                mem_size = 1 << 10;
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                mem_size = 256 << 10;
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)id, CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"KiloBytes", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&mem_size, CMPI_uint64},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD");
+        }
+
+ out:
+        return rasd;
+}
+
 static struct sdc_rasd_prop *mem_max(const CMPIObjectPath *ref,
                                      CMPIStatus *s)
 {
@@ -395,6 +446,83 @@ static struct sdc_rasd_prop *mem_inc(const CMPIObjectPath *ref,
                            CMPI_RC_ERR_FAILED,
                            "Could not copy RASD");
         }
+
+        return rasd;
+}
+
+static bool get_max_procs(const CMPIObjectPath *ref,
+                          uint64_t *num_procs,
+                          CMPIStatus *s)
+{
+        bool ret = false;
+        virConnectPtr conn;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
+        if (conn == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not connect to hypervisor");
+                goto out;
+        }
+
+        *num_procs = virConnectGetMaxVcpus(conn, NULL);
+        CU_DEBUG("libvirt says %d max vcpus", *num_procs);
+        ret = true;
+
+ out:
+       return ret;
+}
+
+static struct sdc_rasd_prop *proc_template(const CMPIObjectPath *ref,
+                                           int template_type,
+                                           CMPIStatus *s)
+{
+        bool ret;
+        uint64_t num_procs;
+        const char *id;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        switch (template_type) {
+        case SDC_RASD_MIN:
+                num_procs = 0;
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                ret = get_max_procs(ref, &num_procs, s);
+                if (!ret)
+                    goto out;
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                num_procs = 1;
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                num_procs = 1;
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)id, CMPI_chars},
+                {"AllocationUnits", (CMPIValue *)"Processors", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_procs, CMPI_uint64},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD");
+        }
+
+ out:
 
         return rasd;
 }
@@ -533,12 +661,6 @@ static struct sdc_rasd_prop *net_min(const CMPIObjectPath *ref,
         return rasd;
 }
 
-static uint64_t net_max_kvm(const CMPIObjectPath *ref,
-                            CMPIStatus *s)
-{
-        /* This appears to not require anything dynamic. */
-        return KVM_MAX_NICS;
-}
 static uint64_t net_max_xen(const CMPIObjectPath *ref,
                             CMPIStatus *s)
 {
@@ -572,6 +694,100 @@ static uint64_t net_max_xen(const CMPIObjectPath *ref,
  out:
         virConnectClose(conn);
         return num_nics;
+}
+
+static bool get_max_nics(const CMPIObjectPath *ref,
+                         uint64_t *num_nics,
+                         CMPIStatus *s)
+{
+        char *prefix;
+        bool ret = false;
+
+        prefix = class_prefix_name(CLASSNAME(ref));
+        if (prefix == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get prefix from reference");
+                goto out;
+        }
+
+        if (STREQC(prefix, "Xen")) {
+                *num_nics = net_max_xen(ref, s);
+        } else if (STREQC(prefix, "KVM")) {
+                /* This appears to not require anything dynamic. */
+                *num_nics = KVM_MAX_NICS;
+        } else {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_NOT_SUPPORTED,
+                           "Unsupported hypervisor: '%s'", prefix);
+                goto out;
+        }
+
+        if (s->rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get max nic count");
+                goto out;
+        } else {
+                ret = true;
+        }
+
+ out:
+        free(prefix);
+
+        return ret;
+}
+
+static struct sdc_rasd_prop *net_template(const CMPIObjectPath *ref,
+                                          int template_type,
+                                          CMPIStatus *s)
+{
+        bool ret;
+        uint64_t num_nics;
+        const char *id;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        switch (template_type) {
+        case SDC_RASD_MIN:
+                num_nics = 0;
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                ret = get_max_nics(ref, &num_nics, s);
+                if (!ret)
+                    goto out;
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                num_nics = 1;
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                num_nics = 1;
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)id, CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&num_nics, CMPI_uint64},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD");
+        }
+
+ out:
+        return rasd;
 }
  
 static struct sdc_rasd_prop *net_max(const CMPIObjectPath *ref,
@@ -668,6 +884,105 @@ static struct sdc_rasd_prop *net_inc(const CMPIObjectPath *ref,
                            "Could not copy RASD");
         }
 
+        return rasd;
+}
+
+static int get_disk_freespace(const CMPIObjectPath *ref,
+                              CMPIStatus *s,
+                              uint64_t *free_space)
+{
+        bool ret = false;
+        const char *inst_id;
+        CMPIrc prop_ret;
+        virConnectPtr conn;
+        CMPIInstance *pool_inst;
+
+        if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get InstanceID");
+                goto out;
+        }
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
+        if (s->rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get connection");
+                goto out;
+        }
+
+        /* Getting the relevant resource pool directly finds the free space 
+ *            for us.  It is in the Capacity field. */
+        *s = get_pool_by_name(_BROKER, ref, inst_id, &pool_inst);
+        if (s->rc != CMPI_RC_OK)
+                goto out;
+
+        prop_ret = cu_get_u64_prop(pool_inst, "Capacity", free_space);
+        if (prop_ret != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get capacity from instance");
+                goto out;
+        }
+
+        CU_DEBUG("Got capacity from pool_inst: %lld", *free_space);
+        ret = true;
+
+ out:
+        return ret;
+}
+
+static struct sdc_rasd_prop *disk_template(const CMPIObjectPath *ref,
+                                           int template_type,
+                                           CMPIStatus *s)
+{
+        bool ret;
+        uint64_t disk_size;
+        const char *id;
+        struct sdc_rasd_prop *rasd = NULL;
+
+        switch(template_type) {
+        case SDC_RASD_MIN:
+                disk_size = SDC_DISK_MIN;
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                ret = get_disk_freespace(ref, s, &disk_size);
+                if (!ret)
+                    goto out;
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                disk_size = SDC_DISK_INC;
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                disk_size = SDC_DISK_DEF;
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        struct sdc_rasd_prop tmp[] = {
+                {"InstanceID", (CMPIValue *)id, CMPI_chars},
+                {"AllocationQuantity", (CMPIValue *)"MegaBytes", CMPI_chars},
+                {"VirtualQuantity", (CMPIValue *)&disk_size, CMPI_uint64},
+                PROP_END
+        };
+
+        ret = dup_rasd_prop_list(tmp, &rasd);
+        if (!ret) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not copy RASD");
+        }
+
+ out:
         return rasd;
 }
 
@@ -842,68 +1157,45 @@ static struct sdc_rasd *sdc_rasd_list[] = {
         NULL
 };
 
-static CMPIInstance *sdc_rasd_inst(const CMPIBroker *broker,
-                                   CMPIStatus *s,
+static CMPIInstance *sdc_rasd_inst(CMPIStatus *s,
                                    const CMPIObjectPath *ref,
-                                   struct sdc_rasd *rasd,
-                                   sdc_rasd_type type)
+                                   sdc_rasd_type type,
+                                   uint16_t resource_type)
 {
         CMPIInstance *inst = NULL;
         struct sdc_rasd_prop *prop_list = NULL;
         int i;
-        const char *inst_id = NULL;
         const char *base = NULL;
-        uint16_t resource_type;
 
-        switch(type) {
-        case SDC_RASD_MIN:
-                if (rasd->min == NULL)
-                        goto out;
-                prop_list = rasd->min(ref, s);
-                inst_id = "Minimum";
-                break;
-        case SDC_RASD_MAX:
-                if (rasd->max == NULL)
-                        goto out;
-                prop_list = rasd->max(ref, s);
-                inst_id = "Maximum";
-                break;
-        case SDC_RASD_INC:
-                if (rasd->inc == NULL)
-                        goto out;
-                prop_list = rasd->inc(ref, s);
-                inst_id = "Increment";
-                break;
-        case SDC_RASD_DEF:
-                if (rasd->def == NULL)
-                        goto out;
-                prop_list = rasd->def(ref, s);
-                inst_id = "Default";
-                break;
-        default:
-                cu_statusf(broker, s, 
+        if (resource_type == CIM_RES_TYPE_MEM)
+                prop_list = mem_template(ref, type, s);
+        else if (resource_type == CIM_RES_TYPE_PROC)
+                prop_list = proc_template(ref, type, s);
+        else if (resource_type == CIM_RES_TYPE_NET)
+                prop_list = net_template(ref, type, s);
+        else if (resource_type == CIM_RES_TYPE_DISK)
+                prop_list = disk_template(ref, type, s);
+        else {
+                cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
-                           "Unsupported sdc_rasd type");
+                           "Unsupported resource type");
         }
 
         if (s->rc != CMPI_RC_OK) 
                 goto out;
 
-        if (rasd_classname_from_type(rasd->resource_type, &base) != CMPI_RC_OK) {
-                cu_statusf(broker, s, 
+        if (rasd_classname_from_type(resource_type, &base) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s, 
                            CMPI_RC_ERR_FAILED,
                            "Resource type not known");
                 goto out;
         }
 
-        inst = get_typed_instance(broker,
+        inst = get_typed_instance(_BROKER,
                                   CLASSNAME(ref),
                                   base,
                                   NAMESPACE(ref));
         
-        CMSetProperty(inst, "InstanceID", inst_id, CMPI_chars);
-
-        resource_type = rasd->resource_type;
         CMSetProperty(inst, "ResourceType", &resource_type, CMPI_uint16);
 
         for (i = 0; prop_list[i].field != NULL; i++) {
@@ -922,40 +1214,24 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                                      uint16_t type)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        struct sdc_rasd *rasd = NULL;
         CMPIInstance *inst;
         int i;
 
-        for (i = 0; sdc_rasd_list[i] != NULL; i++) {
-                if (sdc_rasd_list[i]->resource_type == type) {
-                        rasd = sdc_rasd_list[i];
-                        break;
+        for (i = SDC_RASD_MIN; i <= SDC_RASD_INC; i++) {
+                inst = sdc_rasd_inst(&s, ref, i, type);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Problem getting inst");
+                        goto out;
+                }
+                CU_DEBUG("Got inst");
+                if (inst != NULL) {
+                        inst_list_add(list, inst);
+                        CU_DEBUG("Added inst");
+                } else {
+                        CU_DEBUG("Inst is null, not added");
                 }
         }
-
-        if (rasd) {
-                for (i = SDC_RASD_MIN; i <= SDC_RASD_INC; i++) {
-                        inst = sdc_rasd_inst(_BROKER, &s, ref, rasd, i);
-                        if (s.rc != CMPI_RC_OK) {
-                                CU_DEBUG("Problem getting inst");
-                                goto out;
-                        }
-                        CU_DEBUG("Got inst");
-                        if (inst != NULL) {
-                                inst_list_add(list, inst);
-                                CU_DEBUG("Added inst");
-                        } else {
-                                CU_DEBUG("Inst is null, not added");
-                        }
-                }
                 
-        } else {
-                CU_DEBUG("Unsupported type");
-                cu_statusf(_BROKER, &s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Unsupported device type");
-        }
-
  out:
         return s;
 }
