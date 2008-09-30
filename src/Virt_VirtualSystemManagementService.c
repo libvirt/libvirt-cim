@@ -541,6 +541,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
                 return mem_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_DISK) {
                 return lxc_disk_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_NET) {
+                return net_rasd_to_vdev(inst, dev, ns);
         }
 
         return "Resource type not supported on this platform";
