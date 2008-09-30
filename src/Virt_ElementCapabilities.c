@@ -391,16 +391,6 @@ static char* host_sys_and_service[] = {
         NULL
 };
 
-static char* virtual_system_management_capabilities[] = {
-        "Xen_VirtualSystemManagementCapabilities",
-        "Xen_VirtualSystemMigrationCapabilities",
-        "KVM_VirtualSystemManagementCapabilities",
-        "KVM_VirtualSystemMigrationCapabilities",
-        "LXC_VirtualSystemManagementCapabilities",
-        "LXC_VirtualSystemMigrationCapabilities",
-        NULL,
-};
-
 static char *host_caps[] = {
         "Xen_VirtualSystemManagementCapabilities",
         "Xen_VirtualSystemMigrationCapabilities",
@@ -408,9 +398,6 @@ static char *host_caps[] = {
         "KVM_VirtualSystemMigrationCapabilities",
         "LXC_VirtualSystemManagementCapabilities",
         "LXC_VirtualSystemMigrationCapabilities",
-        "Xen_MemoryAllocationCapabilities",
-        "KVM_MemoryAllocationCapabilities",
-        "LXC_MemoryAllocationCapabilities",
         NULL,
 };
 
@@ -428,7 +415,7 @@ static struct std_assoc system_to_vsm_cap = {
 };
 
 static struct std_assoc vsm_cap_to_sys_or_service = {
-        .source_class = (char**)&virtual_system_management_capabilities,
+        .source_class = (char**)&host_caps,
         .source_prop = "Capabilities",
 
         .target_class = (char**)&host_sys_and_service,
@@ -454,7 +441,7 @@ static struct std_assoc _service_to_cap = {
         .source_class = (char**)&service,
         .source_prop = "ManagedElement",
 
-        .target_class = (char**)&virtual_system_management_capabilities,
+        .target_class = (char**)&host_caps,
         .target_prop = "Capabilities",
 
         .assoc_class = (char**)&assoc_classname,
