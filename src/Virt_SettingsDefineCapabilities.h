@@ -44,12 +44,6 @@ enum {SDC_RANGE_NONE = -1,
       SDC_RANGE_INC = 3,
 } range;
 
-struct sdc_rasd_prop {
-        char *field;
-        CMPIValue *value;
-        CMPIType type;
-};
-
 /*
  * Local Variables:
  * mode: C
