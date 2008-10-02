@@ -1,0 +1,22 @@
+// Copyright IBM Corp. 2008
+
+[Association,
+ Provider("cmpi::Virt_ServiceAffectsElement")
+]
+class Xen_ServiceAffectsElement : CIM_ServiceAffectsElement
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_ServiceAffectsElement")
+]
+class KVM_ServiceAffectsElement : CIM_ServiceAffectsElement
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_ServiceAffectsElement")
+]
+class LXC_ServiceAffectsElement : CIM_ServiceAffectsElement
+{
+};
