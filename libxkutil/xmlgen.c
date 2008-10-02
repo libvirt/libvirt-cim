@@ -617,6 +617,16 @@ static char *os_xml(struct domain *domain)
                 return strdup("<!-- unsupported domain type -->\n");
 }
 
+static int console_xml(struct domain *dominfo,
+                       char **xml)
+{
+        if (dominfo->type == DOMAIN_LXC) {
+                astrcat(xml, "<console type='pty'/>\n");
+        }
+
+        return 0;
+}
+
 char *system_to_xml(struct domain *dominfo)
 {
         char *devxml = strdup("");
@@ -667,6 +677,8 @@ char *system_to_xml(struct domain *dominfo)
                               dominfo->dev_graphics,
                               1,
                               graphics_to_xml);
+
+        console_xml(dominfo, &devxml);
 
         concat_devxml(&sysdevxml,
                       dominfo->dev_mem,
