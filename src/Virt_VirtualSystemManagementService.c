@@ -450,10 +450,16 @@ static const char *mem_rasd_to_vdev(CMPIInstance *inst,
                                     struct virt_device *dev)
 {
         const char *units;
+        CMPIrc ret;
         int shift;
 
-        cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
-        cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
+        ret = cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
+        if (ret != CMPI_RC_OK)
+                ret = cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size); 
+
+        if (ret != CMPI_RC_OK)
+                return "Missing `VirtualQuantity' field in Memory RASD";
+
         dev->dev.mem.maxsize = dev->dev.mem.size;
         cu_get_u64_prop(inst, "Limit", &dev->dev.mem.maxsize);
 
@@ -492,7 +498,9 @@ static const char *proc_rasd_to_vdev(CMPIInstance *inst,
         uint32_t def_weight = 0;
         uint64_t def_limit = 0;
 
-        cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.vcpu.quantity);
+        rc = cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.vcpu.quantity);
+        if (rc != CMPI_RC_OK)
+                return "Missing `VirtualQuantity' field in Processor RASD";
 
         op = CMGetObjectPath(inst, NULL);
         if (op == NULL) {
