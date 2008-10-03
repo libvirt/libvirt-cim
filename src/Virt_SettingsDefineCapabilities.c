@@ -46,6 +46,7 @@
 #include "Virt_RASD.h"
 #include "Virt_VSMigrationCapabilities.h"
 #include "Virt_VSMigrationSettingData.h"
+#include "Virt_VirtualSystemManagementService.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -249,12 +250,38 @@ static CMPIStatus vsmc_to_vssd(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIInstance *sdc_rasd_inst(CMPIStatus *s,
+                                   const CMPIObjectPath *ref,
+                                   uint16_t resource_type)
+{
+        CMPIInstance *inst = NULL;
+        const char *base = NULL;
+
+        if (rasd_classname_from_type(resource_type, &base) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Resource type not known");
+                goto out;
+        }
+
+        inst = get_typed_instance(_BROKER,
+                                  CLASSNAME(ref),
+                                  base,
+                                  NAMESPACE(ref));
+
+        CMSetProperty(inst, "ResourceType", &resource_type, CMPI_uint16);
+
+ out:
+        return inst;
+}
+
 static CMPIStatus mem_template(const CMPIObjectPath *ref,
                                int template_type,
-                               CMPIInstance *inst)
+                               struct inst_list *list)
 {
         uint64_t mem_size;
         const char *id;
+        CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         switch (template_type) {
@@ -281,11 +308,17 @@ static CMPIStatus mem_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_MEM); 
+
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "AllocationUnits", 
                       (CMPIValue *)"KiloBytes", CMPI_chars);
         CMSetProperty(inst, "VirtualQuantity", 
                       (CMPIValue *)&mem_size, CMPI_uint64);
+        CMSetProperty(inst, "Limit", 
+                      (CMPIValue *)&mem_size, CMPI_uint64);
+
+        inst_list_add(list, inst);
 
  out:
         return s;
@@ -316,30 +349,41 @@ static bool get_max_procs(const CMPIObjectPath *ref,
 
 static CMPIStatus proc_template(const CMPIObjectPath *ref,
                                 int template_type,
-                                CMPIInstance *inst)
+                                struct inst_list *list)
 {
         bool ret;
         uint64_t num_procs;
+        uint64_t limit;
+        uint32_t weight;
         const char *id;
+        CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         switch (template_type) {
         case SDC_RASD_MIN:
                 num_procs = 0;
+                limit = 1;
+                weight = MIN_XEN_WEIGHT;
                 id = "Minimum";
                 break;
         case SDC_RASD_MAX:
                 ret = get_max_procs(ref, &num_procs, &s);
                 if (!ret)
                     goto out;
+                limit = 0;
+                weight = MAX_XEN_WEIGHT;
                 id = "Maximum";
                 break;
         case SDC_RASD_INC:
                 num_procs = 1;
+                limit = 50;
+                weight = INC_XEN_WEIGHT;
                 id = "Increment";
                 break;
         case SDC_RASD_DEF:
                 num_procs = 1;
+                limit = 0;
+                weight = DEFAULT_XEN_WEIGHT;
                 id = "Default";
                 break;
         default:
@@ -349,11 +393,21 @@ static CMPIStatus proc_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_PROC); 
+
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "AllocationUnits", 
                       (CMPIValue *)"Processors", CMPI_chars);
         CMSetProperty(inst, "VirtualQuantity", 
                       (CMPIValue *)&num_procs, CMPI_uint64);
+
+        if (STARTS_WITH(CLASSNAME(ref), "Xen")) {
+                CMSetProperty(inst, "Limit", (CMPIValue *)&limit, CMPI_uint64); 
+                CMSetProperty(inst, "Weight", 
+                              (CMPIValue *)&weight, CMPI_uint32); 
+        }
+
+        inst_list_add(list, inst);
 
  out:
         return s;
@@ -438,11 +492,12 @@ static bool get_max_nics(const CMPIObjectPath *ref,
 
 static CMPIStatus net_template(const CMPIObjectPath *ref,
                                int template_type,
-                               CMPIInstance *inst)
+                               struct inst_list *list)
 {
         bool ret;
         uint64_t num_nics;
         const char *id;
+        CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         switch (template_type) {
@@ -471,9 +526,13 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_NET); 
+
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "VirtualQuantity", 
                       (CMPIValue *)&num_nics, CMPI_uint64);
+
+        inst_list_add(list, inst);
 
  out:
         return s;
@@ -525,13 +584,64 @@ static int get_disk_freespace(const CMPIObjectPath *ref,
         return ret;
 }
 
+static CMPIStatus set_disk_props(int type,
+                                 const CMPIObjectPath *ref,
+                                 const char *id,
+                                 uint64_t disk_size,
+                                 struct inst_list *list)
+{
+        const char *addr;
+        const char *dev;
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (type == DOMAIN_LXC) {
+                addr = "/tmp";
+                dev = "/lxc_mnt/tmp";
+        }
+        else {
+                dev = "hda";
+                addr = "/dev/null";
+        }
+
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK);
+
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+        CMSetProperty(inst, "AllocationQuantity",
+                      (CMPIValue *)"MegaBytes", CMPI_chars);
+        CMSetProperty(inst, "VirtualQuantity",
+                      (CMPIValue *)&disk_size, CMPI_uint64);
+        CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
+
+        if (type == DOMAIN_LXC)
+                CMSetProperty(inst, "MountPoint", (CMPIValue *)dev, CMPI_chars);
+        else {
+                if (type == DOMAIN_XENPV) {
+                        dev = "xvda";
+                        CMSetProperty(inst, "Caption",
+                                      (CMPIValue *)"PV disk", CMPI_chars);
+                } else if (type, DOMAIN_XENFV) {
+                        CMSetProperty(inst, "Caption",
+                                      (CMPIValue *)"FV disk", CMPI_chars);
+                }
+
+                CMSetProperty(inst, "VirtualDevice",
+                              (CMPIValue *)dev, CMPI_chars);
+        }
+
+        inst_list_add(list, inst);
+
+        return s;
+}
+
 static CMPIStatus disk_template(const CMPIObjectPath *ref,
                                 int template_type,
-                                CMPIInstance *inst)
+                                struct inst_list *list)
 {
         bool ret;
-        uint64_t disk_size;
+        char *pfx;
         const char *id;
+        uint64_t disk_size;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         switch(template_type) {
@@ -560,57 +670,27 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-        CMSetProperty(inst, "AllocationQuantity", 
-                      (CMPIValue *)"MegaBytes", CMPI_chars);
-        CMSetProperty(inst, "VirtualQuantity", 
-                      (CMPIValue *)&disk_size, CMPI_uint64);
+        pfx = class_prefix_name(CLASSNAME(ref));
+
+        if (STREQ(pfx, "Xen")) {
+                s = set_disk_props(DOMAIN_XENPV, ref, id, disk_size, list); 
+                
+                if (s.rc != CMPI_RC_OK)
+                       goto out;
+
+                s = set_disk_props(DOMAIN_XENFV, ref, id, disk_size, list); 
+        } else if (STREQ(pfx, "KVM")) {
+                s = set_disk_props(DOMAIN_KVM, ref, id, disk_size, list); 
+        } else if (STREQ(pfx, "LXC")) {
+                s = set_disk_props(DOMAIN_LXC, ref, id, disk_size, list); 
+        } else {
+                cu_statusf(_BROKER, &s, 
+                            CMPI_RC_ERR_FAILED,
+                           "Unsupported virtualization type");
+       }
 
  out:
         return s;
-}
-
-static CMPIInstance *sdc_rasd_inst(CMPIStatus *s,
-                                   const CMPIObjectPath *ref,
-                                   sdc_rasd_type type,
-                                   uint16_t resource_type)
-{
-        CMPIInstance *inst = NULL;
-        const char *base = NULL;
-
-        if (rasd_classname_from_type(resource_type, &base) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Resource type not known");
-                goto out;
-        }
-
-        inst = get_typed_instance(_BROKER,
-                                  CLASSNAME(ref),
-                                  base,
-                                  NAMESPACE(ref));
-
-        if (resource_type == CIM_RES_TYPE_MEM)
-                *s = mem_template(ref, type, inst);
-        else if (resource_type == CIM_RES_TYPE_PROC)
-                *s = proc_template(ref, type, inst);
-        else if (resource_type == CIM_RES_TYPE_NET)
-                *s = net_template(ref, type, inst);
-        else if (resource_type == CIM_RES_TYPE_DISK)
-                *s = disk_template(ref, type, inst);
-        else {
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unsupported resource type");
-        }
-
-        if (s->rc != CMPI_RC_OK) 
-                goto out;
-
-        CMSetProperty(inst, "ResourceType", &resource_type, CMPI_uint16);
-
- out:
-        return inst;
 }
 
 static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
@@ -618,21 +698,26 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                                      uint16_t type)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *inst;
         int i;
 
         for (i = SDC_RASD_MIN; i <= SDC_RASD_INC; i++) {
-                inst = sdc_rasd_inst(&s, ref, i, type);
-                if (s.rc != CMPI_RC_OK) {
-                        CU_DEBUG("Problem getting inst");
-                        goto out;
+                if (type == CIM_RES_TYPE_MEM)
+                        s = mem_template(ref, i, list);
+                else if (type == CIM_RES_TYPE_PROC)
+                        s = proc_template(ref, i, list);
+                else if (type == CIM_RES_TYPE_NET)
+                        s = net_template(ref, i, list);
+                else if (type == CIM_RES_TYPE_DISK)
+                        s = disk_template(ref, i, list);
+                else {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unsupported resource type");
                 }
-                CU_DEBUG("Got inst");
-                if ((s.rc == CMPI_RC_OK) && (inst != NULL)) {
-                        inst_list_add(list, inst);
-                        CU_DEBUG("Added inst");
-                } else {
-                        CU_DEBUG("Inst is null, not added");
+
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Problem getting inst list");
+                        goto out;
                 }
         }
                 

@@ -19,6 +19,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  */
 
+#define MIN_XEN_WEIGHT 1
+#define MAX_XEN_WEIGHT 65535
+#define INC_XEN_WEIGHT MAX_XEN_WEIGHT / 2 
+#define DEFAULT_XEN_WEIGHT 1024
+
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
                     const CMPIBroker *broker,
