@@ -56,6 +56,9 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
 #define CIM_CRS_ENABLED_STATE   2
 #define CIM_CRS_REQUESTED_STATE 12
 
+#define  CIM_CRS_OTHER 1
+#define  CIM_CRS_VNC   4
+
 #include <libcmpiutil/libcmpiutil.h>
 #include <string.h>
 
