@@ -1065,9 +1065,9 @@ int change_device(virDomainPtr dom, struct virt_device *dev)
 
 int disk_type_from_file(const char *path)
 {
-        struct stat s;
+        struct stat64 s;
 
-        if (stat(path, &s) < 0)
+        if (stat64(path, &s) < 0)
                 return DISK_UNKNOWN;
 
         if (S_ISBLK(s.st_mode))

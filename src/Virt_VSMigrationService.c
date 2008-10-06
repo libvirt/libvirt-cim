@@ -283,9 +283,9 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
 
 static bool is_valid_check(const char *path)
 {
-        struct stat s;
+        struct stat64 s;
 
-        if (stat(path, &s) != 0)
+        if (stat64(path, &s) != 0)
                 return false;
 
         if (!S_ISREG(s.st_mode))

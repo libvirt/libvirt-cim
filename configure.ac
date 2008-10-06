@@ -23,7 +23,7 @@ CC_WARNINGS="\
 -Wcast-align \
 -Wno-unused-value"
 
-CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE"
+CFLAGS="$CFLAGS -D_FORTIFY_SOURCE=2 -D_GNU_SOURCE -D_LARGEFILE64_SOURCE"
 
 # Configure command line options
 AC_ARG_VAR([CIMSERVER],[the target CIM server (pegasus|sfcb|openwbem|sniacimom).

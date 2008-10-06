@@ -147,9 +147,9 @@ static bool get_file_size(const CMPIBroker *broker,
                           const char *image,
                           uint64_t *size)
 {
-        struct stat st;
+        struct stat64 st;
 
-        if (stat(image, &st) == -1)
+        if (stat64(image, &st) == -1)
                 return false;
 
         *size = st.st_size;
