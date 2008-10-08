@@ -45,7 +45,8 @@ MOFS = \
 	schema/ConcreteComponent.mof \
 	schema/ConsoleRedirectionService.mof \
         schema/ConsoleRedirectionServiceCapabilities.mof \
-        schema/ServiceAffectsElement.mof
+        schema/ServiceAffectsElement.mof \
+        schema/KVMRedirectionSAP.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -101,7 +102,8 @@ REGS = \
 	schema/ConcreteComponent.registration \
 	schema/ConsoleRedirectionService.registration \
         schema/ConsoleRedirectionServiceCapabilities.registration \
-        schema/ServiceAffectsElement.registration
+        schema/ServiceAffectsElement.registration \
+        schema/KVMRedirectionSAP.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \

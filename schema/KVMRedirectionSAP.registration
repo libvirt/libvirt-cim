@@ -1,0 +1,5 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_KVMRedirectionSAP root/virt Virt_KVMRedirectionSAP Virt_KVMRedirectionSAP method instance
+KVM_KVMRedirectionSAP root/virt Virt_KVMRedirectionSAP Virt_KVMRedirectionSAP method instance
+LXC_KVMRedirectionSAP root/virt Virt_KVMRedirectionSAP Virt_KVMRedirectionSAP method instance

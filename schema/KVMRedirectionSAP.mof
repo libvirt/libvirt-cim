@@ -1,0 +1,16 @@
+// Copyright IBM Corp. 2007
+
+[Provider("cmpi::Virt_KVMRedirectionSAP")]
+class Xen_KVMRedirectionSAP : CIM_KVMRedirectionSAP
+{
+};
+
+[Provider("cmpi::Virt_KVMRedirectionSAP")]
+class KVM_KVMRedirectionSAP : CIM_KVMRedirectionSAP
+{
+};
+
+[Provider("cmpi::Virt_ConsoleRedirectionService")]
+class LXC_KVMRedirectionSAP : CIM_KVMRedirectionSAP
+{
+};
