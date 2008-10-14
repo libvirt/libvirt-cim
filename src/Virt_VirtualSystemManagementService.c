@@ -522,6 +522,27 @@ static const char *proc_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *lxc_proc_rasd_to_vdev(CMPIInstance *inst,
+                                         struct virt_device *dev)
+{
+        CMPIrc rc;
+        uint32_t def_weight = 1024;
+
+        rc = cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.vcpu.quantity);
+        if (rc == CMPI_RC_OK)
+                return "ProcRASD field VirtualQuantity not valid for LXC";
+
+        rc = cu_get_u64_prop(inst, "Limit", &dev->dev.vcpu.limit);
+        if (rc == CMPI_RC_OK)
+                return "ProcRASD field Limit not valid for LXC";
+
+        rc = cu_get_u32_prop(inst, "Weight", &dev->dev.vcpu.weight);
+        if (rc != CMPI_RC_OK)
+                dev->dev.vcpu.weight = def_weight;
+
+        return NULL;
+}
+
 static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev,
                                          uint16_t type,
@@ -551,6 +572,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
                 return lxc_disk_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_NET) {
                 return net_rasd_to_vdev(inst, dev, ns);
+        } else if (type == CIM_RES_TYPE_PROC) {
+                return lxc_proc_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
