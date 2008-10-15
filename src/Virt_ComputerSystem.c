@@ -667,23 +667,75 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
+static int xen_scheduler_params(struct infostore_ctx *ctx,
+                                virSchedParameter **params)
+{
+        unsigned long long weight;
+        unsigned long long cap;
+        int nparams = 0;
+
+        *params = calloc(2, sizeof(virSchedParameter));
+        if (*params == NULL)
+                return -1;
+
+        weight = infostore_get_u64(ctx, "weight");
+        cap = infostore_get_u64(ctx, "limit");
+
+        if (weight != 0) {
+                strncpy((*params)[0].field,
+                        "weight",
+                        sizeof((*params)[0].field));
+                (*params)[0].type = VIR_DOMAIN_SCHED_FIELD_UINT;
+                (*params)[0].value.ui = weight;
+                nparams++;
+        }
+
+        if (cap != 0) {
+                strncpy((*params)[0].field,
+                        "cap",
+                        sizeof((*params)[0].field));
+                (*params)[0].type = VIR_DOMAIN_SCHED_FIELD_UINT;
+                (*params)[0].value.ui = cap;
+                nparams++;
+        }
+
+        return nparams;
+}
+
+static int lxc_scheduler_params(struct infostore_ctx *ctx,
+                                virSchedParameter **params)
+{
+        unsigned long long value;
+
+        *params = calloc(1, sizeof(virSchedParameter));
+        if (*params == NULL)
+                return -1;
+
+        value = infostore_get_u64(ctx, "weight");
+
+        if (value != 0) {
+                strncpy((*params)[0].field,
+                        "cpu_shares",
+                        sizeof((*params)[0].field));
+                (*params)[0].type = VIR_DOMAIN_SCHED_FIELD_UINT;
+                (*params)[0].value.ui = value;
+
+                return 1;
+        }
+
+        return 0;
+}
+
 static void set_scheduler_params(virDomainPtr dom)
 {
         struct infostore_ctx *ctx;
         virConnectPtr conn = NULL;
-        virSchedParameter params[] =
-                {{ "weight", VIR_DOMAIN_SCHED_FIELD_UINT },
-                 { "cap", VIR_DOMAIN_SCHED_FIELD_UINT },
-                };
+        virSchedParameter *params = NULL;
+        int count;
 
         conn = virDomainGetConnect(dom);
         if (conn == NULL) {
                 CU_DEBUG("Unable to get connection from domain");
-                return;
-        }
-
-        if (!STREQC(virConnectGetType(conn), "xen")) {
-                CU_DEBUG("Not setting sched params for this domain type");
                 return;
         }
 
@@ -693,13 +745,30 @@ static void set_scheduler_params(virDomainPtr dom)
                 return;
         }
 
-        params[0].value.ui = infostore_get_u64(ctx, "weight");
-        params[1].value.ui = infostore_get_u64(ctx, "limit");
+        if (STREQC(virConnectGetType(conn), "xen"))
+                count = xen_scheduler_params(ctx, &params);
+        else if (STREQC(virConnectGetType(conn), "lxc"))
+                count = lxc_scheduler_params(ctx, &params);
+        else {
+                CU_DEBUG("Not setting sched params for type %s",
+                         virConnectGetType(conn));
+                goto out;
+        }
 
-        virDomainSetSchedulerParameters(dom, params, 2);
+        if (count < 0) {
+                CU_DEBUG("Unable to set scheduler parameters");
+                goto out;
+        }
 
+        if (count > 0)
+                virDomainSetSchedulerParameters(dom, params, count);
+        else
+                CU_DEBUG("No sched parameters to set");
+ out:
         infostore_close(ctx);
+        free(params);
 }
+
 
 /* This composite operation may be supported as a flag to reboot */
 static int domain_reset(virDomainPtr dom)
