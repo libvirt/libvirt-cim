@@ -306,8 +306,13 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 CMSetProperty(inst, "Limit",
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
         } else if (dev->type == CIM_RES_TYPE_PROC) {
-                CMSetProperty(inst, "VirtualQuantity",
-                              (CMPIValue *)&dev->dev.vcpu.quantity, CMPI_uint64);
+                if (dev->dev.vcpu.quantity > 0) {
+                        CMSetProperty(inst,
+                                      "VirtualQuantity",
+                                      (CMPIValue *)&dev->dev.vcpu.quantity,
+                                      CMPI_uint64);
+                }
+
                 set_proc_rasd_params(broker, ref, host, inst);
         }
 
