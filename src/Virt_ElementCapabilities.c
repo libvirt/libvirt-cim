@@ -398,6 +398,9 @@ static char *host_caps[] = {
         "KVM_VirtualSystemMigrationCapabilities",
         "LXC_VirtualSystemManagementCapabilities",
         "LXC_VirtualSystemMigrationCapabilities",
+        "Xen_AllocationCapabilities",
+        "KVM_AllocationCapabilities",
+        "LXC_AllocationCapabilities",
         NULL,
 };
 
