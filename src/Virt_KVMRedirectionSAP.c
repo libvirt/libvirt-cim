@@ -39,11 +39,25 @@
 
 #include "Virt_KVMRedirectionSAP.h"
 
+#define PROC_TCP "/proc/net/tcp"
+
 const static CMPIBroker *_BROKER;
+
+struct vnc_port {
+        char *name;
+        int port;
+        int remote_port;
+};
+
+struct vnc_ports {
+        struct vnc_port **list;
+        unsigned int max;
+        unsigned int cur;
+};
 
 static int inst_from_dom(const CMPIBroker *broker,
                          const CMPIObjectPath *ref,
-                         struct domain *dominfo,
+                         struct vnc_port *port,
                          CMPIInstance *inst)
 {
         char *sccn = NULL;
@@ -52,8 +66,7 @@ static int inst_from_dom(const CMPIBroker *broker,
         uint16_t prop_val;
         int ret = 1;
 
-        if (asprintf(&id, "%s:%s", dominfo->name,
-                     dominfo->dev_graphics->dev.graphics.type) == -1) { 
+        if (asprintf(&id, "%d:%d", port->port, port->remote_port) == -1) {
                 CU_DEBUG("Unable to format name");
                 ret = 0;
                 goto out;
@@ -66,7 +79,7 @@ static int inst_from_dom(const CMPIBroker *broker,
                       (CMPIValue *)id, CMPI_chars);
 
         CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)dominfo->name, CMPI_chars);
+                      (CMPIValue *)port->name, CMPI_chars);
 
         CMSetProperty(inst, "SystemCreationClassName",
                       (CMPIValue *)sccn, CMPI_chars);
@@ -74,19 +87,16 @@ static int inst_from_dom(const CMPIBroker *broker,
         CMSetProperty(inst, "ElementName",
                       (CMPIValue *)id, CMPI_chars);
 
-        if (STREQ(dominfo->dev_graphics->dev.graphics.type, "vnc"))
-                prop_val = (uint16_t)CIM_CRS_VNC;
-        else
-                prop_val = (uint16_t)CIM_CRS_OTHER;
-
+        prop_val = (uint16_t)CIM_CRS_VNC;
         CMSetProperty(inst, "KVMProtocol",
                       (CMPIValue *)&prop_val, CMPI_uint16);
 
-        /* Need to replace this with a check that determines whether
-           the console session is enabled (in use) or available (not actively
-           in use).
-         */
-        prop_val = (uint16_t)CIM_CRS_ENABLED_STATE;
+        if (port->remote_port < 0)
+                prop_val = (uint16_t)CIM_SAP_INACTIVE_STATE;
+        else if (port->remote_port == 0)
+                prop_val = (uint16_t)CIM_SAP_AVAILABLE_STATE;
+        else
+                prop_val = (uint16_t)CIM_SAP_ACTIVE_STATE;
         CMSetProperty(inst, "EnabledState",
                       (CMPIValue *)&prop_val, CMPI_uint16);
 
@@ -101,7 +111,7 @@ static int inst_from_dom(const CMPIBroker *broker,
 static CMPIInstance *get_console_sap(const CMPIBroker *broker,
                                      const CMPIObjectPath *reference,
                                      virConnectPtr conn,
-                                     struct domain *dominfo,
+                                     struct vnc_port *port,
                                      CMPIStatus *s)
 
 { 
@@ -119,7 +129,7 @@ static CMPIInstance *get_console_sap(const CMPIBroker *broker,
                 goto out;
         }
 
-        if (inst_from_dom(broker, reference, dominfo, inst) != 1) {
+        if (inst_from_dom(broker, reference, port, inst) != 1) {
                 cu_statusf(broker, s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get instance from domain");
@@ -127,6 +137,84 @@ static CMPIInstance *get_console_sap(const CMPIBroker *broker,
 
  out:
         return inst;
+}
+
+static CMPIStatus get_vnc_sessions(const CMPIObjectPath *ref,
+                                   virConnectPtr conn,
+                                   struct vnc_ports ports,
+                                   struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *path = PROC_TCP;
+        unsigned int lport = 0;
+        unsigned int rport = 0;
+        FILE *tcp_info;
+        char *line = NULL;
+        size_t len = 0;
+        int val;
+        int ret;
+        int i;
+
+        tcp_info = fopen(path, "r");
+        if (tcp_info == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to open %s: %m", tcp_info);
+                goto out;
+        }
+
+        if (getline(&line, &len, tcp_info) == -1) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to read from %s", tcp_info);
+                goto out;
+        }
+
+        while (getline(&line, &len, tcp_info) > 0) {
+                ret = sscanf(line, "%d: %*[^:]:%X %*[^:]:%X", &val, &lport,
+                             &rport);
+                if (ret != 3) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to determine active sessions");
+                        goto out;
+                }
+
+               for (i = 0; i < ports.max; i++) { 
+                       if (lport != ports.list[i]->port)
+                               continue;
+
+                       ports.list[i]->remote_port = rport;
+                       inst = get_console_sap(_BROKER, 
+                                              ref, 
+                                              conn, 
+                                              ports.list[i], 
+                                              &s);
+                       if ((s.rc != CMPI_RC_OK) || (inst == NULL))
+                               goto out;
+
+                       inst_list_add(list, inst);
+                }
+        }
+
+        /* Handle any guests that were missed.  These guest don't have active 
+           or enabled sessions. */
+        for (i = 0; i < ports.max; i++) { 
+                if (ports.list[i]->remote_port != -1)
+                        continue;
+
+                inst = get_console_sap(_BROKER, ref, conn, ports.list[i], &s);
+                if ((s.rc != CMPI_RC_OK) || (inst == NULL))
+                        goto out;
+
+                inst_list_add(list, inst);
+        }
+
+ out:
+        tcp_info = fopen(path, "r");
+        fclose(tcp_info);
+        return s;
 }
 
 static bool check_graphics(virDomainPtr dom,
@@ -157,7 +245,10 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
         virDomainPtr *domain_list;
         struct domain *dominfo = NULL;
         struct inst_list list;
+        struct vnc_ports port_list;
         int count;
+        int lport;
+        int ret;
         int i;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
@@ -165,6 +256,10 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
                 return s;
 
         inst_list_init(&list);
+
+        port_list.list = NULL;
+        port_list.max = 0;
+        port_list.cur = 0;
 
         count = get_domain_list(conn, &domain_list);
         if (count < 0) {
@@ -175,23 +270,64 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
         } else if (count == 0)
                 goto out;
 
-        for (i = 0; i < count; i++) {
-                CMPIInstance *inst = NULL;
+        port_list.list = malloc(count * sizeof(struct vnc_port *));
+        if (port_list.list == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate guest port list");
+                goto out;
 
+        }
+
+        for (i = 0; i < count; i++) {
+                port_list.list[i] = malloc(sizeof(struct vnc_port));
+                if (port_list.list[i] == NULL) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to allocate guest port list");
+                        goto out;
+                }
+        }
+
+        for (i = 0; i < count; i++) {
                 if (!check_graphics(domain_list[i], &dominfo)) {
                         virDomainFree(domain_list[i]);
                         cleanup_dominfo(&dominfo);
                         continue;
                 }
 
-                inst = get_console_sap(_BROKER, ref, conn, dominfo, &s);
+                ret = sscanf(dominfo->dev_graphics->dev.graphics.port, 
+                             "%d",
+                             &lport);
+                if (ret != 1) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to guest's console port");
+                        goto out;
+                }
+
+                port_list.list[port_list.cur]->name = strdup(dominfo->name);
+                if (port_list.list[port_list.cur]->name == NULL) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Unable to allocate string");
+                        goto out;
+                }
+
+                port_list.list[port_list.cur]->port = lport;
+                port_list.list[port_list.cur]->remote_port = -1;
+                port_list.cur++;
 
                 virDomainFree(domain_list[i]);
                 cleanup_dominfo(&dominfo);
-
-                if (inst != NULL)
-                        inst_list_add(&list, inst);
         }
+
+        port_list.max = port_list.cur;
+        port_list.cur = 0;
+ 
+        s = get_vnc_sessions(ref, conn, port_list, &list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (names_only)
                 cu_return_instance_names(results, &list);
@@ -201,6 +337,13 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
  out:
         free(domain_list);
         inst_list_free(&list);
+
+        for (i = 0; i < count; i++) {
+                free(port_list.list[i]->name);
+                free(port_list.list[i]);
+                port_list.list[i] = NULL;
+        }
+        free(port_list.list);
 
         return s;
 }

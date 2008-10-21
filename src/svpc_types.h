@@ -60,6 +60,10 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
 #define  CIM_CRS_OTHER 1
 #define  CIM_CRS_VNC   4
 
+#define CIM_SAP_ACTIVE_STATE    2
+#define CIM_SAP_INACTIVE_STATE  3
+#define CIM_SAP_AVAILABLE_STATE 6
+
 #include <libcmpiutil/libcmpiutil.h>
 #include <string.h>
 
