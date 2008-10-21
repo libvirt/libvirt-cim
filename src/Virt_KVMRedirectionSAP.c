@@ -350,7 +350,7 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
 
 CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
                                    const CMPIObjectPath *ref,
-                                   const char *name,
+                                   const char *sys,
                                    CMPIInstance **_inst)
 {
         virConnectPtr conn;
@@ -358,6 +358,10 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         struct domain *dominfo = NULL;
+        struct vnc_port *port = NULL;
+        const char *name = NULL;
+        int lport;
+        int rport;
 
         conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL) {
@@ -367,12 +371,12 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
                 goto out;
         }
 
-        dom = virDomainLookupByName(conn, name);
+        dom = virDomainLookupByName(conn, sys);
         if (dom == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "No such instance (%s)",
-                           name);
+                           sys);
                 goto out;
         }
 
@@ -380,9 +384,43 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "No console device for this guest");
+                goto out;
         }
 
-        inst = get_console_sap(_BROKER, ref, conn, dominfo, &s);
+        if (cu_get_str_path(ref, "Name", &name) != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (System)");
+                goto out;
+        }
+
+        if (sscanf(name, "%d:%d", &lport, &rport) != 2) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to guest's console port");
+                goto out;
+        }
+
+        port = malloc(sizeof(struct vnc_port));
+        if (port == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate guest port struct");
+                goto out;
+        }
+
+        port->name = strdup(dominfo->name);
+        if (port->name == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate string");
+                goto out;
+        }
+
+        port->port = lport;
+        port->remote_port = rport;
+
+        inst = get_console_sap(_BROKER, ref, conn, port, &s);
 
         virDomainFree(dom);
 
@@ -393,6 +431,8 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
 
  out:
         virConnectClose(conn);
+        free(port->name);
+        free(port);
 
         return s;
 }
@@ -405,10 +445,10 @@ CMPIStatus get_console_sap_by_ref(const CMPIBroker *broker,
         CMPIInstance *inst = NULL;
         const char *sys = NULL;
 
-        if (cu_get_str_path(reference, "System", &sys) != CMPI_RC_OK) {
+        if (cu_get_str_path(reference, "SystemName", &sys) != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (System)");
+                           "No such instance (SystemName)");
                 goto out;
         }
 
