@@ -47,6 +47,7 @@
 #include "Virt_VSMigrationCapabilities.h"
 #include "Virt_VSMigrationSettingData.h"
 #include "Virt_VirtualSystemManagementService.h"
+#include "Virt_AllocationCapabilities.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -730,6 +731,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
                                     struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK};
+        CMPIInstance *inst;
         uint16_t type;
         const char *id = NULL;
         int i;
@@ -743,6 +745,10 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
                            "Missing InstanceID");
                 goto out;
         }
+
+        s = get_alloc_cap_by_id(_BROKER, ref, id, &inst);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
  
         type = res_type_from_pool_id(id);
 

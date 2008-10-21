@@ -159,7 +159,11 @@ CMPIStatus get_alloc_cap_by_id(const CMPIBroker *broker,
         if ((pool == NULL) || (s.rc != CMPI_RC_OK))
                 return s;
 
-        return ac_from_pool(broker, ref, pool, inst);
+        s = ac_from_pool(broker, ref, pool, inst);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+
+        return cu_validate_ref(broker, ref, *inst);
 }
 
 static CMPIStatus return_alloc_cap_instances(const CMPIBroker *broker,
