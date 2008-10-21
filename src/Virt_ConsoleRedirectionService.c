@@ -38,12 +38,13 @@
 #include "Virt_HostSystem.h"
 #include "Virt_ConsoleRedirectionService.h"
 
+#define MAX_SAP_SESSIONS 65535
+
 const static CMPIBroker *_BROKER;
 
 static CMPIStatus set_inst_properties(const CMPIBroker *broker,
                                       const CMPIContext *context,
                                       const CMPIObjectPath *ref,
-                                      virConnectPtr conn,
                                       CMPIInstance *inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -51,8 +52,6 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         const char *name = NULL;
         const char *ccname = NULL;
         uint16_t prop_val;
-        int num_defined_dom;
-        int num_dom;
 
         s = get_host_system_properties(&name, &ccname, ref, broker, context);
         if (s.rc != CMPI_RC_OK) {
@@ -84,16 +83,7 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         CMSetProperty(inst, "RedirectionServiceType",
                       (CMPIValue *)&array, CMPI_uint16A);
 
-        num_dom = virConnectNumOfDomains(conn);
-        num_defined_dom = virConnectNumOfDefinedDomains(conn);
-
-        if (num_dom < 0)
-            num_dom = 0;
-
-        if (num_defined_dom < 0)
-            num_defined_dom = 0;
-
-        prop_val = (uint16_t) num_defined_dom + (uint16_t) num_defined_dom;
+        prop_val = (uint16_t)MAX_SAP_SESSIONS;
         CMSetProperty(inst, "MaxConcurrentEnabledSAPs",
                       (CMPIValue *)&prop_val, CMPI_uint16);
 
@@ -147,7 +137,7 @@ CMPIStatus get_console_rs(const CMPIObjectPath *reference,
                 goto out;
         }
 
-        s = set_inst_properties(broker, context, reference, conn, inst);
+        s = set_inst_properties(broker, context, reference, inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
