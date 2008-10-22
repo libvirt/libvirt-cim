@@ -1,0 +1,5 @@
+# Copyright IBM Corp. 2008
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_PointingDevice root/virt Virt_Device Virt_Device instance
+KVM_PointingDevice root/virt Virt_Device Virt_Device instance
+LXC_PointingDevice root/virt Virt_Device Virt_Device instance

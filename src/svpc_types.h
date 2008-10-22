@@ -29,15 +29,17 @@
 #define CIM_RES_TYPE_DISK       17
 #define CIM_RES_TYPE_EMU        1
 #define CIM_RES_TYPE_GRAPHICS   24
+#define CIM_RES_TYPE_INPUT      13 
 #define CIM_RES_TYPE_UNKNOWN    1000
 
-#define CIM_RES_TYPE_COUNT 5
+#define CIM_RES_TYPE_COUNT 6
 const static int cim_res_types[CIM_RES_TYPE_COUNT] = 
   {CIM_RES_TYPE_NET,
    CIM_RES_TYPE_DISK,
    CIM_RES_TYPE_MEM,
    CIM_RES_TYPE_PROC,
    CIM_RES_TYPE_GRAPHICS,
+   CIM_RES_TYPE_INPUT,
   };
 
 #define CIM_VSSD_RECOVERY_NONE       2

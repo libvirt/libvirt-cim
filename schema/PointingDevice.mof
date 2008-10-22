@@ -1,0 +1,17 @@
+// Copyright IBM Corp. 2007
+
+[ Provider("cmpi::Virt_Device") ]
+class Xen_PointingDevice : CIM_PointingDevice
+{
+};
+
+[ Provider("cmpi::Virt_Device") ]
+class KVM_PointingDevice : CIM_PointingDevice
+{
+};
+
+[ Provider("cmpi::Virt_Device") ]
+class LXC_PointingDevice : CIM_PointingDevice
+{
+};
+

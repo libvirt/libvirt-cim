@@ -47,7 +47,8 @@ MOFS = \
         schema/ConsoleRedirectionServiceCapabilities.mof \
         schema/ServiceAffectsElement.mof \
         schema/KVMRedirectionSAP.mof \
-        schema/DisplayController.mof
+        schema/DisplayController.mof \
+        schema/PointingDevice.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -110,7 +111,8 @@ REGS = \
         schema/ConsoleRedirectionServiceCapabilities.registration \
         schema/ServiceAffectsElement.registration \
         schema/KVMRedirectionSAP.registration \
-        schema/DisplayController.registration
+        schema/DisplayController.registration \
+        schema/PointingDevice.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
