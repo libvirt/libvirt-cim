@@ -175,6 +175,45 @@ static CMPIInstance *mem_instance(const CMPIBroker *broker,
         return inst;
 }
 
+static int graphics_set_attr(CMPIInstance *instance,
+                             struct graphics_device *dev)
+{
+        int rc;
+        char *vp_str = NULL;
+
+        rc = asprintf(&vp_str, "vnc:%s", dev->port);
+        if (rc == -1) {
+                return 0;
+        }
+
+        CMSetProperty(instance, "VideoProcessor",
+                      (CMPIValue *)vp_str, CMPI_chars);
+
+        free(vp_str);
+
+        return 1;
+}
+
+static CMPIInstance *graphics_instance(const CMPIBroker *broker,
+                                       struct graphics_device *dev,
+                                       const virDomainPtr dom,
+                                       const char *ns)
+{
+        CMPIInstance *inst;
+        virConnectPtr conn;
+
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "DisplayController",
+                                  ns);
+
+        if (!graphics_set_attr(inst, dev))
+                return NULL;
+
+        return inst;
+}
+
 static int device_set_devid(CMPIInstance *instance,
                             struct virt_device *dev,
                             const virDomainPtr dom)
@@ -314,7 +353,12 @@ static bool device_instances(const CMPIBroker *broker,
                 else if (dev->type == CIM_RES_TYPE_PROC) {
                         proc_count = dev->dev.vcpu.quantity;
                         continue;
-                } else
+                } else if (dev->type == CIM_RES_TYPE_GRAPHICS)
+                        instance = graphics_instance(broker,
+                                                     &dev->dev.graphics,
+                                                     dom,
+                                                     ns);
+                else
                         return false;
 
                 if (!instance)
@@ -346,6 +390,8 @@ uint16_t res_type_from_device_classname(const char *classname)
                 return CIM_RES_TYPE_MEM;
         else if (strstr(classname, "Processor"))
                 return CIM_RES_TYPE_PROC;
+        else if (strstr(classname, "DisplayController"))
+                return CIM_RES_TYPE_GRAPHICS;
         else
                 return CIM_RES_TYPE_UNKNOWN;
 }

@@ -31,12 +31,13 @@
 #define CIM_RES_TYPE_GRAPHICS   24
 #define CIM_RES_TYPE_UNKNOWN    1000
 
-#define CIM_RES_TYPE_COUNT 4
+#define CIM_RES_TYPE_COUNT 5
 const static int cim_res_types[CIM_RES_TYPE_COUNT] = 
   {CIM_RES_TYPE_NET,
    CIM_RES_TYPE_DISK,
    CIM_RES_TYPE_MEM,
    CIM_RES_TYPE_PROC,
+   CIM_RES_TYPE_GRAPHICS,
   };
 
 #define CIM_VSSD_RECOVERY_NONE       2

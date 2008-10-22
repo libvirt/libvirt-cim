@@ -1,0 +1,17 @@
+// Copyright IBM Corp. 2007
+
+[ Provider("cmpi::Virt_Device") ]
+class Xen_DisplayController : CIM_DisplayController
+{
+};
+
+[ Provider("cmpi::Virt_Device") ]
+class KVM_DisplayController : CIM_DisplayController
+{
+};
+
+[ Provider("cmpi::Virt_Device") ]
+class LXC_DisplayController : CIM_DisplayController
+{
+};
+

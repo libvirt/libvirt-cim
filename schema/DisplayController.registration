@@ -1,0 +1,5 @@
+# Copyright IBM Corp. 2008
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_DisplayController root/virt Virt_Device Virt_Device instance
+KVM_DisplayController root/virt Virt_Device Virt_Device instance
+LXC_DisplayController root/virt Virt_Device Virt_Device instance

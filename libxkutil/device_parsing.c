@@ -443,6 +443,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
                 goto err;
 
         vdev->type = CIM_RES_TYPE_GRAPHICS;
+        vdev->id = strdup("graphics");
 
         *vdevs = vdev;
 
