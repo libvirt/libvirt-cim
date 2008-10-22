@@ -75,6 +75,7 @@ static void cleanup_graphics_device(struct graphics_device *dev)
 {
         free(dev->type);
         free(dev->port);
+        free(dev->host);
 }
 
 void cleanup_virt_device(struct virt_device *dev)
@@ -438,9 +439,13 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
 
         gdev->type = get_attr_value(node, "type");
         gdev->port = get_attr_value(node, "port");
+        gdev->host = get_attr_value(node, "listen");
 
         if ((gdev->type == NULL) || (gdev->port == NULL))
                 goto err;
+
+        if (gdev->host == NULL)
+                gdev->host = strdup("127.0.0.1");
 
         vdev->type = CIM_RES_TYPE_GRAPHICS;
         vdev->id = strdup("graphics");
@@ -622,6 +627,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
                 DUP_FIELD(dev, _dev, dev.graphics.type);
                 DUP_FIELD(dev, _dev, dev.graphics.port);
+                DUP_FIELD(dev, _dev, dev.graphics.host);
         }
 
         return dev;

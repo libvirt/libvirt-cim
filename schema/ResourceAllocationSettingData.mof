@@ -115,3 +115,25 @@ class KVM_MemResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 class LXC_MemResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
 };
+
+[Description ("Xen virtual graphics device"),
+ Provider("cmpi::Virt_RASD")
+]
+class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingData
+{
+};
+
+[Description ("KVM virtual graphics device"),
+ Provider("cmpi::Virt_RASD")
+]
+class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+};
+
+[Description ("LXC virtual graphics device"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
+};
+

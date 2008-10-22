@@ -247,6 +247,29 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
         return s;
 }
 
+static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
+                                           CMPIInstance *inst)
+{
+        int rc;
+        char *addr_str = NULL;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        rc = asprintf(&addr_str, 
+                      "%s:%s", 
+                      dev->dev.graphics.host, 
+                      dev->dev.graphics.port);
+        if (rc == -1) {
+                goto out;
+        }
+
+        CMSetProperty(inst, "Address", (CMPIValue *)addr_str, CMPI_chars);
+
+ out:
+        free(addr_str);
+
+        return s;
+}
+
 static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                     struct virt_device *dev,
                                     const char *host,
@@ -272,6 +295,9 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 type = CIM_RES_TYPE_MEM;
                 base = "MemResourceAllocationSettingData";
+        } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
+                type = CIM_RES_TYPE_GRAPHICS;
+                base = "GraphicsResourceAllocationSettingData";
         } else {
                 return NULL;
         }
@@ -320,6 +346,8 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
         } else if (dev->type == CIM_RES_TYPE_PROC) {
                 set_proc_rasd_params(broker, ref, dev, host, inst);
+        } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
+                s = set_graphics_rasd_params(dev, inst);
         }
 
         /* FIXME: Put the HostResource in place */
@@ -441,6 +469,8 @@ CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
                *type = CIM_RES_TYPE_PROC;
        else if (STREQ(base, "MemResourceAllocationSettingData"))
                *type = CIM_RES_TYPE_MEM;
+       else if (STREQ(base, "GraphicsResourceAllocationSettingData"))
+               *type = CIM_RES_TYPE_GRAPHICS;
        else
                goto out;
 
@@ -468,6 +498,9 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
                 break;
         case CIM_RES_TYPE_DISK: 
                 *classname = "DiskResourceAllocationSettingData";
+                break;
+        case CIM_RES_TYPE_GRAPHICS: 
+                *classname = "GraphicsResourceAllocationSettingData";
                 break;
         default:
                 rc = CMPI_RC_ERR_FAILED;

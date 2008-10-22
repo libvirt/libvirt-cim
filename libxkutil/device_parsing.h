@@ -62,6 +62,7 @@ struct emu_device {
 struct graphics_device {
         char *type;
         char *port;
+        char *host;
 };
 
 struct virt_device {
