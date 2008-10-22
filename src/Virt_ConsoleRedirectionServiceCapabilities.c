@@ -32,6 +32,7 @@
 #include "svpc_types.h"
 
 #include "Virt_ConsoleRedirectionService.h"
+#include "Virt_ConsoleRedirectionServiceCapabilities.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -69,10 +70,10 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         return s;
 }
 
-static CMPIStatus get_console_rs_caps(const CMPIBroker *broker,
-                                      const CMPIObjectPath *ref,
-                                      CMPIInstance **_inst,
-                                      bool is_get_inst)
+CMPIStatus get_console_rs_caps(const CMPIBroker *broker,
+                               const CMPIObjectPath *ref,
+                               CMPIInstance **_inst,
+                               bool is_get_inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;

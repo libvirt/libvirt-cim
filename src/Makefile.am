@@ -21,7 +21,8 @@ noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_VirtualSystemSnapshotService.h         \
     Virt_VirtualSystemSnapshotServiceCapabilities.h \
     Virt_VSMigrationSettingData.h \
-    Virt_ConsoleRedirectionService.h
+    Virt_ConsoleRedirectionService.h \
+    Virt_ConsoleRedirectionServiceCapabilities.h
 
 XKUADD = $(top_builddir)/libxkutil/libxkutil.la
 
@@ -120,7 +121,7 @@ libVirt_AllocationCapabilities_la_DEPENDENCIES = libVirt_DevicePool.la
 libVirt_AllocationCapabilities_la_SOURCES = Virt_AllocationCapabilities.c
 libVirt_AllocationCapabilities_la_LIBADD = -lVirt_DevicePool
 
-libVirt_ElementCapabilities_la_DEPENDENCIES = libVirt_VirtualSystemManagementCapabilities.la libVirt_EnabledLogicalElementCapabilities.la libVirt_ComputerSystem.la libVirt_HostSystem.la libVirt_VSMigrationCapabilities.la libVirt_VirtualSystemManagementService.la libVirt_VSMigrationService.la libVirt_DevicePool.la libVirt_AllocationCapabilities.la
+libVirt_ElementCapabilities_la_DEPENDENCIES = libVirt_VirtualSystemManagementCapabilities.la libVirt_EnabledLogicalElementCapabilities.la libVirt_ComputerSystem.la libVirt_HostSystem.la libVirt_VSMigrationCapabilities.la libVirt_VirtualSystemManagementService.la libVirt_VSMigrationService.la libVirt_DevicePool.la libVirt_AllocationCapabilities.la libVirt_ConsoleRedirectionService.la libVirt_ConsoleRedirectionServiceCapabilities.la
 libVirt_ElementCapabilities_la_SOURCES = Virt_ElementCapabilities.c
 libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabilities \
                                         -lVirt_EnabledLogicalElementCapabilities \
@@ -130,7 +131,9 @@ libVirt_ElementCapabilities_la_LIBADD = -lVirt_VirtualSystemManagementCapabiliti
 					-lVirt_AllocationCapabilities \
                                         -lVirt_VirtualSystemManagementService \
                                         -lVirt_VSMigrationService \
-                                        -lVirt_DevicePool
+                                        -lVirt_DevicePool \
+                                        -lVirt_ConsoleRedirectionService \
+                                        -lVirt_ConsoleRedirectionServiceCapabilities
 
 libVirt_SettingsDefineCapabilities_la_DEPENDENCIES = libVirt_RASD.la libVirt_DevicePool.la libVirt_VSMigrationCapabilities.la libVirt_VSMigrationSettingData.la libVirt_AllocationCapabilities.la
 libVirt_SettingsDefineCapabilities_la_SOURCES = Virt_SettingsDefineCapabilities.c

@@ -41,6 +41,8 @@
 #include "Virt_VSMigrationCapabilities.h"
 #include "Virt_AllocationCapabilities.h"
 #include "Virt_DevicePool.h"
+#include "Virt_ConsoleRedirectionService.h"
+#include "Virt_ConsoleRedirectionServiceCapabilities.h"
 
 #include "svpc_types.h"
 
@@ -75,7 +77,13 @@ static CMPIStatus validate_caps_get_service(const CMPIContext *context,
                         goto out;
 
                 s = get_migration_service(ref, &_inst, _BROKER, context, false);
-        } else
+        } else if (STREQC(classname, "ConsoleRedirectionServiceCapabilities")) {
+                s = get_console_rs_caps(_BROKER, ref, &_inst, true);
+                if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
+                        goto out;
+
+                s = get_console_rs(ref, &_inst, _BROKER, context, false);
+        } else 
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "Not found");
@@ -113,6 +121,12 @@ static CMPIStatus validate_service_get_caps(const CMPIContext *context,
                         goto out;
 
                 s = get_migration_caps(ref, &_inst, _BROKER, false);
+        } else if (STREQC(classname, "ConsoleRedirectionService")) {
+                s = get_console_rs(ref, &_inst, _BROKER, context, true);
+                if ((s.rc != CMPI_RC_OK) || (_inst == NULL))
+                        goto out;
+		
+                s = get_console_rs_caps(_BROKER, ref, &_inst, false);	
         } else
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
@@ -382,22 +396,28 @@ static char* host_sys_and_service[] = {
         "Xen_HostSystem",
         "Xen_VirtualSystemManagementService",
         "Xen_VirtualSystemMigrationService",
+        "Xen_ConsoleRedirectionService",
         "KVM_HostSystem",
         "KVM_VirtualSystemManagementService",
         "KVM_VirtualSystemMigrationService",
+        "KVM_ConsoleRedirectionService",
         "LXC_HostSystem",
         "LXC_VirtualSystemManagementService",
         "LXC_VirtualSystemMigrationService",
+        "LXC_ConsoleRedirectionService",
         NULL
 };
 
 static char *host_caps[] = {
         "Xen_VirtualSystemManagementCapabilities",
         "Xen_VirtualSystemMigrationCapabilities",
+        "Xen_ConsoleRedirectionServiceCapabilities",
         "KVM_VirtualSystemManagementCapabilities",
         "KVM_VirtualSystemMigrationCapabilities",
+        "KVM_ConsoleRedirectionServiceCapabilities",
         "LXC_VirtualSystemManagementCapabilities",
         "LXC_VirtualSystemMigrationCapabilities",
+        "LXC_ConsoleRedirectionServiceCapabilities",
         "Xen_AllocationCapabilities",
         "KVM_AllocationCapabilities",
         "LXC_AllocationCapabilities",
@@ -437,6 +457,9 @@ static char* service[] = {
         "Xen_VirtualSystemMigrationService",
         "KVM_VirtualSystemMigrationService",
         "LXC_VirtualSystemMigrationService",
+        "Xen_ConsoleRedirectionService",
+        "KVM_ConsoleRedirectionService",
+        "LXC_ConsoleRedirectionService",
         NULL
 };
 
