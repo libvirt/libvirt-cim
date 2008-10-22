@@ -44,6 +44,7 @@
 #define EMU_XPATH       (xmlChar *)"/domain/devices/emulator"
 #define MEM_XPATH       (xmlChar *)"/domain/memory | /domain/currentMemory"
 #define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics"
+#define INPUT_XPATH     (xmlChar *)"/domain/devices/input"
 
 #define DEFAULT_BRIDGE "xenbr0"
 #define DEFAULT_NETWORK "default"
@@ -80,6 +81,12 @@ static void cleanup_graphics_device(struct graphics_device *dev)
         free(dev->keymap);
 }
 
+static void cleanup_input_device(struct input_device *dev)
+{
+        free(dev->type);
+        free(dev->bus);
+}
+
 void cleanup_virt_device(struct virt_device *dev)
 {
         if (dev == NULL)
@@ -93,6 +100,8 @@ void cleanup_virt_device(struct virt_device *dev)
                 cleanup_emu_device(&dev->dev.emu);
         else if (dev->type == CIM_RES_TYPE_GRAPHICS)
                 cleanup_graphics_device(&dev->dev.graphics);
+        else if (dev->type == CIM_RES_TYPE_INPUT)
+                cleanup_input_device(&dev->dev.input);
 
         free(dev->id);
 
@@ -467,6 +476,42 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         return 0;
 }
 
+static int parse_input_device(xmlNode *node, struct virt_device **vdevs)
+{
+        struct virt_device *vdev = NULL;
+        struct input_device *idev = NULL;
+        int ret;
+
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        idev = &(vdev->dev.input);
+
+        idev->type = get_attr_value(node, "type");
+        idev->bus = get_attr_value(node, "bus");
+
+        if ((idev->type == NULL) || (idev->bus == NULL))
+                goto err;
+
+        vdev->type = CIM_RES_TYPE_INPUT;
+
+        ret = asprintf(&vdev->id, "%s:%s", idev->type, idev->bus);
+        if (ret == -1) {
+                CU_DEBUG("Failed to create input id string");
+                goto err;
+        }
+
+        *vdevs = vdev;
+
+        return 1;
+ err:
+        cleanup_input_device(idev);
+        free(vdev);
+
+        return 0;
+}
+
 static bool resize_devlist(struct virt_device **list, int newsize)
 {
         struct virt_device *_list;
@@ -502,6 +547,8 @@ static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
                 do_real_parse = parse_mem_device;
         else if (type == CIM_RES_TYPE_GRAPHICS)
                 do_real_parse = parse_graphics_device;
+        else if (type == CIM_RES_TYPE_INPUT)
+                do_real_parse = parse_input_device;
         else
                 goto out;
 
@@ -570,6 +617,8 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
                 xpathstr = MEM_XPATH;
         else if (type == CIM_RES_TYPE_GRAPHICS)
                 xpathstr = GRAPHICS_XPATH;
+        else if (type == CIM_RES_TYPE_INPUT)
+                xpathstr = INPUT_XPATH;
         else
                 goto err1;
 
@@ -638,6 +687,9 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.graphics.port);
                 DUP_FIELD(dev, _dev, dev.graphics.host);
                 DUP_FIELD(dev, _dev, dev.graphics.keymap);
+        } else if (dev->type == CIM_RES_TYPE_INPUT) {
+                DUP_FIELD(dev, _dev, dev.input.type);
+                DUP_FIELD(dev, _dev, dev.input.bus);
         }
 
         return dev;
@@ -893,6 +945,9 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
         parse_devices(xml, &(*dominfo)->dev_emu, CIM_RES_TYPE_EMU);
         parse_devices(xml, &(*dominfo)->dev_graphics, CIM_RES_TYPE_GRAPHICS);
 
+        (*dominfo)->dev_input_ct = parse_devices(xml, 
+                                                 &(*dominfo)->dev_input, 
+                                                 CIM_RES_TYPE_INPUT);
         (*dominfo)->dev_mem_ct = _get_mem_device(xml, &(*dominfo)->dev_mem);
         (*dominfo)->dev_net_ct = parse_devices(xml,
                                                &(*dominfo)->dev_net,
@@ -962,6 +1017,7 @@ void cleanup_dominfo(struct domain **dominfo)
         cleanup_virt_devices(&dom->dev_net, dom->dev_net_ct);
         cleanup_virt_devices(&dom->dev_disk, dom->dev_disk_ct);
         cleanup_virt_devices(&dom->dev_vcpu, dom->dev_vcpu_ct);
+        cleanup_virt_devices(&dom->dev_input, dom->dev_input_ct);
 
         free(dom);
 

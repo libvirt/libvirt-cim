@@ -69,6 +69,11 @@ struct graphics_device {
         char *keymap;
 };
 
+struct input_device {
+        char *type;
+        char *bus;
+};
+
 struct virt_device {
         uint16_t type;
         union {
@@ -78,6 +83,7 @@ struct virt_device {
                 struct vcpu_device vcpu;
                 struct emu_device emu;
                 struct graphics_device graphics;
+                struct input_device input;
         } dev;
         char *id;
 };
@@ -120,6 +126,9 @@ struct domain {
 
         struct virt_device *dev_graphics;
         struct virt_device *dev_emu;
+
+        struct virt_device *dev_input;
+        int dev_input_ct;
 
         struct virt_device *dev_mem;
         int dev_mem_ct;

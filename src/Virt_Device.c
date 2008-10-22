@@ -40,6 +40,9 @@
 #define CIM_NET_UNKNOWN  0
 #define CIM_NET_ETHERNET 2
 
+#define CIM_INPUT_UNKNOWN  2
+#define CIM_INPUT_MOUSE    3
+
 const static CMPIBroker *_BROKER;
 const static uint64_t XEN_MEM_BLOCKSIZE = 4096;
 
@@ -214,6 +217,85 @@ static CMPIInstance *graphics_instance(const CMPIBroker *broker,
         return inst;
 }
 
+int get_input_dev_caption(const char *type,
+                          const char *bus,
+                          char **cap)
+{
+        int ret;
+        const char *type_str;
+        const char *bus_str;
+
+        if (STREQC(type, "mouse"))
+                type_str = "Mouse";
+        else if (STREQC(type, "tablet"))
+                type_str = "Tablet";
+        else
+                type_str = "Unknown device type";
+
+        if (STREQC(bus, "usb")) 
+                bus_str = "USB";
+        else if (STREQC(bus, "ps2"))
+                bus_str = "PS2";
+        else
+                bus_str = "Unknown bus";
+
+        ret = asprintf(cap, "%s %s", bus_str, type_str);
+        if (ret == -1) {
+                CU_DEBUG("Failed to create input id string");
+                return 0;
+        }
+
+        return 1;
+}
+
+static int input_set_attr(CMPIInstance *instance,
+                          struct input_device *dev)
+{
+        uint16_t cim_type;
+        char *cap;
+        int rc;
+
+        if ((STREQC(dev->type, "mouse")) || (STREQC(dev->type, "tablet"))) 
+                cim_type = CIM_INPUT_MOUSE;
+        else
+                cim_type = CIM_INPUT_UNKNOWN;
+
+        rc = get_input_dev_caption(dev->type, dev->bus, &cap);
+        if (rc != 1) {
+                free(cap);
+                return 0;
+        }            
+
+        CMSetProperty(instance, "PointingType",
+                      (CMPIValue *)&cim_type, CMPI_uint16);
+
+        CMSetProperty(instance, "Caption", (CMPIValue *)cap, CMPI_chars);
+
+        free(cap);
+
+        return 1;
+}
+
+static CMPIInstance *input_instance(const CMPIBroker *broker,
+                                    struct input_device *dev,
+                                    const virDomainPtr dom,
+                                    const char *ns)
+{
+        CMPIInstance *inst;
+        virConnectPtr conn;
+
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "PointingDevice",
+                                  ns);
+
+        if (!input_set_attr(inst, dev))
+                return NULL;
+
+        return inst;
+}
+
 static int device_set_devid(CMPIInstance *instance,
                             struct virt_device *dev,
                             const virDomainPtr dom)
@@ -358,6 +440,11 @@ static bool device_instances(const CMPIBroker *broker,
                                                      &dev->dev.graphics,
                                                      dom,
                                                      ns);
+                 else if (dev->type == CIM_RES_TYPE_INPUT)
+                        instance = input_instance(broker,
+                                                  &dev->dev.input,
+                                                  dom,
+                                                  ns);
                 else
                         return false;
 
@@ -392,6 +479,8 @@ uint16_t res_type_from_device_classname(const char *classname)
                 return CIM_RES_TYPE_PROC;
         else if (strstr(classname, "DisplayController"))
                 return CIM_RES_TYPE_GRAPHICS;
+        else if (strstr(classname, "PointingDevice"))
+                return CIM_RES_TYPE_INPUT;
         else
                 return CIM_RES_TYPE_UNKNOWN;
 }

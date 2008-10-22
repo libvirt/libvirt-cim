@@ -71,6 +71,10 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
 
 uint16_t res_type_from_device_classname(const char *classname);
 
+int get_input_dev_caption(const char *type,
+                          const char *bus,
+                          char **cap);
+
 #endif
 
 /*
