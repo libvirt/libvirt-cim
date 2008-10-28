@@ -124,6 +124,8 @@ CMPIInstance *make_reference(const CMPIBroker *broker,
 bool check_refs_pfx_match(const CMPIObjectPath *refa,
                           const CMPIObjectPath *refb);
 
+int domain_vcpu_count(virDomainPtr dom);
+
 #define LIBVIRT_CIM_DEFAULT_MAKEREF()                                   \
         static CMPIInstance* make_ref(const CMPIObjectPath *source_ref, \
                                       const CMPIInstance *target_inst,  \

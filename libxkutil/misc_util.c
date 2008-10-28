@@ -541,6 +541,45 @@ bool check_refs_pfx_match(const CMPIObjectPath *refa,
         return result;
 }
 
+int domain_vcpu_count(virDomainPtr dom)
+{
+        virVcpuInfoPtr info = NULL;
+        int max;
+        int count;
+        int actual = 0;
+        int i;
+        virConnectPtr conn = NULL;
+
+        conn = virDomainGetConnect(dom);
+        if (conn == NULL) {
+                CU_DEBUG("Failed to get connection from domain");
+                return -1;
+        }
+
+        max = virConnectGetMaxVcpus(conn, virConnectGetType(conn));
+        if (max <= 0) {
+                CU_DEBUG("Failed to get max vcpu count");
+                return -1;
+        }
+
+        info = calloc(max, sizeof(*info));
+        if (info == NULL) {
+                CU_DEBUG("Failed to allocate %i vcpuinfo structures", max);
+                return -1;
+        }
+
+        count = virDomainGetVcpus(dom, info, max, NULL, 0);
+
+        for (i = 0; i < count; i++) {
+                if (info[i].cpu != -1)
+                        actual++;
+        }
+
+        free(info);
+
+        return actual;
+}
+
 /*
  * Local Variables:
  * mode: C
