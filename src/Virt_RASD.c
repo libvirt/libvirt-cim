@@ -96,6 +96,7 @@ char *rasd_to_xml(CMPIInstance *rasd)
 
 static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
                                        const CMPIObjectPath *ref,
+                                       struct virt_device *dev,
                                        const char *domain,
                                        CMPIInstance *inst)
 {
@@ -105,6 +106,7 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
         struct infostore_ctx *info;
         uint32_t weight;
         uint64_t limit;
+        uint64_t count;
 
         conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL)
@@ -117,6 +119,17 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
                            "Domain `%s' not found while getting info", domain);
                 goto out;
         }
+
+        if (domain_online(dom))
+                count = domain_vcpu_count(dom);
+        else
+                count = dev->dev.vcpu.quantity;
+
+        if (count > 0)
+                CMSetProperty(inst,
+                              "VirtualQuantity",
+                              (CMPIValue *)&count,
+                              CMPI_uint64);
 
         info = infostore_open(dom);
         if (info == NULL) {
@@ -306,14 +319,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 CMSetProperty(inst, "Limit",
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
         } else if (dev->type == CIM_RES_TYPE_PROC) {
-                if (dev->dev.vcpu.quantity > 0) {
-                        CMSetProperty(inst,
-                                      "VirtualQuantity",
-                                      (CMPIValue *)&dev->dev.vcpu.quantity,
-                                      CMPI_uint64);
-                }
-
-                set_proc_rasd_params(broker, ref, host, inst);
+                set_proc_rasd_params(broker, ref, dev, host, inst);
         }
 
         /* FIXME: Put the HostResource in place */
