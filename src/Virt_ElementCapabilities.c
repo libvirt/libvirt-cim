@@ -162,6 +162,10 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
+        s = get_console_rs_caps(_BROKER, ref, &inst, false);
+        if (s.rc == CMPI_RC_OK)
+                inst_list_add(list, inst);
+
         s = enum_alloc_cap_instances(_BROKER, ref, NULL, NULL, list);
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("Failed to enum AC: %s",
