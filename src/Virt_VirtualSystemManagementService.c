@@ -211,8 +211,7 @@ static int lxc_vssd_to_domain(CMPIInstance *inst,
         return 1;
 }
 
-static bool default_graphics_device(CMPIInstance *inst,
-                                    struct domain *domain)
+static bool default_graphics_device(struct domain *domain)
 {
         free(domain->dev_graphics);
         domain->dev_graphics = calloc(1, sizeof(*domain->dev_graphics));
@@ -223,6 +222,19 @@ static bool default_graphics_device(CMPIInstance *inst,
 
         domain->dev_graphics->dev.graphics.type = strdup("vnc");
         domain->dev_graphics->dev.graphics.port = strdup("-1");
+        domain->dev_graphics->dev.graphics.host = strdup("127.0.0.1");
+        domain->dev_graphics->dev.graphics.keymap = strdup("en-us");
+        domain->dev_graphics_ct = 1;
+
+        return true;
+}
+
+static bool add_default_devs(struct domain *domain)
+{
+        if (domain->dev_graphics_ct != 1) {
+                if (!default_graphics_device(domain))        
+                        return false;
+        }
 
         return true;
 }
@@ -275,9 +287,6 @@ static int vssd_to_domain(CMPIInstance *inst,
         else {
                 CU_DEBUG("Unknown domain prefix: %s", pfx);
         }
-
-        if (!default_graphics_device(inst, domain))
-                ret = 0;
 
  out:
         free(pfx);
@@ -554,6 +563,40 @@ static const char *lxc_proc_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
+                                         struct virt_device *dev)
+{
+        const char *val;
+        const char *msg = NULL;
+        const char *keymap;
+        int ret;
+
+        dev->dev.graphics.type = strdup("vnc");
+
+        /* FIXME: Add logic to prevent address:port collisions */
+        if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
+                dev->dev.graphics.port = strdup("-1");
+                dev->dev.graphics.host = strdup("127.0.0.1");
+        } else {
+               ret = parse_id(val,
+                              &dev->dev.graphics.host, 
+                              &dev->dev.graphics.port); 
+                if (ret != 1) {
+                        msg = "GraphicsRASD field Address not valid";
+                        goto out;
+                }
+        }
+
+        if (cu_get_str_prop(inst, "KeyMap", &keymap) != CMPI_RC_OK)
+                keymap = "en-us";
+        
+        dev->dev.graphics.keymap = strdup(keymap);
+
+ out:
+
+        return msg;
+}
+
 static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev,
                                          uint16_t type,
@@ -567,6 +610,8 @@ static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                 return mem_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_PROC) {
                 return proc_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_GRAPHICS) {
+                return graphics_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
@@ -585,6 +630,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
                 return net_rasd_to_vdev(inst, dev, ns);
         } else if (type == CIM_RES_TYPE_PROC) {
                 return lxc_proc_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_GRAPHICS) {
+                return graphics_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
@@ -688,6 +735,9 @@ static const char *classify_resources(CMPIArray *resources,
         if (!make_space(&domain->dev_net, domain->dev_net_ct, count))
                 return "Failed to alloc net list";
 
+        if (!make_space(&domain->dev_graphics, domain->dev_graphics_ct, count))
+                return "Failed to alloc graphics list";
+
         for (i = 0; i < count; i++) {
                 CMPIObjectPath *op;
                 CMPIData item;
@@ -748,6 +798,12 @@ static const char *classify_resources(CMPIArray *resources,
                                                        domain->dev_net,
                                                        ncount,
                                                        &domain->dev_net_ct);
+                } else if (type == CIM_RES_TYPE_GRAPHICS) {
+                        domain->dev_graphics_ct = 1;
+                        msg = rasd_to_vdev(inst,
+                                           domain,
+                                           &domain->dev_graphics[0],
+                                           ns);
                 }
                 if (msg != NULL)
                         return msg;
@@ -990,6 +1046,14 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "ResourceSettings Error: %s", msg);
+                goto out;
+        }
+
+        if (!add_default_devs(domain)) {
+                CU_DEBUG("Failed to add default devices");
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "ResourceSettings Error");
                 goto out;
         }
 
@@ -1264,6 +1328,9 @@ static struct virt_device **find_list(struct domain *dominfo,
         } else if (type == CIM_RES_TYPE_MEM) {
                 list = &dominfo->dev_mem;
                 *count = &dominfo->dev_mem_ct;
+        } else if (type == CIM_RES_TYPE_GRAPHICS) {
+                list = &dominfo->dev_graphics;
+                *count = &dominfo->dev_graphics_ct;
         }
 
         return list;
