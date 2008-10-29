@@ -1447,11 +1447,16 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        s = _resource_dynamic(dominfo,
-                                              dev,
-                                              RESOURCE_DEL,
-                                              CLASSNAME(op));
                         dev->type = CIM_RES_TYPE_UNKNOWN;
+                        
+                        if (type == CIM_RES_TYPE_GRAPHICS)
+                                cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
+                        else {
+                                s = _resource_dynamic(dominfo,
+                                                      dev,
+                                                      RESOURCE_DEL,
+                                                      CLASSNAME(op));
+                        }
                         break;
                 }
         }
@@ -1496,6 +1501,13 @@ static CMPIStatus resource_add(struct domain *dominfo,
                 goto out;
         }
 
+        if ((type == CIM_RES_TYPE_GRAPHICS) && (*count > 0)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "A resource already exists for type %" PRIu16, type);
+                goto out;
+        }
+
         list = realloc(*_list, ((*count)+1)*sizeof(struct virt_device));
         if (list == NULL) {
                 /* No memory */
@@ -1512,6 +1524,12 @@ static CMPIStatus resource_add(struct domain *dominfo,
 
         dev->type = type;
         rasd_to_vdev(rasd, dominfo, dev, ns);
+
+        if (type == CIM_RES_TYPE_GRAPHICS) {
+                (*count)++;
+                cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
+                goto out;
+        }
 
         s = _resource_dynamic(dominfo, dev, RESOURCE_ADD, CLASSNAME(op));
         if (s.rc != CMPI_RC_OK)
@@ -1569,10 +1587,15 @@ static CMPIStatus resource_mod(struct domain *dominfo,
 
                 if (STREQ(dev->id, devid)) {
                         rasd_to_vdev(rasd, dominfo, dev, ns);
-                        s = _resource_dynamic(dominfo,
-                                              dev,
-                                              RESOURCE_MOD,
-                                              CLASSNAME(op));
+
+                        if (type == CIM_RES_TYPE_GRAPHICS)
+                                cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
+                        else {
+                                s = _resource_dynamic(dominfo,
+                                                      dev,
+                                                      RESOURCE_MOD,
+                                                      CLASSNAME(op));
+                        }
                         break;
                 }
         }
