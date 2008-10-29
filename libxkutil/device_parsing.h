@@ -125,6 +125,8 @@ struct domain {
         int on_crash;
 
         struct virt_device *dev_graphics;
+        int dev_graphics_ct;
+
         struct virt_device *dev_emu;
 
         struct virt_device *dev_input;

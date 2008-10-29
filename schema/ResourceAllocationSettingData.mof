@@ -117,6 +117,8 @@ class LXC_MemResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 ]
 class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
+      [Description ("Keyboard keymapping")]
+      string KeyMap;
 };
 
 [Description ("KVM virtual graphics device"),
@@ -124,6 +126,8 @@ class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingD
 ]
 class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
+      [Description ("Keyboard keymapping")]
+      string KeyMap;
 };
 
 [Description ("LXC virtual graphics device"),
@@ -131,6 +135,8 @@ class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingD
 ]
 class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
+      [Description ("Keyboard keymapping")]
+      string KeyMap;
 };
 
 [Description ("Xen virtual input device"),

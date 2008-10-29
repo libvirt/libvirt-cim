@@ -748,6 +748,8 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
         addr = "127.0.0.1:-1";
         CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
 
+        CMSetProperty(inst, "KeyMap", (CMPIValue *)"en-us", CMPI_chars);
+
         inst_list_add(list, inst);
 
  out:

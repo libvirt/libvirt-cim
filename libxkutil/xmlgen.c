@@ -703,7 +703,7 @@ char *system_to_xml(struct domain *dominfo)
         if (dominfo->dev_graphics)
                 concat_devxml(&devxml,
                               dominfo->dev_graphics,
-                              1,
+                              dominfo->dev_graphics_ct,
                               graphics_to_xml);
 
         console_xml(dominfo, &devxml);

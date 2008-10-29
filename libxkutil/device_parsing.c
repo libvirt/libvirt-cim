@@ -926,8 +926,9 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
                 goto err;
 
         parse_devices(xml, &(*dominfo)->dev_emu, CIM_RES_TYPE_EMU);
-        parse_devices(xml, &(*dominfo)->dev_graphics, CIM_RES_TYPE_GRAPHICS);
-
+        (*dominfo)->dev_graphics_ct = parse_devices(xml, 
+                                                    &(*dominfo)->dev_graphics, 
+                                                    CIM_RES_TYPE_GRAPHICS);
         (*dominfo)->dev_input_ct = parse_devices(xml, 
                                                  &(*dominfo)->dev_input, 
                                                  CIM_RES_TYPE_INPUT);
@@ -1000,6 +1001,7 @@ void cleanup_dominfo(struct domain **dominfo)
         cleanup_virt_devices(&dom->dev_net, dom->dev_net_ct);
         cleanup_virt_devices(&dom->dev_disk, dom->dev_disk_ct);
         cleanup_virt_devices(&dom->dev_vcpu, dom->dev_vcpu_ct);
+        cleanup_virt_devices(&dom->dev_graphics, dom->dev_graphics_ct);
         cleanup_virt_devices(&dom->dev_input, dom->dev_input_ct);
 
         free(dom);

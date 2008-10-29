@@ -279,6 +279,8 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
         }
 
         CMSetProperty(inst, "Address", (CMPIValue *)addr_str, CMPI_chars);
+        CMSetProperty(inst, "KeyMap", 
+                      (CMPIValue *)dev->dev.graphics.keymap, CMPI_chars);
 
  out:
         free(addr_str);
