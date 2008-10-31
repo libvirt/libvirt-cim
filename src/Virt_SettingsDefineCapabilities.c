@@ -48,6 +48,7 @@
 #include "Virt_VSMigrationSettingData.h"
 #include "Virt_VirtualSystemManagementService.h"
 #include "Virt_AllocationCapabilities.h"
+#include "Virt_Device.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -711,6 +712,127 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus graphics_template(const CMPIObjectPath *ref,
+                                    int template_type,
+                                    struct inst_list *list)
+{
+        const char *id;
+        const char *addr;
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        switch(template_type) {
+        case SDC_RASD_MIN:
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_GRAPHICS);
+
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+
+        addr = "127.0.0.1:-1";
+        CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
+
+        inst_list_add(list, inst);
+
+ out:
+        return s;
+}
+
+static CMPIStatus set_input_props(const CMPIObjectPath *ref,
+                                  const char *id,
+                                  const char *type,
+                                  const char *bus,
+                                  struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        char *cap;
+
+        if (get_input_dev_caption(type, bus, &cap) != 1) {
+                free(cap);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Unable to build input caption");
+                return s;
+        }
+
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_INPUT);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
+
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+
+        CMSetProperty(inst, "ResourceSubType", (CMPIValue *)type, CMPI_chars);
+
+        CMSetProperty(inst, "Caption", (CMPIValue *)cap, CMPI_chars);
+
+        inst_list_add(list, inst);
+
+ out:
+        free(cap);
+
+        return s;
+}
+
+static CMPIStatus input_template(const CMPIObjectPath *ref,
+                                 int template_type,
+                                 struct inst_list *list)
+{
+        const char *id;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *inputs[4][2] = { {"mouse", "ps2"},
+                                     {"mouse", "usb"},
+                                     {"tablet", "usb"},
+                                     {NULL, NULL}
+                                   };
+        int i;
+
+        switch(template_type) {
+        case SDC_RASD_MIN:
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        for(i = 0; inputs[i][0] != NULL; i++) {
+                s = set_input_props(ref, id, inputs[i][0], inputs[i][1], list); 
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
+ out:
+        return s;
+}
+
 static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                                      struct inst_list *list,
                                      uint16_t type)
@@ -727,6 +849,10 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                         s = net_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_DISK)
                         s = disk_template(ref, i, list);
+                else if (type == CIM_RES_TYPE_GRAPHICS)
+                        s = graphics_template(ref, i, list);
+                else if (type == CIM_RES_TYPE_INPUT)
+                        s = input_template(ref, i, list);
                 else {
                         cu_statusf(_BROKER, &s,
                                    CMPI_RC_ERR_FAILED,
@@ -897,14 +1023,20 @@ static char* part_component[] = {
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
         "Xen_ProcResourceAllocationSettingData",
+        "Xen_GraphicsResourceAllocationSettingData",
+        "Xen_InputResourceAllocationSettingData",
         "KVM_DiskResourceAllocationSettingData",
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
+        "KVM_GraphicsResourceAllocationSettingData",
+        "KVM_InputResourceAllocationSettingData",
         "LXC_DiskResourceAllocationSettingData",
         "LXC_MemResourceAllocationSettingData",
         "LXC_NetResourceAllocationSettingData",
         "LXC_ProcResourceAllocationSettingData",
+        "LXC_GraphicsResourceAllocationSettingData",
+        "LXC_InputResourceAllocationSettingData",
         NULL
 };
 
