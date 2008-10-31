@@ -326,14 +326,17 @@ static char* logical_device[] = {
         "Xen_Memory",
         "Xen_NetworkPort",
         "Xen_LogicalDisk",
+        "Xen_DisplayController",
         "KVM_Processor",
         "KVM_Memory",
         "KVM_NetworkPort",
         "KVM_LogicalDisk",
+        "KVM_DisplayController",
         "LXC_Processor",
         "LXC_Memory",
         "LXC_NetworkPort",
         "LXC_LogicalDisk",
+        "LXC_DisplayController",
         NULL
 };
 
@@ -342,14 +345,17 @@ static char* resource_allocation_setting_data[] = {
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
         "Xen_ProcResourceAllocationSettingData",
+        "Xen_GraphicsResourceAllocationSettingData",
         "KVM_DiskResourceAllocationSettingData",
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
+        "KVM_GraphicsResourceAllocationSettingData",
         "LXC_DiskResourceAllocationSettingData",
         "LXC_MemResourceAllocationSettingData",
         "LXC_NetResourceAllocationSettingData",
         "LXC_ProcResourceAllocationSettingData",
+        "LXC_GraphicsResourceAllocationSettingData",
         NULL
 };
 
