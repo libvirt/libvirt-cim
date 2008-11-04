@@ -37,6 +37,7 @@
 
 #include "Virt_RASD.h"
 #include "svpc_types.h"
+#include "Virt_Device.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -285,6 +286,34 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
         return s;
 }
 
+static CMPIStatus set_input_rasd_params(const struct virt_device *dev,
+                                        CMPIInstance *inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        char *cap;
+        int ret;
+
+        ret = get_input_dev_caption(dev->dev.input.type, 
+                                    dev->dev.input.bus, 
+                                    &cap);
+        if (ret != 1) {
+                free(cap);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Unable to build input caption");
+                return s;
+        }
+
+        CMSetProperty(inst, "ResourceSubType", 
+                      (CMPIValue *)dev->dev.input.type, CMPI_chars);
+
+        CMSetProperty(inst, "Caption", (CMPIValue *)cap, CMPI_chars);
+
+        free(cap);
+
+        return s;
+}
+
 static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                     struct virt_device *dev,
                                     const char *host,
@@ -313,6 +342,9 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
                 type = CIM_RES_TYPE_GRAPHICS;
                 base = "GraphicsResourceAllocationSettingData";
+        } else if (dev->type == CIM_RES_TYPE_INPUT) {
+                type = CIM_RES_TYPE_INPUT;
+                base = "InputResourceAllocationSettingData";
         } else {
                 return NULL;
         }
@@ -363,6 +395,8 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 set_proc_rasd_params(broker, ref, dev, host, inst);
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
                 s = set_graphics_rasd_params(dev, inst);
+        } else if (dev->type == CIM_RES_TYPE_INPUT) {
+                s = set_input_rasd_params(dev, inst);
         }
 
         /* FIXME: Put the HostResource in place */
@@ -486,6 +520,8 @@ CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
                *type = CIM_RES_TYPE_MEM;
        else if (STREQ(base, "GraphicsResourceAllocationSettingData"))
                *type = CIM_RES_TYPE_GRAPHICS;
+       else if (STREQ(base, "InputResourceAllocationSettingData"))
+               *type = CIM_RES_TYPE_INPUT;
        else
                goto out;
 
@@ -516,6 +552,9 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
                 break;
         case CIM_RES_TYPE_GRAPHICS: 
                 *classname = "GraphicsResourceAllocationSettingData";
+                break;
+        case CIM_RES_TYPE_INPUT: 
+                *classname = "InputResourceAllocationSettingData";
                 break;
         default:
                 rc = CMPI_RC_ERR_FAILED;

@@ -145,3 +145,24 @@ class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingD
 {
 };
 
+[Description ("Xen virtual input device"),
+ Provider("cmpi::Virt_RASD")
+]
+class Xen_InputResourceAllocationSettingData : Xen_ResourceAllocationSettingData
+{
+};
+
+[Description ("KVM virtual input device"),
+ Provider("cmpi::Virt_RASD")
+]
+class KVM_InputResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+};
+
+[Description ("LXC virtual input device"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_InputResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
+};
+
