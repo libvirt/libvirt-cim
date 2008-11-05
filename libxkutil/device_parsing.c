@@ -76,6 +76,7 @@ static void cleanup_graphics_device(struct graphics_device *dev)
         free(dev->type);
         free(dev->port);
         free(dev->host);
+        free(dev->keymap);
 }
 
 void cleanup_virt_device(struct virt_device *dev)
@@ -440,6 +441,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         gdev->type = get_attr_value(node, "type");
         gdev->port = get_attr_value(node, "port");
         gdev->host = get_attr_value(node, "listen");
+        gdev->keymap = get_attr_value(node, "keymap");
 
         if ((gdev->type == NULL) || (gdev->port == NULL))
                 goto err;
@@ -628,6 +630,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.graphics.type);
                 DUP_FIELD(dev, _dev, dev.graphics.port);
                 DUP_FIELD(dev, _dev, dev.graphics.host);
+                DUP_FIELD(dev, _dev, dev.graphics.keymap);
         }
 
         return dev;

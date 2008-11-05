@@ -63,6 +63,7 @@ struct graphics_device {
         char *type;
         char *port;
         char *host;
+        char *keymap;
 };
 
 struct virt_device {

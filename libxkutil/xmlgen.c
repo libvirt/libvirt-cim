@@ -342,9 +342,12 @@ static bool graphics_to_xml(char **xml, struct virt_device *dev)
         struct graphics_device *graphics = &dev->dev.graphics;
 
         ret = asprintf(&_xml,
-                       "<graphics type='%s' port='%s'/>\n",
+                       "<graphics type='%s' port='%s' "
+                       "listen='%s' keymap='%s'/>\n",
                        graphics->type,
-                       graphics->port);
+                       graphics->port,
+                       graphics->host != NULL ? graphics->host : "127.0.0.1",
+                       graphics->keymap != NULL ? graphics->keymap : "en-us");
         if (ret == -1)
                 return false;
         else
