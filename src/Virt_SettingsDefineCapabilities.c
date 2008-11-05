@@ -270,6 +270,14 @@ static CMPIInstance *sdc_rasd_inst(CMPIStatus *s,
                                   base,
                                   NAMESPACE(ref));
 
+        if (inst == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to create instance of type %s",
+                           base);
+                goto out;
+        }
+
         CMSetProperty(inst, "ResourceType", &resource_type, CMPI_uint16);
 
  out:
@@ -310,6 +318,8 @@ static CMPIStatus mem_template(const CMPIObjectPath *ref,
         }
 
         inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_MEM); 
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "AllocationUnits", 
@@ -395,6 +405,8 @@ static CMPIStatus proc_template(const CMPIObjectPath *ref,
         }
 
         inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_PROC); 
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "AllocationUnits", 
@@ -528,6 +540,8 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         }
 
         inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_NET); 
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "VirtualQuantity", 
@@ -606,6 +620,8 @@ static CMPIStatus set_disk_props(int type,
         }
 
         inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "AllocationQuantity",
@@ -632,6 +648,7 @@ static CMPIStatus set_disk_props(int type,
 
         inst_list_add(list, inst);
 
+ out:
         return s;
 }
 
