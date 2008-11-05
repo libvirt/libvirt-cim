@@ -233,9 +233,9 @@ pegasus_uninstall()
       fi
       if test $mofmode = 1
       then
-	  mymofs="$mymofs $1"
+          mymofs="$1 $mymofs"
       else
-	  myregs="$myregs $1"
+          myregs="$1 $myregs"
       fi
       shift
     done

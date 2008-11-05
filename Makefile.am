@@ -27,6 +27,7 @@ MOFS = \
 	schema/ElementConformsToProfile.mof \
 	schema/ComputerSystemIndication.mof \
 	schema/ComputerSystemMigrationIndication.mof \
+	schema/Virt_ResourceAllocationSettingData.mof \
 	schema/ResourceAllocationSettingData.mof \
 	schema/ResourcePoolConfigurationService.mof \
 	schema/ResourcePoolConfigurationCapabilities.mof \

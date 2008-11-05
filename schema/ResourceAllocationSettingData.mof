@@ -1,17 +1,5 @@
 // Copyright IBM Corp. 2007
 
-class Xen_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData
-{
-};
-
-class KVM_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData
-{
-};
-
-class LXC_ResourceAllocationSettingData : CIM_ResourceAllocationSettingData
-{
-};
-
 [Description ("Xen virtual disk configuration"),
  Provider("cmpi::Virt_RASD")
 ]
