@@ -113,7 +113,7 @@ static int astrcat(char **dest, char *source)
         return 1;
 }
 
-static char *disk_block_xml(const char *path, const char *vdev)
+static char *disk_block_xml(struct disk_device *dev)
 {
         char *xml;
         int ret;
@@ -122,16 +122,20 @@ static char *disk_block_xml(const char *path, const char *vdev)
                        "<disk type='block' device='disk'>\n"
                        "  <source dev='%s'/>\n"
                        "  <target dev='%s'/>\n"
+                       "%s"
+                       "%s"
                        "</disk>\n",
-                       path,
-                       vdev);
+                       dev->source,
+                       dev->virtual_dev,
+                       dev->readonly ? "<readonly/>\n" : "",
+                       dev->shareable ? "<shareable/>\n" : "");
         if (ret == -1)
                 xml = NULL;
 
         return xml;
 }
 
-static char *disk_file_xml(const char *path, const char *vdev)
+static char *disk_file_xml(struct disk_device *dev)
 {
         char *xml;
         int ret;
@@ -140,16 +144,20 @@ static char *disk_file_xml(const char *path, const char *vdev)
                        "<disk type='file' device='disk'>\n"
                        "  <source file='%s'/>\n"
                        "  <target dev='%s'/>\n"
+                       "%s"
+                       "%s"
                        "</disk>\n",
-                       path,
-                       vdev);
+                       dev->source,
+                       dev->virtual_dev,
+                       dev->readonly ? "<readonly/>" : "",
+                       dev->shareable ? "<shareable/>" : "");
         if (ret == -1)
                 xml = NULL;
 
         return xml;
 }
 
-static char *disk_fs_xml(const char *path, const char *vdev)
+static char *disk_fs_xml(struct disk_device *dev)
 {
         char *xml;
         int ret;
@@ -159,8 +167,8 @@ static char *disk_fs_xml(const char *path, const char *vdev)
                        "  <source dir='%s'/>\n"
                        "  <target dir='%s'/>\n"
                        "</filesystem>\n",
-                       path,
-                       vdev);
+                       dev->source,
+                       dev->virtual_dev);
         if (ret == -1)
                 xml = NULL;
 
@@ -173,13 +181,13 @@ static bool disk_to_xml(char **xml, struct virt_device *dev)
         struct disk_device *disk = &dev->dev.disk;
 
         if (disk->disk_type == DISK_PHY)
-                _xml = disk_block_xml(disk->source, disk->virtual_dev);
+                _xml = disk_block_xml(disk);
         else if (disk->disk_type == DISK_FILE)
                 /* If it's not a block device, we assume a file,
                    which should be a reasonable fail-safe */
-                _xml = disk_file_xml(disk->source, disk->virtual_dev);
+                _xml = disk_file_xml(disk);
         else if (disk->disk_type == DISK_FS)
-                _xml = disk_fs_xml(disk->source, disk->virtual_dev);
+                _xml = disk_fs_xml(disk);
         else
                 return false;
 

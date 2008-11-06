@@ -25,6 +25,7 @@
 #define __DEVICE_PARSING_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <libvirt/libvirt.h>
 
 #include "../src/svpc_types.h"
@@ -36,6 +37,8 @@ struct disk_device {
         char *source;
         char *virtual_dev;
         enum {DISK_UNKNOWN, DISK_PHY, DISK_FILE, DISK_FS} disk_type;
+        bool readonly;
+        bool shareable;
 };
 
 struct net_device {

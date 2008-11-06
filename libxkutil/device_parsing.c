@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <inttypes.h>
 #include <sys/stat.h>
 #include <libxml/tree.h>
@@ -235,6 +236,10 @@ static int parse_block_device(xmlNode *dnode, struct virt_device **vdevs)
                         ddev->virtual_dev = get_attr_value(child, "dev");
                         if (ddev->virtual_dev == NULL)
                                 goto err;
+                } else if (XSTREQ(child->name, "readonly")) {
+                        ddev->readonly = true;
+                } else if (XSTREQ(child->name, "shareable")) {
+                        ddev->shareable = true;
                 }
         }
         if ((ddev->source == NULL) || (ddev->virtual_dev == NULL))
@@ -619,6 +624,8 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.disk.driver);
                 DUP_FIELD(dev, _dev, dev.disk.source);
                 DUP_FIELD(dev, _dev, dev.disk.virtual_dev);
+                dev->dev.disk.readonly = dev->dev.disk.readonly;
+                dev->dev.disk.shareable = dev->dev.disk.shareable;
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 dev->dev.mem.size = _dev->dev.mem.size;
                 dev->dev.mem.maxsize = _dev->dev.mem.maxsize;
