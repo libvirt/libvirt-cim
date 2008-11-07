@@ -23,6 +23,9 @@
 
 #include "device_parsing.h"
 
+#define VIRT_DISK_TYPE_DISK  0
+#define VIRT_DISK_TYPE_CDROM 1
+
 char *rasd_to_xml(CMPIInstance *rasd);
 
 /**

@@ -224,6 +224,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                                        CMPIInstance *inst)
 {
         uint64_t cap = 0;
+        uint16_t type;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         get_vol_size(broker, ref, dev->dev.disk.source, &cap);
@@ -243,6 +244,20 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                       "Address",
                       (CMPIValue *)dev->dev.disk.source,
                       CMPI_chars);
+
+        /* There's not much we can do here if we don't recognize the type,
+         * so it seems that assuming 'disk' is a reasonable default
+         */
+        if ((dev->dev.disk.device != NULL) &&
+            STREQ(dev->dev.disk.device, "cdrom"))
+                type = VIRT_DISK_TYPE_CDROM;
+        else
+                type = VIRT_DISK_TYPE_DISK;
+
+        CMSetProperty(inst,
+                      "EmulatedType",
+                      (CMPIValue *)&type,
+                      CMPI_uint16);
 
         return s;
 }

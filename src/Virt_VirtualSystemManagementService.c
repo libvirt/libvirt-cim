@@ -402,6 +402,7 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                                      struct virt_device *dev)
 {
         const char *val = NULL;
+        uint16_t type;
 
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
                 return "Missing `VirtualDevice' property";
@@ -415,6 +416,16 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         free(dev->dev.disk.source);
         dev->dev.disk.source = strdup(val);
         dev->dev.disk.disk_type = disk_type_from_file(val);
+
+        if (cu_get_u16_prop(inst, "EmulatedType", &type) != CMPI_RC_OK)
+                type = VIRT_DISK_TYPE_DISK;
+
+        if (type == VIRT_DISK_TYPE_DISK)
+                dev->dev.disk.device = strdup("disk");
+        else if (type == VIRT_DISK_TYPE_CDROM)
+                dev->dev.disk.device = strdup("cdrom");
+        else
+                return "Invalid value for EmulatedType";
 
         free(dev->id);
         dev->id = strdup(dev->dev.disk.virtual_dev);

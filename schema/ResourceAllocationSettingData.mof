@@ -21,6 +21,10 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
       [Description ("Device as seen by the guest")]
       string VirtualDevice;
 
+      [Description ("Device emulation type"),
+        ValueMap {"0", "1"},
+        Values {"Disk", "CDROM"}]
+      uint16 EmulatedType;
 };
 
 [Description ("KVM virtual disk configuration"),
@@ -32,6 +36,10 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       [Description ("Device as seen by the guest")]
       string VirtualDevice;
 
+      [Description ("Device emulation type"),
+        ValueMap {"0", "1"},
+        Values {"Disk", "CDROM"}]
+      uint16 EmulatedType;
 };
 
 [Description ("LXC virtual disk configuration"),
