@@ -119,12 +119,13 @@ static char *disk_block_xml(struct disk_device *dev)
         int ret;
 
         ret = asprintf(&xml,
-                       "<disk type='block' device='disk'>\n"
+                       "<disk type='block' device='%s'>\n"
                        "  <source dev='%s'/>\n"
                        "  <target dev='%s'/>\n"
                        "%s"
                        "%s"
                        "</disk>\n",
+                       dev->device,
                        dev->source,
                        dev->virtual_dev,
                        dev->readonly ? "<readonly/>\n" : "",
@@ -141,12 +142,13 @@ static char *disk_file_xml(struct disk_device *dev)
         int ret;
 
         ret = asprintf(&xml,
-                       "<disk type='file' device='disk'>\n"
+                       "<disk type='file' device='%s'>\n"
                        "  <source file='%s'/>\n"
                        "  <target dev='%s'/>\n"
                        "%s"
                        "%s"
                        "</disk>\n",
+                       dev->device,
                        dev->source,
                        dev->virtual_dev,
                        dev->readonly ? "<readonly/>" : "",
