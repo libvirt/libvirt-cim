@@ -55,9 +55,32 @@
 
 const static CMPIBroker *_BROKER;
 
-static CMPIStatus validate_caps_get_service(const CMPIContext *context,
-                                            const CMPIObjectPath *ref,
-                                            CMPIInstance **inst)
+static CMPIStatus validate_ac_get_rp(const CMPIObjectPath *ref,
+                                     CMPIInstance **inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *poolid;
+
+        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }       
+
+        s = get_alloc_cap_by_id(_BROKER, ref, poolid, inst);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
+
+        s = get_pool_by_name(_BROKER, ref, poolid, inst); 
+
+ out:
+        return s;
+}
+
+static CMPIStatus validate_caps_get_service_or_rp(const CMPIContext *context,
+                                                  const CMPIObjectPath *ref,
+                                                  CMPIInstance **inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *_inst;
@@ -83,6 +106,8 @@ static CMPIStatus validate_caps_get_service(const CMPIContext *context,
                         goto out;
 
                 s = get_console_rs(ref, &_inst, _BROKER, context, false);
+        } else if (STREQC(classname, "AllocationCapabilities")) {
+                s = validate_ac_get_rp(ref, &_inst);
         } else 
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
@@ -181,9 +206,9 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus cap_to_sys_or_service(const CMPIObjectPath *ref,
-                                        struct std_assoc_info *info,
-                                        struct inst_list *list)
+static CMPIStatus cap_to_sys_or_service_or_rp(const CMPIObjectPath *ref,
+                                              struct std_assoc_info *info,
+                                              struct inst_list *list)
 {
         CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -191,7 +216,7 @@ static CMPIStatus cap_to_sys_or_service(const CMPIObjectPath *ref,
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
 
-        s = validate_caps_get_service(info->context, ref, &inst);
+        s = validate_caps_get_service_or_rp(info->context, ref, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
         
@@ -290,44 +315,6 @@ static CMPIStatus cap_to_cs(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus alloc_to_pool_and_sys(const CMPIObjectPath *ref,
-                                        struct std_assoc_info *info,
-                                        struct inst_list *list)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *host;
-        CMPIInstance *ac;
-        CMPIInstance *pool;
-        const char *poolid;
-
-        if (!match_hypervisor_prefix(ref, info))
-                goto out;
-
-        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Missing InstanceID");
-                goto out;
-        }
-
-        s = get_pool_by_name(_BROKER, ref, poolid, &pool);
-        if ((pool == NULL) || (s.rc != CMPI_RC_OK))
-                goto out;
-
-        s = get_alloc_cap_by_id(_BROKER, ref, poolid, &ac);
-        if ((ac == NULL) || (s.rc != CMPI_RC_OK))
-                goto out;
-
-        s = get_host(_BROKER, info->context, ref, &host, false);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-
-        inst_list_add(list, host);
-        inst_list_add(list, pool);
- out:
-        return s;
-}
-
 static CMPIStatus pool_to_alloc(const CMPIObjectPath *ref,
                                 struct std_assoc_info *info,
                                 struct inst_list *list)
@@ -403,7 +390,7 @@ static char* host_system[] = {
         NULL
 };
 
-static char* host_sys_and_service[] = {
+static char* host_sys_and_service_and_rp[] = {
         "Xen_HostSystem",
         "Xen_VirtualSystemManagementService",
         "Xen_VirtualSystemMigrationService",
@@ -417,6 +404,24 @@ static char* host_sys_and_service[] = {
         "LXC_VirtualSystemMigrationService",
         "LXC_ConsoleRedirectionService",
         "Linux_ComputerSystem",
+        "Xen_ProcessorPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_DiskPool",
+        "Xen_GraphicsPool",
+        "Xen_InputPool",
+        "KVM_ProcessorPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_DiskPool",
+        "KVM_GraphicsPool",
+        "KVM_InputPool",
+        "LXC_ProcessorPool",
+        "LXC_MemoryPool",
+        "LXC_NetworkPool",
+        "LXC_DiskPool",
+        "LXC_GraphicsPool",
+        "LXC_InputPool",
         NULL
 };
 
@@ -449,16 +454,16 @@ static struct std_assoc system_to_vsm_cap = {
         .make_ref = make_ref_default
 };
 
-static struct std_assoc vsm_cap_to_sys_or_service = {
+static struct std_assoc vsm_cap_to_sys_or_service_or_rp = {
         .source_class = (char**)&host_caps,
         .source_prop = "Capabilities",
 
-        .target_class = (char**)&host_sys_and_service,
+        .target_class = (char**)&host_sys_and_service_and_rp,
         .target_prop = "ManagedElement",
 
         .assoc_class = (char**)&assoc_classname,
 
-        .handler = cap_to_sys_or_service,
+        .handler = cap_to_sys_or_service_or_rp,
         .make_ref = make_ref
 };
 
@@ -540,48 +545,21 @@ static char* resource_pool[] = {
         "Xen_MemoryPool",
         "Xen_NetworkPool",
         "Xen_DiskPool",
+        "Xen_GraphicsPool",
+        "Xen_InputPool",
         "KVM_ProcessorPool",
         "KVM_MemoryPool",
         "KVM_NetworkPool",
         "KVM_DiskPool",
+        "KVM_GraphicsPool",
+        "KVM_InputPool",
         "LXC_ProcessorPool",
         "LXC_MemoryPool",
         "LXC_NetworkPool",
         "LXC_DiskPool",
+        "LXC_GraphicsPool",
+        "LXC_InputPool",
         NULL
-};
-
-static char* resource_pool_and_host[] = {
-        "Xen_ProcessorPool",
-        "Xen_MemoryPool",
-        "Xen_NetworkPool",
-        "Xen_DiskPool",
-        "Xen_HostSystem",
-        "KVM_ProcessorPool",
-        "KVM_MemoryPool",
-        "KVM_NetworkPool",
-        "KVM_DiskPool",
-        "KVM_HostSystem",
-        "LXC_ProcessorPool",
-        "LXC_MemoryPool",
-        "LXC_NetworkPool",
-        "LXC_DiskPool",
-        "LXC_HostSystem",
-        NULL
-};
-
-
-static struct std_assoc alloc_cap_to_resource_pool = {
-        .source_class = (char**)&allocation_capabilities,
-        .source_prop = "Capabilities",
-
-        .target_class = (char**)&resource_pool_and_host,
-        .target_prop = "ManagedElement",
-
-        .assoc_class = (char**)&assoc_classname,
-
-        .handler = alloc_to_pool_and_sys,
-        .make_ref = make_ref
 };
 
 static struct std_assoc resource_pool_to_alloc_cap = {
@@ -599,11 +577,10 @@ static struct std_assoc resource_pool_to_alloc_cap = {
 
 static struct std_assoc *assoc_handlers[] = {
         &system_to_vsm_cap,
-        &vsm_cap_to_sys_or_service,
+        &vsm_cap_to_sys_or_service_or_rp,
         &_service_to_cap,
         &ele_cap_to_cs,
         &cs_to_ele_cap,
-        &alloc_cap_to_resource_pool,
         &resource_pool_to_alloc_cap,
         NULL
 };
