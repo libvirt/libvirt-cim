@@ -179,14 +179,20 @@ static char* antecedent[] = {
         "Xen_MemoryPool",
         "Xen_NetworkPool",
         "Xen_DiskPool",
+        "Xen_GraphicsPool",
+        "Xen_InputPool",
         "KVM_ProcessorPool",
         "KVM_MemoryPool",
         "KVM_NetworkPool",
         "KVM_DiskPool",
+        "KVM_GraphicsPool",
+        "KVM_InputPool",
         "LXC_ProcessorPool",
         "LXC_MemoryPool",
         "LXC_NetworkPool",
         "LXC_DiskPool",
+        "LXC_GraphicsPool",
+        "LXC_InputPool",
         NULL
 };
 
@@ -195,14 +201,20 @@ static char* dependent[] = {
         "Xen_MemResourceAllocationSettingData",
         "Xen_NetResourceAllocationSettingData",
         "Xen_ProcResourceAllocationSettingData",
+        "Xen_GraphicsResourceAllocationSettingData",
+        "Xen_InputResourceAllocationSettingData",
         "KVM_DiskResourceAllocationSettingData",
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
+        "KVM_GraphicsResourceAllocationSettingData",
+        "KVM_InputResourceAllocationSettingData",
         "LXC_DiskResourceAllocationSettingData",
         "LXC_MemResourceAllocationSettingData",
         "LXC_NetResourceAllocationSettingData",
         "LXC_ProcResourceAllocationSettingData",
+        "LXC_GraphicsResourceAllocationSettingData",
+        "LXC_InputResourceAllocationSettingData",
         NULL
 };
 

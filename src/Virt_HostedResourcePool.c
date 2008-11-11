@@ -105,14 +105,20 @@ static char* part_component[] = {
         "Xen_MemoryPool",
         "Xen_NetworkPool",
         "Xen_DiskPool",
+        "Xen_GraphicsPool",
+        "Xen_InputPool",
         "KVM_ProcessorPool",
         "KVM_MemoryPool",
         "KVM_NetworkPool",
         "KVM_DiskPool",
+        "KVM_GraphicsPool",
+        "KVM_InputPool",
         "LXC_ProcessorPool",
         "LXC_MemoryPool",
         "LXC_NetworkPool",
         "LXC_DiskPool",
+        "LXC_GraphicsPool",
+        "LXC_InputPool",
         NULL
 };
 
