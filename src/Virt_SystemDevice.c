@@ -135,16 +135,19 @@ static char* part_component[] = {
         "Xen_NetworkPort",
         "Xen_LogicalDisk",
         "Xen_DisplayController",
+        "Xen_PointingDevice",
         "KVM_Processor",
         "KVM_Memory",
         "KVM_NetworkPort",
         "KVM_LogicalDisk",
         "KVM_DisplayController",
+        "KVM_PointingDevice",
         "LXC_Processor",
         "LXC_Memory",
         "LXC_NetworkPort",
         "LXC_LogicalDisk",
         "LXC_DisplayController",
+        "LXC_PointingDevice",
         NULL
 };
 
