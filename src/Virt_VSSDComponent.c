@@ -132,16 +132,19 @@ static char* part_component[] = {
         "Xen_NetResourceAllocationSettingData",
         "Xen_ProcResourceAllocationSettingData",
         "Xen_GraphicsResourceAllocationSettingData",
+        "Xen_InputResourceAllocationSettingData",
         "KVM_DiskResourceAllocationSettingData",
         "KVM_MemResourceAllocationSettingData",
         "KVM_NetResourceAllocationSettingData",
         "KVM_ProcResourceAllocationSettingData",
         "KVM_GraphicsResourceAllocationSettingData",
+        "KVM_InputResourceAllocationSettingData",
         "LXC_DiskResourceAllocationSettingData",
         "LXC_MemResourceAllocationSettingData",
         "LXC_NetResourceAllocationSettingData",
         "LXC_ProcResourceAllocationSettingData",
         "LXC_GraphicsResourceAllocationSettingData",
+        "LXC_InputResourceAllocationSettingData",
         NULL
 };
 
