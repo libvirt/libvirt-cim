@@ -64,7 +64,8 @@ INTEROP_MOFS = \
 CIMV2_MOFS = \
 	schema/HostedResourcePool.mof \
 	schema/ElementCapabilities.mof \
-	schema/HostedService.mof
+	schema/HostedService.mof \
+	schema/HostedDependency.mof
 
 REGS = \
 	schema/ComputerSystem.registration \
@@ -119,7 +120,8 @@ INTEROP_REGS = \
 CIMV2_REGS = \
 	schema/HostedResourcePool.registration \
 	schema/ElementCapabilities.registration \
-	schema/HostedService.registration
+	schema/HostedService.registration \
+	schema/HostedDependency.registration
 
 pkgdata_DATA = $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)
 pkgdata_SCRIPTS = provider-register.sh

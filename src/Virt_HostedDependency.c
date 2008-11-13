@@ -64,15 +64,21 @@ static CMPIStatus host_to_vs(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
+        CMPIObjectPath *vref = NULL;
 
-        if (!match_hypervisor_prefix(ref, info))
+        if (!STARTS_WITH(CLASSNAME(ref), "Linux_") &&
+            !match_hypervisor_prefix(ref, info))
                 goto out;
 
         s = get_host(_BROKER, info->context, ref, &instance, true);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = enum_domains(_BROKER, ref, list);
+        vref = convert_sblim_hostsystem(_BROKER, ref, info);
+        if (vref == NULL)
+                goto out;
+
+        s = enum_domains(_BROKER, vref, list);
 
  out:
         return s;
@@ -91,6 +97,7 @@ static char* dependent[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
         "LXC_HostSystem",
+        "Linux_ComputerSystem",
         NULL
 };
 
