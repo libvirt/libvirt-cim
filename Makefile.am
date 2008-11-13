@@ -61,6 +61,8 @@ INTEROP_MOFS = \
 	schema/ElementConformsToProfile.mof \
 	schema/ReferencedProfile.mof
 
+CIMV2_MOFS = \
+	schema/HostedResourcePool.mof
 
 REGS = \
 	schema/ComputerSystem.registration \
@@ -112,6 +114,9 @@ INTEROP_REGS = \
 	schema/ElementConformsToProfile.registration \
 	schema/ReferencedProfile.registration
 
+CIMV2_REGS = \
+	schema/HostedResourcePool.registration
+
 pkgdata_DATA = $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)
 pkgdata_SCRIPTS = provider-register.sh
 
@@ -129,12 +134,14 @@ preinstall:
 postinstall:
 	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
+	sh provider-register.sh -v -t @CIMSERVER@ -n root/cimv2 -r $(CIMV2_REGS) -m $(CIMV2_MOFS)
 	virsh -v | grep -q '^0.3' && cp examples/diskpool.conf $(DISK_POOL_CONFIG) || true
 	mkdir -p $(INFO_STORE)
 
 preuninstall:
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/cimv2 -r $(CIMV2_REGS) -m $(CIMV2_MOFS)
 
 rpm: clean
 	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.gz)

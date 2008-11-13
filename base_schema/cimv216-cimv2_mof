@@ -1,0 +1,11 @@
+Qualifier IsPUnit : boolean = false, 
+    Scope(property, method, parameter);
+
+Qualifier Experimental : boolean = false, 
+    Scope(any), 
+    Flavor(EnableOverride, Restricted);
+
+#pragma include ("Core/CIM_ResourcePool.mof")
+#pragma include ("Core/CIM_HostedResourcePool.mof")
+#pragma include ("Core/CIM_ElementCapabilities.mof")
+#pragma include ("Core/CIM_HostedService.mof")

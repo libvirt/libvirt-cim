@@ -32,6 +32,8 @@
 #include "misc_util.h"
 #include <libcmpiutil/std_association.h>
 
+#include <config.h>
+
 #include "Virt_HostSystem.h"
 #include "Virt_DevicePool.h"
 #include "svpc_types.h"
@@ -68,15 +70,21 @@ static CMPIStatus sys_to_pool(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
+        CMPIObjectPath *virtref = NULL;
 
-        if (!match_hypervisor_prefix(ref, info))
+        if (!STARTS_WITH(CLASSNAME(ref), "Linux_") &&
+            !match_hypervisor_prefix(ref, info))
+                goto out;
+
+        virtref = convert_sblim_hostsystem(_BROKER, ref, info);
+        if (virtref == NULL)
                 goto out;
 
         s = get_host(_BROKER, info->context, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = enum_pools(_BROKER, ref, CIM_RES_TYPE_ALL, list);
+        s = enum_pools(_BROKER, virtref, CIM_RES_TYPE_ALL, list);
 
  out:
         return s;
@@ -88,6 +96,7 @@ static char* group_component[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
         "LXC_HostSystem",
+        "Linux_ComputerSystem",
         NULL
 };
 
