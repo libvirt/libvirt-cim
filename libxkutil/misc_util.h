@@ -126,6 +126,10 @@ bool check_refs_pfx_match(const CMPIObjectPath *refa,
 
 int domain_vcpu_count(virDomainPtr dom);
 
+CMPIObjectPath *convert_sblim_hostsystem(const CMPIBroker *broker,
+                                         const CMPIObjectPath *ref,
+                                         struct std_assoc_info *info);
+
 #define LIBVIRT_CIM_DEFAULT_MAKEREF()                                   \
         static CMPIInstance* make_ref(const CMPIObjectPath *source_ref, \
                                       const CMPIInstance *target_inst,  \

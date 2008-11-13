@@ -38,6 +38,8 @@
 #include "misc_util.h"
 #include "cs_util.h"
 
+#include <config.h>
+
 #define URI_ENV "HYPURI"
 
 static const char *cn_to_uri(const char *classname)
@@ -578,6 +580,31 @@ int domain_vcpu_count(virDomainPtr dom)
         free(info);
 
         return actual;
+}
+
+CMPIObjectPath *convert_sblim_hostsystem(const CMPIBroker *broker,
+                                         const CMPIObjectPath *ref,
+                                         struct std_assoc_info *info)
+{
+        CMPIObjectPath *vref = NULL;
+        CMPIStatus s;
+        char *base = NULL;
+        char *cn = NULL;
+
+        base = class_base_name(CLASSNAME(ref));
+        if (base == NULL)
+                goto out;
+
+        cn = get_typed_class(info->assoc_class, base);
+        if (cn == NULL)
+                goto out;
+
+        vref = CMNewObjectPath(broker, CIM_VIRT_NS, cn, &s);
+ out:
+        free(base);
+        free(cn);
+
+        return vref;
 }
 
 /*
