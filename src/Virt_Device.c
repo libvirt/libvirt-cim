@@ -289,6 +289,11 @@ static CMPIInstance *input_instance(const CMPIBroker *broker,
                                   pfx_from_conn(conn),
                                   "PointingDevice",
                                   ns);
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get instance of %s_PointingDevice",
+                         pfx_from_conn(conn));
+                return NULL;
+        }
 
         if (!input_set_attr(inst, dev))
                 return NULL;
