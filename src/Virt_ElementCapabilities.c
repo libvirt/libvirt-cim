@@ -146,27 +146,33 @@ static CMPIStatus sys_to_cap(const CMPIObjectPath *ref,
 {
         CMPIInstance *inst = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIObjectPath *vref = NULL;
 
-        if (!match_hypervisor_prefix(ref, info))
+        if (!STARTS_WITH(CLASSNAME(ref), "Linux_") &&
+            !match_hypervisor_prefix(ref, info))
                 goto out;
 
         s = get_host(_BROKER, info->context, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = get_vsm_cap(_BROKER, ref, &inst, false);
+        vref = convert_sblim_hostsystem(_BROKER, ref, info);
+        if (vref == NULL)
+                goto out;
+
+        s = get_vsm_cap(_BROKER, vref, &inst, false);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
-        s = get_migration_caps(ref, &inst, _BROKER, false);
+        s = get_migration_caps(vref, &inst, _BROKER, false);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
-        s = get_console_rs_caps(_BROKER, ref, &inst, false);
+        s = get_console_rs_caps(_BROKER, vref, &inst, false);
         if (s.rc == CMPI_RC_OK)
                 inst_list_add(list, inst);
 
-        s = enum_alloc_cap_instances(_BROKER, ref, NULL, NULL, list);
+        s = enum_alloc_cap_instances(_BROKER, vref, NULL, NULL, list);
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("Failed to enum AC: %s",
                          CMGetCharPtr(s.msg));
@@ -393,6 +399,7 @@ static char* host_system[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
         "LXC_HostSystem",
+        "Linux_ComputerSystem",
         NULL
 };
 
@@ -409,6 +416,7 @@ static char* host_sys_and_service[] = {
         "LXC_VirtualSystemManagementService",
         "LXC_VirtualSystemMigrationService",
         "LXC_ConsoleRedirectionService",
+        "Linux_ComputerSystem",
         NULL
 };
 
