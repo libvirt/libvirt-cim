@@ -3,3 +3,6 @@
 Xen_HostedService root/virt Virt_HostedService Virt_HostedService association
 KVM_HostedService root/virt Virt_HostedService Virt_HostedService association
 LXC_HostedService root/virt Virt_HostedService Virt_HostedService association
+Xen_HostedService root/cimv2 Virt_HostedService Virt_HostedService association
+KVM_HostedService root/cimv2 Virt_HostedService Virt_HostedService association
+LXC_HostedService root/cimv2 Virt_HostedService Virt_HostedService association

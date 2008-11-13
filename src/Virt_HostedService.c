@@ -89,38 +89,44 @@ static CMPIStatus host_to_service(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
+        CMPIObjectPath *vref = NULL;
 
-        if (!match_hypervisor_prefix(ref, info))
+        if (!STARTS_WITH(CLASSNAME(ref), "Linux_") &&
+            !match_hypervisor_prefix(ref, info))
                 return s;
 
         s = get_host(_BROKER, info->context, ref, &inst, true);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        s = get_rpcs(ref, &inst, _BROKER, info->context, false);
+        vref = convert_sblim_hostsystem(_BROKER, ref, info);
+        if (vref == NULL)
+                goto out;
+
+        s = get_rpcs(vref, &inst, _BROKER, info->context, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
                 inst_list_add(list, inst);
 
-        s = get_vsms(ref, &inst, _BROKER, info->context, false);
+        s = get_vsms(vref, &inst, _BROKER, info->context, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
             inst_list_add(list, inst);
 
-        s = get_migration_service(ref, &inst, _BROKER, info->context, false);
+        s = get_migration_service(vref, &inst, _BROKER, info->context, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
                 inst_list_add(list, inst);
 
-        s = get_console_rs(ref, &inst, _BROKER, info->context, false);
+        s = get_console_rs(vref, &inst, _BROKER, info->context, false);
         if (s.rc != CMPI_RC_OK)
                 return s;
         if (!CMIsNullObject(inst))
                 inst_list_add(list, inst);
-
+ out:
         return s;
 }
 
@@ -130,6 +136,7 @@ static char* antecedent[] = {
         "Xen_HostSystem",
         "KVM_HostSystem",
         "LXC_HostSystem",
+        "Linux_ComputerSystem",
         NULL
 };
 
