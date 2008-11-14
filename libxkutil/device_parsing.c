@@ -317,25 +317,8 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
         if (ndev->mac == NULL)
                 goto err;
 
-        if (ndev->source == NULL) {
-                if (STREQC(ndev->type, "bridge")) {
-                        ndev->source = strdup(DEFAULT_BRIDGE);
-                        CU_DEBUG("No bridge, taking default of `%s'\n",
-                                 ndev->source);
-                } else if (STREQC(ndev->type, "network")) {
-                        ndev->source = strdup(DEFAULT_NETWORK);
-                        CU_DEBUG("No network, taking default of `%s'\n",
-                                 ndev->source);
-                } else if (STREQC(ndev->type, "user")){
-                        CU_DEBUG("Leaving source blank for user net type");
-                } else {
-                        /* This likely indicates an unsupported
-                         * network configuration
-                         */
-                        CU_DEBUG("No network source, and no known default");
-                        goto err;
-                }
-        }
+        if (ndev->source == NULL)
+                CU_DEBUG("No network source defined, leaving blank\n");
 
         vdev->type = CIM_RES_TYPE_NET;
         vdev->id = strdup(ndev->mac);

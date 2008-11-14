@@ -206,16 +206,26 @@ static bool bridge_net_to_xml(char **xml, struct virt_device *dev)
         char *script = "vif-bridge";
         struct net_device *net = &dev->dev.net;
 
-        ret = asprintf(&_xml,
-                       "<interface type='%s'>\n"
-                       "  <source bridge='%s'/>\n"
-                       "  <mac address='%s'/>\n"
-                       "  <script path='%s'/>\n"
-                       "</interface>\n",
-                       net->type,
-                       net->source,
-                       net->mac,
-                       script);
+        if (net->source == NULL)
+                ret = asprintf(&_xml,
+                               "<interface type='%s'>\n"
+                               "  <mac address='%s'/>\n"
+                               "  <script path='%s'/>\n"
+                               "</interface>\n",
+                               net->type,
+                               net->mac,
+                               script);
+        else
+                ret = asprintf(&_xml,
+                               "<interface type='%s'>\n"
+                               "  <source bridge='%s'/>\n"
+                               "  <mac address='%s'/>\n"
+                               "  <script path='%s'/>\n"
+                               "</interface>\n",
+                               net->type,
+                               net->source,
+                               net->mac,
+                               script);
 
         if (ret == -1)
                 return false;
@@ -234,16 +244,21 @@ static bool network_net_to_xml(char **xml, struct virt_device *dev)
         struct net_device *net = &dev->dev.net;
 
         if (net->source == NULL)
-                net->source = strdup("default");
-
-        ret = asprintf(&_xml,
-                       "<interface type='%s'>\n"
-                       "  <mac address='%s'/>\n"
-                       "  <source network='%s'/>\n"
-                       "</interface>\n",
-                       net->type,
-                       net->mac,
-                       net->source);
+                ret = asprintf(&_xml,
+                               "<interface type='%s'>\n"
+                               "  <mac address='%s'/>\n"
+                               "</interface>\n",
+                               net->type,
+                               net->mac);
+        else
+                ret = asprintf(&_xml,
+                               "<interface type='%s'>\n"
+                               "  <mac address='%s'/>\n"
+                               "  <source network='%s'/>\n"
+                               "</interface>\n",
+                               net->type,
+                               net->mac,
+                               net->source);
         if (ret == -1)
                 return false;
         else
