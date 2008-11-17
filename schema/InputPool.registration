@@ -1,0 +1,5 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_InputPool root/virt Virt_DevicePool Virt_DevicePool instance
+KVM_InputPool root/virt Virt_DevicePool Virt_DevicePool instance
+LXC_InputPool root/virt Virt_DevicePool Virt_DevicePool instance

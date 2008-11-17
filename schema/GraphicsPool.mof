@@ -1,0 +1,16 @@
+// Copyright IBM Corp. 2007
+
+[Provider("cmpi::Virt_DevicePool")]
+class Xen_GraphicsPool : CIM_ResourcePool
+{
+};
+
+[Provider("cmpi::Virt_DevicePool")]
+class KVM_GraphicsPool : CIM_ResourcePool
+{
+};
+
+[Provider("cmpi::Virt_DevicePool")]
+class LXC_GraphicsPool : CIM_ResourcePool
+{
+};

@@ -49,7 +49,9 @@ MOFS = \
         schema/ServiceAffectsElement.mof \
         schema/KVMRedirectionSAP.mof \
         schema/DisplayController.mof \
-        schema/PointingDevice.mof
+        schema/PointingDevice.mof \
+        schema/GraphicsPool.mof \
+        schema/InputPool.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -113,7 +115,9 @@ REGS = \
         schema/ServiceAffectsElement.registration \
         schema/KVMRedirectionSAP.registration \
         schema/DisplayController.registration \
-        schema/PointingDevice.registration
+        schema/PointingDevice.registration \
+        schema/GraphicsPool.registration \
+        schema/InputPool.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \

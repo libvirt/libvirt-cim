@@ -478,6 +478,10 @@ char *pool_member_of(const CMPIBroker *broker,
                 poolid = netpool_member_of(broker, id, refcn);
         else if (type == CIM_RES_TYPE_DISK)
                 poolid = diskpool_member_of(broker, id, refcn);
+        else if (type == CIM_RES_TYPE_GRAPHICS)
+                poolid = strdup("GraphicsPool/0");
+        else if (type == CIM_RES_TYPE_INPUT)
+                poolid = strdup("InputPool/0");
         else
                 return NULL;
 
@@ -494,6 +498,10 @@ uint16_t res_type_from_pool_classname(const char *classname)
                 return CIM_RES_TYPE_MEM;
         else if (strstr(classname, "ProcessorPool"))
                 return CIM_RES_TYPE_PROC;
+        else if (strstr(classname, "GraphicsPool"))
+                return CIM_RES_TYPE_GRAPHICS;
+        else if (strstr(classname, "InputPool"))
+                return CIM_RES_TYPE_INPUT;
         else
                 return CIM_RES_TYPE_UNKNOWN;
 }
@@ -508,6 +516,10 @@ uint16_t res_type_from_pool_id(const char *id)
                 return CIM_RES_TYPE_MEM;
         else if (STARTS_WITH(id, "ProcessorPool"))
                 return CIM_RES_TYPE_PROC;
+        else if (strstr(id, "GraphicsPool"))
+                return CIM_RES_TYPE_GRAPHICS;
+        else if (strstr(id, "InputPool"))
+                return CIM_RES_TYPE_INPUT;
         else
                 return CIM_RES_TYPE_UNKNOWN;
 }
@@ -841,6 +853,78 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
         return s;
 }
 
+static CMPIStatus graphicspool_instance(virConnectPtr conn,
+                                        struct inst_list *list,
+                                        const char *ns,
+                                        const char *_id,
+                                        const CMPIBroker *broker)
+{
+        const char *id = "GraphicsPool/0";
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if ((_id != NULL) && (!STREQC(_id, "0"))) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No such graphics pool `%s'", id);
+                return s;
+        }
+
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "GraphicsPool",
+                                  ns);
+        if (inst == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get instance of %s_GraphicsPool", 
+                           pfx_from_conn(conn));
+                return s;
+        }
+
+        set_params(inst, CIM_RES_TYPE_GRAPHICS, id, NULL, NULL);
+
+        inst_list_add(list, inst);
+
+        return s;
+}
+
+static CMPIStatus inputpool_instance(virConnectPtr conn,
+                                     struct inst_list *list,
+                                     const char *ns,
+                                     const char *_id,
+                                     const CMPIBroker *broker)
+{
+        const char *id = "InputPool/0";
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if ((_id != NULL) && (!STREQC(_id, "0"))) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No such input pool `%s'", id);
+                return s;
+        }
+
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "InputPool",
+                                  ns);
+        if (inst == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get instance of %s_InputPool", 
+                           pfx_from_conn(conn));
+                return s;
+        }
+
+        set_params(inst, CIM_RES_TYPE_INPUT, id, NULL, NULL);
+
+        inst_list_add(list, inst);
+
+        return s;
+}
+
 static CMPIStatus _get_pools(const CMPIBroker *broker,
                              const CMPIObjectPath *reference,
                              const uint16_t type,
@@ -885,6 +969,22 @@ static CMPIStatus _get_pools(const CMPIBroker *broker,
                                       NAMESPACE(reference),
                                       id,
                                       broker);
+
+        if ((type == CIM_RES_TYPE_GRAPHICS) || 
+            (type == CIM_RES_TYPE_ALL))
+                s = graphicspool_instance(conn,
+                                          list,
+                                          NAMESPACE(reference),
+                                          id,
+                                          broker);
+
+        if ((type == CIM_RES_TYPE_INPUT) || 
+            (type == CIM_RES_TYPE_ALL))
+                s = inputpool_instance(conn,
+                                       list,
+                                       NAMESPACE(reference),
+                                       id,
+                                       broker);
 
         if (type == CIM_RES_TYPE_UNKNOWN)
                 cu_statusf(broker, &s,
@@ -1029,6 +1129,16 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
                 *s = enum_pools(broker, reference, type, &list);
                 if ((s->rc == CMPI_RC_OK) && (list.cur > 0))
                         inst = list.list[0];
+        } else if (type == CIM_RES_TYPE_GRAPHICS) {
+                *s = get_pool_by_name(broker, 
+                                      reference, 
+                                      "GraphicsPool/0", 
+                                      &inst);
+        } else if (type == CIM_RES_TYPE_INPUT) {
+                *s = get_pool_by_name(broker, 
+                                      reference, 
+                                      "InputPool/0", 
+                                      &inst);
         } else {
                 cu_statusf(broker, s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
