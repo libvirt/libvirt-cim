@@ -377,7 +377,7 @@ static int parse_emu_device(xmlNode *node, struct virt_device **vdevs)
         edev = &(vdev->dev.emu);
 
         edev->path = get_node_content(node);
-        if (edev->path != NULL)
+        if (edev->path == NULL)
                 goto err;
 
         vdev->type = CIM_RES_TYPE_EMU;
