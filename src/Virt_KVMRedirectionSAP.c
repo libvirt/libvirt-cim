@@ -276,7 +276,6 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
                            CMPI_RC_ERR_FAILED,
                            "Unable to allocate guest port list");
                 goto out;
-
         }
 
         for (i = 0; i < count; i++) {
@@ -287,6 +286,7 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
                                    "Unable to allocate guest port list");
                         goto out;
                 }
+                port_list.list[i]->name = NULL;
         }
 
         for (i = 0; i < count; i++) {
