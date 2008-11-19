@@ -390,14 +390,15 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
         if (cu_get_str_path(ref, "Name", &name) != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (System)");
+                           "No such instance (Name)");
                 goto out;
         }
 
         if (sscanf(name, "%d:%d", &lport, &rport) != 2) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Unable to guest's console port");
+                           "Unable to determine console port for guest '%s'",
+                           sys);
                 goto out;
         }
 
@@ -431,7 +432,8 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
 
  out:
         virConnectClose(conn);
-        free(port->name);
+        if (port != NULL)
+                free(port->name);
         free(port);
 
         return s;
