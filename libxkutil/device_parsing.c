@@ -440,11 +440,16 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         gdev->host = get_attr_value(node, "listen");
         gdev->keymap = get_attr_value(node, "keymap");
 
-        if ((gdev->type == NULL) || (gdev->port == NULL))
+        if (gdev->type == NULL)
                 goto err;
 
-        if (gdev->host == NULL)
-                gdev->host = strdup("127.0.0.1");
+        if (STREQC(gdev->type, "vnc")) {
+                if (gdev->port == NULL)
+                        goto err;
+
+                if (gdev->host == NULL)
+                        gdev->host = strdup("127.0.0.1");
+        }
 
         vdev->type = CIM_RES_TYPE_GRAPHICS;
         vdev->id = strdup("graphics");

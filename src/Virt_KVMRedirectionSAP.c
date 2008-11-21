@@ -231,6 +231,11 @@ static bool check_graphics(virDomainPtr dom,
         if ((*dominfo)->dev_graphics == NULL) {
                 CU_DEBUG("No graphics device associated with guest");
                 return false;
+        } 
+
+        if (!STREQC((*dominfo)->dev_graphics->dev.graphics.type, "vnc")) {
+                CU_DEBUG("Only vnc devices have console redirection sessions");
+                return false;
         }
 
         return true;

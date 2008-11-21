@@ -270,17 +270,23 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
         char *addr_str = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
-        rc = asprintf(&addr_str, 
-                      "%s:%s", 
-                      dev->dev.graphics.host, 
-                      dev->dev.graphics.port);
-        if (rc == -1) {
-                goto out;
-        }
+        CMSetProperty(inst, "ResourceSubType", 
+                       (CMPIValue *)dev->dev.graphics.type, CMPI_chars);
+         
+        if (STREQC(dev->dev.graphics.type, "vnc")) {
+                rc = asprintf(&addr_str, 
+                              "%s:%s", 
+                              dev->dev.graphics.host, 
+                              dev->dev.graphics.port);
+                if (rc == -1)
+                        goto out;
 
-        CMSetProperty(inst, "Address", (CMPIValue *)addr_str, CMPI_chars);
-        CMSetProperty(inst, "KeyMap", 
-                      (CMPIValue *)dev->dev.graphics.keymap, CMPI_chars);
+                CMSetProperty(inst, "Address", 
+                              (CMPIValue *)addr_str, CMPI_chars);
+
+                CMSetProperty(inst, "KeyMap",
+                             (CMPIValue *)dev->dev.graphics.keymap, CMPI_chars);
+        }
 
  out:
         free(addr_str);

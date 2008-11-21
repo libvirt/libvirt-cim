@@ -749,6 +749,7 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
         CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
 
         CMSetProperty(inst, "KeyMap", (CMPIValue *)"en-us", CMPI_chars);
+        CMSetProperty(inst, "ResourceSubType", (CMPIValue *)"vnc", CMPI_chars);
 
         inst_list_add(list, inst);
 
