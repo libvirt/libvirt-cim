@@ -771,27 +771,39 @@ static void set_scheduler_params(virDomainPtr dom)
 
 
 /* This composite operation may be supported as a flag to reboot */
-static int domain_reset(virDomainPtr dom)
+static CMPIStatus domain_reset(virDomainPtr dom)
 {
         int ret;
         virConnectPtr conn = NULL;
         char *xml = NULL;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
 
         conn = virDomainGetConnect(dom);
         if (conn == NULL) {
                 CU_DEBUG("Unable to get connection from domain");
-                return 1;
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get domain connection");
+                return s;
         }
 
         xml = virDomainGetXMLDesc(dom, 0);
         if (xml == NULL) {
                 CU_DEBUG("Unable to retrieve domain XML");
-                return 1;
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get domain definition");
+                return s;
         }
 
         ret = virDomainDestroy(dom);
-        if (ret)
+        if (ret != 0) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to destroy domain");
                 goto out;
+        }
 
         dom = virDomainLookupByName(virDomainGetConnect(dom),
                                      virDomainGetName(dom));
@@ -799,8 +811,11 @@ static int domain_reset(virDomainPtr dom)
         if (dom == NULL) {
             dom = virDomainDefineXML(conn, xml);
             if (dom == NULL) {
-                CU_DEBUG("Failed to define domain from XML");
-                ret = 1;
+                    CU_DEBUG("Failed to define domain from XML");
+                    virt_set_status(_BROKER, &s,
+                                    CMPI_RC_ERR_FAILED,
+                                    virDomainGetConnect(dom),
+                                    "Unable to define domain");
                 goto out;
             }
         }
@@ -809,11 +824,16 @@ static int domain_reset(virDomainPtr dom)
             CU_DEBUG("Guest is now offline");
 
         ret = virDomainCreate(dom);
+        if (ret != 0)
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Failed to start domain");
 
  out:
         free(xml);
 
-        return ret;
+        return s;
 }
 
 static CMPIStatus start_domain(virDomainPtr dom)
@@ -828,9 +848,10 @@ static CMPIStatus start_domain(virDomainPtr dom)
         }
 
         if (virDomainCreate(dom) != 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to start domain");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to start domain");
                 return s;
         }
 
@@ -842,7 +863,6 @@ static CMPIStatus start_domain(virDomainPtr dom)
 static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
         switch (info->state) {
         case VIR_DOMAIN_SHUTOFF:
@@ -851,7 +871,11 @@ static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
                 break;
         case VIR_DOMAIN_PAUSED:
                 CU_DEBUG("Unpause domain");
-                ret = virDomainResume(dom);
+                if (virDomainResume(dom) != 0)
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_FAILED,
+                                        virDomainGetConnect(dom),
+                                        "Unable to unpause domain");
                 break;
         default:
                 CU_DEBUG("Cannot go to enabled state from %i", info->state);
@@ -860,18 +884,12 @@ static CMPIStatus state_change_enable(virDomainPtr dom, virDomainInfoPtr info)
                            "Invalid state transition");
         };
 
-        if (ret != 0)
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Domain Operation Failed");
-
         return s;
 }
 
 static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
         info->state = adjust_state_xen(dom, info->state);
 
@@ -879,7 +897,11 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
         case VIR_DOMAIN_RUNNING:
         case VIR_DOMAIN_BLOCKED:
                 CU_DEBUG("Stop domain");
-                ret = virDomainShutdown(dom);
+                if (virDomainShutdown(dom) != 0)
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_FAILED,
+                                        virDomainGetConnect(dom),
+                                        "Unable to stop domain");
                 break;
         default:
                 CU_DEBUG("Cannot go to disabled/shutdown state from %i", 
@@ -889,18 +911,12 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
                            "Invalid state transition");
         };
 
-        if (ret != 0)
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Domain Operation Failed");
-
         return s;
 }
 
 static CMPIStatus state_change_pause(virDomainPtr dom, virDomainInfoPtr info)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
         info->state = adjust_state_xen(dom, info->state);
 
@@ -908,7 +924,11 @@ static CMPIStatus state_change_pause(virDomainPtr dom, virDomainInfoPtr info)
         case VIR_DOMAIN_RUNNING:
         case VIR_DOMAIN_BLOCKED:
                 CU_DEBUG("Pause domain");
-                ret = virDomainSuspend(dom);
+                if (virDomainSuspend(dom) != 0)
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_FAILED,
+                                        virDomainGetConnect(dom),
+                                        "Unable to pause domain");
                 break;
         default:
                 cu_statusf(_BROKER, &s,
@@ -916,18 +936,12 @@ static CMPIStatus state_change_pause(virDomainPtr dom, virDomainInfoPtr info)
                            "Domain not running");
         };
 
-        if (ret != 0)
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Domain Operation Failed");
-
         return s;
 }
 
 static CMPIStatus state_change_reboot(virDomainPtr dom, virDomainInfoPtr info)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
         info->state = adjust_state_xen(dom, info->state);
 
@@ -936,7 +950,11 @@ static CMPIStatus state_change_reboot(virDomainPtr dom, virDomainInfoPtr info)
         case VIR_DOMAIN_BLOCKED:
         case VIR_DOMAIN_PAUSED:
                 CU_DEBUG("Reboot domain");
-                ret = virDomainReboot(dom, 0);
+                if (virDomainReboot(dom, 0) != 0)
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_FAILED,
+                                        virDomainGetConnect(dom),
+                                        "Unable to reboot domain");
                 break;
         default:
                 cu_statusf(_BROKER, &s,
@@ -944,18 +962,12 @@ static CMPIStatus state_change_reboot(virDomainPtr dom, virDomainInfoPtr info)
                            "Domain not running");
         };
 
-        if (ret != 0)
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Domain Operation Failed");
-
         return s;
 }
 
 static CMPIStatus state_change_reset(virDomainPtr dom, virDomainInfoPtr info)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int ret = 0;
 
         info->state = adjust_state_xen(dom, info->state);
 
@@ -964,18 +976,13 @@ static CMPIStatus state_change_reset(virDomainPtr dom, virDomainInfoPtr info)
         case VIR_DOMAIN_BLOCKED:
         case VIR_DOMAIN_PAUSED:
                 CU_DEBUG("Reset domain");
-                ret = domain_reset(dom);
+                s = domain_reset(dom);
                 break;
         default:
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Domain not running");
         };
-
-        if (ret != 0)
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Domain Operation Failed");
 
         return s;
 }

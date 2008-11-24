@@ -831,9 +831,10 @@ static CMPIInstance *connect_and_create(char *xml,
         dom = virDomainDefineXML(conn, xml);
         if (dom == NULL) {
                 CU_DEBUG("Failed to define domain from XML");
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to create domain");
+                virt_set_status(_BROKER, s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Failed to define domain");
                 return NULL;
         }
 
