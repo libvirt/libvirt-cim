@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
@@ -606,6 +607,51 @@ CMPIObjectPath *convert_sblim_hostsystem(const CMPIBroker *broker,
 
         return vref;
 }
+
+int virt_set_status(const CMPIBroker *broker,
+                    CMPIStatus *s,
+                    CMPIrc rc,
+                    virConnectPtr conn,
+                    const char *fmt, ...)
+{
+        va_list ap;
+        char *formatted = NULL;
+        char *verrmsg = NULL;
+        int ret;
+        virErrorPtr virt_error;
+
+        if (conn == NULL)
+                virt_error = virGetLastError();
+        else
+                virt_error = virConnGetLastError(conn);
+
+        if (virt_error == NULL) {
+                if (asprintf(&verrmsg, "(none)") == -1)
+                        verrmsg = NULL;
+        } else if (virt_error->message != NULL) {
+                verrmsg = strdup(virt_error->message);
+        } else {
+                if (asprintf(&verrmsg, "Error %i", virt_error->code) == -1)
+                        verrmsg = NULL;
+        }
+
+        va_start(ap, fmt);
+        ret = vasprintf(&formatted, fmt, ap);
+        va_end(ap);
+
+        if (ret == -1) {
+                CU_DEBUG("Failed to format message for %s", fmt);
+                formatted = NULL;
+        }
+
+        ret = cu_statusf(broker, s, rc, "%s: %s", formatted, verrmsg);
+
+        free(formatted);
+        free(verrmsg);
+
+        return ret;
+}
+
 
 /*
  * Local Variables:

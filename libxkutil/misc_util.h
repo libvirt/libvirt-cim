@@ -130,6 +130,12 @@ CMPIObjectPath *convert_sblim_hostsystem(const CMPIBroker *broker,
                                          const CMPIObjectPath *ref,
                                          struct std_assoc_info *info);
 
+int virt_set_status(const CMPIBroker *broker,
+                    CMPIStatus *s,
+                    CMPIrc rc,
+                    virConnectPtr conn,
+                    const char *fmt, ...);
+
 #define LIBVIRT_CIM_DEFAULT_MAKEREF()                                   \
         static CMPIInstance* make_ref(const CMPIObjectPath *source_ref, \
                                       const CMPIInstance *target_inst,  \
