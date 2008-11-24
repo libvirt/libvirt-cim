@@ -242,6 +242,8 @@ int get_input_dev_caption(const char *type,
                 bus_str = "USB";
         else if (STREQC(bus, "ps2"))
                 bus_str = "PS2";
+        else if (STREQC(bus, "xen"))
+                bus_str = "Xen";
         else
                 bus_str = "Unknown bus";
 

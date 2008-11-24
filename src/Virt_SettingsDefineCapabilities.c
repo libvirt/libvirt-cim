@@ -761,6 +761,7 @@ static CMPIStatus set_input_props(const CMPIObjectPath *ref,
                                   const char *id,
                                   const char *type,
                                   const char *bus,
+                                  const char *caption,
                                   struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -773,6 +774,15 @@ static CMPIStatus set_input_props(const CMPIObjectPath *ref,
                            CMPI_RC_ERR_NOT_FOUND,
                            "Unable to build input caption");
                 return s;
+        }
+
+        if (caption != NULL) {
+                if (asprintf(&cap, "%s %s", caption, cap) == -1) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "Unable to build input caption");
+                        goto out;
+                }
         }
 
         inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_INPUT);
@@ -799,11 +809,20 @@ static CMPIStatus input_template(const CMPIObjectPath *ref,
 {
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        const char *inputs[4][2] = { {"mouse", "ps2"},
-                                     {"mouse", "usb"},
-                                     {"tablet", "usb"},
-                                     {NULL, NULL}
-                                   };
+        const char *xen_inputs[4][3] = { {"mouse", "ps2", "FV"},
+                                         {"mouse", "usb", "FV"},
+                                         {"mouse", "xen", "PV"},
+                                         {NULL, NULL, NULL}
+                                       };
+        const char *kvm_inputs[4][3] = { {"mouse", "ps2", NULL},
+                                         {"mouse", "usb", NULL},
+                                         {"tablet", "usb", NULL},
+                                         {NULL, NULL, NULL}
+                                       };
+        const char *lxc_inputs[4][3] = { {"mouse", "usb", NULL},
+                                         {NULL, NULL, NULL}
+                                       };
+        char *pfx = NULL;
         int i;
 
         switch(template_type) {
@@ -826,13 +845,50 @@ static CMPIStatus input_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        for(i = 0; inputs[i][0] != NULL; i++) {
-                s = set_input_props(ref, id, inputs[i][0], inputs[i][1], list); 
-                if (s.rc != CMPI_RC_OK)
-                        goto out;
+        pfx = class_prefix_name(CLASSNAME(ref));
+
+        if (STREQ(pfx, "Xen")) {
+                for(i = 0; xen_inputs[i][0] != NULL; i++) {
+                        s = set_input_props(ref, 
+                                            id, 
+                                            xen_inputs[i][0], 
+                                            xen_inputs[i][1], 
+                                            xen_inputs[i][2], 
+                                            list);
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+                }
+        } else if (STREQ(pfx, "KVM")) {
+                for(i = 0; kvm_inputs[i][0] != NULL; i++) {
+                        s = set_input_props(ref, 
+                                            id, 
+                                            kvm_inputs[i][0], 
+                                            kvm_inputs[i][1], 
+                                            kvm_inputs[i][2], 
+                                            list);
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+                }
+        } else if (STREQ(pfx, "LXC")) {
+                for(i = 0; lxc_inputs[i][0] != NULL; i++) {
+                        s = set_input_props(ref, 
+                                            id, 
+                                            lxc_inputs[i][0], 
+                                            lxc_inputs[i][1], 
+                                            lxc_inputs[i][2], 
+                                            list);
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+                }
+        } else {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported guest type");
+                goto out;
         }
 
  out:
+        free(pfx);
         return s;
 }
 
