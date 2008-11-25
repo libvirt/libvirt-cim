@@ -229,10 +229,40 @@ static bool default_graphics_device(struct domain *domain)
         return true;
 }
 
+static bool default_input_device(struct domain *domain)
+{
+        if (domain->type == DOMAIN_LXC)
+                return true;
+
+        free(domain->dev_input);
+        domain->dev_input = calloc(1, sizeof(*domain->dev_input));
+        if (domain->dev_input == NULL) {
+                CU_DEBUG("Failed to allocate default input device");
+                return false;
+        }
+
+        domain->dev_input->dev.input.type = strdup("mouse");
+
+        if (domain->type == DOMAIN_XENPV) { 
+                domain->dev_input->dev.input.bus = strdup("xen");
+        } else { 
+                domain->dev_input->dev.input.bus = strdup("ps2");
+        }
+
+        domain->dev_input_ct = 1;
+
+        return true;
+}
+
 static bool add_default_devs(struct domain *domain)
 {
         if (domain->dev_graphics_ct != 1) {
                 if (!default_graphics_device(domain))        
+                        return false;
+        }
+
+        if (domain->dev_input_ct < 1) {
+                if (!default_input_device(domain))        
                         return false;
         }
 
@@ -597,6 +627,35 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
         return msg;
 }
 
+static const char *input_rasd_to_vdev(CMPIInstance *inst,
+                                      struct virt_device *dev)
+{
+        const char *val;
+        const char *msg;
+
+        if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK) {
+                msg = "InputRASD ResourceSubType field not valid";
+                goto out;
+        }
+        dev->dev.input.type = strdup(val);
+
+        if (cu_get_str_prop(inst, "BusType", &val) != CMPI_RC_OK) {
+                if (STREQC(dev->dev.input.type, "mouse"))
+                        dev->dev.input.bus = strdup("ps2");
+                else if (STREQC(dev->dev.input.type, "tablet"))
+                        dev->dev.input.bus = strdup("usb");
+                else {
+                        msg = "Invalid value for ResourceSubType in InputRASD";
+                        goto out;
+                }
+        } else
+                dev->dev.input.bus = strdup(val);
+
+ out:
+
+        return NULL;
+}
+
 static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev,
                                          uint16_t type,
@@ -612,6 +671,8 @@ static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                 return proc_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_GRAPHICS) {
                 return graphics_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_INPUT) {
+                return input_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
@@ -632,6 +693,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
                 return lxc_proc_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_GRAPHICS) {
                 return graphics_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_INPUT) {
+                return input_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
@@ -738,6 +801,9 @@ static const char *classify_resources(CMPIArray *resources,
         if (!make_space(&domain->dev_graphics, domain->dev_graphics_ct, count))
                 return "Failed to alloc graphics list";
 
+        if (!make_space(&domain->dev_input, domain->dev_input_ct, count))
+                return "Failed to alloc input list";
+
         for (i = 0; i < count; i++) {
                 CMPIObjectPath *op;
                 CMPIData item;
@@ -803,6 +869,12 @@ static const char *classify_resources(CMPIArray *resources,
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &domain->dev_graphics[0],
+                                           ns);
+                } else if (type == CIM_RES_TYPE_INPUT) {
+                        domain->dev_input_ct = 1;
+                        msg = rasd_to_vdev(inst,
+                                           domain,
+                                           &domain->dev_input[0],
                                            ns);
                 }
                 if (msg != NULL)
