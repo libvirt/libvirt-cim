@@ -383,6 +383,26 @@ static bool graphics_to_xml(char **xml, struct virt_device *dev)
         return true;
 }
 
+static bool input_to_xml(char **xml, struct virt_device *dev)
+{
+        int ret;
+        char *_xml;
+        struct input_device *input = &dev->dev.input;
+
+        ret = asprintf(&_xml,
+                       "<input type='%s' bus='%s'/>\n",
+                       input->type != NULL ? input->type: "mouse",
+                       input->bus != NULL ? input->bus : "ps2");
+        if (ret == -1)
+                return false;
+        else
+                astrcat(xml, _xml);
+
+        free(_xml);
+
+        return true;
+}
+
 static bool concat_devxml(char **xml,
                           struct virt_device *list,
                           int count,
@@ -430,6 +450,9 @@ char *device_to_xml(struct virt_device *dev)
                 break;
         case CIM_RES_TYPE_GRAPHICS:
                 func = graphics_to_xml;
+                break;
+        case CIM_RES_TYPE_INPUT:
+                func = input_to_xml;
                 break;
         default:
                 return NULL;
@@ -705,6 +728,12 @@ char *system_to_xml(struct domain *dominfo)
                               dominfo->dev_graphics,
                               dominfo->dev_graphics_ct,
                               graphics_to_xml);
+
+        if (dominfo->dev_input)
+                concat_devxml(&devxml,
+                              dominfo->dev_input,
+                              dominfo->dev_input_ct,
+                              input_to_xml);
 
         console_xml(dominfo, &devxml);
 

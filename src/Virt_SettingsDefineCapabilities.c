@@ -793,6 +793,8 @@ static CMPIStatus set_input_props(const CMPIObjectPath *ref,
 
         CMSetProperty(inst, "ResourceSubType", (CMPIValue *)type, CMPI_chars);
 
+        CMSetProperty(inst, "BusType", (CMPIValue *)bus, CMPI_chars);
+
         CMSetProperty(inst, "Caption", (CMPIValue *)cap, CMPI_chars);
 
         inst_list_add(list, inst);

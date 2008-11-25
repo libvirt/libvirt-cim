@@ -144,6 +144,7 @@ class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingD
 ]
 class Xen_InputResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
+      string BusType;
 };
 
 [Description ("KVM virtual input device"),
@@ -151,6 +152,7 @@ class Xen_InputResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 ]
 class KVM_InputResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
+      string BusType;
 };
 
 [Description ("LXC virtual input device"),
@@ -158,5 +160,6 @@ class KVM_InputResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 ]
 class LXC_InputResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
+      string BusType;
 };
 

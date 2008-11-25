@@ -315,6 +315,9 @@ static CMPIStatus set_input_rasd_params(const struct virt_device *dev,
         CMSetProperty(inst, "ResourceSubType", 
                       (CMPIValue *)dev->dev.input.type, CMPI_chars);
 
+        CMSetProperty(inst, "BusType", 
+                      (CMPIValue *)dev->dev.input.bus, CMPI_chars);
+
         CMSetProperty(inst, "Caption", (CMPIValue *)cap, CMPI_chars);
 
         free(cap);
