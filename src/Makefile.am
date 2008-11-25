@@ -108,9 +108,9 @@ libVirt_HostedDependency_la_LIBADD = -lVirt_ComputerSystem -lVirt_HostSystem
 
 libVirt_DevicePool_la_SOURCES = Virt_DevicePool.c
 
-libVirt_ElementConformsToProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la
+libVirt_ElementConformsToProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la libVirt_HostSystem.la
 libVirt_ElementConformsToProfile_la_SOURCES = Virt_ElementConformsToProfile.c
-libVirt_ElementConformsToProfile_la_LIBADD = -lVirt_RegisteredProfile
+libVirt_ElementConformsToProfile_la_LIBADD = -lVirt_RegisteredProfile -lVirt_HostSystem
 
 libVirt_ReferencedProfile_la_DEPENDENCIES = libVirt_RegisteredProfile.la
 libVirt_ReferencedProfile_la_SOURCES = Virt_ReferencedProfile.c

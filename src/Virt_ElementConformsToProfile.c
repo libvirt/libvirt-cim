@@ -37,6 +37,7 @@
 #include "config.h"
 
 #include "Virt_RegisteredProfile.h"
+#include "Virt_HostSystem.h"
 
 /* Associate an XXX_RegisteredProfile to the proper XXX_ManagedElement.
  *
@@ -54,13 +55,21 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
                                  const char *class)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
         CMPIObjectPath *op;
         CMPIEnumeration *en  = NULL;
-        CMPIData data ;
-        char *classname;
+        CMPIData data;
+        char *classname = NULL;
 
         if (class == NULL)
                 return s;
+
+        if (STREQC(class, "HostSystem")) {
+                s = get_host(_BROKER, info->context, ref, &inst, false);
+                if (s.rc == CMPI_RC_OK)
+                        inst_list_add(list, inst);
+                goto out;
+        }
 
         classname = get_typed_class(pfx_from_conn(conn), 
                                     class);
@@ -158,11 +167,13 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
         virConnectPtr conn = NULL;
-        char *classname;
+        CMPIObjectPath *vref = NULL;
+        char *classname = NULL;
         int i;
-        
-        if (!match_hypervisor_prefix(ref, info))
-                return s;
+
+        if (!STARTS_WITH(CLASSNAME(ref), "Linux_") &&
+            !match_hypervisor_prefix(ref, info))
+                goto out;
 
         instance = CBGetInstance(_BROKER,
                                  info->context,
@@ -172,17 +183,24 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 return s;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
-        if (conn == NULL)
-                return s;
-
-        classname = class_base_name(CLASSNAME(ref));
+        if (STREQC(CLASSNAME(ref), "Linux_ComputerSystem"))
+                classname = class_base_name("Linux_HostSystem");
+        else
+                classname = class_base_name(CLASSNAME(ref));
         if (classname == NULL) {
                 cu_statusf(_BROKER, &s, 
                            CMPI_RC_ERR_FAILED,
                            "Can't get class name");
                 goto out;
         }
+
+        vref = convert_sblim_hostsystem(_BROKER, ref, info);
+        if (vref == NULL)
+                goto out;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(vref), &s);
+        if (conn == NULL)
+                return s;
 
         for (i = 0; profiles[i] != NULL; i++) {
 
@@ -195,7 +213,7 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
                 }
 
                 s = get_profile(_BROKER,
-                                ref, 
+                                vref, 
                                 info->properties,
                                 pfx_from_conn(conn),
                                 profiles[i],
@@ -244,6 +262,7 @@ static char* managed_element[] = {
         "LXC_NetworkPool",
         "LXC_ProcessorPool",
         "LXC_VirtualSystemMigrationService",
+        "Linux_ComputerSystem",
         NULL
 };
 
