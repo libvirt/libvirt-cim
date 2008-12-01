@@ -104,6 +104,16 @@ struct reg_prof VirtualSystemMigration = {
         .scoping_profile = &SystemVirtualization
 };
 
+struct reg_prof KVMRedirection = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1076-KVMRedirection-1.0.0",
+        .reg_name = "KVM Redirection",
+        .reg_version = "1.0.0",
+        .scoping_class = "HostSystem",
+        .central_class = "ConsoleRedirectionService",
+        .scoping_profile = &SystemVirtualization
+};
+
 // Make sure to add pointer to your reg_prof struct here.
 struct reg_prof *profiles[] = {
         &SystemVirtualization,
@@ -113,6 +123,7 @@ struct reg_prof *profiles[] = {
         &GDRVP_Proc,
         &MemoryResourceVirtualization,
         &VirtualSystemMigration,
+        &KVMRedirection,
         NULL
 };
 

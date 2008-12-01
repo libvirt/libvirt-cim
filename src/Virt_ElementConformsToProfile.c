@@ -248,6 +248,7 @@ static char* managed_element[] = {
         "Xen_NetworkPool",
         "Xen_ProcessorPool",
         "Xen_VirtualSystemMigrationService",
+        "Xen_ConsoleRedirectionService",
         "KVM_HostSystem",
         "KVM_ComputerSystem",
         "KVM_DiskPool",
@@ -255,6 +256,7 @@ static char* managed_element[] = {
         "KVM_NetworkPool",
         "KVM_ProcessorPool",
         "KVM_VirtualSystemMigrationService",
+        "KVM_ConsoleRedirectionService",
         "LXC_HostSystem",
         "LXC_ComputerSystem",
         "LXC_DiskPool",
@@ -262,6 +264,7 @@ static char* managed_element[] = {
         "LXC_NetworkPool",
         "LXC_ProcessorPool",
         "LXC_VirtualSystemMigrationService",
+        "LXC_ConsoleRedirectionService",
         "Linux_ComputerSystem",
         NULL
 };
