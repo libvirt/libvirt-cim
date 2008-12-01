@@ -50,6 +50,7 @@
 #include "Virt_RASD.h"
 #include "Virt_HostSystem.h"
 #include "Virt_DevicePool.h"
+#include "Virt_Device.h"
 #include "svpc_types.h"
 
 #include "config.h"
@@ -1404,6 +1405,9 @@ static struct virt_device **find_list(struct domain *dominfo,
         } else if (type == CIM_RES_TYPE_GRAPHICS) {
                 list = &dominfo->dev_graphics;
                 *count = &dominfo->dev_graphics_ct;
+        } else if (type == CIM_RES_TYPE_INPUT) {
+                list = &dominfo->dev_input;
+                *count = &dominfo->dev_input_ct;
         }
 
         return list;
@@ -1522,7 +1526,8 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 if (STREQ(dev->id, devid)) {
                         dev->type = CIM_RES_TYPE_UNKNOWN;
                         
-                        if (type == CIM_RES_TYPE_GRAPHICS)
+                        if ((type == CIM_RES_TYPE_GRAPHICS) ||
+                           (type == CIM_RES_TYPE_INPUT))
                                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                         else {
                                 s = _resource_dynamic(dominfo,
@@ -1598,7 +1603,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         dev->type = type;
         rasd_to_vdev(rasd, dominfo, dev, ns);
 
-        if (type == CIM_RES_TYPE_GRAPHICS) {
+        if ((type == CIM_RES_TYPE_GRAPHICS) || (type == CIM_RES_TYPE_INPUT)) {
                 (*count)++;
                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                 goto out;
@@ -1661,7 +1666,8 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                 if (STREQ(dev->id, devid)) {
                         rasd_to_vdev(rasd, dominfo, dev, ns);
 
-                        if (type == CIM_RES_TYPE_GRAPHICS)
+                        if ((type == CIM_RES_TYPE_GRAPHICS) ||
+                            (type == CIM_RES_TYPE_INPUT))
                                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                         else {
                                 s = _resource_dynamic(dominfo,
