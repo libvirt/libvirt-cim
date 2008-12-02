@@ -52,7 +52,8 @@ MOFS = \
         schema/PointingDevice.mof \
         schema/GraphicsPool.mof \
         schema/InputPool.mof \
-        schema/HostedAccessPoint.mof
+        schema/HostedAccessPoint.mof \
+        schema/ServiceAccessBySAP.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -123,7 +124,8 @@ REGS = \
         schema/PointingDevice.registration \
         schema/GraphicsPool.registration \
         schema/InputPool.registration \
-        schema/HostedAccessPoint.registration
+        schema/HostedAccessPoint.registration \
+        schema/ServiceAccessBySAP.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \

@@ -1,0 +1,22 @@
+// Copyright IBM Corp. 2007
+
+[Association,
+ Provider("cmpi::Virt_ServiceAccessBySAP")
+]
+class Xen_ServiceAccessBySAP : CIM_ServiceAccessBySAP
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_ServiceAccessBySAP")
+]
+class KVM_ServiceAccessBySAP : CIM_ServiceAccessBySAP
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_ServiceAccessBySAP")
+]
+class LXC_ServiceAccessBySAP : CIM_ServiceAccessBySAP
+{
+};
