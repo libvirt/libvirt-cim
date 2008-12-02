@@ -342,6 +342,7 @@ static bool get_max_procs(const CMPIObjectPath *ref,
 {
         bool ret = false;
         virConnectPtr conn;
+        int max;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (conn == NULL) {
@@ -351,8 +352,14 @@ static bool get_max_procs(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        *num_procs = virConnectGetMaxVcpus(conn, NULL);
-        CU_DEBUG("libvirt says %d max vcpus", *num_procs);
+        max = virConnectGetMaxVcpus(conn, NULL);
+        if (max == -1) {
+                CU_DEBUG("GetMaxVcpus not supported, assuming 1");
+                *num_procs = 1;
+        } else {
+                *num_procs = max;
+                CU_DEBUG("libvirt says %d max vcpus", *num_procs);
+        }
         ret = true;
 
  out:
