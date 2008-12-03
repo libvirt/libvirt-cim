@@ -400,7 +400,7 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
         }
 
         if (sscanf(name, "%d:%d", &lport, &rport) != 2) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to determine console port for guest '%s'",
                            sys);
@@ -409,7 +409,7 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
 
         port = malloc(sizeof(struct vnc_port));
         if (port == NULL) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to allocate guest port struct");
                 goto out;
@@ -417,7 +417,7 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
 
         port->name = strdup(dominfo->name);
         if (port->name == NULL) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to allocate string");
                 goto out;
@@ -426,7 +426,7 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
         port->port = lport;
         port->remote_port = rport;
 
-        inst = get_console_sap(_BROKER, ref, conn, port, &s);
+        inst = get_console_sap(broker, ref, conn, port, &s);
 
         virDomainFree(dom);
 
