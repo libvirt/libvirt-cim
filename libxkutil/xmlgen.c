@@ -24,6 +24,9 @@
 #include <inttypes.h>
 #include <uuid/uuid.h>
 
+#include <libxml/tree.h>
+#include <libxml/xmlsave.h>
+
 #include "xmlgen.h"
 
 #ifndef TEST
@@ -32,487 +35,383 @@
 #include "cmpimacs.h"
 #endif
 
-static char *__tag_attr(struct kv *attrs, int count)
+#define XML_ERROR "Failed to allocate XML memory"
+
+typedef const char *(*devfn_t)(xmlNodePtr node, struct domain *dominfo);
+
+static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
 {
-        char *result = strdup("");
-        char *new = NULL;
+        xmlNodePtr disk;
+        xmlNodePtr tmp;
+
+        disk = xmlNewChild(root, NULL, BAD_CAST "disk", NULL);
+        if (disk == NULL)
+                return XML_ERROR;
+        xmlNewProp(disk, BAD_CAST "type", BAD_CAST "block");
+        xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
+
+        tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->source);
+
+        tmp = xmlNewChild(disk, NULL, BAD_CAST "target", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->virtual_dev);
+
+        if (dev->readonly)
+                xmlNewChild(disk, NULL, BAD_CAST "readonly", NULL);
+
+        if (dev->shareable)
+                xmlNewChild(disk, NULL, BAD_CAST "shareable", NULL);
+
+        return NULL;
+}
+
+static const char *disk_file_xml(xmlNodePtr root, struct disk_device *dev)
+{
+        xmlNodePtr disk;
+        xmlNodePtr tmp;
+
+        disk = xmlNewChild(root, NULL, BAD_CAST "disk", NULL);
+        if (disk == NULL)
+                return XML_ERROR;
+        xmlNewProp(disk, BAD_CAST "type", BAD_CAST "file");
+        xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
+
+        tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "file", BAD_CAST dev->source);
+
+        tmp = xmlNewChild(disk, NULL, BAD_CAST "target", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->virtual_dev);
+
+        if (dev->readonly)
+                xmlNewChild(disk, NULL, BAD_CAST "readonly", NULL);
+
+        if (dev->shareable)
+                xmlNewChild(disk, NULL, BAD_CAST "shareable", NULL);
+
+
+        return NULL;
+}
+
+static const char *disk_fs_xml(xmlNodePtr root, struct disk_device *dev)
+{
+        xmlNodePtr fs;
+        xmlNodePtr tmp;
+
+        fs = xmlNewChild(root, NULL, BAD_CAST "filesystem", NULL);
+        if (fs == NULL)
+                return XML_ERROR;
+
+        tmp = xmlNewChild(fs, NULL, BAD_CAST "source", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "dir", BAD_CAST dev->source);
+
+        tmp = xmlNewChild(fs, NULL, BAD_CAST "target", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "dir", BAD_CAST dev->virtual_dev);
+
+        return NULL;
+}
+
+static const char *disk_xml(xmlNodePtr root, struct domain *dominfo)
+{
         int i;
-        int size = 0;
+        const char *msg = NULL;;
 
-        for (i = 0; i < count; i++) {
-                char *tmp;
-                int ret;
+        for (i = 0; (i < dominfo->dev_disk_ct) && (msg == NULL); i++) {
+                struct disk_device *disk = &dominfo->dev_disk[i].dev.disk;
+                CU_DEBUG("Disk: %i %s %s",
+                         disk->disk_type,
+                         disk->source,
+                         disk->virtual_dev);
+                if (disk->disk_type == DISK_PHY)
+                        msg = disk_block_xml(root, disk);
+                else if (disk->disk_type == DISK_FILE)
+                        /* If it's not a block device, we assume a file,
+                           which should be a reasonable fail-safe */
+                        msg = disk_file_xml(root, disk);
+                else if (disk->disk_type == DISK_FS)
+                        msg = disk_fs_xml(root, disk);
+                else
+                        msg = "Unknown disk type";
+        }
 
-                ret = asprintf(&new, " %s='%s'",
-                               attrs[i].key, attrs[i].val);
+        return msg;
+}
 
-                if (ret == -1)
-                        goto err;
+static const char *bridge_net_to_xml(xmlNodePtr root, struct net_device *dev)
+{
+        const char *script = "vif-bridge";
+        xmlNodePtr nic;
+        xmlNodePtr tmp;
 
-                size += strlen(new) + 1;
-                tmp = realloc(result, size);
+        nic = xmlNewChild(root, NULL, BAD_CAST "interface", NULL);
+        if (nic == NULL)
+                return XML_ERROR;
+        xmlNewProp(nic, BAD_CAST "type", BAD_CAST dev->type);
+
+        tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "address", BAD_CAST dev->mac);
+
+        tmp = xmlNewChild(nic, NULL, BAD_CAST "script", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "path", BAD_CAST script);
+
+        if (dev->source != NULL) {
+                tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
                 if (tmp == NULL)
-                        goto err;
-
-                result = tmp;
-
-                strcat(result, new);
-                free(new);
+                        return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST "bridge", BAD_CAST dev->source);
         }
 
-        return result;
-
- err:
-        free(result);
         return NULL;
 }
 
-static char *tagify(char *tagname, char *content, struct kv *attrs, int count)
+static const char *network_net_to_xml(xmlNodePtr root, struct net_device *dev)
 {
-        char *result;
-        int ret;
-        char *opentag;
+        xmlNodePtr nic;
+        xmlNodePtr tmp;
 
-        if (count)
-                opentag = __tag_attr(attrs, count);
-        else
-                opentag = strdup("");
+        nic = xmlNewChild(root, NULL, BAD_CAST "interface", NULL);
+        if (nic == NULL)
+                return XML_ERROR;
+        xmlNewProp(nic, BAD_CAST "type", BAD_CAST dev->type);
 
-        if (content)
-                ret = asprintf(&result,
-                               "<%s%s>%s</%s>",
-                               tagname, opentag, content, tagname);
-        else
-                ret = asprintf(&result,
-                               "<%s%s/>", tagname, opentag);
-        if (ret == -1)
-                result = NULL;
+        tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "address", BAD_CAST dev->mac);
 
-        free(opentag);
-
-        return result;
-}
-
-static int astrcat(char **dest, char *source)
-{
-        char *tmp;
-        int ret;
-
-        if (*dest) {
-                ret = asprintf(&tmp, "%s%s", *dest, source);
-                if (ret == -1)
-                        return 0;
-        } else {
-                tmp = strdup(source);
+        if (dev->source != NULL) {
+                tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST "network", BAD_CAST dev->source);
         }
 
-        free(*dest);
-
-        *dest = tmp;
-
-        return 1;
+        return NULL;
 }
 
-static char *disk_block_xml(struct disk_device *dev)
+static const char *user_net_to_xml(xmlNodePtr root, struct net_device *dev)
 {
-        char *xml;
+        xmlNodePtr nic;
+        xmlNodePtr tmp;
+
+        nic = xmlNewChild(root, NULL, BAD_CAST "interface", NULL);
+        if (nic == NULL)
+                return XML_ERROR;
+        xmlNewProp(nic, BAD_CAST "type", BAD_CAST dev->type);
+
+        tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "address", BAD_CAST dev->mac);
+
+        return NULL;
+}
+
+static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
+{
+        int i;
+        const char *msg = NULL;
+
+        for (i = 0; (i < dominfo->dev_net_ct) && (msg == NULL); i++) {
+                struct virt_device *dev = &dominfo->dev_net[i];
+                struct net_device *net = &dev->dev.net;
+
+                if (STREQ(dev->dev.net.type, "network"))
+                        msg = network_net_to_xml(root, net);
+                else if (STREQ(dev->dev.net.type, "bridge"))
+                        msg = bridge_net_to_xml(root, net);
+                else if (STREQ(dev->dev.net.type, "user"))
+                        msg = user_net_to_xml(root, net);
+                else
+                        msg = "Unknown interface type";
+        }
+
+        return msg;
+}
+
+static const char *vcpu_xml(xmlNodePtr root, struct domain *dominfo)
+{
+        struct vcpu_device *vcpu;
+        xmlNodePtr tmp;
         int ret;
+        char *string = NULL;
 
-        ret = asprintf(&xml,
-                       "<disk type='block' device='%s'>\n"
-                       "  <source dev='%s'/>\n"
-                       "  <target dev='%s'/>\n"
-                       "%s"
-                       "%s"
-                       "</disk>\n",
-                       dev->device,
-                       dev->source,
-                       dev->virtual_dev,
-                       dev->readonly ? "<readonly/>\n" : "",
-                       dev->shareable ? "<shareable/>\n" : "");
+        if (dominfo->dev_vcpu == NULL)
+                return NULL;
+
+        vcpu = &dominfo->dev_vcpu[0].dev.vcpu;
+
+        ret = asprintf(&string, "%" PRIu64, vcpu->quantity);
         if (ret == -1)
-                xml = NULL;
+                return XML_ERROR;
 
-        return xml;
+        tmp = xmlNewChild(root, NULL, BAD_CAST "vcpu", BAD_CAST string);
+        free(string);
+
+        if (tmp == NULL)
+                return XML_ERROR;
+        else
+                return NULL;
 }
 
-static char *disk_file_xml(struct disk_device *dev)
+static const char *mem_xml(xmlNodePtr root, struct domain *dominfo)
 {
-        char *xml;
+        struct mem_device *mem;
+        xmlNodePtr tmp = NULL;
         int ret;
+        char *string = NULL;
 
-        ret = asprintf(&xml,
-                       "<disk type='file' device='%s'>\n"
-                       "  <source file='%s'/>\n"
-                       "  <target dev='%s'/>\n"
-                       "%s"
-                       "%s"
-                       "</disk>\n",
-                       dev->device,
-                       dev->source,
-                       dev->virtual_dev,
-                       dev->readonly ? "<readonly/>" : "",
-                       dev->shareable ? "<shareable/>" : "");
+        if (dominfo->dev_mem == NULL)
+                return NULL;
+
+        mem = &dominfo->dev_mem[0].dev.mem;
+
+        ret = asprintf(&string, "%" PRIu64, mem->size);
         if (ret == -1)
-                xml = NULL;
+                goto out;
+        tmp = xmlNewChild(root,
+                          NULL,
+                          BAD_CAST "currentMemory",
+                          BAD_CAST string);
 
-        return xml;
-}
+        free(string);
+        tmp = NULL;
 
-static char *disk_fs_xml(struct disk_device *dev)
-{
-        char *xml;
-        int ret;
-
-        ret = asprintf(&xml,
-                       "<filesystem type='mount'>\n"
-                       "  <source dir='%s'/>\n"
-                       "  <target dir='%s'/>\n"
-                       "</filesystem>\n",
-                       dev->source,
-                       dev->virtual_dev);
+        ret = asprintf(&string, "%" PRIu64, mem->maxsize);
         if (ret == -1)
-                xml = NULL;
+                goto out;
+        tmp = xmlNewChild(root,
+                          NULL,
+                          BAD_CAST "memory",
+                          BAD_CAST string);
 
-        return xml;
+        free(string);
+ out:
+        if (tmp == NULL)
+                return XML_ERROR;
+        else
+                return NULL;
 }
 
-static bool disk_to_xml(char **xml, struct virt_device *dev)
+static const char *emu_xml(xmlNodePtr root, struct domain *dominfo)
 {
-        char *_xml = NULL;
-        struct disk_device *disk = &dev->dev.disk;
+        struct emu_device *emu;
+        xmlNodePtr tmp;
 
-        if (disk->disk_type == DISK_PHY)
-                _xml = disk_block_xml(disk);
-        else if (disk->disk_type == DISK_FILE)
-                /* If it's not a block device, we assume a file,
-                   which should be a reasonable fail-safe */
-                _xml = disk_file_xml(disk);
-        else if (disk->disk_type == DISK_FS)
-                _xml = disk_fs_xml(disk);
-        else
-                return false;
+        if (dominfo->dev_emu == NULL)
+                return NULL;
 
-        astrcat(xml, _xml);
-        free(_xml);
+        emu = &dominfo->dev_emu->dev.emu;
+        tmp = xmlNewChild(root, NULL, BAD_CAST "emulator", BAD_CAST emu->path);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        return true;
+        return NULL;
 }
 
-static bool bridge_net_to_xml(char **xml, struct virt_device *dev)
+static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
 {
-        int ret;
-        char *_xml;
-        char *script = "vif-bridge";
-        struct net_device *net = &dev->dev.net;
-
-        if (net->source == NULL)
-                ret = asprintf(&_xml,
-                               "<interface type='%s'>\n"
-                               "  <mac address='%s'/>\n"
-                               "  <script path='%s'/>\n"
-                               "</interface>\n",
-                               net->type,
-                               net->mac,
-                               script);
-        else
-                ret = asprintf(&_xml,
-                               "<interface type='%s'>\n"
-                               "  <source bridge='%s'/>\n"
-                               "  <mac address='%s'/>\n"
-                               "  <script path='%s'/>\n"
-                               "</interface>\n",
-                               net->type,
-                               net->source,
-                               net->mac,
-                               script);
-
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        free(_xml);
-
-        return true;
-}
-
-static bool network_net_to_xml(char **xml, struct virt_device *dev)
-{
-        int ret;
-        char *_xml;
-        struct net_device *net = &dev->dev.net;
-
-        if (net->source == NULL)
-                ret = asprintf(&_xml,
-                               "<interface type='%s'>\n"
-                               "  <mac address='%s'/>\n"
-                               "</interface>\n",
-                               net->type,
-                               net->mac);
-        else
-                ret = asprintf(&_xml,
-                               "<interface type='%s'>\n"
-                               "  <mac address='%s'/>\n"
-                               "  <source network='%s'/>\n"
-                               "</interface>\n",
-                               net->type,
-                               net->mac,
-                               net->source);
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        free(_xml);
-
-        return true;
-}
-
-static bool user_net_to_xml(char **xml, struct virt_device *dev)
-{
-        int ret;
-        char *_xml;
-        struct net_device *net = &dev->dev.net;
-
-        ret = asprintf(&_xml,
-                       "<interface type='%s'>\n"
-                       "  <mac address='%s'/>\n"
-                       "</interface>\n",
-                       net->type,
-                       net->mac);
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        free(_xml);
-
-        return true;
-}
-
-static bool net_to_xml(char **xml, struct virt_device *dev)
-{
-        if (STREQ(dev->dev.net.type, "network"))
-                return network_net_to_xml(xml, dev);
-        else if (STREQ(dev->dev.net.type, "bridge"))
-                return bridge_net_to_xml(xml, dev);
-        else if (STREQ(dev->dev.net.type, "user"))
-                return user_net_to_xml(xml, dev);
-        else
-                return false;
-}
-
-static bool vcpu_to_xml(char **xml, struct virt_device *dev)
-{
-        int ret;
-        char *_xml;
-
-        ret = asprintf(&_xml, "<vcpu>%" PRIu64 "</vcpu>\n",
-                       dev->dev.vcpu.quantity);
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        return true;
-}
-
-static bool mem_to_xml(char **xml, struct virt_device *dev)
-{
-        int ret;
-        char *_xml;
-        struct mem_device *mem = &dev->dev.mem;
-
-        ret = asprintf(&_xml,
-                       "<currentMemory>%" PRIu64 "</currentMemory>\n"
-                       "<memory>%" PRIu64 "</memory>\n",
-                       mem->size,
-                       mem->maxsize);
-
-
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        free(_xml);
-
-        return true;
-}
-
-static bool emu_to_xml(char **xml, struct virt_device *dev)
-{
-        int ret;
-        char *_xml;
-        struct emu_device *emu = &dev->dev.emu;
-
-        ret = asprintf(&_xml,
-                       "<emulator>%s</emulator>\n",
-                       emu->path);
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        free(_xml);
-
-        return true;
-}
-
-static bool graphics_to_xml(char **xml, struct virt_device *dev)
-{
-        int ret;
-        char *_xml;
-        struct graphics_device *graphics = &dev->dev.graphics;
-
-        ret = asprintf(&_xml,
-                       "<graphics type='%s' port='%s' "
-                       "listen='%s' keymap='%s'/>\n",
-                       graphics->type,
-                       graphics->port,
-                       graphics->host != NULL ? graphics->host : "127.0.0.1",
-                       graphics->keymap != NULL ? graphics->keymap : "en-us");
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        free(_xml);
-
-        return true;
-}
-
-static bool input_to_xml(char **xml, struct virt_device *dev)
-{
-        int ret;
-        char *_xml;
-        struct input_device *input = &dev->dev.input;
-
-        ret = asprintf(&_xml,
-                       "<input type='%s' bus='%s'/>\n",
-                       input->type != NULL ? input->type: "mouse",
-                       input->bus != NULL ? input->bus : "ps2");
-        if (ret == -1)
-                return false;
-        else
-                astrcat(xml, _xml);
-
-        free(_xml);
-
-        return true;
-}
-
-static bool concat_devxml(char **xml,
-                          struct virt_device *list,
-                          int count,
-                          bool (*func)(char **, struct virt_device *))
-{
-        char *_xml = NULL;
         int i;
 
-        for (i = 0; i < count; i++) {
-                /* Deleted devices are marked as CIM_RES_TYPE_UNKNOWN
-                 * and should be skipped
-                 */
-                if (list[i].type != CIM_RES_TYPE_UNKNOWN)
-                        func(&_xml, &list[i]);
+        for (i = 0; i < dominfo->dev_graphics_ct; i++) {
+                xmlNodePtr tmp;
+                struct virt_device *_dev = &dominfo->dev_graphics[i];
+                struct graphics_device *dev = &_dev->dev.graphics;
+
+                tmp = xmlNewChild(root, NULL, BAD_CAST "graphics", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+
+                xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->type);
+                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
+                xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->host);
+                xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->keymap);
         }
-
-        if (_xml != NULL)
-                astrcat(xml, _xml);
-        free(_xml);
-
-        return true;
-}
-
-char *device_to_xml(struct virt_device *dev)
-{
-        char *xml = NULL;
-        int type = dev->type;
-        bool (*func)(char **, struct virt_device *);
-
-        switch (type) {
-        case CIM_RES_TYPE_DISK:
-                func = disk_to_xml;
-                break;
-        case CIM_RES_TYPE_PROC:
-                func = vcpu_to_xml;
-                break;
-        case CIM_RES_TYPE_NET:
-                func = net_to_xml;
-                break;
-        case CIM_RES_TYPE_MEM:
-                func = mem_to_xml;
-                break;
-        case CIM_RES_TYPE_EMU:
-                func = emu_to_xml;
-                break;
-        case CIM_RES_TYPE_GRAPHICS:
-                func = graphics_to_xml;
-                break;
-        case CIM_RES_TYPE_INPUT:
-                func = input_to_xml;
-                break;
-        default:
-                return NULL;
-        }
-
-        if (concat_devxml(&xml, dev, 1, func))
-                return xml;
-
-        free(xml);
 
         return NULL;
 }
 
-static char *system_xml(struct domain *domain)
+static const char *input_xml(xmlNodePtr root, struct domain *dominfo)
 {
-        int ret;
-        char *bl = NULL;
-        char *bl_args = NULL;
-        char *xml;
+        int i;
 
-        if (domain->bootloader)
-                bl = tagify("bootloader",
-                            domain->bootloader,
-                            NULL,
-                            0);
-        if (domain->bootloader_args)
-                bl_args = tagify("bootloader_args",
-                                 domain->bootloader_args,
-                                 NULL,
-                                 0);
+        for (i = 0; i < dominfo->dev_input_ct; i++) {
+                xmlNodePtr tmp;
+                struct virt_device *_dev = &dominfo->dev_input[i];
+                struct input_device *dev = &_dev->dev.input;
 
-        ret = asprintf(&xml,
-                       "<name>%s</name>\n"
-                       "%s\n"
-                       "%s\n"
-                       "<on_poweroff>%s</on_poweroff>\n"
-                       "<on_crash>%s</on_crash>\n",
-                       domain->name,
-                       bl ? bl : "",
-                       bl_args ? bl_args : "",
-                       vssd_recovery_action_str(domain->on_poweroff),
-                       vssd_recovery_action_str(domain->on_crash));
-        if (ret == -1)
-                xml = NULL;
+                tmp = xmlNewChild(root, NULL, BAD_CAST "input", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
 
-        free(bl);
-        free(bl_args);
+                xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->type);
+                xmlNewProp(tmp, BAD_CAST "bus", BAD_CAST dev->bus);
+        }
 
-        return xml;
+        return NULL;
 }
 
-static char *_xenpv_os_xml(struct domain *domain)
+static char *system_xml(xmlNodePtr root, struct domain *domain)
+{
+        xmlNodePtr tmp;
+
+        tmp = xmlNewChild(root, NULL, BAD_CAST "name", BAD_CAST domain->name);
+
+        if (domain->bootloader) {
+                xmlNodePtr bl;
+
+                bl = xmlNewChild(root,
+                                 NULL,
+                                 BAD_CAST "bootloader",
+                                 BAD_CAST domain->bootloader);
+        }
+
+        if (domain->bootloader_args) {
+                xmlNodePtr bl_args;
+
+                bl_args = xmlNewChild(root,
+                                      NULL,
+                                      BAD_CAST "bootloader_args",
+                                      BAD_CAST domain->bootloader_args);
+        }
+
+        tmp = xmlNewChild(root,
+                          NULL,
+                          BAD_CAST "on_poweroff",
+                          BAD_CAST vssd_recovery_action_str(domain->on_poweroff));
+
+        tmp = xmlNewChild(root,
+                          NULL,
+                          BAD_CAST "on_crash",
+                          BAD_CAST vssd_recovery_action_str(domain->on_crash));
+
+        tmp = xmlNewChild(root,
+                          NULL,
+                          BAD_CAST "uuid",
+                          BAD_CAST domain->uuid);
+
+        return NULL;
+}
+
+static char *_xenpv_os_xml(xmlNodePtr root, struct domain *domain)
 {
         struct pv_os_info *os = &domain->os_info.pv;
-        int ret;
-        char *xml;
-        char *type = NULL;
-        char *kernel = NULL;
-        char *initrd = NULL;
-        char *cmdline = NULL;
+        xmlNodePtr tmp;
 
         if (os->type == NULL)
                 os->type = strdup("linux");
@@ -520,42 +419,29 @@ static char *_xenpv_os_xml(struct domain *domain)
         if (os->kernel == NULL)
                 os->kernel = strdup("/dev/null");
 
-        type = tagify("type", os->type, NULL, 0);
-        kernel = tagify("kernel", os->kernel, NULL, 0);
-        initrd = tagify("initrd", os->initrd, NULL, 0);
-        cmdline = tagify("cmdline", os->cmdline, NULL, 0);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "type", BAD_CAST os->type);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        ret = asprintf(&xml,
-                       "<os>\n"
-                       "  %s\n"
-                       "  %s\n"
-                       "  %s\n"
-                       "  %s\n"
-                       "</os>\n",
-                       type,
-                       kernel,
-                       initrd,
-                       cmdline);
-        if (ret == -1)
-                xml = NULL;
+        tmp = xmlNewChild(root, NULL, BAD_CAST "kernel", BAD_CAST os->kernel);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        free(type);
-        free(kernel);
-        free(initrd);
-        free(cmdline);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "initrd", BAD_CAST os->initrd);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        return xml;
+        tmp = xmlNewChild(root, NULL, BAD_CAST "cmdline", BAD_CAST os->cmdline);
+        if (tmp == NULL)
+                return XML_ERROR;
+
+        return NULL;
 }
 
-static char *_xenfv_os_xml(struct domain *domain)
+static char *_xenfv_os_xml(xmlNodePtr root, struct domain *domain)
 {
         struct fv_os_info *os = &domain->os_info.fv;
-        int ret;
-        char *xml;
-        char *type;
-        char *loader;
-        char *boot;
-        struct kv bootattr = {"dev", NULL};
+        xmlNodePtr tmp;
 
         if (os->type == NULL)
                 os->type = strdup("hvm");
@@ -566,44 +452,30 @@ static char *_xenfv_os_xml(struct domain *domain)
         if (os->boot == NULL)
                 os->boot = strdup("hd");
 
-        type = tagify("type", os->type, NULL, 0);
-        loader = tagify("loader", os->loader, NULL, 0);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "type", BAD_CAST os->type);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        bootattr.val = os->boot;
-        boot = tagify("boot", NULL, &bootattr, 1);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "loader", BAD_CAST os->loader);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        ret = asprintf(&xml,
-                       "<os>\n"
-                       "  %s\n"
-                       "  %s\n"
-                       "  %s\n"
-                       "</os>\n"
-                       "<features>\n"
-                       "  <pae/>\n"
-                       "  <acpi/>\n"
-                       "  <apic/>\n"
-                       "</features>\n",
-                       type,
-                       loader,
-                       boot);
-        if (ret == -1)
-                xml = NULL;
+        tmp = xmlNewChild(root, NULL, BAD_CAST "boot", BAD_CAST os->boot);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        free(type);
-        free(loader);
-        free(boot);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "features", NULL);
+        xmlNewChild(tmp, NULL, BAD_CAST "pae", NULL);
+        xmlNewChild(tmp, NULL, BAD_CAST "acpi", NULL);
+        xmlNewChild(tmp, NULL, BAD_CAST "apic", NULL);
 
-        return xml;
+        return NULL;
 }
 
-static char *_kvm_os_xml(struct domain *domain)
+static char *_kvm_os_xml(xmlNodePtr root, struct domain *domain)
 {
         struct fv_os_info *os = &domain->os_info.fv;
-        int ret;
-        char *xml;
-        char *type;
-        char *boot;
-        struct kv bootattr = {"dev", NULL};
+        xmlNodePtr tmp;
 
         if (os->type == NULL)
                 os->type = strdup("hvm");
@@ -611,84 +483,193 @@ static char *_kvm_os_xml(struct domain *domain)
         if (os->boot == NULL)
                 os->boot = strdup("hd");
 
-        type = tagify("type", os->type, NULL, 0);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "type", BAD_CAST os->type);
+        if (tmp == NULL)
+                return XML_ERROR;
 
-        bootattr.val = os->boot;
-        boot = tagify("boot", NULL, &bootattr, 1);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "boot", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST os->boot);
 
-        ret = asprintf(&xml,
-                       "<os>\n"
-                       "  %s\n"
-                       "  %s\n"
-                       "</os>\n",
-                       type,
-                       boot);
-        if (ret == -1)
-                xml = NULL;
-
-        free(type);
-        free(boot);
-
-        return xml;
+        return NULL;
 }
 
-static char *_lxc_os_xml(struct domain *domain)
+static char *_lxc_os_xml(xmlNodePtr root, struct domain *domain)
 {
         struct lxc_os_info *os = &domain->os_info.lxc;
-        int ret;
-        char *xml = NULL;
+        xmlNodePtr tmp;
 
         if (os->type == NULL)
                 os->type = strdup("exe");
 
-        ret = asprintf(&xml,
-                       "<os>\n"
-                       "  <init>%s</init>\n"
-                       "  <type>%s</type>\n"
-                       "</os>\n",
-                       os->init,
-                       os->type);
-        if (ret == -1)
-                xml = NULL;
+        tmp = xmlNewChild(root, NULL, BAD_CAST "init", BAD_CAST os->init);
+        if (tmp == NULL)
+                return XML_ERROR;
+
+        tmp = xmlNewChild(root, NULL, BAD_CAST "type", BAD_CAST os->type);
+        if (tmp == NULL)
+                return XML_ERROR;
+
+        return NULL;
+}
+
+static char *os_xml(xmlNodePtr root, struct domain *domain)
+{
+        xmlNodePtr os;
+
+        os = xmlNewChild(root, NULL, BAD_CAST "os", NULL);
+        if (os == NULL)
+                return "Failed to allocate XML memory";
+
+        if (domain->type == DOMAIN_XENPV)
+                return _xenpv_os_xml(os, domain);
+        else if (domain->type == DOMAIN_XENFV)
+                return _xenfv_os_xml(os, domain);
+        else if (domain->type == DOMAIN_KVM)
+                return _kvm_os_xml(os, domain);
+        else if (domain->type == DOMAIN_LXC)
+                return _lxc_os_xml(os, domain);
+        else
+                return "Unsupported domain type";
+}
+
+static char *tree_to_xml(xmlNodePtr root)
+{
+        xmlBufferPtr buffer = NULL;
+        xmlSaveCtxtPtr savectx = NULL;
+        char *xml = NULL;
+        bool done = false;
+
+        buffer = xmlBufferCreate();
+        if (buffer == NULL) {
+                CU_DEBUG("Failed to allocate XML buffer");
+                goto out;
+        }
+
+        savectx = xmlSaveToBuffer(buffer, NULL, XML_SAVE_FORMAT);
+        if (savectx == NULL) {
+                CU_DEBUG("Failed to create save context");
+                goto out;
+        }
+
+        if (xmlSaveTree(savectx, root) < 0) {
+                CU_DEBUG("Failed to generate XML tree");
+                goto out;
+        }
+
+        done = true;
+ out:
+        xmlSaveClose(savectx);
+
+        if (done) {
+                xml = strdup((char *)xmlBufferContent(buffer));
+                if (xml == NULL) {
+                        CU_DEBUG("Failed to allocate memory for XML");
+                }
+        }
+
+        xmlBufferFree(buffer);
 
         return xml;
 }
 
-static char *os_xml(struct domain *domain)
+char *device_to_xml(struct virt_device *_dev)
 {
-        if (domain->type == DOMAIN_XENPV)
-                return _xenpv_os_xml(domain);
-        else if (domain->type == DOMAIN_XENFV)
-                return _xenfv_os_xml(domain);
-        else if (domain->type == DOMAIN_KVM)
-                return _kvm_os_xml(domain);
-        else if (domain->type == DOMAIN_LXC)
-                return _lxc_os_xml(domain);
-        else
-                return strdup("<!-- unsupported domain type -->\n");
-}
+        char *xml = NULL;
+        int type = _dev->type;
+        xmlNodePtr root = NULL;
+        const char *msg;
+        struct domain *dominfo;
+        devfn_t func;
+        struct virt_device *dev = NULL;
 
-static int console_xml(struct domain *dominfo,
-                       char **xml)
-{
-        if (dominfo->type == DOMAIN_LXC) {
-                astrcat(xml, "<console type='pty'/>\n");
+        dominfo = calloc(1, sizeof(*dominfo));
+        if (dominfo == NULL)
+                goto out;
+
+        dev = virt_device_dup(_dev);
+        if (dev == NULL)
+                goto out;
+
+        root = xmlNewNode(NULL, BAD_CAST "tmp");
+        if (root == NULL)
+                goto out;
+
+        switch (type) {
+        case CIM_RES_TYPE_DISK:
+                func = disk_xml;
+                dominfo->dev_disk_ct = 1;
+                dominfo->dev_disk = dev;
+                break;
+        case CIM_RES_TYPE_PROC:
+                func = vcpu_xml;
+                dominfo->dev_vcpu_ct = 1;
+                dominfo->dev_vcpu = dev;
+                break;
+        case CIM_RES_TYPE_NET:
+                func = net_xml;
+                dominfo->dev_net_ct = 1;
+                dominfo->dev_net = dev;
+                break;
+        case CIM_RES_TYPE_MEM:
+                func = mem_xml;
+                dominfo->dev_mem_ct = 1;
+                dominfo->dev_mem = dev;
+                break;
+        case CIM_RES_TYPE_EMU:
+                func = emu_xml;
+                dominfo->dev_emu = dev;
+                break;
+        case CIM_RES_TYPE_GRAPHICS:
+                func = graphics_xml;
+                dominfo->dev_graphics_ct = 1;
+                dominfo->dev_graphics = dev;
+                break;
+        case CIM_RES_TYPE_INPUT:
+                func = input_xml;
+                dominfo->dev_input_ct = 1;
+                dominfo->dev_input = dev;
+                break;
+        default:
+                cleanup_virt_device(dev);
+                goto out;
         }
 
-        return 0;
+        msg = func(root, dominfo);
+        if (msg != NULL) {
+                CU_DEBUG("Failed to create device XML: %s", msg);
+                goto out;
+        }
+
+        xml = tree_to_xml(root->children);
+ out:
+        CU_DEBUG("Created Device XML:\n%s\n", xml);
+
+        cleanup_dominfo(&dominfo);
+        xmlFreeNode(root);
+
+        return xml;
 }
 
 char *system_to_xml(struct domain *dominfo)
 {
-        char *devxml = strdup("");
-        char *sysdevxml = strdup("");
-        char *sysxml = NULL;
-        char *osxml = NULL;
+        xmlNodePtr root = NULL;
+        xmlNodePtr devices = NULL;
         char *xml = NULL;
-        int ret;
         uint8_t uuid[16];
         char uuidstr[37];
         const char *domtype;
+        const char *msg = XML_ERROR;
+        int i;
+        devfn_t device_handlers[] = {
+                &disk_xml,
+                &net_xml,
+                &input_xml,
+                &graphics_xml,
+                &emu_xml,
+                NULL
+        };
 
         if ((dominfo->type == DOMAIN_XENPV) || (dominfo->type == DOMAIN_XENFV))
                 domtype = "xen";
@@ -700,78 +681,73 @@ char *system_to_xml(struct domain *dominfo)
                 domtype = "unknown";
 
         if (dominfo->uuid) {
-                strcpy(uuidstr, dominfo->uuid);
-                CU_DEBUG("Using existing UUID: %s");
+                CU_DEBUG("Using existing UUID: %s", dominfo->uuid);
         } else {
                 CU_DEBUG("New UUID");
                 uuid_generate(uuid);
                 uuid_unparse(uuid, uuidstr);
+                dominfo->uuid = strdup(uuidstr);
         }
 
-        concat_devxml(&devxml,
-                      dominfo->dev_net,
-                      dominfo->dev_net_ct,
-                      net_to_xml);
-        concat_devxml(&devxml,
-                      dominfo->dev_disk,
-                      dominfo->dev_disk_ct,
-                      disk_to_xml);
+        root = xmlNewNode(NULL, BAD_CAST "domain");
+        if (root == NULL)
+                goto out;
 
-        if (dominfo->dev_emu)
-                concat_devxml(&devxml,
-                              dominfo->dev_emu,
-                              1,
-                              emu_to_xml);
+        if (xmlNewProp(root, BAD_CAST "type", BAD_CAST domtype) == NULL)
+                goto out;
 
-        if (dominfo->dev_graphics)
-                concat_devxml(&devxml,
-                              dominfo->dev_graphics,
-                              dominfo->dev_graphics_ct,
-                              graphics_to_xml);
+        msg = system_xml(root, dominfo);
+        if (msg != NULL)
+                goto out;
 
-        if (dominfo->dev_input)
-                concat_devxml(&devxml,
-                              dominfo->dev_input,
-                              dominfo->dev_input_ct,
-                              input_to_xml);
+        msg = os_xml(root, dominfo);
+        if (msg != NULL)
+                goto out;
 
-        console_xml(dominfo, &devxml);
+        msg = mem_xml(root, dominfo);
+        if (msg != NULL)
+                goto out;
 
-        concat_devxml(&sysdevxml,
-                      dominfo->dev_mem,
-                      dominfo->dev_mem_ct,
-                      mem_to_xml);
-        concat_devxml(&sysdevxml,
-                      dominfo->dev_vcpu,
-                      dominfo->dev_vcpu_ct,
-                      vcpu_to_xml);
+        msg = vcpu_xml(root, dominfo);
+        if (msg != NULL)
+                goto out;
 
-        sysxml = system_xml(dominfo);
-        osxml = os_xml(dominfo);
+        devices = xmlNewChild(root, NULL, BAD_CAST "devices", NULL);
+        if (devices == NULL) {
+                msg = XML_ERROR;
+                goto out;
+        }
 
-        ret = asprintf(&xml,
-                       "<domain type='%s'>\n"
-                       "<uuid>%s</uuid>\n"
-                       "%s"
-                       "%s"
-                       "%s"
-                       "<devices>\n"
-                       "%s"
-                       "</devices>\n"
-                       "</domain>\n",
-                       domtype,
-                       uuidstr,
-                       sysxml,
-                       osxml,
-                       sysdevxml,
-                       devxml);
-        if (ret == -1)
-                xml = NULL;
+        for (i = 0; device_handlers[i] != NULL; i++) {
+                devfn_t fn = device_handlers[i];
 
-        free(devxml);
-        free(sysdevxml);
-        free(osxml);
-        free(sysxml);
+                msg = fn(devices, dominfo);
+                if (msg != NULL)
+                        goto out;
+        }
+
+        msg = XML_ERROR;
+        if (dominfo->type == DOMAIN_LXC) {
+                xmlNodePtr cons;
+
+                cons = xmlNewChild(devices, NULL, BAD_CAST "console", NULL);
+                if (cons == NULL)
+                        goto out;
+
+                if (xmlNewProp(cons, BAD_CAST "type", BAD_CAST "pty") == NULL)
+                        goto out;
+        }
+
+        msg = NULL;
+        xml = tree_to_xml(root);
+        if (xml == NULL)
+                msg = "XML generation failed";
+ out:
+        if (msg != NULL) {
+                CU_DEBUG("Failed to create XML: %s", msg);
+        }
+
+        xmlFreeNode(root);
 
         return xml;
 }
