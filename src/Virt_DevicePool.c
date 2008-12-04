@@ -144,17 +144,28 @@ static bool _diskpool_is_member(virConnectPtr conn,
 {
         virStorageVolPtr vol = NULL;
         bool result = false;
+        virStoragePoolPtr pool_vol = NULL;
+        const char *pool_name = NULL;
 
         vol = virStorageVolLookupByPath(conn, file);
-        if (vol != NULL)
-                result = true;
+        if (vol == NULL)
+                goto out;
 
+        pool_vol = virStoragePoolLookupByVolume(vol);
+        if (vol != NULL) {
+                pool_name = virStoragePoolGetName(pool_vol);                
+                if ((pool_name != NULL) && (STREQC(pool_name, pool->tag)))
+                        result = true;
+        }
+        
+ out:
         CU_DEBUG("Image %s in pool %s: %s",
                  file,
                  pool->tag,
                  result ? "YES": "NO");
 
         virStorageVolFree(vol);
+        virStoragePoolFree(pool_vol);
 
         return result;
 }
