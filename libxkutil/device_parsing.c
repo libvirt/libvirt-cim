@@ -661,8 +661,9 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.disk.driver);
                 DUP_FIELD(dev, _dev, dev.disk.source);
                 DUP_FIELD(dev, _dev, dev.disk.virtual_dev);
-                dev->dev.disk.readonly = dev->dev.disk.readonly;
-                dev->dev.disk.shareable = dev->dev.disk.shareable;
+                dev->dev.disk.disk_type = _dev->dev.disk.disk_type;
+                dev->dev.disk.readonly = _dev->dev.disk.readonly;
+                dev->dev.disk.shareable = _dev->dev.disk.shareable;
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 dev->dev.mem.size = _dev->dev.mem.size;
                 dev->dev.mem.maxsize = _dev->dev.mem.maxsize;
