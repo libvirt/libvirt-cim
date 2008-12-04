@@ -382,7 +382,8 @@ static struct snap_context *new_context(const char *name,
 static CMPIStatus start_snapshot_job(const CMPIObjectPath *ref,
                                      const CMPIContext *context,
                                      const char *name,
-                                     uint16_t type)
+                                     uint16_t type,
+                                     CMPIArgs *argsout)
 {
         struct snap_context *ctx;
         CMPIStatus s;
@@ -400,6 +401,7 @@ static CMPIStatus start_snapshot_job(const CMPIObjectPath *ref,
         ctx->restore = (type != VIR_VSSS_SNAPSHOT_MEMT);
 
         s = create_job(context, ref, ctx, &job);
+        CMAddArg(argsout, "Job", (CMPIValue *)&job, CMPI_ref);
 
  out:
         return s;
@@ -457,7 +459,7 @@ static CMPIStatus create_snapshot(CMPIMethodMI *self,
                 goto out;
         }
 
-        s = start_snapshot_job(reference, context, name, type);
+        s = start_snapshot_job(reference, context, name, type, argsout);
 
         retcode = CIM_RETURN_COMPLETED;
  out:
@@ -556,7 +558,7 @@ static CMPIStatus apply_snapshot(CMPIMethodMI *self,
                 goto out;
         }
 
-        s = start_snapshot_job(reference, context, name, 0);
+        s = start_snapshot_job(reference, context, name, 0, argsout);
 
         retcode = CIM_RETURN_COMPLETED;
 
