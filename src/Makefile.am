@@ -72,7 +72,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_HostedService.la \
                        libVirt_ElementSettingData.la \
                        libVirt_ConcreteComponent.la \
-                       libVirt_ServiceAffectsElement.la
+                       libVirt_ServiceAffectsElement.la \
+                       libVirt_HostedAccessPoint.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_ComputerSystem_la_DEPENDENCIES = libVirt_VirtualSystemSnapshotService.la
@@ -215,4 +216,8 @@ libVirt_ServiceAffectsElement_la_SOURCES = Virt_ServiceAffectsElement.c
 libVirt_ServiceAffectsElement_la_LIBADD = -lVirt_ComputerSystem -lVirt_ConsoleRedirectionService
 
 libVirt_KVMRedirectionSAP_la_SOURCES = Virt_KVMRedirectionSAP.c
+
+libVirt_HostedAccessPoint_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_KVMRedirectionSAP.la
+libVirt_HostedAccessPoint_la_SOURCES = Virt_HostedAccessPoint.c
+libVirt_HostedAccessPoint_la_LIBADD = -lVirt_HostSystem -lVirt_KVMRedirectionSAP
 
