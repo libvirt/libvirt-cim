@@ -139,7 +139,8 @@ static CMPIInstance *get_console_sap(const CMPIBroker *broker,
         return inst;
 }
 
-static CMPIStatus get_vnc_sessions(const CMPIObjectPath *ref,
+static CMPIStatus get_vnc_sessions(const CMPIBroker *broker,
+                                   const CMPIObjectPath *ref,
                                    virConnectPtr conn,
                                    struct vnc_ports ports,
                                    struct inst_list *list)
@@ -158,14 +159,14 @@ static CMPIStatus get_vnc_sessions(const CMPIObjectPath *ref,
 
         tcp_info = fopen(path, "r");
         if (tcp_info == NULL) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to open %s: %m", tcp_info);
                 goto out;
         }
 
         if (getline(&line, &len, tcp_info) == -1) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to read from %s", tcp_info);
                 goto out;
@@ -175,7 +176,7 @@ static CMPIStatus get_vnc_sessions(const CMPIObjectPath *ref,
                 ret = sscanf(line, "%d: %*[^:]:%X %*[^:]:%X", &val, &lport,
                              &rport);
                 if (ret != 3) {
-                        cu_statusf(_BROKER, &s,
+                        cu_statusf(broker, &s,
                                    CMPI_RC_ERR_FAILED,
                                    "Unable to determine active sessions");
                         goto out;
@@ -186,7 +187,7 @@ static CMPIStatus get_vnc_sessions(const CMPIObjectPath *ref,
                                continue;
 
                        ports.list[i]->remote_port = rport;
-                       inst = get_console_sap(_BROKER, 
+                       inst = get_console_sap(broker, 
                                               ref, 
                                               conn, 
                                               ports.list[i], 
@@ -204,7 +205,7 @@ static CMPIStatus get_vnc_sessions(const CMPIObjectPath *ref,
                 if (ports.list[i]->remote_port != -1)
                         continue;
 
-                inst = get_console_sap(_BROKER, ref, conn, ports.list[i], &s);
+                inst = get_console_sap(broker, ref, conn, ports.list[i], &s);
                 if ((s.rc != CMPI_RC_OK) || (inst == NULL))
                         goto out;
 
@@ -246,21 +247,41 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
                                      bool names_only)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        struct inst_list list;
+
+        inst_list_init(&list);
+
+        s = enum_console_sap(_BROKER, ref, &list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        if (names_only)
+                cu_return_instance_names(results, &list);
+        else
+                cu_return_instances(results, &list);
+
+ out:
+        inst_list_free(&list);
+        return s;
+}
+
+CMPIStatus enum_console_sap(const CMPIBroker *broker,
+                            const CMPIObjectPath *ref,
+                            struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn;
         virDomainPtr *domain_list;
         struct domain *dominfo = NULL;
-        struct inst_list list;
         struct vnc_ports port_list;
         int count;
         int lport;
         int ret;
         int i;
 
-        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL)
                 return s;
-
-        inst_list_init(&list);
 
         port_list.list = NULL;
         port_list.max = 0;
@@ -268,7 +289,7 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
 
         count = get_domain_list(conn, &domain_list);
         if (count < 0) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to enumerate domains");
                 goto out;
@@ -277,7 +298,7 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
 
         port_list.list = malloc(count * sizeof(struct vnc_port *));
         if (port_list.list == NULL) {
-                cu_statusf(_BROKER, &s,
+                cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to allocate guest port list");
                 goto out;
@@ -286,7 +307,7 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
         for (i = 0; i < count; i++) {
                 port_list.list[i] = malloc(sizeof(struct vnc_port));
                 if (port_list.list[i] == NULL) {
-                        cu_statusf(_BROKER, &s,
+                        cu_statusf(broker, &s,
                                    CMPI_RC_ERR_FAILED,
                                    "Unable to allocate guest port list");
                         goto out;
@@ -305,7 +326,7 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
                              "%d",
                              &lport);
                 if (ret != 1) {
-                        cu_statusf(_BROKER, &s,
+                        cu_statusf(broker, &s,
                                    CMPI_RC_ERR_FAILED,
                                    "Unable to guest's console port");
                         goto out;
@@ -313,7 +334,7 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
 
                 port_list.list[port_list.cur]->name = strdup(dominfo->name);
                 if (port_list.list[port_list.cur]->name == NULL) {
-                        cu_statusf(_BROKER, &s,
+                        cu_statusf(broker, &s,
                                    CMPI_RC_ERR_FAILED,
                                    "Unable to allocate string");
                         goto out;
@@ -330,18 +351,12 @@ static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
         port_list.max = port_list.cur;
         port_list.cur = 0;
  
-        s = get_vnc_sessions(ref, conn, port_list, &list);
+        s = get_vnc_sessions(broker, ref, conn, port_list, list);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        if (names_only)
-                cu_return_instance_names(results, &list);
-        else
-                cu_return_instances(results, &list);
-
  out:
         free(domain_list);
-        inst_list_free(&list);
 
         for (i = 0; i < count; i++) {
                 free(port_list.list[i]->name);

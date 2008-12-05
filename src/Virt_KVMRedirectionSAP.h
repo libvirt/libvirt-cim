@@ -28,6 +28,10 @@ CMPIStatus get_console_sap_by_ref(const CMPIBroker *broker,
                                   const CMPIObjectPath *reference,
                                   CMPIInstance **_inst);
 
+CMPIStatus enum_console_sap(const CMPIBroker *broker,
+                            const CMPIObjectPath *ref,
+                            struct inst_list *list);
+
 /*
  * Local Variables:
  * mode: C
