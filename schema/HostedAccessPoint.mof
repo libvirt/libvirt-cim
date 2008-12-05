@@ -1,0 +1,22 @@
+// Copyright IBM Corp. 2007
+
+[Association,
+ Provider("cmpi::Virt_HostedAccessPoint")
+]
+class Xen_HostedAccessPoint : CIM_HostedAccessPoint
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_HostedAccessPoint")
+]
+class KVM_HostedAccessPoint : CIM_HostedAccessPoint
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_HostedAccessPoint")
+]
+class LXC_HostedAccessPoint : CIM_HostedAccessPoint
+{
+};

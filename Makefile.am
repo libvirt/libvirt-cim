@@ -51,7 +51,8 @@ MOFS = \
         schema/DisplayController.mof \
         schema/PointingDevice.mof \
         schema/GraphicsPool.mof \
-        schema/InputPool.mof
+        schema/InputPool.mof \
+        schema/HostedAccessPoint.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -72,7 +73,8 @@ CIMV2_MOFS = \
 	schema/HostedDependency.mof \
 	schema/RegisteredProfile.mof \
 	schema/ComputerSystem.mof \
-	schema/ElementConformsToProfile.mof
+	schema/ElementConformsToProfile.mof \
+	schema/HostedAccessPoint.mof
 
 REGS = \
 	schema/ComputerSystem.registration \
@@ -120,7 +122,8 @@ REGS = \
         schema/DisplayController.registration \
         schema/PointingDevice.registration \
         schema/GraphicsPool.registration \
-        schema/InputPool.registration
+        schema/InputPool.registration \
+        schema/HostedAccessPoint.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
@@ -132,7 +135,8 @@ CIMV2_REGS = \
 	schema/ElementCapabilities.registration \
 	schema/HostedService.registration \
 	schema/HostedDependency.registration \
-	schema/ElementConformsToProfile.registration
+	schema/ElementConformsToProfile.registration \
+	schema/HostedAccessPoint.registration
 
 pkgdata_DATA = $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)
 pkgdata_SCRIPTS = provider-register.sh

@@ -1,0 +1,8 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_HostedAccessPoint root/virt Virt_HostedAccessPoint Virt_HostedAccessPoint association
+KVM_HostedAccessPoint root/virt Virt_HostedAccessPoint Virt_HostedAccessPoint association
+LXC_HostedAccessPoint root/virt Virt_HostedAccessPoint Virt_HostedAccessPoint association
+Xen_HostedAccessPoint root/cimv2 Virt_HostedAccessPoint Virt_HostedAccessPoint association
+KVM_HostedAccessPoint root/cimv2 Virt_HostedAccessPoint Virt_HostedAccessPoint association
+LXC_HostedAccessPoint root/cimv2 Virt_HostedAccessPoint Virt_HostedAccessPoint association
