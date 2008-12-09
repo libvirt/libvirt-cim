@@ -882,6 +882,8 @@ static int parse_domain(xmlNodeSet *nsv, struct domain *dominfo)
                         set_action(&dominfo->on_reboot, child);
                 else if (XSTREQ(child->name, "on_crash"))
                         set_action(&dominfo->on_crash, child);
+                else if (XSTREQ(child->name, "clock"))
+                        dominfo->clock = get_attr_value(child, "offset");
         }
 
         return 1;

@@ -405,6 +405,11 @@ static char *system_xml(xmlNodePtr root, struct domain *domain)
                           BAD_CAST "uuid",
                           BAD_CAST domain->uuid);
 
+        if (domain->clock != NULL) {
+                tmp = xmlNewChild(root, NULL, BAD_CAST "clock", NULL);
+                xmlNewProp(tmp, BAD_CAST "offset", BAD_CAST domain->clock);
+        }
+
         return NULL;
 }
 

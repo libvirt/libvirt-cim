@@ -113,6 +113,7 @@ struct domain {
         char *uuid;
         char *bootloader;
         char *bootloader_args;
+        char *clock;
 
         union {
                 struct pv_os_info pv;
