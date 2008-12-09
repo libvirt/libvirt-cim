@@ -116,7 +116,7 @@ EOFP
 		  return 1;;
 	  esac	  
 	done
-	if test $namespace = $NAMESPACE
+	if test "$namespace" = "$NAMESPACE"
 	then
 	    cat >> $OUTFILE <<EOFC
 instance of PG_ProviderCapabilities
