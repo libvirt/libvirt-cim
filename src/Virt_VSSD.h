@@ -21,6 +21,9 @@
 #ifndef __VIRT_VSSD_H
 #define __VIRT_VSSD_H
 
+#define VSSD_CLOCK_UTC 0
+#define VSSD_CLOCK_LOC 1
+
 CMPIStatus get_vssd_by_ref(const CMPIBroker *broker,
                            const CMPIObjectPath *reference,
                            CMPIInstance **_inst);

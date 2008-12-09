@@ -125,6 +125,16 @@ static int instance_from_dom(virDomainPtr dom,
         CMSetProperty(inst, "AutomaticRecoveryAction",
                       (CMPIValue *)&dominfo->on_crash, CMPI_uint16);
 
+        if (dominfo->clock != NULL) {
+                uint16_t clock = VSSD_CLOCK_UTC;
+
+                if (STREQC(dominfo->clock, "localtime"))
+                        clock = VSSD_CLOCK_LOC;
+
+                CMSetProperty(inst, "ClockOffset",
+                              (CMPIValue *)&clock, CMPI_uint16);
+        }
+
         if ((dominfo->type == DOMAIN_XENFV) ||
             (dominfo->type == DOMAIN_KVM))
                 _set_fv_prop(dominfo, inst);
