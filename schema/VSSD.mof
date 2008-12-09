@@ -1,11 +1,11 @@
 // Copyright IBM Corp. 2007
 
 [Description (
-	"A class derived from CIM_VirtualSystemSettingData to represent "
+	"A class derived from Virt_VirtualSystemSettingData to represent "
 	"the config of Xen virtual machines/domains running on the system."),
  Provider("cmpi::Virt_VSSD")
 ]
-class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
+class Xen_VirtualSystemSettingData : Virt_VirtualSystemSettingData
 {
 
   [Description ("Flag to determine whether this guest is fully-virtualized")]
@@ -29,42 +29,30 @@ class Xen_VirtualSystemSettingData : CIM_VirtualSystemSettingData
                 "One of hd,fd,cdrom.")]
   string BootDevice;
 
-  [Override, ValueMap { "2", "3", ".." }, 
-             Values { "Turn Off", "Save state", "DMTF Reserved" }]
-  uint16 AutomaticShutdownAction;
-
 };
 
 [Description (
-	"A class derived from CIM_VirtualSystemSettingData to represent "
+	"A class derived from Virt_VirtualSystemSettingData to represent "
 	"the config of KVM virtual machines/domains running on the system."),
  Provider("cmpi::Virt_VSSD")
 ]
-class KVM_VirtualSystemSettingData : CIM_VirtualSystemSettingData
+class KVM_VirtualSystemSettingData : Virt_VirtualSystemSettingData
 {
 
   [Description ("The device to boot from.  One of hd,fd,cdrom.")]
   string BootDevice;
 
-  [Override, ValueMap { "2", "3", ".." }, 
-             Values { "Turn Off", "Save state", "DMTF Reserved" }]
-  uint16 AutomaticShutdownAction;
-
 };
 
 [Description (
-	"A class derived from CIM_VirtualSystemSettingData to represent "
+	"A class derived from Virt_VirtualSystemSettingData to represent "
 	"the config of LXC containers running on the system."),
  Provider("cmpi::Virt_VSSD")
 ]
-class LXC_VirtualSystemSettingData : CIM_VirtualSystemSettingData
+class LXC_VirtualSystemSettingData : Virt_VirtualSystemSettingData
 {
 
   [Description ("Path to the init process for the container")]
   string InitPath;
-
-  [Override, ValueMap { "2", "3", ".." }, 
-             Values { "Turn Off", "Save state", "DMTF Reserved" }]
-  uint16 AutomaticShutdownAction;
 
 };

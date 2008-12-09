@@ -1,0 +1,15 @@
+// Copyright IBM Corp. 2007
+
+class Virt_VirtualSystemSettingData : CIM_VirtualSystemSettingData
+{
+
+  [Description ("Clock offset control"),
+   ValueMap { "0", "1" },
+   Values { "UTC", "Local" }]
+  uint16 ClockOffset;
+
+  [Override, ValueMap { "2", "3", ".." }, 
+             Values { "Turn Off", "Save state", "DMTF Reserved" }]
+  uint16 AutomaticShutdownAction;
+
+};

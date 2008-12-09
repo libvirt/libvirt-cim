@@ -10,6 +10,7 @@ MOFS = \
 	schema/Memory.mof \
 	schema/Processor.mof \
 	schema/SystemDevice.mof \
+	schema/Virt_VSSD.mof \
 	schema/VSSD.mof \
 	schema/HostSystem.mof \
 	schema/HostedDependency.mof \
