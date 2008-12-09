@@ -47,6 +47,7 @@
 #include "Virt_VirtualSystemManagementService.h"
 #include "Virt_ComputerSystem.h"
 #include "Virt_ComputerSystemIndication.h"
+#include "Virt_VSSD.h"
 #include "Virt_RASD.h"
 #include "Virt_HostSystem.h"
 #include "Virt_DevicePool.h"
@@ -308,6 +309,18 @@ static int vssd_to_domain(CMPIInstance *inst,
 
         if (cu_get_bool_prop(inst, "IsFullVirt", &fullvirt) != CMPI_RC_OK)
                 fullvirt = false;
+
+        if (cu_get_u16_prop(inst, "ClockOffset", &tmp) == CMPI_RC_OK) {
+                if (tmp == VSSD_CLOCK_UTC)
+                        domain->clock = strdup("utc");
+                else if (tmp == VSSD_CLOCK_LOC)
+                        domain->clock = strdup("localtime");
+                else {
+                        CU_DEBUG("Unknown clock offset value %hi", tmp);
+                        ret = 0;
+                        goto out;
+                }
+        }
 
         if (fullvirt || STREQC(pfx, "KVM"))
                 ret = fv_vssd_to_domain(inst, domain, pfx);
