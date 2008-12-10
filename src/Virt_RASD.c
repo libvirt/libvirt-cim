@@ -126,7 +126,7 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
         else
                 count = dev->dev.vcpu.quantity;
 
-        if (count > 0)
+        if (count >= 0)
                 CMSetProperty(inst,
                               "VirtualQuantity",
                               (CMPIValue *)&count,
