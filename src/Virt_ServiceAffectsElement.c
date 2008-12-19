@@ -29,9 +29,11 @@
 #include <libcmpiutil/libcmpiutil.h>
 #include <libcmpiutil/std_association.h>
 #include "misc_util.h"
+#include "svpc_types.h"
 
 #include "Virt_ComputerSystem.h"
 #include "Virt_ConsoleRedirectionService.h"
+#include "Virt_Device.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -41,15 +43,70 @@ static CMPIStatus service_to_cs(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
-
+        const char *host = NULL;
+        int i;
+        int num_of_domains;
+        
         if (!match_hypervisor_prefix(ref, info))
-                return s;
+                goto out;
 
         s = get_console_rs(ref, &instance, _BROKER, info->context, true);
         if (s.rc != CMPI_RC_OK)
-                return s;
+                goto out;
 
         s = enum_domains(_BROKER, ref, list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+       
+        num_of_domains = list->cur;
+ 
+        /*
+         * For each domain, insert its video and pointer devices into
+         * the list
+         */
+        for (i = 0; i < num_of_domains; i++) {
+                s.rc = cu_get_str_prop(list->list[i], "Name", &host);
+                if (s.rc != CMPI_RC_OK) 
+                        goto out;
+
+                s = enum_devices(_BROKER, 
+                                 ref, 
+                                 host, 
+                                 CIM_RES_TYPE_INPUT, 
+                                 list);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+
+                s = enum_devices(_BROKER, 
+                                 ref,
+                                 host,
+                                 CIM_RES_TYPE_GRAPHICS,
+                                 list);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
+ out:
+        return s;
+}
+
+static CMPIStatus validate_cs_or_dev_ref(const CMPIContext *context,
+                                         const CMPIObjectPath *ref)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        char* classname;
+                                  
+        classname = class_base_name(CLASSNAME(ref));
+
+        if (STREQC(classname, "ComputerSystem")) {
+                s = get_domain_by_ref(_BROKER, ref, &inst);
+        } else if ((STREQC(classname, "PointingDevice"))  || 
+                   (STREQC(classname, "DisplayController"))) {
+                s = get_device_by_ref(_BROKER, ref, &inst);        
+        }
+
+        free(classname);
 
         return s;
 }
@@ -63,8 +120,8 @@ static CMPIStatus cs_to_service(const CMPIObjectPath *ref,
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
-
-        s = get_domain_by_ref(_BROKER, ref, &inst);
+        
+        s = validate_cs_or_dev_ref(info->context, ref);
         if (s.rc != CMPI_RC_OK)
                 return s;
 
@@ -83,6 +140,12 @@ static char* antecedent[] = {
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
         "LXC_ComputerSystem",
+        "Xen_PointingDevice",
+        "KVM_PointingDevice",
+        "LXC_PointingDevice",
+        "Xen_DisplayController",
+        "KVM_DisplayController",
+        "LXC_DisplayController",
         NULL
 };
 
