@@ -74,7 +74,8 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_ConcreteComponent.la \
                        libVirt_ServiceAffectsElement.la \
                        libVirt_HostedAccessPoint.la \
-                       libVirt_ServiceAccessBySAP.la
+                       libVirt_ServiceAccessBySAP.la \
+                       libVirt_SAPAvailableForElement.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_ComputerSystem_la_DEPENDENCIES = libVirt_VirtualSystemSnapshotService.la
@@ -225,4 +226,8 @@ libVirt_ServiceAccessBySAP_la_LIBADD = -lVirt_ConsoleRedirectionService -lVirt_K
 libVirt_HostedAccessPoint_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_KVMRedirectionSAP.la
 libVirt_HostedAccessPoint_la_SOURCES = Virt_HostedAccessPoint.c
 libVirt_HostedAccessPoint_la_LIBADD = -lVirt_HostSystem -lVirt_KVMRedirectionSAP
+
+libVirt_SAPAvailableForElement_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_KVMRedirectionSAP.la 
+libVirt_SAPAvailableForElement_la_SOURCES = Virt_SAPAvailableForElement.c
+libVirt_SAPAvailableForElement_la_LIBADD = -lVirt_ComputerSystem -lVirt_KVMRedirectionSAP
 
