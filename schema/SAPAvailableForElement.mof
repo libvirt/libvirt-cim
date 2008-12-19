@@ -1,0 +1,22 @@
+// Copyright IBM Corp. 2007
+
+[Association,
+ Provider("cmpi::Virt_SAPAvailableForElement")
+]
+class Xen_SAPAvailableForElement : CIM_SAPAvailableForElement
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_SAPAvailableForElement")
+]
+class KVM_SAPAvailableForElement : CIM_SAPAvailableForElement
+{
+};
+
+[Association,
+ Provider("cmpi::Virt_SAPAvailableForElement")
+]
+class LXC_SAPAvailableForElement : CIM_SAPAvailableForElement
+{
+};

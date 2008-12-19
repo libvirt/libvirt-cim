@@ -1,0 +1,5 @@
+# Copyright IBM Corp. 2007
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+Xen_SAPAvailableForElement root/virt Virt_SAPAvailableForElement Virt_SAPAvailableForElement association
+KVM_SAPAvailableForElement root/virt Virt_SAPAvailableForElement Virt_SAPAvailableForElement association
+LXC_SAPAvailableForElement root/virt Virt_SAPAvailableForElement Virt_SAPAvailableForElement association

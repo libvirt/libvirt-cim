@@ -54,7 +54,8 @@ MOFS = \
         schema/GraphicsPool.mof \
         schema/InputPool.mof \
         schema/HostedAccessPoint.mof \
-        schema/ServiceAccessBySAP.mof
+        schema/ServiceAccessBySAP.mof \
+        schema/SAPAvailableForElement.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -126,7 +127,8 @@ REGS = \
         schema/GraphicsPool.registration \
         schema/InputPool.registration \
         schema/HostedAccessPoint.registration \
-        schema/ServiceAccessBySAP.registration
+        schema/ServiceAccessBySAP.registration \
+        schema/SAPAvailableForElement.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
