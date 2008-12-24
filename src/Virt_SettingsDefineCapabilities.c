@@ -617,6 +617,7 @@ static CMPIStatus set_disk_props(int type,
         const char *dev;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        uint16_t emu_type = 0;
 
         if (type == DOMAIN_LXC) {
                 addr = "/tmp";
@@ -652,6 +653,8 @@ static CMPIStatus set_disk_props(int type,
 
                 CMSetProperty(inst, "VirtualDevice",
                               (CMPIValue *)dev, CMPI_chars);
+                CMSetProperty(inst, "EmulatedType",
+                              (CMPIValue *)&emu_type, CMPI_uint16);
         }
 
         inst_list_add(list, inst);
