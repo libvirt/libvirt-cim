@@ -114,6 +114,26 @@ struct reg_prof KVMRedirection = {
         .scoping_profile = &SystemVirtualization
 };
 
+struct reg_prof AllocationCapabilities = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1043-AllocationCapabilities-1.0.0a",
+        .reg_name = "Allocation Capabilities",
+        .reg_version = "1.0.0a",
+        .scoping_class = "ComputerSystem",
+        .central_class = "AllocationCapabilities",
+        .scoping_profile = &SystemVirtualization
+};
+
+struct reg_prof ResourceAllocation = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1041-ResourceAllocation-1.1.0c",
+        .reg_name = "Resource Allocation",
+        .reg_version = "1.1.0c",
+        .scoping_class = "ComputerSystem",
+        .central_class = "ResourcePool",
+        .scoping_profile = &SystemVirtualization
+};
+
 // Make sure to add pointer to your reg_prof struct here.
 struct reg_prof *profiles[] = {
         &SystemVirtualization,
@@ -124,6 +144,8 @@ struct reg_prof *profiles[] = {
         &MemoryResourceVirtualization,
         &VirtualSystemMigration,
         &KVMRedirection,
+        &AllocationCapabilities,
+        &ResourceAllocation,
         NULL
 };
 
