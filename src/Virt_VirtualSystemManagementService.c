@@ -1479,9 +1479,10 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
         CU_DEBUG("Doing dynamic device update for `%s'", dominfo->name);
 
         if (func(dom, dev) == 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to change (%i) device", action);
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to change (%i) device", action);
         } else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_OK,

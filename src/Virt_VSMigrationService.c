@@ -939,9 +939,10 @@ static CMPIStatus handle_migrate(virConnectPtr dconn,
         ddom = virDomainMigrate(dom, dconn, type, NULL, NULL, 0);
         if (ddom == NULL) {
                 CU_DEBUG("Migration failed");
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Migration Failed");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Migration Failed");
         }
  out:
         virDomainFree(ddom);
