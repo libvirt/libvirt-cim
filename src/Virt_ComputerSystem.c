@@ -800,13 +800,13 @@ static CMPIStatus domain_reset(virDomainPtr dom)
         if (ret != 0) {
                 virt_set_status(_BROKER, &s,
                                 CMPI_RC_ERR_FAILED,
-                                virDomainGetConnect(dom),
+                                conn,
                                 "Unable to destroy domain");
                 goto out;
         }
 
-        dom = virDomainLookupByName(virDomainGetConnect(dom),
-                                     virDomainGetName(dom));
+        dom = virDomainLookupByName(conn,
+                                    virDomainGetName(dom));
 
         if (dom == NULL) {
             dom = virDomainDefineXML(conn, xml);
@@ -814,7 +814,7 @@ static CMPIStatus domain_reset(virDomainPtr dom)
                     CU_DEBUG("Failed to define domain from XML");
                     virt_set_status(_BROKER, &s,
                                     CMPI_RC_ERR_FAILED,
-                                    virDomainGetConnect(dom),
+                                    conn,
                                     "Unable to define domain");
                 goto out;
             }
@@ -827,7 +827,7 @@ static CMPIStatus domain_reset(virDomainPtr dom)
         if (ret != 0)
                 virt_set_status(_BROKER, &s,
                                 CMPI_RC_ERR_FAILED,
-                                virDomainGetConnect(dom),
+                                conn,
                                 "Failed to start domain");
 
  out:
