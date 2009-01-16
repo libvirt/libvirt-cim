@@ -611,13 +611,13 @@ static CMPIStatus set_disk_props(int type,
                                  const CMPIObjectPath *ref,
                                  const char *id,
                                  uint64_t disk_size,
+                                 uint16_t emu_type,
                                  struct inst_list *list)
 {
         const char *addr;
         const char *dev;
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        uint16_t emu_type = 0;
 
         if (type == DOMAIN_LXC) {
                 addr = "/tmp";
@@ -646,7 +646,7 @@ static CMPIStatus set_disk_props(int type,
                         dev = "xvda";
                         CMSetProperty(inst, "Caption",
                                       (CMPIValue *)"PV disk", CMPI_chars);
-                } else if (type, DOMAIN_XENFV) {
+                } else if (type == DOMAIN_XENFV) {
                         CMSetProperty(inst, "Caption",
                                       (CMPIValue *)"FV disk", CMPI_chars);
                 }
@@ -671,6 +671,7 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         char *pfx;
         const char *id;
         uint64_t disk_size;
+        uint16_t emu_type = 0;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         switch(template_type) {
@@ -702,16 +703,54 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         pfx = class_prefix_name(CLASSNAME(ref));
 
         if (STREQ(pfx, "Xen")) {
-                s = set_disk_props(DOMAIN_XENPV, ref, id, disk_size, list); 
-                
-                if (s.rc != CMPI_RC_OK)
-                       goto out;
+                int xen_type[2] = {DOMAIN_XENFV, DOMAIN_XENPV};
+                int i = 0;
+ 
+                for (; i < 2; i++) {
+                        emu_type = 0;
+                        s = set_disk_props(xen_type[i],
+                                           ref, 
+                                           id, 
+                                           disk_size, 
+                                           emu_type, 
+                                           list); 
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
 
-                s = set_disk_props(DOMAIN_XENFV, ref, id, disk_size, list); 
+                        emu_type = 1;
+                        s = set_disk_props(xen_type[i],
+                                           ref, 
+                                           id, 
+                                           disk_size, 
+                                           emu_type, 
+                                           list); 
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+                }
         } else if (STREQ(pfx, "KVM")) {
-                s = set_disk_props(DOMAIN_KVM, ref, id, disk_size, list); 
+                s = set_disk_props(DOMAIN_KVM,
+                                   ref, 
+                                   id, 
+                                   disk_size, 
+                                   emu_type, 
+                                   list); 
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+
+                emu_type = 1; 
+                s = set_disk_props(DOMAIN_KVM,
+                                   ref, 
+                                   id, 
+                                   disk_size, 
+                                   emu_type, 
+                                   list); 
         } else if (STREQ(pfx, "LXC")) {
-                s = set_disk_props(DOMAIN_LXC, ref, id, disk_size, list); 
+                s = set_disk_props(DOMAIN_LXC,
+                                   ref, 
+                                   id, 
+                                   disk_size, 
+                                   emu_type, 
+                                   list); 
         } else {
                 cu_statusf(_BROKER, &s, 
                             CMPI_RC_ERR_FAILED,
