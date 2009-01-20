@@ -84,6 +84,7 @@ rm -fr $RPM_BUILD_ROOT
 %{_datadir}/libvirt-cim/*.sh
 %{_datadir}/libvirt-cim/*.mof
 %{_datadir}/libvirt-cim/cimv*-interop_mof
+%{_datadir}/libvirt-cim/cimv*-cimv2_mof
 %{_datadir}/libvirt-cim/*.registration
 %{_datadir}/libvirt-cim/fix_schema.patch
 %{_datadir}/libvirt-cim/cimv*-MOFs.zip
