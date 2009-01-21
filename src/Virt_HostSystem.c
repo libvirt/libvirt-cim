@@ -144,16 +144,10 @@ static CMPIStatus sblim_host(const CMPIBroker *broker,
                              CMPIInstance **inst)
 {
         CMPIObjectPath *path;
+        CMPIEnumeration *en  = NULL;
+        CMPIData data;
         CMPIStatus s;
         const char *cn = "Linux_ComputerSystem";
-        char name[256];
-
-        if (get_fqdn(name, sizeof(name)) != 0) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get hostname: %m");
-                return s;
-        }
 
         path = CMNewObjectPath(broker, "root/cimv2", cn, &s);
         if ((path == NULL) || (s.rc != CMPI_RC_OK)) {
@@ -163,11 +157,33 @@ static CMPIStatus sblim_host(const CMPIBroker *broker,
                 return s;
         }
 
-        CMAddKey(path, "CreationClassName", cn, CMPI_chars);
-        CMAddKey(path, "Name", name, CMPI_chars);
+        /* FIXME:  This approach may return the wrong instance if more than
+           one SBLIM Linux_ComputerSystem instance exists on the system.
+           This isn't likely to happen in most cases, but a better approach 
+           should be used here.
+         */
+        en = CBEnumInstances(broker, context, path, NULL, &s);
+        if (en == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Upcall EnumInstances of %s class failed",
+                           cn);
+                goto out;
+        }
 
-        *inst = CBGetInstance(broker, context, path, NULL, &s);
+        if (CMHasNext(en, &s)) {
+                data = CMGetNext(en, &s);
+                if (CMIsNullObject(data.value.inst)) {
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to retrieve enumeration entry");
+                        goto out;
+                }
 
+                *inst = data.value.inst;
+        }
+
+ out:
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("SBLIM: %i %s", s.rc, CMGetCharPtr(s.msg));
         } else {
