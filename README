@@ -35,7 +35,10 @@ Procedure:
   $ ./configure
   $ make
   $ make preinstall
-  $ Restart Pegasus or SFCB
+
+  # Restart Pegasus or SFCB
+
   $ sudo make install
   $ sudo make postinstall
-  $ Restart Pegasus or SFCB
+
+  # Restart Pegasus or SFCB
