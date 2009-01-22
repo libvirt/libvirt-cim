@@ -213,7 +213,6 @@ static CMPIStatus get_vnc_sessions(const CMPIBroker *broker,
         }
 
  out:
-        tcp_info = fopen(path, "r");
         fclose(tcp_info);
         return s;
 }
