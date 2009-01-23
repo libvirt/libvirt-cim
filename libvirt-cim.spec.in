@@ -51,6 +51,12 @@ rm -fr $RPM_BUILD_ROOT
 %define REGISTRATION %{_datadir}/%{name}/*.registration
 %define SCHEMA %{_datadir}/%{name}/*.mof
 
+%define INTEROP_REG %{_datadir}/%{name}/{RegisteredProfile,ElementConformsToProfile,ReferencedProfile}.registration
+%define INTEROP_MOF %{_datadir}/%{name}/{ComputerSystem,HostSystem,RegisteredProfile,DiskPool,MemoryPool,NetPool,ProcessorPool,VSMigrationService,ElementConformsToProfile,ReferencedProfile}.mof
+
+%define CIMV2_REG %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,ElementConformsToProfile,HostedAccessPoint}.registration
+%define CIMV2_MOF %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,RegisteredProfile,ComputerSystem,ElementConformsToProfile,HostedAccessPoint}.mof
+
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
 	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
@@ -65,6 +71,15 @@ rm -fr $RPM_BUILD_ROOT
 %{_datadir}/%{name}/provider-register.sh -t pegasus \
 	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+%{_datadir}/%{name}/provider-register.sh -t pegasus \
+        -n @CIM_VIRT_NS@ \
+        -r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+%{_datadir}/%{name}/provider-register.sh -t pegasus \
+        -n root/interop \
+        -r %{INTEROP_REG} -m %{INTEROP_MOF} -v >/dev/null 2>&1 || true
+%{_datadir}/%{name}/provider-register.sh -t pegasus \
+        -n root/cimv2\
+        -r %{CIMV2_REG} -m %{CIMV2_MOF} -v >/dev/null 2>&1 || true
 
 %preun
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
