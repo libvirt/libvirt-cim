@@ -185,7 +185,15 @@ static char *dest_uri(const char *cn,
                 goto out;
         }
 
-        rc = asprintf(&uri, "%s+%s://%s/system/%s", prefix, tport, dest, param);
+        rc = asprintf(&uri, "%s+%s://%s/system", prefix, tport, dest);
+        if (rc == -1) {
+                uri = NULL;
+                goto out;
+        }
+
+        if (!STREQC(param, ""))
+                rc = asprintf(&uri, "%s/%s", uri, param);
+
         if (rc == -1)
                 uri = NULL;
 
