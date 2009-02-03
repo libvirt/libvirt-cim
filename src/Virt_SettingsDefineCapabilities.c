@@ -1119,6 +1119,32 @@ static CMPIInstance *make_ref_valuerole(const CMPIObjectPath *source_ref,
         return ref_inst;
 }
 
+static CMPIInstance *make_ref_msd(const CMPIObjectPath *source_ref,
+                                  const CMPIInstance *target_inst,
+                                  struct std_assoc_info *info,
+                                  struct std_assoc *assoc)
+{
+        CMPIInstance *ref_inst = NULL;
+        uint16_t ppolicy = SDC_POLICY_INDEPENDENT;
+        uint16_t valuerole = SDC_ROLE_DEFAULT;
+        uint16_t valuerange = SDC_RANGE_POINT;
+
+        ref_inst = make_reference(_BROKER,
+                                  source_ref,
+                                  target_inst,
+                                  info,
+                                  assoc);
+
+        CMSetProperty(ref_inst, "ValueRole",
+                      (CMPIValue *)&valuerole, CMPI_uint16);
+        CMSetProperty(ref_inst, "ValueRange",
+                      (CMPIValue *)&valuerange, CMPI_uint16);
+        CMSetProperty(ref_inst, "PropertyPolicy",
+                      (CMPIValue *)&ppolicy, CMPI_uint16);
+
+        return ref_inst;
+}
+
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
 static char* group_component[] = {
@@ -1207,7 +1233,7 @@ static struct std_assoc _migrate_cap_to_vsmsd = {
         .assoc_class = (char**)&assoc_classname,
 
         .handler = migrate_cap_to_vsmsd,
-        .make_ref = make_ref
+        .make_ref = make_ref_msd
 };
 
 static struct std_assoc _vsmsd_to_migrate_cap = {
