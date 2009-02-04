@@ -249,7 +249,7 @@ def main():
     parser.add_option("-v", "--virt-type", dest="virt", default=None,
                       help="Virtualization type [ Xen | KVM ]")
     parser.add_option("--migration-type", dest="type", default=None,
-                      help="Migration type: [ live | resume | restart ]")
+                      help="Migration type:[ live | resume | restart | other ]")
     parser.add_option("--disable-check", dest="disable_ck", action="store_true",
                       help="Disable migration pre-check")
 
@@ -280,10 +280,6 @@ def main():
 
     if options.virt == None:
         print "Must specify virtualization type"
-        return 1
-
-    if options.virt != "Xen":
-        print "Only Xen migration is currently supported"
         return 1
 
     if options.type != None:
