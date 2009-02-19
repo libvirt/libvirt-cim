@@ -22,3 +22,5 @@
 #pragma include ("Core/CIM_Job.mof")
 #pragma include ("Core/CIM_ConcreteJob.mof")
 #pragma include ("Core/CIM_ResourcePool.mof")
+#pragma include ("Core/CIM_Capabilities.mof")
+#pragma include ("Core/CIM_AllocationCapabilities.mof")

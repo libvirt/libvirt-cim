@@ -67,7 +67,8 @@ INTEROP_MOFS = \
 	schema/ProcessorPool.mof \
 	schema/VSMigrationService.mof \
 	schema/ElementConformsToProfile.mof \
-	schema/ReferencedProfile.mof
+	schema/ReferencedProfile.mof \
+	schema/AllocationCapabilities.mof
 
 CIMV2_MOFS = \
 	schema/HostedResourcePool.mof \
