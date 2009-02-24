@@ -963,9 +963,10 @@ static CMPIStatus update_dominfo(const struct domain *dominfo,
 
         dom = virDomainLookupByName(conn, dominfo->name);
         if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "Unable to lookup domain `%s'", dominfo->name);
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Unable to lookup domain `%s'", dominfo->name);
                 goto out;
         }
 
@@ -1065,9 +1066,10 @@ static CMPIStatus get_reference_domain(struct domain **domain,
 
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "Referenced domain `%s' does not exist", name);
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Referenced domain `%s' does not exist", name);
                 goto out;
         }
 
@@ -1274,13 +1276,16 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
 
 error:
         if (rc == IM_RC_SYS_NOT_FOUND)
-                cu_statusf(_BROKER, &status,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to find domain");
+                virt_set_status(_BROKER, &status,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Referenced domain `%s' does not exist", 
+                                dom_name);
         else if (rc == IM_RC_FAILED)
-                cu_statusf(_BROKER, &status,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to retrieve domain name.");
+                virt_set_status(_BROKER, &status,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Unable to retrieve domain name");
         else if (rc == IM_RC_OK) {
                 status = (CMPIStatus){CMPI_RC_OK, NULL};
                 trigger_indication(context,
@@ -1320,8 +1325,13 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
                 goto out;
 
         dom = virDomainLookupByName(conn, name);
-        if (dom == NULL)
+        if (dom == NULL) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Referenced domain `%s' does not exist", name);
                 goto out;
+        }
 
         if (!get_dominfo(dom, &dominfo)) {
                 cu_statusf(_BROKER, &s,
@@ -1459,9 +1469,10 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
         dom = virDomainLookupByName(conn, dominfo->name);
         if (dom == NULL) {
                 CU_DEBUG("Failed to lookup VS `%s'", dominfo->name);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "Virtual System `%s' not found", dominfo->name);
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Virtual System `%s' not found", dominfo->name);
                 goto out;
         }
 
@@ -1825,9 +1836,11 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
 
                 dom = virDomainLookupByName(conn, name);
                 if (dom == NULL) {
-                        cu_statusf(_BROKER, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Unknown system `%s'", name);
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_NOT_FOUND,
+                                        conn,
+                                        "Referenced domain `%s' does not exist",
+                                        name);
                         goto end;
                 }
 
