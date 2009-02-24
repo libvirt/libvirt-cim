@@ -273,7 +273,7 @@ static int set_state_from_dom(const CMPIBroker *broker,
         struct infostore_ctx *infostore = NULL;
 
         ret = virDomainGetInfo(dom, &info);
-        if (ret != 0)
+        if (ret != 0) 
                 return 0;
 
         info.state = adjust_state_xen(dom, info.state);
@@ -398,19 +398,27 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
 
         if (get_dominfo(dom, &domain) == 0) {
                 CU_DEBUG("Unable to get domain information");
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get domain information");
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to get domain information");
                 goto out;
         }
 
         if (!set_name_from_dom(dom, instance)) {
-                /* Print trace error */
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to get domain name");
                 goto out;
         }
 
         if (!set_uuid_from_dom(dom, instance, &uuid)) {
-                /* Print trace error */
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to get domain UUID");
+
                 goto out;
         }
 
@@ -420,7 +428,11 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
         }
 
         if (!set_state_from_dom(broker, dom, instance)) {
-                /* Print trace error */
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to get domain info");
+
                 goto out;
         }
 
@@ -570,10 +582,11 @@ CMPIStatus get_domain_by_name(const CMPIBroker *broker,
 
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s).",
-                           name);
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Referenced domain `%s' does not exist", 
+                                name);
                 goto out;
         }
 
@@ -790,9 +803,10 @@ static CMPIStatus domain_reset(virDomainPtr dom)
         xml = virDomainGetXMLDesc(dom, 0);
         if (xml == NULL) {
                 CU_DEBUG("Unable to retrieve domain XML");
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get domain definition");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to get domain definition");
                 return s;
         }
 
@@ -1003,16 +1017,18 @@ static CMPIStatus __state_change(const char *name,
 
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Domain not found");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Domain not found");
                 goto out;
         }
 
         if (virDomainGetInfo(dom, &info) != 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get current state");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to get current state");
                 goto out;
         }
 
