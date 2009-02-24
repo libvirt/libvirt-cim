@@ -259,16 +259,18 @@ static CMPIStatus check_hver(virConnectPtr conn, virConnectPtr dconn)
         unsigned long remote;
 
         if (virConnectGetVersion(conn, &local)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get local Hypervisor version");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to get local Hypervisor version");
                 goto out;
         }
 
         if (virConnectGetVersion(dconn, &remote)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get remote hypervisor version");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                dconn,
+                                "Unable to get remote Hypervisor version");
                 goto out;
         }
 
@@ -396,12 +398,28 @@ static CMPIStatus _call_check(virDomainPtr dom,
         pid_t pid;
         int i;
         int rc = -1;
+        virConnectPtr conn = virDomainGetConnect(dom);
+        const char *name = virDomainGetName(dom);
+        const char *uri = virConnectGetURI(conn);
+
+        if (name == NULL) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Failed to get domain name");
+                goto out;        
+        }
+
+        if (uri == NULL) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Failed to get URI of connection");
+                goto out; 
+        }
 
         pid = fork();
         if (pid == 0) {
-                virConnectPtr conn = virDomainGetConnect(dom);
-                const char *name = virDomainGetName(dom);
-                const char *uri = virConnectGetURI(conn);
 
                 if (setpgrp() == -1)
                         perror("setpgrp");
@@ -436,6 +454,7 @@ static CMPIStatus _call_check(virDomainPtr dom,
                 free(name);
         }
 
+ out:
         return s;
 }
 
@@ -589,9 +608,10 @@ static CMPIStatus vs_migratable(const CMPIObjectPath *ref,
 
         dom = virDomainLookupByName(conn, domain);
         if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such domain");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "No such domain");
                 goto out;
         }
 
@@ -930,9 +950,10 @@ static CMPIStatus handle_migrate(virConnectPtr dconn,
 
         ret = virDomainGetInfo(dom, &info);
         if (ret == -1) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Error getting domain info");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Error getting domain info");
                 goto out;
         }
 
@@ -949,7 +970,7 @@ static CMPIStatus handle_migrate(virConnectPtr dconn,
                 CU_DEBUG("Migration failed");
                 virt_set_status(_BROKER, &s,
                                 CMPI_RC_ERR_FAILED,
-                                virDomainGetConnect(dom),
+                                dconn,
                                 "Migration Failed");
         }
  out:
@@ -969,9 +990,10 @@ static CMPIStatus handle_restart_migrate(virConnectPtr dconn,
         CU_DEBUG("Shutting down domain for migration");
         ret = virDomainShutdown(dom);
         if (ret != 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to shutdown guest");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to shutdown guest");
                 goto out;
         }
 
@@ -1005,9 +1027,12 @@ static CMPIStatus prepare_migrate(virDomainPtr dom,
 
         *xml = virDomainGetXMLDesc(dom, 0);
         if (*xml == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to retrieve domain XML.");
+
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Unable to retrieve domain XML");
+
                 goto out;
         }
 
@@ -1036,6 +1061,7 @@ static CMPIStatus complete_migrate(virDomainPtr ldom,
                                             virDomainGetName(ldom));
                 if (dom == NULL) {
                         CU_DEBUG("Unable to re-lookup domain");
+
                         ret = -1;
                         break;
                 }
@@ -1055,9 +1081,10 @@ static CMPIStatus complete_migrate(virDomainPtr ldom,
 
         newdom = virDomainDefineXML(rconn, xml);
         if (newdom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to define domain");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                rconn,
+                                "Failed to define domain");
                 goto out;
         }
 
@@ -1067,9 +1094,11 @@ static CMPIStatus complete_migrate(virDomainPtr ldom,
                 CU_DEBUG("Restarting domain on remote host");
                 if (virDomainCreate(newdom) != 0) {
                         CU_DEBUG("Failed to start domain on remote host");
-                        cu_statusf(_BROKER, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Failed to start domain on remote host");
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_FAILED,
+                                        rconn,
+                                        "Failed to start domain on remote \
+                                        host");
                 }
         }
  out:
@@ -1086,9 +1115,12 @@ static CMPIStatus ensure_dom_offline(virDomainPtr dom)
 
         ret = virDomainGetInfo(dom, &info);
         if (ret == -1) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Error getting domain info");
+                
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Error getting domain info");
+
                 goto out;
         }
 
@@ -1117,9 +1149,11 @@ static CMPIStatus migrate_vs(struct migration_job *job)
         dom = virDomainLookupByName(conn, job->domain);
         if (dom == NULL) {
                 CU_DEBUG("Failed to lookup `%s'", job->domain);
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to lookup domain `%s'", job->domain);
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Failed to lookup domain `%s'", job->domain);
+
                 goto out;
         }
 
