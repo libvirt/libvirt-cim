@@ -124,13 +124,43 @@ struct reg_prof AllocationCapabilities = {
         .scoping_profile = &SystemVirtualization
 };
 
-struct reg_prof ResourceAllocation = {
+struct reg_prof ResourceAllocation_Disk = {
         .reg_org = 2,
-        .reg_id = "CIM:DSP1041-ResourceAllocation-1.1.0c",
+        .reg_id = "CIM:DSP1041-ResourceAllocation-1.1.0c_d",
         .reg_name = "Resource Allocation",
         .reg_version = "1.1.0c",
         .scoping_class = "ComputerSystem",
-        .central_class = "ResourcePool",
+        .central_class = "DiskPool",
+        .scoping_profile = &SystemVirtualization
+};
+
+struct reg_prof ResourceAllocation_Net = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1041-ResourceAllocation-1.1.0c_n",
+        .reg_name = "Resource Allocation",
+        .reg_version = "1.1.0c",
+        .scoping_class = "ComputerSystem",
+        .central_class = "NetworkPool",
+        .scoping_profile = &SystemVirtualization
+};
+
+struct reg_prof ResourceAllocation_Proc = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1041-ResourceAllocation-1.1.0c_p",
+        .reg_name = "Resource Allocation",
+        .reg_version = "1.1.0c",
+        .scoping_class = "ComputerSystem",
+        .central_class = "ProcessorPool",
+        .scoping_profile = &SystemVirtualization
+};
+
+struct reg_prof ResourceAllocation_Mem = {
+        .reg_org = 2,
+        .reg_id = "CIM:DSP1041-ResourceAllocation-1.1.0c_m",
+        .reg_name = "Resource Allocation",
+        .reg_version = "1.1.0c",
+        .scoping_class = "ComputerSystem",
+        .central_class = "MemoryPool",
         .scoping_profile = &SystemVirtualization
 };
 
@@ -145,7 +175,10 @@ struct reg_prof *profiles[] = {
         &VirtualSystemMigration,
         &KVMRedirection,
         &AllocationCapabilities,
-        &ResourceAllocation,
+        &ResourceAllocation_Disk,
+        &ResourceAllocation_Net,
+        &ResourceAllocation_Proc,
+        &ResourceAllocation_Mem,
         NULL
 };
 
