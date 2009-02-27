@@ -123,9 +123,10 @@ static CMPIStatus return_enum_elec(const CMPIObjectPath *ref,
         for (i = 0; i < count; i++) {
                 name = virDomainGetName(list[i]);
                 if (name == NULL) {
-                        cu_statusf(_BROKER, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Unable to get domain names");
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_FAILED,
+                                        conn,
+                                        "Unable to get domain names");
                         goto end;
                 }
 
@@ -169,10 +170,11 @@ CMPIStatus get_elec_by_name(const CMPIBroker *broker,
         
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)",
-                           name);
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "No such instance (%s)",
+                                name);
                 goto out;
         }
 
