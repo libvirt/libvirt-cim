@@ -712,9 +712,10 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
         CU_DEBUG("Looking up network `%s'", netname);
         network = virNetworkLookupByName(conn, netname);
         if (network == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No such NetworkPool: %s", netname);
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "No such NetworkPool: %s", netname);
                 goto out;
         }
 
@@ -740,9 +741,10 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
 
         bridge = virNetworkGetBridgeName(network);
         if (asprintf(&cap, "Bridge: %s", bridge) == -1) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "");
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "");
                 goto out;
         }
 
@@ -780,9 +782,11 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
 
         nets = virConnectNumOfNetworks(conn);
         if (nets < 0) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to list networks");
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to list networks");
+
                 goto out;
         }
 
