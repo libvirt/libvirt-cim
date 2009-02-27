@@ -742,10 +742,11 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
 
         dom = virDomainLookupByName(conn, domain);
         if (dom == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (no domain for %s)",
-                           name);
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "No such instance (no domain for %s)",
+                                name);
                 goto err;
         }
 
