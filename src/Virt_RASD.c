@@ -115,9 +115,11 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
 
         dom = virDomainLookupByName(conn, domain);
         if (dom == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "Domain `%s' not found while getting info", domain);
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Domain `%s' not found while getting info",
+                                domain);
                 goto out;
         }
 
@@ -451,10 +453,11 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
 
         dev = find_dev(conn, type, host, devid);
         if (!dev) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", 
-                           name);
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "No such instance (%s)",
+                                name);
                 goto out;
         }
 
