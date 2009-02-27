@@ -1075,9 +1075,10 @@ static CMPIStatus get_reference_domain(struct domain **domain,
 
         ret = get_dominfo(dom, domain);
         if (ret == 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Error getting referenced configuration");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Error getting referenced configuration");
                 goto out;
         }
 
@@ -1334,10 +1335,11 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         }
 
         if (!get_dominfo(dom, &dominfo)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to find existing domain `%s' to modify",
-                           name);
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to find existing domain `%s' to modify",
+                                name);
                 goto out;
         }
 
@@ -1721,9 +1723,10 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
         CMPIObjectPath *op;
 
         if (!get_dominfo(dom, &dominfo)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Internal error (getting domain info)");
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virDomainGetConnect(dom),
+                                "Internal error (getting domain info)");
                 goto out;
         }
 
