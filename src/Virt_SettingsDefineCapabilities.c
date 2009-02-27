@@ -453,9 +453,10 @@ static uint64_t net_max_xen(const CMPIObjectPath *ref,
         rc = virConnectGetVersion(conn, &version);
         CU_DEBUG("libvir : version=%ld, rc=%d", version, rc);
         if (rc != 0) {
-                cu_statusf(_BROKER, s, 
-                           CMPI_RC_ERR_FAILED,
-                           "Could not get xen version");
+                virt_set_status(_BROKER, s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to get xen version");
                 goto out;
         }
 
