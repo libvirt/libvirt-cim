@@ -254,10 +254,11 @@ CMPIStatus get_vssd_by_name(const CMPIBroker *broker,
         
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)",
-                           name);
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "No such instance (%s)",
+                                name);
                 goto out;
         }
         
