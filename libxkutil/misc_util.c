@@ -218,6 +218,9 @@ char *get_typed_class(const char *refcn, const char *new_base)
         char *class = NULL;
         char *pfx;
 
+        if (refcn == NULL)
+                return NULL;
+
         if (strchr(refcn, '_'))
                 pfx = class_prefix_name(refcn);
         else
