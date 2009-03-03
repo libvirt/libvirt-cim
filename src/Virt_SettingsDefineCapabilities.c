@@ -4,6 +4,7 @@
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
  *  Jay Gagnon <grendel@linux.vnet.ibm.com>
+ *  Richard Maciel <rmaciel@linux.vnet.ibm.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -49,6 +50,16 @@
 #include "Virt_VirtualSystemManagementService.h"
 #include "Virt_AllocationCapabilities.h"
 #include "Virt_Device.h"
+
+/*
+ * Right now, detect support and use it, if available.
+ * Later, this can be a configure option if needed
+ */
+#if LIBVIR_VERSION_NUMBER > 4000
+# define VIR_USE_LIBVIRT_STORAGE 1
+#else
+# define VIR_USE_LIBVIRT_STORAGE 0
+#endif
 
 const static CMPIBroker *_BROKER;
 
@@ -561,7 +572,129 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
  out:
         return s;
 }
+
+static CMPIStatus set_disk_props(int type,
+                                 const CMPIObjectPath *ref,
+                                 const char *id,
+                                 const char *disk_path,
+                                 uint64_t disk_size,
+                                 uint16_t emu_type,
+                                 struct inst_list *list)
+{
+        const char *dev;
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (type == DOMAIN_LXC) {
+                dev = "/lxc_mnt/tmp";
+        }
+        else {
+                dev = "hda";
+        }
+
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
+
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+        CMSetProperty(inst, "AllocationQuantity",
+                      (CMPIValue *)"MegaBytes", CMPI_chars);
+        CMSetProperty(inst, "Address", (CMPIValue *)disk_path, CMPI_chars);
+
+        if (type == DOMAIN_LXC)
+                CMSetProperty(inst, "MountPoint", (CMPIValue *)dev, CMPI_chars);
+        else {
+                if (emu_type == 0)
+                        CMSetProperty(inst, "VirtualQuantity",
+                                      (CMPIValue *)&disk_size, CMPI_uint64);
+
+                if (type == DOMAIN_XENPV) {
+                        dev = "xvda";
+                        CMSetProperty(inst, "Caption",
+                                      (CMPIValue *)"PV disk", CMPI_chars);
+                } else if (type == DOMAIN_XENFV) {
+                        CMSetProperty(inst, "Caption",
+                                      (CMPIValue *)"FV disk", CMPI_chars);
+                }
+
+                CMSetProperty(inst, "VirtualDevice",
+                              (CMPIValue *)dev, CMPI_chars);
+                CMSetProperty(inst, "EmulatedType",
+                              (CMPIValue *)&emu_type, CMPI_uint16);
+        }
+
+        inst_list_add(list, inst);
+
+ out:
+        return s;
+}
+
+static CMPIStatus cdrom_template(const CMPIObjectPath *ref,
+                                  int template_type,
+                                  struct inst_list *list)
+{
+        char *pfx = NULL;
+        const char *id;
+        const char *vol_path = "/dev/null";
+        uint64_t vol_size = 0;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        uint16_t emu_type = 1;
+
+        switch(template_type) {
+        case SDC_RASD_MIN:
+                id = "Minimum CDROM";
+                break;
+        case SDC_RASD_MAX:
+                id = "Maximum CDROM";
+                break;
+        case SDC_RASD_INC:
+                id = "Increment CDROM";
+                break;
+        case SDC_RASD_DEF:
+                id = "Default CDROM";
+                break;
+        default:
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        pfx = class_prefix_name(CLASSNAME(ref));
+        if (STREQ(pfx, "Xen")) {
+                int xen_type[2] = {DOMAIN_XENFV, DOMAIN_XENPV};
+                int i = 0;
  
+                for (; i < 2; i++) {
+                        s = set_disk_props(xen_type[i],
+                                           ref, 
+                                           id,
+                                           vol_path, 
+                                           vol_size, 
+                                           emu_type, 
+                                           list); 
+                }
+        } else if (STREQ(pfx, "KVM")) {
+                s = set_disk_props(DOMAIN_KVM,
+                                   ref, 
+                                   id,
+                                   vol_path, 
+                                   vol_size, 
+                                   emu_type, 
+                                   list); 
+
+        } else if (!STREQ(pfx, "LXC")){
+                cu_statusf(_BROKER, &s, 
+                            CMPI_RC_ERR_FAILED,
+                           "Unsupported virtualization type");
+       }
+
+ out:
+        free(pfx);
+
+        return s;
+}
+
 static int get_disk_freespace(const CMPIObjectPath *ref,
                               CMPIStatus *s,
                               uint64_t *free_space)
@@ -587,7 +720,7 @@ static int get_disk_freespace(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        /* Getting the relevant resource pool directly finds the free space 
+        /* Getting the relevant resource pool directly finds the free space
  *            for us.  It is in the Capacity field. */
         *s = get_pool_by_name(_BROKER, ref, inst_id, &pool_inst);
         if (s->rc != CMPI_RC_OK)
@@ -608,82 +741,39 @@ static int get_disk_freespace(const CMPIObjectPath *ref,
         return ret;
 }
 
-static CMPIStatus set_disk_props(int type,
-                                 const CMPIObjectPath *ref,
-                                 const char *id,
-                                 uint64_t disk_size,
-                                 uint16_t emu_type,
-                                 struct inst_list *list)
+static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
+                                        int template_type,
+                                        struct inst_list *list)
 {
-        const char *addr;
-        const char *dev;
-        CMPIInstance *inst;
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-
-        if (type == DOMAIN_LXC) {
-                addr = "/tmp";
-                dev = "/lxc_mnt/tmp";
-        }
-        else {
-                dev = "hda";
-                addr = "/dev/null";
-        }
-
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK);
-        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
-                goto out;
-
-        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-        CMSetProperty(inst, "AllocationQuantity",
-                      (CMPIValue *)"MegaBytes", CMPI_chars);
-        CMSetProperty(inst, "VirtualQuantity",
-                      (CMPIValue *)&disk_size, CMPI_uint64);
-        CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
-
-        if (type == DOMAIN_LXC)
-                CMSetProperty(inst, "MountPoint", (CMPIValue *)dev, CMPI_chars);
-        else {
-                if (type == DOMAIN_XENPV) {
-                        dev = "xvda";
-                        CMSetProperty(inst, "Caption",
-                                      (CMPIValue *)"PV disk", CMPI_chars);
-                } else if (type == DOMAIN_XENFV) {
-                        CMSetProperty(inst, "Caption",
-                                      (CMPIValue *)"FV disk", CMPI_chars);
-                }
-
-                CMSetProperty(inst, "VirtualDevice",
-                              (CMPIValue *)dev, CMPI_chars);
-                CMSetProperty(inst, "EmulatedType",
-                              (CMPIValue *)&emu_type, CMPI_uint16);
-        }
-
-        inst_list_add(list, inst);
-
- out:
-        return s;
-}
-
-static CMPIStatus disk_template(const CMPIObjectPath *ref,
-                                int template_type,
-                                struct inst_list *list)
-{
-        bool ret;
-        char *pfx;
+        uint64_t disk_size = 0;
+        int emu_type = 0;
+        char *pfx = NULL;
+        const char *disk_path = "/dev/null";
         const char *id;
-        uint64_t disk_size;
-        uint16_t emu_type = 0;
+        int type = 0;
+        bool ret;
+
         CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        pfx = class_prefix_name(CLASSNAME(ref));
 
         switch(template_type) {
         case SDC_RASD_MIN:
-                disk_size = SDC_DISK_MIN;
+                if (!STREQ(pfx, "LXC")) {
+                        ret = get_disk_freespace(ref, &s, &disk_size);
+                        if (!ret)
+                                goto out;
+                        if (SDC_DISK_MIN < disk_size)
+                                disk_size = SDC_DISK_MIN;
+                }
                 id = "Minimum";
                 break;
         case SDC_RASD_MAX:
-                ret = get_disk_freespace(ref, &s, &disk_size);
-                if (!ret)
-                    goto out;
+                if (!STREQ(pfx, "LXC")) {
+                        ret = get_disk_freespace(ref, &s, &disk_size);
+                        if (!ret)
+                                goto out;
+                }
                 id = "Maximum";
                 break;
         case SDC_RASD_INC:
@@ -701,66 +791,272 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        if (STREQ(pfx, "Xen")) {
+                int xen_type[2] = {DOMAIN_XENFV, DOMAIN_XENPV};
+                int i = 0;
+
+                for (; i < 2; i++) {
+                        s = set_disk_props(xen_type[i],
+                                           ref,
+                                           id,
+                                           disk_path,
+                                           disk_size,
+                                           emu_type,
+                                           list);
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+                }
+        } else {
+                if (STREQ(pfx, "KVM")) {
+                        type = DOMAIN_KVM;
+                } else if (STREQ(pfx, "LXC")) {
+                        type = DOMAIN_LXC;
+                        disk_path = "/tmp";
+                        disk_size = 0;
+                }
+
+                s = set_disk_props(type,
+                                   ref,
+                                   id,
+                                   disk_path,
+                                   disk_size,
+                                   emu_type,
+                                   list);
+        }
+
+ out:
+        free(pfx);
+        return s;
+}
+
+#if VIR_USE_LIBVIRT_STORAGE
+static CMPIStatus volume_template(const CMPIObjectPath *ref,
+                                  int template_type,
+                                  virStorageVolPtr volume_ptr,
+                                  struct inst_list *list)
+{
+        char *pfx = NULL;
+        const char *id;
+        char *vol_path = NULL;
+        uint64_t vol_size;
+        virStorageVolInfo vol_info;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+        uint16_t emu_type = 0;
+
+        ret = virStorageVolGetInfo(volume_ptr, &vol_info);
+        if (ret == -1) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virStorageVolGetConnect(volume_ptr),
+                                "Unable to get volume information");
+                goto out;
+        }
+
+        switch(template_type) {
+        case SDC_RASD_MIN:
+                if (SDC_DISK_MIN > (uint64_t)vol_info.capacity)
+                        vol_size = (uint64_t)vol_info.capacity;
+                else
+                        vol_size = SDC_DISK_MIN;
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                vol_size = (uint64_t)vol_info.capacity;
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                vol_size = SDC_DISK_INC;
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                vol_size = (uint64_t)vol_info.allocation;
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        vol_path = virStorageVolGetPath(volume_ptr);
+        if (vol_path == NULL) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virStorageVolGetConnect(volume_ptr),
+                                "Unable to get volume path");
+                goto out;
+        }
+
         pfx = class_prefix_name(CLASSNAME(ref));
 
         if (STREQ(pfx, "Xen")) {
                 int xen_type[2] = {DOMAIN_XENFV, DOMAIN_XENPV};
                 int i = 0;
- 
-                for (; i < 2; i++) {
-                        emu_type = 0;
-                        s = set_disk_props(xen_type[i],
-                                           ref, 
-                                           id, 
-                                           disk_size, 
-                                           emu_type, 
-                                           list); 
-                        if (s.rc != CMPI_RC_OK)
-                                goto out;
 
-                        emu_type = 1;
+                for (; i < 2; i++) {
                         s = set_disk_props(xen_type[i],
-                                           ref, 
-                                           id, 
-                                           disk_size, 
-                                           emu_type, 
-                                           list); 
-                        if (s.rc != CMPI_RC_OK)
-                                goto out;
+                                           ref,
+                                           id,
+                                           vol_path,
+                                           vol_size,
+                                           emu_type,
+                                           list);
                 }
         } else if (STREQ(pfx, "KVM")) {
                 s = set_disk_props(DOMAIN_KVM,
-                                   ref, 
-                                   id, 
-                                   disk_size, 
-                                   emu_type, 
-                                   list); 
-                if (s.rc != CMPI_RC_OK)
-                        goto out;
-
-                emu_type = 1; 
-                s = set_disk_props(DOMAIN_KVM,
-                                   ref, 
-                                   id, 
-                                   disk_size, 
-                                   emu_type, 
-                                   list); 
-        } else if (STREQ(pfx, "LXC")) {
-                s = set_disk_props(DOMAIN_LXC,
-                                   ref, 
-                                   id, 
-                                   disk_size, 
-                                   emu_type, 
-                                   list); 
+                                   ref,
+                                   id,
+                                   vol_path,
+                                   vol_size,
+                                   emu_type,
+                                   list);
         } else {
-                cu_statusf(_BROKER, &s, 
+                cu_statusf(_BROKER, &s,
                             CMPI_RC_ERR_FAILED,
                            "Unsupported virtualization type");
        }
 
  out:
+        free(pfx);
+        free(vol_path);
+
         return s;
 }
+
+static CMPIStatus disk_template(const CMPIObjectPath *ref,
+                                int template_type,
+                                struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virConnectPtr conn = NULL;
+        virStoragePoolPtr poolptr = NULL;
+        virStorageVolPtr volptr = NULL;
+        const char *instid = NULL;
+        char *host = NULL;
+        const char *poolname = NULL;
+        char **volnames = NULL;
+        int numvols = 0;
+        int numvolsret = 0;
+        int i;
+        char *pfx = NULL;
+
+        pfx = class_prefix_name(CLASSNAME(ref));
+        if (STREQ(pfx, "LXC")) {
+                s = default_disk_template(ref, template_type, list);
+                goto out;
+        }
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+
+        if (cu_get_str_path(ref, "InstanceID", &instid) != CMPI_RC_OK) {
+               cu_statusf(_BROKER, &s,
+                          CMPI_RC_ERR_FAILED,
+                          "Unable to get InstanceID for disk device");
+               goto out;
+        }
+
+        if (parse_fq_devid(instid, &host, (char **)&poolname) != 1) {
+                cu_statusf(_BROKER, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get pool device id");
+                goto out;
+        }
+
+        if ((poolptr = virStoragePoolLookupByName(conn, poolname)) == NULL) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Storage pool `%s' not found",
+                                poolname);
+                goto out;
+        }
+
+        if ((numvols = virStoragePoolNumOfVolumes(poolptr)) == -1) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to get the number of volumes \
+                                of storage pool `%s'",
+                                poolname);
+                goto out;
+        }
+
+        volnames = (char **)malloc(sizeof(char *) * numvols);
+        if (volnames == NULL) {
+               cu_statusf(_BROKER, &s,
+                          CMPI_RC_ERR_FAILED,
+                          "Could not allocate space for list of volumes \
+                          of storage pool `%s'",
+                          poolname);
+               goto out;
+        }
+
+        numvolsret = virStoragePoolListVolumes(poolptr, volnames, numvols);
+
+        if (numvolsret == -1) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to get a pointer to volumes \
+                                of storage pool `%s'",
+                                poolname);
+                goto out;
+        }
+
+        for (i = 0; i < numvolsret; i++) {
+                volptr = virStorageVolLookupByName(poolptr, volnames[i]);
+                if (volptr == NULL) {
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_NOT_FOUND,
+                                        conn,
+                                        "Storage Volume `%s' not found",
+                                        volnames[i]);
+                        goto out;
+                }         
+                
+                s = volume_template(ref, template_type, volptr, list);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;            
+        }
+
+        s = cdrom_template(ref, template_type, list);
+
+ out:
+        free(pfx);
+        free(volnames);
+        free(host);
+        virStorageVolFree(volptr);
+        virStoragePoolFree(poolptr);
+        virConnectClose(conn);
+
+        return s;
+}
+#else
+static CMPIStatus disk_template(const CMPIObjectPath *ref,
+                                int template_type,
+                                struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        char *pfx = NULL;
+
+        s = default_disk_template(ref, template_type, list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        pfx = class_prefix_name(CLASSNAME(ref));
+        if (STREQ(pfx, "LXC"))
+                goto out;
+
+        s = cdrom_template(ref, template_type, list);
+
+ out:
+        free(pfx);
+
+        return s;
+}
+#endif
 
 static CMPIStatus graphics_template(const CMPIObjectPath *ref,
                                     int template_type,
