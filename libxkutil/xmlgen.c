@@ -128,6 +128,10 @@ static const char *disk_xml(xmlNodePtr root, struct domain *dominfo)
         const char *msg = NULL;;
 
         for (i = 0; (i < dominfo->dev_disk_ct) && (msg == NULL); i++) {
+                struct virt_device *dev = &dominfo->dev_disk[i];
+                if (dev->type == CIM_RES_TYPE_UNKNOWN)
+                        continue;
+
                 struct disk_device *disk = &dominfo->dev_disk[i].dev.disk;
                 CU_DEBUG("Disk: %i %s %s",
                          disk->disk_type,
@@ -229,6 +233,9 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
 
         for (i = 0; (i < dominfo->dev_net_ct) && (msg == NULL); i++) {
                 struct virt_device *dev = &dominfo->dev_net[i];
+                if (dev->type == CIM_RES_TYPE_UNKNOWN)
+                        continue;
+
                 struct net_device *net = &dev->dev.net;
 
                 if (STREQ(dev->dev.net.type, "network"))
@@ -331,6 +338,9 @@ static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
         for (i = 0; i < dominfo->dev_graphics_ct; i++) {
                 xmlNodePtr tmp;
                 struct virt_device *_dev = &dominfo->dev_graphics[i];
+                if (_dev->type == CIM_RES_TYPE_UNKNOWN)
+                        continue;
+
                 struct graphics_device *dev = &_dev->dev.graphics;
 
                 tmp = xmlNewChild(root, NULL, BAD_CAST "graphics", NULL);
@@ -353,6 +363,9 @@ static const char *input_xml(xmlNodePtr root, struct domain *dominfo)
         for (i = 0; i < dominfo->dev_input_ct; i++) {
                 xmlNodePtr tmp;
                 struct virt_device *_dev = &dominfo->dev_input[i];
+                if (_dev->type == CIM_RES_TYPE_UNKNOWN)
+                        continue;
+
                 struct input_device *dev = &_dev->dev.input;
 
                 tmp = xmlNewChild(root, NULL, BAD_CAST "input", NULL);
