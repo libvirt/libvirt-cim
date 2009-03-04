@@ -1551,8 +1551,6 @@ static CMPIStatus resource_del(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        dev->type = CIM_RES_TYPE_UNKNOWN;
-                        
                         if ((type == CIM_RES_TYPE_GRAPHICS) ||
                            (type == CIM_RES_TYPE_INPUT))
                                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
@@ -1562,6 +1560,9 @@ static CMPIStatus resource_del(struct domain *dominfo,
                                                       RESOURCE_DEL,
                                                       CLASSNAME(op));
                         }
+
+                        dev->type = CIM_RES_TYPE_UNKNOWN;
+
                         break;
                 }
         }
