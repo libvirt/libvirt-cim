@@ -25,6 +25,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <time.h>
+#include <sys/time.h>
 #include <libvirt/libvirt.h>
 
 #include "cmpidt.h"
@@ -398,8 +399,14 @@ static const char *_net_rand_mac(void)
         const char *_mac = NULL;
         CMPIString *str = NULL;
         CMPIStatus status;
+        struct timeval curr_time;
 
-        srand(time(NULL));
+        ret = gettimeofday(&curr_time, NULL);
+        if (ret != 0)
+                goto out;
+
+        srand(curr_time.tv_usec);
+        s = curr_time.tv_usec;
         r = rand_r(&s);
 
         ret = asprintf(&mac,
