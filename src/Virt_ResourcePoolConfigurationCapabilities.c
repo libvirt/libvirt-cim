@@ -54,6 +54,8 @@ static CMPIStatus get_rpc_cap(const CMPIObjectPath *reference,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         virConnectPtr conn = NULL;
+        CMPIArray *array;
+        uint32_t val;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL) {
@@ -76,7 +78,18 @@ static CMPIStatus get_rpc_cap(const CMPIObjectPath *reference,
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)"RPCC", CMPI_chars);
 
-        /* No method currently supported */
+        array = CMNewArray(_BROKER, 2, CMPI_uint32, &s);
+        if (s.rc != CMPI_RC_OK)
+                return s;
+
+        val = CreateChildResourcePool;
+        CMSetArrayElementAt(array, 0, (CMPIValue *)&val, CMPI_uint32);
+
+        val = DeleteResourcePool;
+        CMSetArrayElementAt(array, 1, (CMPIValue *)&val, CMPI_uint32);
+
+        CMSetProperty(inst, "SynchronousMethodsSupported",
+                      (CMPIValue *)&array, CMPI_uint32A);
 
         if (is_get_inst) {
                 s = cu_validate_ref(_BROKER, reference, inst);
