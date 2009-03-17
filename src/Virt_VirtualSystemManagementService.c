@@ -148,9 +148,15 @@ static int xenpv_vssd_to_domain(CMPIInstance *inst,
         return 1;
 }
 
-static bool fv_default_emulator(struct domain *domain)
+static bool fv_set_emulator(struct domain *domain,
+                            const char *emu)
 {
-        const char *emul = XEN_EMULATOR;
+        if ((domain->type == DOMAIN_XENFV) && (emu == NULL))
+                emu = XEN_EMULATOR;
+
+        /* No emulator value to set */
+        if (emu == NULL)
+                return true;
 
         cleanup_virt_device(domain->dev_emu);
 
@@ -161,7 +167,7 @@ static bool fv_default_emulator(struct domain *domain)
         }
 
         domain->dev_emu->type = CIM_RES_TYPE_EMU;
-        domain->dev_emu->dev.emu.path = strdup(emul);
+        domain->dev_emu->dev.emu.path = strdup(emu);
         domain->dev_emu->id = strdup("emulator");
 
         return true;
@@ -178,8 +184,6 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
                 domain->type = DOMAIN_KVM;
         } else if (STREQC(pfx, "Xen")) {
                 domain->type = DOMAIN_XENFV;
-                if (!fv_default_emulator(domain))
-                        return 0;
         } else {
                 CU_DEBUG("Unknown fullvirt domain type: %s", pfx);
                 return 0;
@@ -191,6 +195,17 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
 
         free(domain->os_info.fv.boot);
         domain->os_info.fv.boot = strdup(val);
+
+        ret = cu_get_str_prop(inst, "Emulator", &val);
+        if (ret != CMPI_RC_OK)
+                val = NULL;
+        else if (disk_type_from_file(val) == DISK_UNKNOWN) {
+                CU_DEBUG("Emulator path does not exist: %s", val);
+                return 0;
+        }
+
+        if (!fv_set_emulator(domain, val))
+                return 0;
 
         return 1;
 }
