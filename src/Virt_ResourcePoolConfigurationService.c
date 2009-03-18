@@ -3,6 +3,7 @@
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
+ *  Kaitlin Rupert <karupert@us.ibm.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -27,11 +28,300 @@
 #include <libcmpiutil/std_instance.h>
 
 #include "misc_util.h"
+#include "xmlgen.h"
 
+#include "svpc_types.h"
 #include "Virt_HostSystem.h"
 #include "Virt_ResourcePoolConfigurationService.h"
+#include "Virt_DevicePool.h"
+#include "Virt_RASD.h"
 
 const static CMPIBroker *_BROKER;
+
+const char *DEF_POOL_NAME = "libvirt-cim-pool";
+
+static CMPIStatus create_child_pool_parse_args(const CMPIArgs *argsin,
+                                               const char **name,
+                                               CMPIArray **set,
+                                               CMPIArray **parent_arr)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (cu_get_str_arg(argsin, "ElementName", name) != CMPI_RC_OK) {
+                CU_DEBUG("No ElementName string argument");
+                *name = strdup(DEF_POOL_NAME);
+        }
+
+        if (cu_get_array_arg(argsin, "Settings", set) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get Settings array arg");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `Settings'");
+                goto out;
+        }
+
+        if (cu_get_array_arg(argsin, "ParentPool", parent_arr) != CMPI_RC_OK)
+                CU_DEBUG("No parent pool specified during pool creation");
+
+ out:
+        return s;
+}
+
+static const char *net_rasd_to_pool(CMPIInstance *inst,
+                                    struct virt_pool *pool,
+                                    const char *ns)
+{
+        const char *val = NULL;
+        const char *msg = NULL;
+
+        /*FIXME:  Need to add validation of addresses if user specified */
+
+        if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK)
+                val = "192.168.122.1";
+
+        free(pool->pool_info.net.addr);
+        pool->pool_info.net.addr = strdup(val);
+
+        if (cu_get_str_prop(inst, "Netmask", &val) != CMPI_RC_OK)
+                val = "255.255.255.0";
+
+        free(pool->pool_info.net.netmask);
+        pool->pool_info.net.netmask = strdup(val);
+
+        if (cu_get_str_prop(inst, "IPRangeStart", &val) != CMPI_RC_OK)
+                val = "192.168.122.2";
+
+        free(pool->pool_info.net.ip_start);
+        pool->pool_info.net.ip_start = strdup(val);
+
+        if (cu_get_str_prop(inst, "IPRangeStart", &val) != CMPI_RC_OK)
+                val = "192.168.122.254";
+
+        free(pool->pool_info.net.ip_end);
+        pool->pool_info.net.ip_end = strdup(val);
+
+        return msg;
+
+}
+
+static const char *rasd_to_vpool(CMPIInstance *inst,
+                                 struct virt_pool *pool,
+                                 uint16_t type,
+                                 const char *ns)
+{
+        pool->type = type;
+
+        if (type == CIM_RES_TYPE_NET) {
+                return net_rasd_to_pool(inst, pool, ns);
+        }
+
+        pool->type = CIM_RES_TYPE_UNKNOWN;
+
+        return "Resource type not supported on this platform";
+}
+
+static const char *get_pool_properties(CMPIArray *settings,
+                                       struct virt_pool *pool)
+{
+        CMPIObjectPath *op;
+        CMPIData item;
+        CMPIInstance *inst;
+        const char *msg = NULL;
+        uint16_t type;
+        int count;
+
+        count = CMGetArrayCount(settings, NULL);
+        if (count < 1)
+                return "No resources specified";
+
+        if (count > 1)
+                CU_DEBUG("More than one RASD specified during pool creation");
+
+        item = CMGetArrayElementAt(settings, 0, NULL);
+        if (CMIsNullObject(item.value.inst))
+                return "Internal array error";
+
+        inst = item.value.inst;
+
+        op = CMGetObjectPath(inst, NULL);
+        if (op == NULL)
+                return "Unknown resource instance type";
+
+        if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK)
+                return "Unable to determine resource type";
+
+        if (type != CIM_RES_TYPE_NET)
+                return "Only network pools currently supported";
+
+        msg = rasd_to_vpool(inst, pool, type, NAMESPACE(op));
+
+        return msg;
+}
+
+static char *get_pool_id(int res_type,
+                         const char *name) 
+{
+        char *id = NULL;
+        const char *pool = NULL;
+
+        if (res_type == CIM_RES_TYPE_NET)
+                pool = "NetworkPool";
+        else if (res_type == CIM_RES_TYPE_DISK)
+                pool = "DiskPool";
+        else if (res_type == CIM_RES_TYPE_MEM)
+                pool = "MemoryPool";
+        else if (res_type == CIM_RES_TYPE_PROC)
+                pool = "ProcessorPool";
+        else if (res_type == CIM_RES_TYPE_GRAPHICS)
+                pool = "GraphicsPool";
+        else if (res_type == CIM_RES_TYPE_INPUT)
+                pool = "InputPool";
+        else
+                pool = "Unknown";
+
+        if (asprintf(&id, "%s/%s", pool, name) == -1) {
+                return NULL;
+        }
+
+        return id;
+}
+
+static CMPIInstance *connect_and_create(char *xml,
+                                        const CMPIObjectPath *ref,
+                                        const char *id,
+                                        int res_type,
+                                        CMPIStatus *s)
+{
+        virConnectPtr conn;
+        CMPIInstance *inst = NULL;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
+        if (conn == NULL) {
+                CU_DEBUG("libvirt connection failed");
+                return NULL;
+        }
+
+        if (define_pool(conn, xml, res_type) == 0) {
+                virt_set_status(_BROKER, s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to create resource pool");
+                goto out;
+        }
+
+        *s = get_pool_by_name(_BROKER, ref, id, &inst);
+        if (s->rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get new pool instance: %s", id);
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to lookup resulting pool");
+        }
+
+ out:
+        virConnectClose(conn);
+
+        return inst;
+}
+
+static CMPIStatus create_child_pool(CMPIMethodMI *self,
+                                    const CMPIContext *context,
+                                    const CMPIResult *results,
+                                    const CMPIObjectPath *reference,
+                                    const CMPIArgs *argsin,
+                                    CMPIArgs *argsout)
+{
+        uint32_t rc = CIM_SVPC_RETURN_FAILED;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        CMPIArray *set;
+        CMPIArray *parent_pools;
+        CMPIObjectPath *result;
+        struct virt_pool *pool = NULL;
+        const char *name = NULL; 
+        const char *msg = NULL; 
+        char *full_id = NULL;
+        char *xml = NULL;
+
+        CU_DEBUG("CreateChildResourcePool");
+
+        s = create_child_pool_parse_args(argsin, &name, &set, &parent_pools);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        pool = calloc(1, sizeof(*pool));
+        if (pool == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to allocate pool struct");
+                goto out;
+        }
+
+        msg = get_pool_properties(set, pool);
+        if (msg != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Settings Error: %s", msg);
+
+                goto out;
+        }
+
+        full_id = get_pool_id(pool->type, name);
+        if (full_id == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to format resulting pool ID");
+                goto out;
+        }
+
+        s = get_pool_by_name(_BROKER, reference, full_id, &inst);
+        if (s.rc == CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Pool with that name already exists");
+                goto out;
+        }
+
+        pool->id = strdup(name);
+
+        xml = pool_to_xml(pool);
+        if (xml == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to generate XML for resource pool");
+                goto out;
+        }
+
+        CU_DEBUG("Pool XML:\n%s", xml);
+
+        inst = connect_and_create(xml, reference, full_id, pool->type, &s);
+        if (inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to create resource pool");
+                goto out;
+        }
+
+        result = CMGetObjectPath(inst, &s);
+        if ((result != NULL) && (s.rc == CMPI_RC_OK)) {
+                CMSetNameSpace(result, NAMESPACE(reference));
+                CMAddArg(argsout, "Pool", &result, CMPI_ref);
+        }
+
+        /* FIXME:  Trigger indication here */
+
+        cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
+ out:
+        cleanup_virt_pool(&pool);
+
+        free(xml);
+        free(full_id);
+
+        if (s.rc == CMPI_RC_OK)
+                rc = CIM_SVPC_RETURN_COMPLETED;
+        CMReturnData(results, &rc, CMPI_uint32);
+
+        return s;
+}
 
 static CMPIStatus dummy_handler(CMPIMethodMI *self,
                                 const CMPIContext *context,
@@ -51,8 +341,12 @@ static struct method_handler CreateResourcePool = {
 
 static struct method_handler CreateChildResourcePool = {
         .name = "CreateChildResourcePool",
-        .handler = dummy_handler,
-        .args = { ARG_END },
+        .handler = create_child_pool,
+        .args = {{"ElementName", CMPI_string, true},
+                 {"Settings", CMPI_instanceA, false},
+                 {"ParentPool", CMPI_refA, true},
+                 ARG_END
+        }
 };
 
 static struct method_handler AddResourcesToResourcePool = {
