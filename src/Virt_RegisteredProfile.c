@@ -49,6 +49,7 @@ CMPIStatus get_profile(const CMPIBroker *broker,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
+        CMPIArray *array;
 
         instance = get_typed_instance(broker,
                                       pfx,
@@ -78,6 +79,19 @@ CMPIStatus get_profile(const CMPIBroker *broker,
 
         CMSetProperty(instance, "RegisteredVersion", 
                       (CMPIValue *)profile->reg_version, CMPI_chars);
+
+        array = CMNewArray(broker, 1, CMPI_uint16, &s);
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(array))) {
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to create CMPIArray object");
+                goto out;
+        }
+
+        CMSetArrayElementAt(array, 0, &profile->ad_types, CMPI_uint16);
+
+        CMSetProperty(instance, "AdvertiseTypes",
+                      (CMPIValue *)&array, CMPI_uint16A);
 
         *_inst = instance;
 
