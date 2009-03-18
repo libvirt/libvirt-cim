@@ -163,3 +163,35 @@ class LXC_InputResourceAllocationSettingData : LXC_ResourceAllocationSettingData
       string BusType;
 };
 
+[Description ("Xen virtual pool settings"),
+ Provider("cmpi::Virt_RASD")
+]
+class Xen_NetPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingData
+{
+      string Netmask;
+      string IPRangeStart;
+      string IPRangeEnd;
+      string ForwardMode;
+};
+
+[Description ("KVM virtual pool settings"),
+ Provider("cmpi::Virt_RASD")
+]
+class KVM_NetPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+      string Netmask;
+      string IPRangeStart;
+      string IPRangeEnd;
+      string ForwardMode;
+};
+
+[Description ("LXC virtual pool settings"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_NetPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
+      string Netmask;
+      string IPRangeStart;
+      string IPRangeEnd;
+      string ForwardMode;
+};

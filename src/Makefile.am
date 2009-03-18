@@ -157,9 +157,11 @@ libVirt_RASD_la_DEPENDENCIES = libVirt_Device.la
 libVirt_RASD_la_SOURCES = Virt_RASD.c
 libVirt_RASD_la_LIBADD = -lVirt_Device
 
-libVirt_ResourcePoolConfigurationService_la_DEPENDENCIES = libVirt_HostSystem.la
+libVirt_ResourcePoolConfigurationService_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_DevicePool.la libVirt_RASD.la
 libVirt_ResourcePoolConfigurationService_la_SOURCES = Virt_ResourcePoolConfigurationService.c
-libVirt_ResourcePoolConfigurationService_la_LIBADD = -lVirt_HostSystem
+libVirt_ResourcePoolConfigurationService_la_LIBADD = -lVirt_HostSystem \
+                                                     -lVirt_DevicePool \
+                                                     -lVirt_RASD
 
 libVirt_ResourcePoolConfigurationCapabilities_la_SOURCES = Virt_ResourcePoolConfigurationCapabilities.c
 
