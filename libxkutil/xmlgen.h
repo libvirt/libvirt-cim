@@ -22,6 +22,7 @@
 #define __XMLGEN_H
 
 #include "device_parsing.h"
+#include "pool_parsing.h"
 
 #include "cmpidt.h"
 
@@ -32,5 +33,7 @@ struct kv {
 
 char *system_to_xml(struct domain *dominfo);
 char *device_to_xml(struct virt_device *dev);
+
+char *pool_to_xml(struct virt_pool *pool);
 
 #endif

@@ -38,6 +38,7 @@
 #define XML_ERROR "Failed to allocate XML memory"
 
 typedef const char *(*devfn_t)(xmlNodePtr node, struct domain *dominfo);
+typedef const char *(*poolfn_t)(xmlNodePtr node, struct virt_pool *pool);
 
 static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
 {
@@ -763,6 +764,122 @@ char *system_to_xml(struct domain *dominfo)
  out:
         if (msg != NULL) {
                 CU_DEBUG("Failed to create XML: %s", msg);
+        }
+
+        xmlFreeNode(root);
+
+        return xml;
+}
+
+static const char *net_pool_xml(xmlNodePtr root,
+                                struct virt_pool *_pool)
+{
+        xmlNodePtr net = NULL;
+        xmlNodePtr ip = NULL;
+        xmlNodePtr forward = NULL;
+        xmlNodePtr dhcp = NULL;
+        xmlNodePtr range = NULL;
+        struct net_pool *pool = &_pool->pool_info.net;
+
+        net = xmlNewChild(root, NULL, BAD_CAST "network", NULL);
+        if (net == NULL)
+                goto out;
+
+        if (xmlNewChild(net, NULL, BAD_CAST "name", BAD_CAST _pool->id) == NULL)
+                goto out;
+
+        if (xmlNewChild(net, NULL, BAD_CAST "bridge", NULL) == NULL)
+                goto out;
+
+        if (pool->forward_mode != NULL) {
+                forward = xmlNewChild(net, NULL, BAD_CAST "forward", NULL);
+                if (forward == NULL)
+                        goto out;
+
+                if (xmlNewProp(forward,
+                               BAD_CAST "mode",
+                               BAD_CAST pool->forward_mode) == NULL)
+                        goto out;
+
+                if (pool->forward_dev != NULL) {
+                        if (xmlNewProp(forward,
+                                       BAD_CAST "dev",
+                                       BAD_CAST pool->forward_dev) == NULL)
+                        goto out;
+                }
+        }
+
+        ip = xmlNewChild(net, NULL, BAD_CAST "ip", NULL);
+        if (ip == NULL)
+                goto out;
+
+        if (xmlNewProp(ip, BAD_CAST "address", BAD_CAST pool->addr) == NULL)
+                goto out;
+
+        if (xmlNewProp(ip, BAD_CAST "netmask", BAD_CAST pool->netmask) == NULL)
+                goto out;
+
+        if ((pool->ip_start != NULL) && (pool->ip_end != NULL)) {
+                dhcp = xmlNewChild(ip, NULL, BAD_CAST "dhcp", NULL);
+                if (dhcp == NULL)
+                        goto out;
+
+                range = xmlNewChild(dhcp, NULL, BAD_CAST "range", NULL);
+                if (range == NULL)
+                        goto out;
+
+                if (xmlNewProp(range,
+                               BAD_CAST "start",
+                               BAD_CAST pool->ip_start) == NULL)
+                        goto out;
+
+                if (xmlNewProp(range,
+                               BAD_CAST "end",
+                               BAD_CAST pool->ip_end) == NULL)
+                        goto out;
+        }
+
+        return NULL;
+
+ out:
+        return XML_ERROR;
+}
+
+char *pool_to_xml(struct virt_pool *pool) {
+        char *xml = NULL;
+        xmlNodePtr root = NULL;
+        int type = pool->type;
+        const char *msg = NULL;
+        poolfn_t func;
+
+        root = xmlNewNode(NULL, BAD_CAST "tmp");
+        if (root == NULL) {
+                msg = XML_ERROR;
+                goto out;
+        }
+
+        switch (type) {
+        case CIM_RES_TYPE_NET:
+                func = net_pool_xml;
+                break;
+        default:
+                CU_DEBUG("pool_to_xml: invalid type specified: %d", type);
+                msg = "pool_to_xml: invalid type specified";
+                goto out;
+        }
+
+        msg = func(root, pool);
+        if (msg != NULL)
+                goto out;
+
+        xml = tree_to_xml(root->children);
+        if (xml == NULL)
+                msg = "XML generation failed";
+ out:
+        if (msg != NULL) {
+                CU_DEBUG("Failed to create pool XML: %s", msg);
+        } else {
+                CU_DEBUG("Created pool XML:\n%s\n", xml);
         }
 
         xmlFreeNode(root);
