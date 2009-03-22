@@ -135,6 +135,14 @@ static int instance_from_dom(virDomainPtr dom,
                               (CMPIValue *)&clock, CMPI_uint16);
         }
 
+        if (dominfo->dev_emu != NULL) {
+                CMSetProperty(inst,
+                              "Emulator",
+                              (CMPIValue *)dominfo->dev_emu->dev.emu.path,
+                              CMPI_chars);
+        }
+
+
         if ((dominfo->type == DOMAIN_XENFV) ||
             (dominfo->type == DOMAIN_KVM))
                 _set_fv_prop(dominfo, inst);
