@@ -323,6 +323,90 @@ static CMPIStatus create_child_pool(CMPIMethodMI *self,
         return s;
 }
 
+static CMPIStatus delete_pool(CMPIMethodMI *self,
+                              const CMPIContext *context,
+                              const CMPIResult *results,
+                              const CMPIObjectPath *reference,
+                              const CMPIArgs *argsin,
+                              CMPIArgs *argsout)
+{
+        uint32_t rc = CIM_SVPC_RETURN_FAILED;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+        CMPIObjectPath *pool = NULL;
+        virConnectPtr conn = NULL;
+        const char *poolid = NULL;
+        char *pool_name = NULL;
+        uint16_t type;
+
+        CU_DEBUG("DeleteResourcePool");
+
+        if (cu_get_ref_arg(argsin, "Pool", &pool) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get Pool reference arg");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `Pool'");
+                goto out;
+        }
+
+        s = get_pool_by_ref(_BROKER, pool, &inst);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Resource pool instance does not exist");
+                goto out;
+        }
+
+        if (cu_get_str_path(pool, "InstanceID", &poolid) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get InstanceID from pool reference");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID in pool reference");
+                goto out;
+        }
+
+        pool_name = name_from_pool_id(poolid);
+        if (pool_name == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Pool has invalid InstanceID");
+                goto out;
+        }
+
+        type = res_type_from_pool_classname(CLASSNAME(pool));
+        if (type == CIM_RES_TYPE_UNKNOWN) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine resource type of pool");
+                goto out;
+        }
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to connect to hypervisor");
+                goto out;
+        }
+
+        if (destroy_pool(conn, pool_name, type) == 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to destroy resource pool");
+                goto out;
+        }
+
+ out:
+        free(pool_name);
+        virConnectClose(conn);
+
+        if (s.rc == CMPI_RC_OK)
+                rc = CIM_SVPC_RETURN_COMPLETED;
+        CMReturnData(results, &rc, CMPI_uint32);
+
+        return s;
+}
+
 static CMPIStatus dummy_handler(CMPIMethodMI *self,
                                 const CMPIContext *context,
                                 const CMPIResult *results,
@@ -363,8 +447,10 @@ static struct method_handler RemoveResourcesFromResourcePool = {
 
 static struct method_handler DeleteResourcePool = {
         .name = "DeleteResourcePool",
-        .handler = dummy_handler,
-        .args = { ARG_END }
+        .handler = delete_pool,
+        .args = {{"Pool", CMPI_ref, false},
+                 ARG_END
+        }
 };
 
 static struct method_handler *my_handlers[] = {
