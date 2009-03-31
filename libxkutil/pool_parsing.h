@@ -47,6 +47,7 @@ struct virt_pool {
 void cleanup_virt_pool(struct virt_pool **pool);
 
 int define_pool(virConnectPtr conn, const char *xml, int res_type);
+int destroy_pool(virConnectPtr conn, const char *name, int res_type);
 
 
 #endif

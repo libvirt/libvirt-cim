@@ -83,6 +83,38 @@ int define_pool(virConnectPtr conn, const char *xml, int res_type)
         return ret; 
 }
 
+int destroy_pool(virConnectPtr conn, const char *name, int res_type)
+{
+        int ret = 0;
+
+        if (res_type == CIM_RES_TYPE_NET) {
+
+                virNetworkPtr ptr = virNetworkLookupByName(conn, name);
+                if (ptr == NULL) {
+                        CU_DEBUG("Virtual network %s is not defined", name);
+                        return ret;
+                }
+
+                if (virNetworkDestroy(ptr) != 0) {
+                        CU_DEBUG("Unable to destroy virtual network");
+                        goto err1;
+                }
+
+                if (virNetworkUndefine(ptr) != 0) {
+                        CU_DEBUG("Unable to undefine virtual network");
+                        goto err1;
+                }
+
+                ret = 1;
+
+ err1:
+                virNetworkFree(ptr);
+        }
+
+
+        return ret;
+}
+
 /*
  * Local Variables:
  * mode: C
