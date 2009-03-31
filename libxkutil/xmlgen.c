@@ -545,7 +545,7 @@ static char *os_xml(xmlNodePtr root, struct domain *domain)
                 return _xenpv_os_xml(os, domain);
         else if (domain->type == DOMAIN_XENFV)
                 return _xenfv_os_xml(os, domain);
-        else if (domain->type == DOMAIN_KVM)
+        else if ((domain->type == DOMAIN_KVM) || (domain->type == DOMAIN_QEMU))
                 return _kvm_os_xml(os, domain);
         else if (domain->type == DOMAIN_LXC)
                 return _lxc_os_xml(os, domain);
@@ -694,6 +694,8 @@ char *system_to_xml(struct domain *dominfo)
                 domtype = "xen";
         else if (dominfo->type == DOMAIN_KVM)
                 domtype = "kvm";
+        else if (dominfo->type == DOMAIN_QEMU)
+                domtype = "qemu";
         else if (dominfo->type == DOMAIN_LXC)
                 domtype = "lxc";
         else

@@ -144,7 +144,7 @@ static int instance_from_dom(virDomainPtr dom,
 
 
         if ((dominfo->type == DOMAIN_XENFV) ||
-            (dominfo->type == DOMAIN_KVM))
+            (dominfo->type == DOMAIN_KVM) || (dominfo->type == DOMAIN_QEMU))
                 _set_fv_prop(dominfo, inst);
         else if (dominfo->type == DOMAIN_XENPV)
                 _set_pv_prop(dominfo, inst);

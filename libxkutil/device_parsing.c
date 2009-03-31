@@ -827,9 +827,10 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         if ((STREQC(dominfo->os_info.fv.type, "hvm")) &&
             (STREQC(dominfo->typestr, "xen")))
                 dominfo->type = DOMAIN_XENFV;
-        else if ((STREQC(dominfo->typestr, "kvm")) ||
-                 (STREQC(dominfo->typestr, "qemu")))
+        else if (STREQC(dominfo->typestr, "kvm"))
                 dominfo->type = DOMAIN_KVM;
+        else if (STREQC(dominfo->typestr, "qemu"))
+                dominfo->type = DOMAIN_QEMU;
         else if (STREQC(dominfo->typestr, "lxc"))
                 dominfo->type = DOMAIN_LXC;
         else if (STREQC(dominfo->os_info.pv.type, "linux"))
@@ -994,7 +995,7 @@ void cleanup_dominfo(struct domain **dominfo)
                 free(dom->os_info.pv.initrd);
                 free(dom->os_info.pv.cmdline);
         } else if ((dom->type == DOMAIN_XENFV) ||
-                   (dom->type == DOMAIN_KVM)) {
+                   (dom->type == DOMAIN_KVM) || (dom->type == DOMAIN_QEMU)) {
                 free(dom->os_info.fv.type);
                 free(dom->os_info.fv.loader);
                 free(dom->os_info.fv.boot);

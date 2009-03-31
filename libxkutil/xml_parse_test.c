@@ -41,7 +41,7 @@ static void print_os(struct domain *dom,
                 print_value(d, "Loader", dom->os_info.fv.loader);
                 print_value(d, "Boot", dom->os_info.fv.boot);
 
-        } else if (dom->type == DOMAIN_KVM) {
+        } else if ((dom->type == DOMAIN_KVM) || (dom->type == DOMAIN_QEMU)) {
                 print_value(d, "Domain Type", "KVM/QEMU");
                 print_value(d, "Type", dom->os_info.fv.type);
                 print_value(d, "Loader", dom->os_info.fv.loader);

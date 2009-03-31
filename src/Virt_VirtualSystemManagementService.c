@@ -174,6 +174,29 @@ static bool fv_set_emulator(struct domain *domain,
         return true;
 }
 
+static bool system_has_kvm(const char *pfx)
+{
+        CMPIStatus s;
+        virConnectPtr conn;
+        char *caps = NULL;
+        bool kvm = false;
+
+        conn = connect_by_classname(_BROKER, pfx, &s);
+        if ((conn == NULL) || (s.rc != CMPI_RC_OK)) {
+                return false;
+        }
+
+        caps = virConnectGetCapabilities(conn);
+        if (caps != NULL)
+                kvm = (strstr(caps, "kvm") != NULL);
+
+        free(caps);
+
+        virConnectClose(conn);
+
+        return kvm;
+}
+
 static int fv_vssd_to_domain(CMPIInstance *inst,
                              struct domain *domain,
                              const char *pfx)
@@ -182,7 +205,10 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
         const char *val;
 
         if (STREQC(pfx, "KVM")) {
-                domain->type = DOMAIN_KVM;
+                if (system_has_kvm(pfx))
+                        domain->type = DOMAIN_KVM;
+                else
+                        domain->type = DOMAIN_QEMU;
         } else if (STREQC(pfx, "Xen")) {
                 domain->type = DOMAIN_XENFV;
         } else {
