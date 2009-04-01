@@ -374,6 +374,7 @@ static bool get_max_procs(const CMPIObjectPath *ref,
         ret = true;
 
  out:
+       virConnectClose(conn);
        return ret;
 }
 
@@ -702,7 +703,7 @@ static int get_disk_freespace(const CMPIObjectPath *ref,
         bool ret = false;
         const char *inst_id;
         CMPIrc prop_ret;
-        virConnectPtr conn;
+        virConnectPtr conn = NULL;
         CMPIInstance *pool_inst;
 
         if (cu_get_str_path(ref, "InstanceID", &inst_id) != CMPI_RC_OK) {
@@ -738,6 +739,7 @@ static int get_disk_freespace(const CMPIObjectPath *ref,
         ret = true;
 
  out:
+        virConnectClose(conn);
         return ret;
 }
 

@@ -969,7 +969,7 @@ static CMPIInstance *connect_and_create(char *xml,
                                 CMPI_RC_ERR_FAILED,
                                 conn,
                                 "Failed to define domain");
-                return NULL;
+                goto out;
         }
 
         name = virDomainGetName(dom);
@@ -982,6 +982,7 @@ static CMPIInstance *connect_and_create(char *xml,
                            "Failed to lookup resulting system");
         }
 
+ out:
         virDomainFree(dom);
         virConnectClose(conn);
 

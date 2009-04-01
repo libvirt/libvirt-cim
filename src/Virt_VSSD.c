@@ -238,6 +238,7 @@ static CMPIStatus return_enum_vssd(const CMPIObjectPath *reference,
 
  out:
         free(list);
+        virConnectClose(conn);
 
         return s;
 }

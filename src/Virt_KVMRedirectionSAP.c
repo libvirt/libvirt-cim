@@ -269,7 +269,7 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
                             struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        virConnectPtr conn;
+        virConnectPtr conn = NULL;
         virDomainPtr *domain_list;
         struct domain *dominfo = NULL;
         struct vnc_ports port_list;
@@ -364,6 +364,7 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
         }
         free(port_list.list);
 
+        virConnectClose(conn);
         return s;
 }
 
