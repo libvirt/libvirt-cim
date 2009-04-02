@@ -846,10 +846,7 @@ static CMPIStatus volume_template(const CMPIObjectPath *ref,
 
         ret = virStorageVolGetInfo(volume_ptr, &vol_info);
         if (ret == -1) {
-                virt_set_status(_BROKER, &s,
-                                CMPI_RC_ERR_FAILED,
-                                virStorageVolGetConnect(volume_ptr),
-                                "Unable to get volume information");
+                CU_DEBUG("Unable to get volume information");
                 goto out;
         }
 
