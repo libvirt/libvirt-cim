@@ -36,10 +36,22 @@ struct net_pool {
         char *forward_dev;
 };
 
+struct disk_pool {
+        enum {DISK_POOL_UNKNOWN, 
+              DISK_POOL_DIR, 
+              DISK_POOL_FS, 
+              DISK_POOL_NETFS, 
+              DISK_POOL_DISK, 
+              DISK_POOL_ISCSI, 
+              DISK_POOL_LOGICAL} pool_type;
+        char *path;
+};
+
 struct virt_pool {
         uint16_t type;
         union {
                 struct net_pool net;
+                struct disk_pool disk;
         } pool_info;
         char *id;
 };

@@ -33,6 +33,16 @@
 #include "pool_parsing.h"
 #include "../src/svpc_types.h"
 
+/*
+ *  * Right now, detect support and use it, if available.
+ *   * Later, this can be a configure option if needed
+ *    */
+#if LIBVIR_VERSION_NUMBER > 4000
+# define VIR_USE_LIBVIRT_STORAGE 1
+#else
+# define VIR_USE_LIBVIRT_STORAGE 0
+#endif
+
 static void cleanup_net_pool(struct net_pool pool) {
         free(pool.addr);
         free(pool.netmask);
@@ -78,7 +88,26 @@ int define_pool(virConnectPtr conn, const char *xml, int res_type)
                 }
 
                 virNetworkFree(ptr);
+        } else if (res_type == CIM_RES_TYPE_DISK) {
+#if VIR_USE_LIBVIRT_STORAGE
+                virStoragePoolPtr ptr = virStoragePoolDefineXML(conn, xml, 0);
+                if (ptr == NULL) {
+                        CU_DEBUG("Unable to define storage pool");
+                        return 0;
+                }
+
+                if (virStoragePoolCreate(ptr, 0) != 0) {
+                        CU_DEBUG("Unable to start storage pool");
+                        ret = 0;
+
+                        if (virStoragePoolUndefine(ptr) != 0)
+                                CU_DEBUG("Unable to undefine storage pool");
+                }
+
+                virStoragePoolFree(ptr);
+#endif
         }
+
 
         return ret; 
 }
