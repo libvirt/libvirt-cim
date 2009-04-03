@@ -845,6 +845,67 @@ static const char *net_pool_xml(xmlNodePtr root,
         return XML_ERROR;
 }
 
+static const char *disk_pool_type_to_str(uint16_t type)
+{
+        switch (type) {
+        case DISK_POOL_DIR:
+                return "dir";      
+        case DISK_POOL_FS:
+                return "fs";      
+        case DISK_POOL_NETFS:
+                return "netfs";      
+        case DISK_POOL_DISK:
+                return "disk";      
+        case DISK_POOL_ISCSI:
+                return "iscsi";      
+        case DISK_POOL_LOGICAL:
+                return "logical";      
+        default:
+                CU_DEBUG("Unsupported disk pool type");
+        }
+
+        return NULL;
+}
+
+static const char *disk_pool_xml(xmlNodePtr root,
+                                 struct virt_pool *_pool)
+{
+        xmlNodePtr disk = NULL;
+        xmlNodePtr name = NULL;
+        xmlNodePtr target = NULL;
+        xmlNodePtr path = NULL;
+        const char *type = NULL;
+        struct disk_pool *pool = &_pool->pool_info.disk;
+
+        type = disk_pool_type_to_str(pool->pool_type);
+        if (type == NULL)
+                goto out;
+
+        disk = xmlNewChild(root, NULL, BAD_CAST "pool", NULL);
+        if (disk == NULL)
+                goto out;
+
+        if (xmlNewProp(disk, BAD_CAST "type", BAD_CAST type) == NULL)
+                goto out;
+
+        name = xmlNewChild(disk, NULL, BAD_CAST "name", BAD_CAST _pool->id);
+        if (name == NULL)
+                goto out;
+
+        target = xmlNewChild(disk, NULL, BAD_CAST "target", NULL);
+        if (target == NULL)
+                goto out;
+
+        path = xmlNewChild(target, NULL, BAD_CAST "path", BAD_CAST pool->path);
+        if (target == NULL)
+                goto out;
+
+        return NULL;
+
+ out:
+        return XML_ERROR;
+ }
+
 char *pool_to_xml(struct virt_pool *pool) {
         char *xml = NULL;
         xmlNodePtr root = NULL;
@@ -861,6 +922,9 @@ char *pool_to_xml(struct virt_pool *pool) {
         switch (type) {
         case CIM_RES_TYPE_NET:
                 func = net_pool_xml;
+                break;
+        case CIM_RES_TYPE_DISK:
+                func = disk_pool_xml;
                 break;
         default:
                 CU_DEBUG("pool_to_xml: invalid type specified: %d", type);
