@@ -40,6 +40,16 @@ const static CMPIBroker *_BROKER;
 
 const char *DEF_POOL_NAME = "libvirt-cim-pool";
 
+/*
+ *  * Right now, detect support and use it, if available.
+ *   * Later, this can be a configure option if needed
+ *    */
+#if LIBVIR_VERSION_NUMBER > 4000
+# define VIR_USE_LIBVIRT_STORAGE 1
+#else
+# define VIR_USE_LIBVIRT_STORAGE 0
+#endif
+
 static CMPIStatus create_child_pool_parse_args(const CMPIArgs *argsin,
                                                const char **name,
                                                CMPIArray **set,
@@ -104,6 +114,40 @@ static const char *net_rasd_to_pool(CMPIInstance *inst,
 
 }
 
+#if VIR_USE_LIBVIRT_STORAGE
+static const char *disk_rasd_to_pool(CMPIInstance *inst,
+                                    struct virt_pool *pool,
+                                    const char *ns)
+{
+        const char *val = NULL;
+        const char *msg = NULL;
+        uint16_t type;
+
+        if (cu_get_u16_prop(inst, "Type", &type) != CMPI_RC_OK)
+                return "Missing `Type' property";
+
+        if (type != DISK_POOL_DIR)
+                return "Storage pool type not supported";
+
+        pool->pool_info.disk.pool_type = type;
+
+        if (cu_get_str_prop(inst, "Path", &val) != CMPI_RC_OK)
+                return "Missing `Path' property";
+
+        pool->pool_info.disk.path = strdup(val);
+
+        return msg;
+
+}
+#else
+static const char *disk_rasd_to_pool(CMPIInstance *inst,
+                                    struct virt_pool *pool,
+                                    const char *ns)
+{
+        return "Storage pool creation not supported in this version of libvirt";
+}
+#endif
+
 static const char *rasd_to_vpool(CMPIInstance *inst,
                                  struct virt_pool *pool,
                                  uint16_t type,
@@ -113,6 +157,8 @@ static const char *rasd_to_vpool(CMPIInstance *inst,
 
         if (type == CIM_RES_TYPE_NET) {
                 return net_rasd_to_pool(inst, pool, ns);
+        } else if (type == CIM_RES_TYPE_DISK) {
+                return disk_rasd_to_pool(inst, pool, ns);
         }
 
         pool->type = CIM_RES_TYPE_UNKNOWN;
@@ -149,9 +195,6 @@ static const char *get_pool_properties(CMPIArray *settings,
 
         if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK)
                 return "Unable to determine resource type";
-
-        if (type != CIM_RES_TYPE_NET)
-                return "Only network pools currently supported";
 
         msg = rasd_to_vpool(inst, pool, type, NAMESPACE(op));
 
