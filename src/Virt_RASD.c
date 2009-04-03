@@ -524,7 +524,8 @@ CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
        if (base == NULL)
                 goto out;
 
-       if (STREQ(base, "DiskResourceAllocationSettingData"))
+       if ((STREQ(base, "DiskResourceAllocationSettingData")) ||
+                (STREQ(base, "DiskPoolResourceAllocationSettingData")))
                *type = CIM_RES_TYPE_DISK;
        else if ((STREQ(base, "NetResourceAllocationSettingData")) ||
                 (STREQ(base, "NetPoolResourceAllocationSettingData")))

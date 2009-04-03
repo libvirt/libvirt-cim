@@ -163,7 +163,7 @@ class LXC_InputResourceAllocationSettingData : LXC_ResourceAllocationSettingData
       string BusType;
 };
 
-[Description ("Xen virtual pool settings"),
+[Description ("Xen virtual network pool settings"),
  Provider("cmpi::Virt_RASD")
 ]
 class Xen_NetPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingData
@@ -174,7 +174,7 @@ class Xen_NetPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingDa
       string ForwardMode;
 };
 
-[Description ("KVM virtual pool settings"),
+[Description ("KVM virtual network pool settings"),
  Provider("cmpi::Virt_RASD")
 ]
 class KVM_NetPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingData
@@ -185,7 +185,7 @@ class KVM_NetPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingDa
       string ForwardMode;
 };
 
-[Description ("LXC virtual pool settings"),
+[Description ("LXC virtual network pool settings"),
  Provider("cmpi::Virt_RASD")
 ]
 class LXC_NetPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingData
@@ -195,3 +195,43 @@ class LXC_NetPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingDa
       string IPRangeEnd;
       string ForwardMode;
 };
+
+[Description ("Xen virtual disk pool settings"),
+ Provider("cmpi::Virt_RASD")
+]
+class Xen_DiskPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingData
+{
+      [Description ("Storage pool type"),
+        ValueMap {"0", "1", "2", "3", "4", "5", "6"},
+        Values {"Unknown", "Directory, File System, Network File System, "
+                "Disk, ISCSI, Logical"}]
+      uint16 Type;
+      string Path;
+};
+
+[Description ("KVM virtual disk pool settings"),
+ Provider("cmpi::Virt_RASD")
+]
+class KVM_DiskPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+      [Description ("Storage pool type"),
+        ValueMap {"0", "1", "2", "3", "4", "5", "6"},
+        Values {"Unknown", "Directory, File System, Network File System, "
+                "Disk, ISCSI, Logical"}]
+      uint16 Type;
+      string Path;
+};
+
+[Description ("LXC virtual disk pool settings"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_DiskPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
+      [Description ("Storage pool type"),
+        ValueMap {"0", "1", "2", "3", "4", "5", "6"},
+        Values {"Unknown", "Directory, File System, Network File System, "
+                "Disk, ISCSI, Logical"}]
+      uint16 Type;
+      string Path;
+};
+
