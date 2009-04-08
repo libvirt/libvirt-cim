@@ -960,7 +960,8 @@ static CMPIStatus handle_migrate(virConnectPtr dconn,
         if ((const int)info.state == VIR_DOMAIN_SHUTOFF) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
-                           "Domain must not be shut off for live migration");
+                           "Domain must be running for live " 
+                           "or resume migration");
                 goto out;
         }
 
