@@ -1014,6 +1014,9 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
                 }         
                 
                 s = volume_template(ref, template_type, volptr, list);
+
+                virStorageVolFree(volptr);
+
                 if (s.rc != CMPI_RC_OK)
                         goto out;            
         }
@@ -1024,7 +1027,6 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         free(pfx);
         free(volnames);
         free(host);
-        virStorageVolFree(volptr);
         virStoragePoolFree(poolptr);
         virConnectClose(conn);
 
