@@ -374,7 +374,7 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
                                    CMPIInstance **_inst)
 {
         virConnectPtr conn;
-        virDomainPtr dom;
+        virDomainPtr dom = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         struct domain *dominfo = NULL;
@@ -445,14 +445,13 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
 
         inst = get_console_sap(broker, ref, conn, port, &s);
 
-        virDomainFree(dom);
-
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
         *_inst = inst;
 
  out:
+        virDomainFree(dom);
         virConnectClose(conn);
         if (port != NULL)
                 free(port->name);

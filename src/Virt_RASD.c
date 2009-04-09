@@ -63,12 +63,17 @@ int list_rasds(virConnectPtr conn,
               struct virt_device **list)
 {
         virDomainPtr dom;
+        int count = 0;
 
         dom = virDomainLookupByName(conn, host);
         if (dom == NULL)
                 return 0;
 
-        return get_devices(dom, list, type);
+        count = get_devices(dom, list, type);
+
+        virDomainFree(dom);
+
+        return count;
 }
 
 static struct virt_device *find_dev(virConnectPtr conn,
@@ -703,6 +708,7 @@ CMPIStatus enum_rasds(const CMPIBroker *broker,
 
  out:
         virConnectClose(conn);
+        free(domains);
 
         return s;
 }
