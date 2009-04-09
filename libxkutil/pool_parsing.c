@@ -138,8 +138,31 @@ int destroy_pool(virConnectPtr conn, const char *name, int res_type)
 
  err1:
                 virNetworkFree(ptr);
-        }
 
+        } else if (res_type == CIM_RES_TYPE_DISK) {
+#if VIR_USE_LIBVIRT_STORAGE
+                virStoragePoolPtr ptr = virStoragePoolLookupByName(conn, name);
+                if (ptr == NULL) {
+                        CU_DEBUG("Storage pool %s is not defined", name);
+                        return 0;
+                }
+
+                if (virStoragePoolDestroy(ptr) != 0) {
+                        CU_DEBUG("Unable to destroy storage pool");
+                        goto err2;
+                }
+
+                if (virStoragePoolUndefine(ptr) != 0) {
+                        CU_DEBUG("Unable to undefine storage pool");
+                        goto err2;
+                }
+
+                ret = 1;
+
+ err2:
+                virStoragePoolFree(ptr);
+#endif
+        }
 
         return ret;
 }

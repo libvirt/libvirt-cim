@@ -139,12 +139,31 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
         return msg;
 
 }
+
+static const char *_delete_pool(virConnectPtr conn,
+                                const char *pool_name,
+                                uint16_t type)
+{
+        const char *msg = NULL;
+
+        if (destroy_pool(conn, pool_name, type) == 0)
+                msg = "Unable to destroy resource pool";
+
+        return msg;
+}
 #else
 static const char *disk_rasd_to_pool(CMPIInstance *inst,
                                     struct virt_pool *pool,
                                     const char *ns)
 {
         return "Storage pool creation not supported in this version of libvirt";
+}
+
+static const char *_delete_pool(virConnectPtr conn,
+                                const char *pool_name,
+                                uint16_t type)
+{
+        return "Storage pool deletion not supported in this version of libvirt";
 }
 #endif
 
@@ -379,6 +398,7 @@ static CMPIStatus delete_pool(CMPIMethodMI *self,
         CMPIObjectPath *pool = NULL;
         virConnectPtr conn = NULL;
         const char *poolid = NULL;
+        const char *msg = NULL;
         char *pool_name = NULL;
         uint16_t type;
 
@@ -432,10 +452,12 @@ static CMPIStatus delete_pool(CMPIMethodMI *self,
                 goto out;
         }
 
-        if (destroy_pool(conn, pool_name, type) == 0) {
+        msg = _delete_pool(conn, pool_name, type);
+        if (msg != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Unable to destroy resource pool");
+                           "Storage pool deletion error: %s", msg);
+
                 goto out;
         }
 
