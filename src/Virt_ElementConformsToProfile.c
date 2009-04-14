@@ -64,15 +64,7 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         if (class == NULL)
                 return s;
 
-        if (STREQC(class, "HostSystem")) {
-                s = get_host(_BROKER, info->context, ref, &inst, false);
-                if (s.rc == CMPI_RC_OK)
-                        inst_list_add(list, inst);
-                goto out;
-        }
-
-        classname = get_typed_class(pfx_from_conn(conn), 
-                                    class);
+        classname = get_typed_class(pfx_from_conn(conn),  class);
         if (classname == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED, 
@@ -83,7 +75,14 @@ static CMPIStatus elem_instances(const CMPIObjectPath *ref,
         op = CMNewObjectPath(_BROKER, CIM_VIRT_NS, classname, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto out;
-        
+
+        if (STREQC(class, "HostSystem")) {
+                s = get_host(_BROKER, info->context, op, &inst, false);
+                if (s.rc == CMPI_RC_OK)
+                        inst_list_add(list, inst);
+                goto out;
+        }
+
         en = CBEnumInstances(_BROKER, info->context , op, info->properties, &s);
         if (en == NULL) {
                 cu_statusf(_BROKER, &s,
