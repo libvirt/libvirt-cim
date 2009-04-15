@@ -78,8 +78,7 @@ static CMPIStatus create_child_pool_parse_args(const CMPIArgs *argsin,
 }
 
 static const char *net_rasd_to_pool(CMPIInstance *inst,
-                                    struct virt_pool *pool,
-                                    const char *ns)
+                                    struct virt_pool *pool)
 {
         const char *val = NULL;
         const char *msg = NULL;
@@ -116,8 +115,7 @@ static const char *net_rasd_to_pool(CMPIInstance *inst,
 
 #if VIR_USE_LIBVIRT_STORAGE
 static const char *disk_rasd_to_pool(CMPIInstance *inst,
-                                    struct virt_pool *pool,
-                                    const char *ns)
+                                    struct virt_pool *pool)
 {
         const char *val = NULL;
         const char *msg = NULL;
@@ -153,8 +151,7 @@ static const char *_delete_pool(virConnectPtr conn,
 }
 #else
 static const char *disk_rasd_to_pool(CMPIInstance *inst,
-                                    struct virt_pool *pool,
-                                    const char *ns)
+                                    struct virt_pool *pool)
 {
         return "Storage pool creation not supported in this version of libvirt";
 }
@@ -169,15 +166,14 @@ static const char *_delete_pool(virConnectPtr conn,
 
 static const char *rasd_to_vpool(CMPIInstance *inst,
                                  struct virt_pool *pool,
-                                 uint16_t type,
-                                 const char *ns)
+                                 uint16_t type)
 {
         pool->type = type;
 
         if (type == CIM_RES_TYPE_NET) {
-                return net_rasd_to_pool(inst, pool, ns);
+                return net_rasd_to_pool(inst, pool);
         } else if (type == CIM_RES_TYPE_DISK) {
-                return disk_rasd_to_pool(inst, pool, ns);
+                return disk_rasd_to_pool(inst, pool);
         }
 
         pool->type = CIM_RES_TYPE_UNKNOWN;
@@ -215,7 +211,7 @@ static const char *get_pool_properties(CMPIArray *settings,
         if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK)
                 return "Unable to determine resource type";
 
-        msg = rasd_to_vpool(inst, pool, type, NAMESPACE(op));
+        msg = rasd_to_vpool(inst, pool, type);
 
         return msg;
 }
