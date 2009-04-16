@@ -52,6 +52,11 @@ static void cleanup_net_pool(struct net_pool pool) {
         free(pool.forward_dev);
 }
 
+static void cleanup_disk_pool(struct disk_pool pool) {
+        free(pool.path);
+        free(pool.device_path);
+}
+
 void cleanup_virt_pool(struct virt_pool **pool)
 {
         struct virt_pool *_pool = *pool;
@@ -61,6 +66,8 @@ void cleanup_virt_pool(struct virt_pool **pool)
  
         if (_pool->type == CIM_RES_TYPE_NET)
                 cleanup_net_pool(_pool->pool_info.net);
+        else if (_pool->type == CIM_RES_TYPE_DISK)
+                cleanup_disk_pool(_pool->pool_info.disk);
 
         free(_pool->id);
         free(_pool);

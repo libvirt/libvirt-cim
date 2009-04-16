@@ -874,6 +874,8 @@ static const char *disk_pool_xml(xmlNodePtr root,
 {
         xmlNodePtr disk = NULL;
         xmlNodePtr name = NULL;
+        xmlNodePtr src = NULL;
+        xmlNodePtr dev = NULL;
         xmlNodePtr target = NULL;
         xmlNodePtr path = NULL;
         const char *type = NULL;
@@ -893,6 +895,21 @@ static const char *disk_pool_xml(xmlNodePtr root,
         name = xmlNewChild(disk, NULL, BAD_CAST "name", BAD_CAST _pool->id);
         if (name == NULL)
                 goto out;
+
+        if (pool->device_path != NULL) {
+                src = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
+                if (src == NULL)
+                        goto out;
+
+                dev = xmlNewChild(src, NULL, BAD_CAST "device", BAD_CAST NULL);
+                if (dev == NULL)
+                        goto out;
+
+                if (xmlNewProp(dev,
+                               BAD_CAST "path", 
+                               BAD_CAST pool->device_path) == NULL)
+                        goto out;
+        }
 
         target = xmlNewChild(disk, NULL, BAD_CAST "target", NULL);
         if (target == NULL)

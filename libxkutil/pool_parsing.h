@@ -45,6 +45,7 @@ struct disk_pool {
               DISK_POOL_ISCSI, 
               DISK_POOL_LOGICAL} pool_type;
         char *path;
+        char *device_path;
 };
 
 struct virt_pool {

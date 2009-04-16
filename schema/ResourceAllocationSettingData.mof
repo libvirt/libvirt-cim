@@ -207,6 +207,7 @@ class Xen_DiskPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingD
                 "Disk, ISCSI, Logical"}]
       uint16 Type;
       string Path;
+      string DevicePath;
 };
 
 [Description ("KVM virtual disk pool settings"),
@@ -220,6 +221,7 @@ class KVM_DiskPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingD
                 "Disk, ISCSI, Logical"}]
       uint16 Type;
       string Path;
+      string DevicePath;
 };
 
 [Description ("LXC virtual disk pool settings"),
@@ -233,5 +235,6 @@ class LXC_DiskPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingD
                 "Disk, ISCSI, Logical"}]
       uint16 Type;
       string Path;
+      string DevicePath;
 };
 

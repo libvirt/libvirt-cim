@@ -114,6 +114,25 @@ static const char *net_rasd_to_pool(CMPIInstance *inst,
 }
 
 #if VIR_USE_LIBVIRT_STORAGE
+static void init_disk_pool(struct virt_pool *pool)
+{
+        pool->pool_info.disk.device_path = NULL;
+        pool->pool_info.disk.path = NULL;
+}
+
+static const char *disk_fs_pool(CMPIInstance *inst,
+                                struct virt_pool *pool)
+{
+        const char *val = NULL;
+
+        if (cu_get_str_prop(inst, "DevicePath", &val) != CMPI_RC_OK)
+                return "Missing `DevicePath' property";
+
+        pool->pool_info.disk.device_path = strdup(val);
+
+        return NULL;
+}
+
 static const char *disk_rasd_to_pool(CMPIInstance *inst,
                                     struct virt_pool *pool)
 {
@@ -124,8 +143,19 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
         if (cu_get_u16_prop(inst, "Type", &type) != CMPI_RC_OK)
                 return "Missing `Type' property";
 
-        if (type != DISK_POOL_DIR)
+        init_disk_pool(pool);
+
+        switch (type) {
+        case DISK_POOL_DIR:
+                break;
+        case DISK_POOL_FS:
+                msg = disk_fs_pool(inst, pool);
+                if (msg != NULL)
+                        goto out;
+                break;
+        default:
                 return "Storage pool type not supported";
+        }
 
         pool->pool_info.disk.pool_type = type;
 
@@ -134,6 +164,7 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
 
         pool->pool_info.disk.path = strdup(val);
 
+ out:
         return msg;
 
 }
