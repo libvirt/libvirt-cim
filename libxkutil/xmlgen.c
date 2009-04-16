@@ -153,84 +153,45 @@ static const char *disk_xml(xmlNodePtr root, struct domain *dominfo)
         return msg;
 }
 
-static const char *bridge_net_to_xml(xmlNodePtr root, struct net_device *dev)
+static const char *set_net_source(xmlNodePtr nic, 
+                                  struct net_device *dev,
+                                  const char *src_type)
 {
-        const char *script = "vif-bridge";
-        xmlNodePtr nic;
         xmlNodePtr tmp;
 
-        nic = xmlNewChild(root, NULL, BAD_CAST "interface", NULL);
-        if (nic == NULL)
-                return XML_ERROR;
-        xmlNewProp(nic, BAD_CAST "type", BAD_CAST dev->type);
+        if (dev->source != NULL) {
+                tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST src_type, BAD_CAST dev->source);
+        }
 
-        tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-        xmlNewProp(tmp, BAD_CAST "address", BAD_CAST dev->mac);
+        return NULL;
+}
+
+
+static const char *bridge_net_to_xml(xmlNodePtr nic, struct net_device *dev)
+{
+        const char *script = "vif-bridge";
+        xmlNodePtr tmp;
+        const char *msg = NULL;
 
         tmp = xmlNewChild(nic, NULL, BAD_CAST "script", NULL);
         if (tmp == NULL)
                 return XML_ERROR;
         xmlNewProp(tmp, BAD_CAST "path", BAD_CAST script);
 
-        if (dev->source != NULL) {
-                tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
-                if (tmp == NULL)
-                        return XML_ERROR;
-                xmlNewProp(tmp, BAD_CAST "bridge", BAD_CAST dev->source);
-        }
+        msg = set_net_source(nic, dev, "bridge");
 
-        return NULL;
-}
-
-static const char *network_net_to_xml(xmlNodePtr root, struct net_device *dev)
-{
-        xmlNodePtr nic;
-        xmlNodePtr tmp;
-
-        nic = xmlNewChild(root, NULL, BAD_CAST "interface", NULL);
-        if (nic == NULL)
-                return XML_ERROR;
-        xmlNewProp(nic, BAD_CAST "type", BAD_CAST dev->type);
-
-        tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-        xmlNewProp(tmp, BAD_CAST "address", BAD_CAST dev->mac);
-
-        if (dev->source != NULL) {
-                tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
-                if (tmp == NULL)
-                        return XML_ERROR;
-                xmlNewProp(tmp, BAD_CAST "network", BAD_CAST dev->source);
-        }
-
-        return NULL;
-}
-
-static const char *user_net_to_xml(xmlNodePtr root, struct net_device *dev)
-{
-        xmlNodePtr nic;
-        xmlNodePtr tmp;
-
-        nic = xmlNewChild(root, NULL, BAD_CAST "interface", NULL);
-        if (nic == NULL)
-                return XML_ERROR;
-        xmlNewProp(nic, BAD_CAST "type", BAD_CAST dev->type);
-
-        tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-        xmlNewProp(tmp, BAD_CAST "address", BAD_CAST dev->mac);
-
-        return NULL;
+        return msg;
 }
 
 static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
 {
         int i;
         const char *msg = NULL;
+        xmlNodePtr nic;
+        xmlNodePtr tmp;
 
         for (i = 0; (i < dominfo->dev_net_ct) && (msg == NULL); i++) {
                 struct virt_device *dev = &dominfo->dev_net[i];
@@ -239,12 +200,22 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
 
                 struct net_device *net = &dev->dev.net;
 
+                nic = xmlNewChild(root, NULL, BAD_CAST "interface", NULL);
+                if (nic == NULL)
+                        return XML_ERROR;
+                xmlNewProp(nic, BAD_CAST "type", BAD_CAST net->type);
+
+                tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST "address", BAD_CAST net->mac);
+
                 if (STREQ(dev->dev.net.type, "network"))
-                        msg = network_net_to_xml(root, net);
+                        msg = set_net_source(nic, net, "network");
                 else if (STREQ(dev->dev.net.type, "bridge"))
                         msg = bridge_net_to_xml(root, net);
                 else if (STREQ(dev->dev.net.type, "user"))
-                        msg = user_net_to_xml(root, net);
+                        continue;
                 else
                         msg = "Unknown interface type";
         }
