@@ -524,6 +524,34 @@ static bool get_max_nics(const CMPIObjectPath *ref,
         return ret;
 }
 
+static CMPIStatus set_net_props(int type,
+                                const CMPIObjectPath *ref,
+                                const char *id,
+                                uint64_t num_nics,
+                                const char *model,
+                                struct inst_list *list)
+{
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_NET);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
+
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+        CMSetProperty(inst, "VirtualQuantity",
+                      (CMPIValue *)&num_nics, CMPI_uint64);
+
+        if (model != NULL)
+                CMSetProperty(inst, "ResourceSubType", 
+                             (CMPIValue *)model, CMPI_chars);
+
+        inst_list_add(list, inst);
+
+ out:
+        return s;
+}
+
 static CMPIStatus net_template(const CMPIObjectPath *ref,
                                int template_type,
                                struct inst_list *list)
@@ -531,7 +559,6 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         bool ret;
         uint64_t num_nics;
         const char *id;
-        CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         switch (template_type) {
@@ -560,15 +587,12 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_NET); 
-        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+        
+        s = set_net_props(template_type, ref, id, num_nics, "e1000", list);
+        if (s.rc != CMPI_RC_OK)
                 goto out;
-
-        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-        CMSetProperty(inst, "VirtualQuantity", 
-                      (CMPIValue *)&num_nics, CMPI_uint64);
-
-        inst_list_add(list, inst);
+     
+        s = set_net_props(template_type, ref, id, num_nics, NULL, list);
 
  out:
         return s;
