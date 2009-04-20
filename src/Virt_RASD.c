@@ -398,6 +398,12 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               "Address",
                               (CMPIValue *)dev->dev.net.mac,
                               CMPI_chars);
+
+                if (dev->dev.net.model != NULL)
+                        CMSetProperty(inst,
+                                      "ResourceSubType",
+                                      (CMPIValue *)dev->dev.net.model,
+                                      CMPI_chars);
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 const char *units = "KiloBytes";
 

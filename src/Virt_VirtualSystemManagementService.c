@@ -495,6 +495,12 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         free(dev->dev.net.source);
         dev->dev.net.source = name_from_pool_id(val);
 
+        free(dev->dev.net.model);
+        if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK)
+                dev->dev.net.model = NULL; 
+        else 
+                dev->dev.net.model = strdup(val);
+
  out:
         return msg;
 }
