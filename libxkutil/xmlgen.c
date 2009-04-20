@@ -210,6 +210,13 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                         return XML_ERROR;
                 xmlNewProp(tmp, BAD_CAST "address", BAD_CAST net->mac);
 
+                if (net->model != NULL) {
+                        tmp = xmlNewChild(nic, NULL, BAD_CAST "model", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "type", BAD_CAST net->model);
+                }
+
                 if (STREQ(dev->dev.net.type, "network"))
                         msg = set_net_source(nic, net, "network");
                 else if (STREQ(dev->dev.net.type, "bridge"))

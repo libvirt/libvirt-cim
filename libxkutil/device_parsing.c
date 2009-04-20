@@ -66,6 +66,7 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->type);
         free(dev->mac);
         free(dev->source);
+        free(dev->model);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -311,6 +312,10 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         if (ndev->source != NULL)
                                 continue;
                         goto err;
+                } else if (XSTREQ(child->name, "model")) {
+                        ndev->model = get_attr_value(child, "type");
+                        if (ndev->model == NULL)
+                                goto err;
                 }
         }
 
