@@ -48,6 +48,7 @@ static const CMPIBroker *_BROKER;
 struct disk_pool {
         char *tag;
         char *path;
+        bool primordial;
 };
 
 /*
@@ -60,6 +61,36 @@ struct disk_pool {
 # define VIR_USE_LIBVIRT_STORAGE 0
 #endif
 
+static bool get_disk_parent(struct disk_pool **_pools,
+                            int *_count)
+{
+        struct disk_pool *pools = NULL;
+        int ret = false;
+        int count;
+
+        count = *_count;
+        pools = *_pools;
+
+        pools = realloc(pools, (count + 1) * (sizeof(*pools)));
+        if (pools == NULL) {
+                CU_DEBUG("Failed to alloc new pool");
+                goto out;
+        }
+
+        pools[count].tag = strdup("Parent");
+        pools[count].path = NULL;
+        pools[count].primordial = true;
+        count++;
+
+        *_count = count;
+        *_pools = pools;
+        ret = true;
+
+ out:
+        return ret;
+}
+
+
 #if VIR_USE_LIBVIRT_STORAGE
 static int get_diskpool_config(virConnectPtr conn,
                                struct disk_pool **_pools)
@@ -67,7 +98,7 @@ static int get_diskpool_config(virConnectPtr conn,
         int count = 0;
         int i;
         char ** names = NULL;
-        struct disk_pool *pools;
+        struct disk_pool *pools = NULL;
 
         count = virConnectNumOfStoragePools(conn);
         if (count <= 0)
@@ -91,11 +122,16 @@ static int get_diskpool_config(virConnectPtr conn,
                 goto out;
         }
 
-        for (i = 0; i < count; i++)
+        for (i = 0; i < count; i++) {
                 pools[i].tag = names[i];
+                pools[i].primordial = false;
+        }
+
+ out:
+        get_disk_parent(&pools, &count);
 
         *_pools = pools;
- out:
+
         free(names);
 
         return count;
@@ -180,6 +216,7 @@ static int parse_diskpool_line(struct disk_pool *pool,
                 free(pool->tag);
                 free(pool->path);
         }
+        pools->primordial = false;
 
         return (ret == 2);
 }
@@ -212,6 +249,8 @@ static int get_diskpool_config(virConnectPtr conn,
                         count++;
         }
 
+
+        get_disk_parent(&pools, &count);
  out:
         free(line);
         *_pools = pools;
@@ -830,6 +869,9 @@ static CMPIInstance *diskpool_from_path(struct disk_pool *pool,
                 return NULL;
 
         set_params(inst, CIM_RES_TYPE_DISK, poolid, "Megabytes", pool->tag);
+
+        CMSetProperty(inst, "Primordial",
+                      (CMPIValue *)&pool->primordial, CMPI_boolean);
 
         if (!diskpool_set_capacity(conn, inst, pool))
                 CU_DEBUG("Failed to set capacity for disk pool: %s",
