@@ -40,6 +40,7 @@
 #include "misc_util.h"
 #include <libcmpiutil/std_association.h>
 #include "device_parsing.h"
+#include "pool_parsing.h"
 #include "svpc_types.h"
 
 #include "Virt_SettingsDefineCapabilities.h"
@@ -67,6 +68,9 @@ const static CMPIBroker *_BROKER;
 #define SDC_DISK_MIN 2000
 #define SDC_DISK_DEF 5000
 #define SDC_DISK_INC 250
+
+#define DEVICE_RASD 0 
+#define POOL_RASD   1 
 
 static bool system_has_vt(virConnectPtr conn)
 {
@@ -265,12 +269,19 @@ static CMPIStatus vsmc_to_vssd(const CMPIObjectPath *ref,
 
 static CMPIInstance *sdc_rasd_inst(CMPIStatus *s,
                                    const CMPIObjectPath *ref,
-                                   uint16_t resource_type)
+                                   uint16_t resource_type,
+                                   uint16_t rasd_type)
 {
         CMPIInstance *inst = NULL;
         const char *base = NULL;
+        CMPIrc ret = 1;
 
-        if (rasd_classname_from_type(resource_type, &base) != CMPI_RC_OK) {
+        if (rasd_type == DEVICE_RASD)
+                ret = rasd_classname_from_type(resource_type, &base);
+        else if (rasd_type == POOL_RASD)
+                ret = pool_rasd_classname_from_type(resource_type, &base);
+
+        if (ret != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "Resource type not known");
@@ -329,7 +340,7 @@ static CMPIStatus mem_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_MEM); 
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_MEM, DEVICE_RASD); 
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
@@ -424,7 +435,7 @@ static CMPIStatus proc_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_PROC); 
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_PROC, DEVICE_RASD); 
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
@@ -534,7 +545,7 @@ static CMPIStatus set_net_props(int type,
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_NET);
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_NET, DEVICE_RASD);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
@@ -617,7 +628,7 @@ static CMPIStatus set_disk_props(int type,
                 dev = "hda";
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK);
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK, DEVICE_RASD);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
@@ -1083,6 +1094,107 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
 }
 #endif
 
+static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
+                                     int template_type,
+                                     struct inst_list *list)
+{
+        const char *id;
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *path = "/dev/null";
+        const char *dev_path;
+        int type[2] = {DISK_POOL_DIR, DISK_POOL_FS};
+        int pool_types = 2;
+        int i;
+
+        switch (template_type) {
+        case SDC_RASD_MIN:
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        for (i = 0; i < pool_types; i++) {
+                inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK, POOL_RASD);
+                if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                        goto out;
+
+                CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+
+                switch (type[i]) {
+                case DISK_POOL_FS:
+                        dev_path = "/dev/sda100";
+                        CMSetProperty(inst, "DevicePath", 
+                                      (CMPIValue *)dev_path, CMPI_chars);
+                        break;
+                default:
+                        break;
+                }
+
+                CMSetProperty(inst, "Type", (CMPIValue *)&type[i], CMPI_uint16);
+                CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
+
+                inst_list_add(list, inst);
+        }
+
+ out:
+        return s;
+}
+
+static CMPIStatus disk_dev_or_pool_template(const CMPIObjectPath *ref,
+                                            int template_type,
+                                            struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *poolid;
+        bool val;
+
+        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }
+
+        s = get_pool_by_name(_BROKER, ref, poolid, &inst);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get pool instance from capabilities");
+                goto out;
+        }
+
+        if (cu_get_bool_prop(inst, "Primordial", &val) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine pool type");
+                goto out;
+        }
+
+        if (val)
+                s = disk_pool_template(ref, template_type, list);
+        else
+                s = disk_template(ref, template_type, list);
+
+ out:
+
+        return s;                        
+}
+
 static CMPIStatus graphics_template(const CMPIObjectPath *ref,
                                     int template_type,
                                     struct inst_list *list)
@@ -1112,7 +1224,7 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_GRAPHICS);
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_GRAPHICS, DEVICE_RASD);
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
 
@@ -1156,7 +1268,7 @@ static CMPIStatus set_input_props(const CMPIObjectPath *ref,
                 }
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_INPUT);
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_INPUT, DEVICE_RASD);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
@@ -1280,7 +1392,7 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                 else if (type == CIM_RES_TYPE_NET)
                         s = net_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_DISK)
-                        s = disk_template(ref, i, list);
+                        s = disk_dev_or_pool_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_GRAPHICS)
                         s = graphics_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_INPUT)

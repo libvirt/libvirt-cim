@@ -590,6 +590,21 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
         return rc;
 }
 
+CMPIrc pool_rasd_classname_from_type(uint16_t type, const char **classname)
+{
+        CMPIrc rc = CMPI_RC_OK;
+
+        switch(type) {
+        case CIM_RES_TYPE_DISK:
+                *classname = "DiskPoolResourceAllocationSettingData";
+                break;
+        default:
+                rc = CMPI_RC_ERR_FAILED;
+        }
+
+        return rc;
+}
+
 static CMPIStatus _get_rasds(const CMPIBroker *broker,
                              const CMPIObjectPath *reference,
                              const virDomainPtr dom,

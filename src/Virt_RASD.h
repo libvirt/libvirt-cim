@@ -48,6 +48,8 @@ CMPIStatus enum_rasds(const CMPIBroker *broker,
 CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type);
 CMPIrc rasd_classname_from_type(uint16_t type, const char **cn);
 
+CMPIrc pool_rasd_classname_from_type(uint16_t type, const char **classname);
+
 CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
                             const CMPIObjectPath *reference,
                             const char *name,
