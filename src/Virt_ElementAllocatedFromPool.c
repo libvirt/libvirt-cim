@@ -89,18 +89,29 @@ static CMPIStatus vdev_to_pool(const CMPIObjectPath *ref,
         free(poolid);
 
         return s;
+
 }
 
-static int filter_by_pool(struct inst_list *dest,
-                          struct inst_list *src,
-                          const uint16_t type,
-                          const char *_poolid)
+static CMPIStatus get_dev_from_pool(const CMPIObjectPath *ref,
+                                    const uint16_t type,
+                                    const char *_poolid,
+                                    struct inst_list *list)
 {
-        int i;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         char *poolid = NULL;
+        struct inst_list tmp;
+        int i;
 
-        for (i = 0; i < src->cur; i++) {
-                CMPIInstance *inst = src->list[i];
+        inst_list_init(&tmp);
+
+        s = enum_devices(_BROKER, ref, NULL, type, &tmp);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Unable to enum devices in get_dev_from_pool()");
+                goto out;
+        }
+
+        for (i = 0; i < tmp.cur; i++) {
+                CMPIInstance *inst = tmp.list[i];
                 const char *cn = NULL;
                 const char *dev_id = NULL;
 
@@ -112,21 +123,80 @@ static int filter_by_pool(struct inst_list *dest,
 
                 poolid = pool_member_of(_BROKER, cn, type, dev_id);
                 if (poolid && STREQ(poolid, _poolid))
-                        inst_list_add(dest, inst);
+                        inst_list_add(list, inst);
         }
 
-        return dest->cur;
+        inst_list_free(&tmp);
+
+ out:
+
+        return s;
 }
 
-static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
-                               struct std_assoc_info *info,
-                               struct inst_list *list)
+static CMPIStatus get_pools(const CMPIObjectPath *ref,
+                            const uint16_t type,
+                            const char *poolid,
+                            CMPIInstance *pool_inst,
+                            struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *pool = NULL;
+        bool val;
+
+        if (cu_get_bool_prop(pool_inst, "Primordial", &val) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine pool type");
+                goto out;
+        }
+
+        /* If Primordial is true, the pool is a parent pool. Need to return
+           all other pools.  Otherwise, just return the parent pool. */
+        if (val) {
+                struct inst_list tmp;
+                int i;
+
+                inst_list_init(&tmp);
+
+                s = enum_pools(_BROKER, ref, type, &tmp);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Unable to enum pools in get_pools()");
+                        goto out;
+                }
+
+                for (i = 0; i < tmp.cur; i++) {
+                        CMPIInstance *inst = tmp.list[i];
+                        const char *id = NULL;
+
+                        cu_get_str_prop(inst, "InstanceID", &id);
+
+                        if (!STREQC(id, poolid))
+                                inst_list_add(list, inst);
+                }
+
+                inst_list_free(&tmp);
+        } else {
+                pool = parent_device_pool(_BROKER, ref, type, &s);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Unable to get parent pool in get_pools()");
+                        goto out;
+                }
+
+                inst_list_add(list, pool);
+        }
+
+ out:
+        return s;
+}
+
+static CMPIStatus pool_to_vdev_or_pool(const CMPIObjectPath *ref,
+                                       struct std_assoc_info *info,
+                                       struct inst_list *list)
 {
         const char *poolid;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         uint16_t type;
         CMPIInstance *inst = NULL;
-        struct inst_list tmp;
 
         if (!match_hypervisor_prefix(ref, info))
                 return s;
@@ -150,15 +220,13 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst_list_init(&tmp);
-
-        s = enum_devices(_BROKER, ref, NULL, type, &tmp);
-        if (s.rc != CMPI_RC_OK)
+        s = get_dev_from_pool(ref, type, poolid, list);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Unable to get device from pool");
                 goto out;
+        }
 
-        filter_by_pool(list, &tmp, type, poolid);
-
-        inst_list_free(&tmp);
+        s = get_pools(ref, type, poolid, inst, list);
 
  out:
         return s;
@@ -166,7 +234,7 @@ static CMPIStatus pool_to_vdev(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-static char* antecedent[] = {
+static char* pool[] = {
         "Xen_ProcessorPool",
         "Xen_MemoryPool",
         "Xen_NetworkPool",
@@ -188,7 +256,7 @@ static char* antecedent[] = {
         NULL
 };
 
-static char* dependent[] = {
+static char* device[] = {
         "Xen_Processor",
         "Xen_Memory",
         "Xen_NetworkPort",
@@ -210,6 +278,46 @@ static char* dependent[] = {
         NULL
 };
 
+static char* device_or_pool[] = {
+        "Xen_Processor",
+        "Xen_Memory",
+        "Xen_NetworkPort",
+        "Xen_LogicalDisk",
+        "Xen_DisplayController",
+        "Xen_PointingDevice",
+        "KVM_Processor",
+        "KVM_Memory",
+        "KVM_NetworkPort",
+        "KVM_LogicalDisk",
+        "KVM_DisplayController",
+        "KVM_PointingDevice",
+        "LXC_Processor",
+        "LXC_Memory",
+        "LXC_NetworkPort",
+        "LXC_LogicalDisk",
+        "LXC_DisplayController",
+        "LXC_PointingDevice",
+        "Xen_ProcessorPool",
+        "Xen_MemoryPool",
+        "Xen_NetworkPool",
+        "Xen_DiskPool",
+        "Xen_GraphicsPool",
+        "Xen_InputPool",
+        "KVM_ProcessorPool",
+        "KVM_MemoryPool",
+        "KVM_NetworkPool",
+        "KVM_DiskPool",
+        "KVM_GraphicsPool",
+        "KVM_InputPool",
+        "LXC_ProcessorPool",
+        "LXC_MemoryPool",
+        "LXC_NetworkPool",
+        "LXC_DiskPool",
+        "LXC_GraphicsPool",
+        "LXC_InputPool",
+        NULL
+};
+
 static char* assoc_classname[] = {
         "Xen_ElementAllocatedFromPool",
         "KVM_ElementAllocatedFromPool",
@@ -218,10 +326,10 @@ static char* assoc_classname[] = {
 };
 
 static struct std_assoc _vdev_to_pool = {
-        .source_class = (char**)&dependent,
+        .source_class = (char**)&device,
         .source_prop = "Dependent",
 
-        .target_class = (char**)&antecedent,
+        .target_class = (char**)&pool,
         .target_prop = "Antecedent",
 
         .assoc_class = (char**)&assoc_classname,
@@ -230,22 +338,22 @@ static struct std_assoc _vdev_to_pool = {
         .make_ref = make_ref
 };
 
-static struct std_assoc _pool_to_vdev = {
-        .source_class = (char**)&antecedent,
+static struct std_assoc _pool_to_vdev_or_pool = {
+        .source_class = (char**)&pool,
         .source_prop = "Antecedent",
 
-        .target_class = (char**)&dependent,
+        .target_class = (char**)&device_or_pool,
         .target_prop = "Dependent",
 
         .assoc_class = (char**)&assoc_classname,
 
-        .handler = pool_to_vdev,
+        .handler = pool_to_vdev_or_pool,
         .make_ref = make_ref
 };
 
 static struct std_assoc *handlers[] = {
         &_vdev_to_pool,
-        &_pool_to_vdev,
+        &_pool_to_vdev_or_pool,
         NULL
 };
 
