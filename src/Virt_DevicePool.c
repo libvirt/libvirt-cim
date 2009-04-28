@@ -77,7 +77,7 @@ static bool get_disk_parent(struct disk_pool **_pools,
                 goto out;
         }
 
-        pools[count].tag = strdup("Parent");
+        pools[count].tag = strdup("0");
         pools[count].path = NULL;
         pools[count].primordial = true;
         count++;
@@ -1234,6 +1234,45 @@ CMPIStatus enum_pools(const CMPIBroker *broker,
         return _get_pools(broker, reference, type, NULL, list);
 }
 
+CMPIInstance *parent_device_pool(const CMPIBroker *broker,
+                                 const CMPIObjectPath *reference,
+                                 uint16_t type,
+                                 CMPIStatus *s)
+{
+        CMPIInstance *inst = NULL;
+        const char *id = NULL;
+
+        if (type == CIM_RES_TYPE_MEM) {
+                id = "MemoryPool/0";
+        } else if (type == CIM_RES_TYPE_PROC) {
+                id = "ProcessorPool/0";
+        } else if (type == CIM_RES_TYPE_DISK) {
+                id = "DiskPool/0";
+        } else if (type == CIM_RES_TYPE_NET) {
+                id = "NetworkPool/0";
+        } else if (type == CIM_RES_TYPE_GRAPHICS) {
+                id = "GraphicsPool/0";
+        } else if (type == CIM_RES_TYPE_INPUT) {
+                id = "InputPool/0";
+        } else {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "No such device type `%s'", type);
+                goto out;
+        }
+
+        *s = get_pool_by_name(broker, reference, id, &inst);
+        if (inst == NULL) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_FAILED,
+                           "No default pool found for type %hi", type);
+        }
+
+ out:
+
+        return inst;
+}
+
 CMPIInstance *default_device_pool(const CMPIBroker *broker,
                                   const CMPIObjectPath *reference,
                                   uint16_t type,
@@ -1241,44 +1280,43 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
 {
         CMPIInstance *inst = NULL;
         struct inst_list list;
+        bool val;
 
-        inst_list_init(&list);
+        if ((type == CIM_RES_TYPE_DISK) || (type == CIM_RES_TYPE_NET)) {
+                int i = 0;
+                CMPIrc rc;
 
-        if (type == CIM_RES_TYPE_MEM) {
-                *s = get_pool_by_name(broker, reference, "MemoryPool/0", &inst);
-        } else if (type == CIM_RES_TYPE_PROC) {
-                *s = get_pool_by_name(broker, reference, "ProcessorPool/0", &inst);
-        } else if (type == CIM_RES_TYPE_DISK) {
+                inst_list_init(&list);
+
                 *s = enum_pools(broker, reference, type, &list);
-                if ((s->rc == CMPI_RC_OK) && (list.cur > 0))
-                        inst = list.list[0];
-        } else if (type == CIM_RES_TYPE_NET) {
-                *s = enum_pools(broker, reference, type, &list);
-                if ((s->rc == CMPI_RC_OK) && (list.cur > 0))
-                        inst = list.list[0];
-        } else if (type == CIM_RES_TYPE_GRAPHICS) {
-                *s = get_pool_by_name(broker, 
-                                      reference, 
-                                      "GraphicsPool/0", 
-                                      &inst);
-        } else if (type == CIM_RES_TYPE_INPUT) {
-                *s = get_pool_by_name(broker, 
-                                      reference, 
-                                      "InputPool/0", 
-                                      &inst);
+                if ((s->rc != CMPI_RC_OK) || (list.cur <= 0)) {
+                        CU_DEBUG("Unable to enum pools to get parent pool");
+                        goto out;
+                }
+
+                for (i = 0; i < list.cur; i++) {
+                        rc = cu_get_bool_prop(list.list[i], 
+                                              "Primordial", 
+                                              &val);
+                        if ((rc != CMPI_RC_OK) || (val))
+                                continue;
+
+                        inst = list.list[i];
+                        break;
+                }
+
+                inst_list_free(&list);
+
+                if (inst == NULL) {
+                        cu_statusf(broker, s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "No default pool found for type %hi", type);
+                }
         } else {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_INVALID_PARAMETER,
-                           "No such device type `%s'", type);
+                inst = parent_device_pool(broker, reference, type, s);
         }
 
-        inst_list_free(&list);
-
-        if (inst == NULL) {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_FAILED,
-                           "No default pool found for type %hi", type);
-        }
+ out:
 
         return inst;
 }
