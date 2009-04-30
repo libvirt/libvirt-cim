@@ -82,6 +82,7 @@ static const char *net_rasd_to_pool(CMPIInstance *inst,
 {
         const char *val = NULL;
         const char *msg = NULL;
+        uint16_t type;
 
         /*FIXME:  Need to add validation of addresses if user specified */
 
@@ -103,11 +104,36 @@ static const char *net_rasd_to_pool(CMPIInstance *inst,
         free(pool->pool_info.net.ip_start);
         pool->pool_info.net.ip_start = strdup(val);
 
-        if (cu_get_str_prop(inst, "IPRangeStart", &val) != CMPI_RC_OK)
+        if (cu_get_str_prop(inst, "IPRangeEnd", &val) != CMPI_RC_OK)
                 val = "192.168.122.254";
 
         free(pool->pool_info.net.ip_end);
         pool->pool_info.net.ip_end = strdup(val);
+
+        if (cu_get_u16_prop(inst, "ForwardMode", &type) != CMPI_RC_OK) {
+                pool->pool_info.net.forward_mode = strdup("nat");
+        } else {
+                free(pool->pool_info.net.forward_mode);
+
+                switch (type) {
+                case NETPOOL_FORWARD_NONE:
+                        pool->pool_info.net.forward_mode = NULL;
+                        break;
+                case NETPOOL_FORWARD_NAT:
+                        pool->pool_info.net.forward_mode = strdup("nat");
+                        break;
+                case NETPOOL_FORWARD_ROUTED:
+                        pool->pool_info.net.forward_mode = strdup("route");
+                        break;
+                default:
+                        return "Storage pool type not supported";
+                }
+        }
+
+        if (cu_get_str_prop(inst, "ForwardDevice", &val) == CMPI_RC_OK) {
+                free(pool->pool_info.net.forward_dev);
+                pool->pool_info.net.forward_dev = strdup(val);
+        }
 
         return msg;
 

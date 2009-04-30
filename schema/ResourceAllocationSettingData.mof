@@ -171,7 +171,12 @@ class Xen_NetPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingDa
       string Netmask;
       string IPRangeStart;
       string IPRangeEnd;
-      string ForwardMode;
+      string ForwardDevice;
+
+      [Description ("Network pool forwarding mode"),
+        ValueMap {"0", "1", "2"},
+        Values {"None", "NAT", "Routed"}]
+      uint16 ForwardMode;
 };
 
 [Description ("KVM virtual network pool settings"),
@@ -182,7 +187,12 @@ class KVM_NetPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingDa
       string Netmask;
       string IPRangeStart;
       string IPRangeEnd;
-      string ForwardMode;
+      string ForwardDevice;
+
+      [Description ("Network pool forwarding mode"),
+        ValueMap {"0", "1", "2"},
+        Values {"None", "NAT", "Routed"}]
+      uint16 ForwardMode;
 };
 
 [Description ("LXC virtual network pool settings"),
@@ -193,7 +203,12 @@ class LXC_NetPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingDa
       string Netmask;
       string IPRangeStart;
       string IPRangeEnd;
-      string ForwardMode;
+      string ForwardDevice;
+
+      [Description ("Network pool forwarding mode"),
+        ValueMap {"0", "1", "2"},
+        Values {"None", "NAT", "Routed"}]
+      uint16 ForwardMode;
 };
 
 [Description ("Xen virtual disk pool settings"),

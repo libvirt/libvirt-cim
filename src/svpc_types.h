@@ -66,6 +66,10 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
 #define CIM_SAP_INACTIVE_STATE  3
 #define CIM_SAP_AVAILABLE_STATE 6
 
+#define NETPOOL_FORWARD_NONE 0
+#define NETPOOL_FORWARD_NAT 1
+#define NETPOOL_FORWARD_ROUTED 2
+
 #include <libcmpiutil/libcmpiutil.h>
 #include <string.h>
 

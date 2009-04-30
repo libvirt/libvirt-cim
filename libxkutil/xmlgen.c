@@ -785,7 +785,7 @@ static const char *net_pool_xml(xmlNodePtr root,
                         if (xmlNewProp(forward,
                                        BAD_CAST "dev",
                                        BAD_CAST pool->forward_dev) == NULL)
-                        goto out;
+                                goto out;
                 }
         }
 
