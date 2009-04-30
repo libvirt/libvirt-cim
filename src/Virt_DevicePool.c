@@ -651,7 +651,8 @@ static void set_params(CMPIInstance *inst,
                        uint16_t type,
                        const char *id,
                        const char *units,
-                       const char *caption)
+                       const char *caption,
+                       bool primordial)
 {
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)id, CMPI_chars);
@@ -669,6 +670,9 @@ static void set_params(CMPIInstance *inst,
         if (caption != NULL)
                 CMSetProperty(inst, "Caption",
                               (CMPIValue *)caption, CMPI_chars);
+
+        CMSetProperty(inst, "Primordial",
+                      (CMPIValue *)&primordial, CMPI_boolean);
 }
 
 static CMPIStatus mempool_instance(virConnectPtr conn,
@@ -696,7 +700,7 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
         mempool_set_total(inst, conn);
         mempool_set_reserved(inst, conn);
 
-        set_params(inst, CIM_RES_TYPE_MEM, id, "KiloBytes", NULL);
+        set_params(inst, CIM_RES_TYPE_MEM, id, "KiloBytes", NULL, true);
 
         inst_list_add(list, inst);
 
@@ -727,9 +731,47 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
 
         procpool_set_total(inst, conn);
 
-        set_params(inst, CIM_RES_TYPE_PROC, id, "Processors", NULL);
+        set_params(inst, CIM_RES_TYPE_PROC, id, "Processors", NULL, true);
 
         inst_list_add(list, inst);
+
+        return s;
+}
+
+static CMPIStatus _netpool_for_parent(struct inst_list *list,
+                                      const char *ns,
+                                      const char *refcn,
+                                      const CMPIBroker *broker)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        char *id = NULL;
+        CMPIInstance *inst;
+
+        inst = get_typed_instance(broker,
+                                  refcn,
+                                  "NetworkPool",
+                                  ns);
+        if (inst == NULL) {
+                CU_DEBUG("Unable to get instance: %s:%s_NetworkPool",
+                         ns, refcn);
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error getting pool instance");
+                goto out;
+        }
+
+        if (asprintf(&id, "NetworkPool/0") == -1) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "");
+                goto out;
+        }
+
+        set_params(inst, CIM_RES_TYPE_NET, id, NULL, NULL, true);
+        free(id);
+
+        inst_list_add(list, inst);
+ out:
 
         return s;
 }
@@ -747,6 +789,9 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
         char *bridge = NULL;
         CMPIInstance *inst;
         virNetworkPtr network = NULL;
+
+        if (STREQC(netname, "0"))
+                return _netpool_for_parent(list, ns, refcn, broker);
 
         CU_DEBUG("Looking up network `%s'", netname);
         network = virNetworkLookupByName(conn, netname);
@@ -787,7 +832,7 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
                 goto out;
         }
 
-        set_params(inst, CIM_RES_TYPE_NET, id, NULL, cap);
+        set_params(inst, CIM_RES_TYPE_NET, id, NULL, cap, false);
         free(id);
         free(cap);
         free(bridge);
@@ -839,6 +884,17 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
 
         nets = virConnectListNetworks(conn, netnames, nets);
 
+        nets++;
+        netnames = realloc(netnames, (nets) * (sizeof(*netnames)));
+        if (netnames == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to allocate memory for %i net names", nets);
+                goto out;
+        }
+
+        netnames[nets - 1] = "0";
+
         for (i = 0; i < nets; i++) {
                 _netpool_for_network(list,
                                      ns,
@@ -868,10 +924,12 @@ static CMPIInstance *diskpool_from_path(struct disk_pool *pool,
         if (asprintf(&poolid, "DiskPool/%s", pool->tag) == -1)
                 return NULL;
 
-        set_params(inst, CIM_RES_TYPE_DISK, poolid, "Megabytes", pool->tag);
-
-        CMSetProperty(inst, "Primordial",
-                      (CMPIValue *)&pool->primordial, CMPI_boolean);
+        set_params(inst, 
+                   CIM_RES_TYPE_DISK, 
+                   poolid, 
+                   "Megabytes", 
+                   pool->tag, 
+                   pool->primordial);
 
         if (!diskpool_set_capacity(conn, inst, pool))
                 CU_DEBUG("Failed to set capacity for disk pool: %s",
@@ -951,7 +1009,7 @@ static CMPIStatus graphicspool_instance(virConnectPtr conn,
                 return s;
         }
 
-        set_params(inst, CIM_RES_TYPE_GRAPHICS, id, NULL, NULL);
+        set_params(inst, CIM_RES_TYPE_GRAPHICS, id, NULL, NULL, true);
 
         inst_list_add(list, inst);
 
@@ -987,7 +1045,7 @@ static CMPIStatus inputpool_instance(virConnectPtr conn,
                 return s;
         }
 
-        set_params(inst, CIM_RES_TYPE_INPUT, id, NULL, NULL);
+        set_params(inst, CIM_RES_TYPE_INPUT, id, NULL, NULL, true);
 
         inst_list_add(list, inst);
 
