@@ -609,6 +609,143 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         return s;
 }
 
+static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
+                                     const char *id,
+                                     uint16_t pool_type,
+                                     struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *addr = "192.168.122.1";
+        const char *netmask = "255.255.255.0";
+        const char *ip_start = "192.168.122.2";
+        const char *ip_stop = "192.168.122.254";
+        int dev_count;
+        int i;
+
+        /* Isolated network pools don't have a forward device */
+        if (pool_type == NETPOOL_FORWARD_NONE)
+                dev_count = 1;
+        else
+                dev_count = 2;
+
+        for (i = 0; i < dev_count; i++) {
+                inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_NET, POOL_RASD);
+                if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                        goto out;
+
+                CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+
+                CMSetProperty(inst, "Address",
+                              (CMPIValue *)addr, CMPI_chars);
+
+                CMSetProperty(inst, "Netmask",
+                              (CMPIValue *)netmask, CMPI_chars);
+
+                CMSetProperty(inst, "IPRangeStart",
+                              (CMPIValue *)ip_start, CMPI_chars);
+
+                CMSetProperty(inst, "IPRangeEnd",
+                              (CMPIValue *)ip_stop, CMPI_chars);
+
+                CMSetProperty(inst, "ForwardMode",
+                              (CMPIValue *)&pool_type, CMPI_uint16);
+
+                if (i == 1) {
+                        CMSetProperty(inst, "ForwardDevice",
+                                      (CMPIValue *)"eth0", CMPI_chars);
+                }
+
+                inst_list_add(list, inst);
+        }       
+
+ out:
+        return s;
+}
+
+static CMPIStatus net_pool_template(const CMPIObjectPath *ref,
+                                    int template_type,
+                                    struct inst_list *list)
+{
+        const char *id;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int type[3] = {NETPOOL_FORWARD_NONE, 
+                       NETPOOL_FORWARD_NAT, 
+                       NETPOOL_FORWARD_ROUTED};
+        int pool_types = 3;
+        int i;
+
+        switch (template_type) {
+        case SDC_RASD_MIN:
+                id = "Minimum";
+                break;
+        case SDC_RASD_MAX:
+                id = "Maximum";
+                break;
+        case SDC_RASD_INC:
+                id = "Increment";
+                break;
+        case SDC_RASD_DEF:
+                id = "Default";
+                break;
+        default:
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        for (i = 0; i < pool_types; i++) {
+                s = set_net_pool_props(ref, id, type[i], list);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
+
+ out:
+        return s;
+}
+
+static CMPIStatus net_dev_or_pool_template(const CMPIObjectPath *ref,
+                                           int template_type,
+                                           struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *poolid;
+        bool val;
+
+        if (cu_get_str_path(ref, "InstanceID", &poolid) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID");
+                goto out;
+        }
+
+        s = get_pool_by_name(_BROKER, ref, poolid, &inst);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get pool instance from capabilities");
+                goto out;
+        }
+
+        if (cu_get_bool_prop(inst, "Primordial", &val) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine pool type");
+                goto out;
+        }
+
+        if (val)
+                s = net_pool_template(ref, template_type, list);
+        else
+                s = net_template(ref, template_type, list);
+
+ out:
+
+        return s;
+}
+
 static CMPIStatus set_disk_props(int type,
                                  const CMPIObjectPath *ref,
                                  const char *id,
@@ -1390,7 +1527,7 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                 else if (type == CIM_RES_TYPE_PROC)
                         s = proc_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_NET)
-                        s = net_template(ref, i, list);
+                        s = net_dev_or_pool_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_DISK)
                         s = disk_dev_or_pool_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_GRAPHICS)

@@ -598,6 +598,9 @@ CMPIrc pool_rasd_classname_from_type(uint16_t type, const char **classname)
         case CIM_RES_TYPE_DISK:
                 *classname = "DiskPoolResourceAllocationSettingData";
                 break;
+        case CIM_RES_TYPE_NET:
+                *classname = "NetPoolResourceAllocationSettingData";
+                break;
         default:
                 rc = CMPI_RC_ERR_FAILED;
         }
