@@ -216,7 +216,7 @@ static int parse_diskpool_line(struct disk_pool *pool,
                 free(pool->tag);
                 free(pool->path);
         }
-        pools->primordial = false;
+        pool->primordial = false;
 
         return (ret == 2);
 }
