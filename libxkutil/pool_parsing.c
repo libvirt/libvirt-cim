@@ -55,6 +55,8 @@ static void cleanup_net_pool(struct net_pool pool) {
 static void cleanup_disk_pool(struct disk_pool pool) {
         free(pool.path);
         free(pool.device_path);
+        free(pool.host);
+        free(pool.src_dir);
 }
 
 void cleanup_virt_pool(struct virt_pool **pool)

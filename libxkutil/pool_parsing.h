@@ -46,6 +46,8 @@ struct disk_pool {
               DISK_POOL_LOGICAL} pool_type;
         char *path;
         char *device_path;
+        char *host;
+        char *src_dir;
 };
 
 struct virt_pool {

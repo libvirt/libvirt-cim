@@ -847,16 +847,61 @@ static const char *disk_pool_type_to_str(uint16_t type)
         return NULL;
 }
 
+static const char *set_disk_pool_source(xmlNodePtr disk,
+                                        struct disk_pool *pool)
+{
+        xmlNodePtr src;
+        xmlNodePtr tmp;
+
+        src = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
+        if (src == NULL)
+                return XML_ERROR;
+
+        if (pool->device_path != NULL) {
+                tmp = xmlNewChild(src, NULL, BAD_CAST "device", BAD_CAST NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+
+                if (xmlNewProp(tmp,
+                               BAD_CAST "path",
+                               BAD_CAST pool->device_path) == NULL)
+                        return XML_ERROR;
+        }
+
+        if (pool->host != NULL) {
+                tmp = xmlNewChild(src, NULL, BAD_CAST "host", BAD_CAST NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+
+                if (xmlNewProp(tmp,
+                               BAD_CAST "name",
+                               BAD_CAST pool->host) == NULL)
+                        return XML_ERROR;
+        }
+
+        if (pool->src_dir != NULL) {
+                tmp = xmlNewChild(src, NULL, BAD_CAST "dir", BAD_CAST NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+
+                if (xmlNewProp(tmp,
+                               BAD_CAST "path",
+                               BAD_CAST pool->src_dir) == NULL)
+                        return XML_ERROR;
+        }
+
+        return NULL;
+}
+
 static const char *disk_pool_xml(xmlNodePtr root,
                                  struct virt_pool *_pool)
 {
         xmlNodePtr disk = NULL;
         xmlNodePtr name = NULL;
-        xmlNodePtr src = NULL;
-        xmlNodePtr dev = NULL;
         xmlNodePtr target = NULL;
         xmlNodePtr path = NULL;
         const char *type = NULL;
+        const char *msg = NULL;
         struct disk_pool *pool = &_pool->pool_info.disk;
 
         type = disk_pool_type_to_str(pool->pool_type);
@@ -874,19 +919,10 @@ static const char *disk_pool_xml(xmlNodePtr root,
         if (name == NULL)
                 goto out;
 
-        if (pool->device_path != NULL) {
-                src = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
-                if (src == NULL)
-                        goto out;
-
-                dev = xmlNewChild(src, NULL, BAD_CAST "device", BAD_CAST NULL);
-                if (dev == NULL)
-                        goto out;
-
-                if (xmlNewProp(dev,
-                               BAD_CAST "path", 
-                               BAD_CAST pool->device_path) == NULL)
-                        goto out;
+        if (pool->pool_type != DISK_POOL_DIR) {
+                msg = set_disk_pool_source(disk, pool);
+                if (msg != NULL)
+                        return msg;
         }
 
         target = xmlNewChild(disk, NULL, BAD_CAST "target", NULL);
