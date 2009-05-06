@@ -1240,8 +1240,10 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *path = "/dev/null";
         const char *dev_path;
-        int type[2] = {DISK_POOL_DIR, DISK_POOL_FS};
-        int pool_types = 2;
+        const char *host;
+        const char *src_dir;
+        int type[3] = {DISK_POOL_DIR, DISK_POOL_FS, DISK_POOL_NETFS};
+        int pool_types = 3;
         int i;
 
         switch (template_type) {
@@ -1276,6 +1278,15 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                         dev_path = "/dev/sda100";
                         CMSetProperty(inst, "DevicePath", 
                                       (CMPIValue *)dev_path, CMPI_chars);
+                        break;
+                case DISK_POOL_NETFS:
+                        host = "host_sys.domain.com";
+                        CMSetProperty(inst, "Host", 
+                                      (CMPIValue *)host, CMPI_chars);
+
+                        src_dir = "/var/lib/images";
+                        CMSetProperty(inst, "SourceDirectory", 
+                                      (CMPIValue *)src_dir, CMPI_chars);
                         break;
                 default:
                         break;
