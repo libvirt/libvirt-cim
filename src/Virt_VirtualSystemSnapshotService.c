@@ -38,6 +38,7 @@
 
 #include "Virt_VirtualSystemSnapshotService.h"
 #include "Virt_HostSystem.h"
+#include "Virt_VSSD.h"
 
 #define CIM_JOBSTATE_STARTING 3
 #define CIM_JOBSTATE_RUNNING 4
@@ -388,6 +389,8 @@ static CMPIStatus start_snapshot_job(const CMPIObjectPath *ref,
         struct snap_context *ctx;
         CMPIStatus s;
         CMPIObjectPath *job;
+        CMPIObjectPath *vssd;
+        CMPIInstance *inst;
 
         ctx = new_context(name, &s);
         if (ctx == NULL) {
@@ -401,7 +404,21 @@ static CMPIStatus start_snapshot_job(const CMPIObjectPath *ref,
         ctx->restore = (type != VIR_VSSS_SNAPSHOT_MEMT);
 
         s = create_job(context, ref, ctx, &job);
+
+        s = get_vssd_by_name(_BROKER, ref, name, &inst);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Unable to get guest VSSD in start_snapshot_job()");
+                goto out;
+        }
+
+        vssd = CMGetObjectPath(inst, &s);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Unable to get VSSD ref from instance");
+                goto out;
+        }
+
         CMAddArg(argsout, "Job", (CMPIValue *)&job, CMPI_ref);
+        CMAddArg(argsout, "ResultingSnapshot", (CMPIValue *)&vssd, CMPI_ref);
 
  out:
         return s;
