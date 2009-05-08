@@ -337,6 +337,12 @@ static int vssd_to_domain(CMPIInstance *inst,
         free(domain->name);
         domain->name = strdup(val);
 
+        ret = cu_get_str_prop(inst, "UUID", &val);
+        if (ret == CMPI_RC_OK) {
+                free(domain->uuid);
+                domain->uuid = strdup(val);
+        }
+
         ret = cu_get_u16_prop(inst, "AutomaticShutdownAction", &tmp);
         if (ret != CMPI_RC_OK)
                 tmp = 0;

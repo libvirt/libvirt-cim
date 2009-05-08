@@ -113,6 +113,9 @@ static int instance_from_dom(virDomainPtr dom,
         CMSetProperty(inst, "VirtualSystemType",
                       (CMPIValue *)pfx, CMPI_chars);
 
+        CMSetProperty(inst, "UUID",
+                      (CMPIValue *)dominfo->uuid, CMPI_chars);
+
         CMSetProperty(inst, "Caption",
                       (CMPIValue *)"Virtual System", CMPI_chars);
 

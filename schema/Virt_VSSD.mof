@@ -12,4 +12,7 @@ class Virt_VirtualSystemSettingData : CIM_VirtualSystemSettingData
              Values { "Turn Off", "Save state", "DMTF Reserved" }]
   uint16 AutomaticShutdownAction;
 
+  [Description("UUID assigned to this DomU.")]
+  string UUID;
+
 };
