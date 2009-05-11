@@ -457,9 +457,11 @@ static char *_xenfv_os_xml(xmlNodePtr root, struct domain *domain)
         if (tmp == NULL)
                 return XML_ERROR;
 
-        tmp = xmlNewChild(root, NULL, BAD_CAST "boot", BAD_CAST os->boot);
+        tmp = xmlNewChild(root, NULL, BAD_CAST "boot", NULL);
         if (tmp == NULL)
                 return XML_ERROR;
+
+        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST os->boot);
 
         tmp = xmlNewChild(root, NULL, BAD_CAST "features", NULL);
         xmlNewChild(tmp, NULL, BAD_CAST "pae", NULL);
