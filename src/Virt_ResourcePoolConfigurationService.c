@@ -148,8 +148,8 @@ static void init_disk_pool(struct virt_pool *pool)
         pool->pool_info.disk.src_dir = NULL;
 }
 
-static const char *disk_fs_pool(CMPIInstance *inst,
-                                struct virt_pool *pool)
+static const char *disk_fs_or_disk_pool(CMPIInstance *inst,
+                                        struct virt_pool *pool)
 {
         const char *val = NULL;
 
@@ -195,18 +195,18 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
         case DISK_POOL_DIR:
                 break;
         case DISK_POOL_FS:
-                msg = disk_fs_pool(inst, pool);
-                if (msg != NULL)
-                        goto out;
+        case DISK_POOL_DISK:
+                msg = disk_fs_or_disk_pool(inst, pool);
                 break;
         case DISK_POOL_NETFS:
                 msg = disk_netfs_pool(inst, pool);
-                if (msg != NULL)
-                        goto out;
                 break;
         default:
                 return "Storage pool type not supported";
         }
+
+        if (msg != NULL)
+                goto out;
 
         pool->pool_info.disk.pool_type = type;
 
