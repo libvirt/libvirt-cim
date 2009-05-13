@@ -3,7 +3,7 @@
 DATA="$1"
 NS=@CIM_VIRT_NS@
 CIMOM=@CIMSERVER@
-SCHEMA_VERSION="2.16"
+SCHEMA_VERSION="2.21.0"
 
 TMPDIR=$(mktemp -d /tmp/cim_schema.XXXXX)
 chmod a+x $TMPDIR
@@ -16,13 +16,12 @@ else
 fi
 
 unpack_schema() {
-    cd ${TMPDIR} && unzip ${DATA}/cimv*-MOFs.zip
+    cd ${TMPDIR} && unzip ${DATA}/cim_schema_*-MOFs.zip
 }
 
 fix_schema() {
-    (cd ${TMPDIR} && patch -p0 < ${DATA}/fix_schema.patch)
-    cp -a ${DATA}/cimv216-interop_mof ${TMPDIR}/cimv216-interop.mof
-    cp -a ${DATA}/cimv216-cimv2_mof ${TMPDIR}/cimv216-cimv2.mof
+    cp -a ${DATA}/cimv2.21.0-interop_mof ${TMPDIR}/cimv2.21.0-interop.mof
+    cp -a ${DATA}/cimv2.21.0-cimv2_mof ${TMPDIR}/cimv2.21.0-cimv2.mof
 
 }
 
@@ -70,11 +69,11 @@ install_schema_pegasus() {
 
     cd ${TMPDIR}
 
-    cimmofl -uc -aEV -R$repo -n $NS cimv???.mof
+    cimmofl -uc -aEV -R$repo -n $NS cim_schema_?.??.?.mof
     cimmofl -uc -aEV -R$repo -n $NS qualifiers.mof
     cimmofl -uc -aEV -R$repo -n $NS qualifiers_optional.mof
-    cimmofl -uc -aEV -R$repo -n /root/interop cimv???-interop.mof
-    cimmofl -uc -aEV -R$repo -n /root/cimv2 cimv???-cimv2.mof
+    cimmofl -uc -aEV -R$repo -n /root/interop cimv?.??.?-interop.mof
+    cimmofl -uc -aEV -R$repo -n /root/cimv2 cimv?.??.?-cimv2.mof
 }
 
 install_schema_sfcb() {
@@ -87,7 +86,7 @@ install_schema_sfcb() {
 	return
     fi
 
-    mv ${TMPDIR}/cimv???.mof ${TMPDIR}/CIM_Schema.mof
+    mv ${TMPDIR}/cim_schema_?.??.?.mof ${TMPDIR}/CIM_Schema.mof
     cp -ra ${TMPDIR}/* ${dir}/CIM
     sfcbrepos -f
 }
