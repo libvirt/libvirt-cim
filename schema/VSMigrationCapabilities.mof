@@ -1,15 +1,5 @@
 // Copyright IBM Corp. 2007
 
-class CIM_VirtualSystemMigrationCapabilities : CIM_Capabilities {
-
-  uint16 DestinationHostFormatsSupported[];
-
-  uint16 SynchronousMethodsSupported[];
-
-  uint16 AsynchronousMethodsSupported[];
-
-};
-
 [Provider("cmpi::Virt_VSMigrationCapabilities")]
 class Xen_VirtualSystemMigrationCapabilities : CIM_VirtualSystemMigrationCapabilities {
 };

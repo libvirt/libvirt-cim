@@ -1510,6 +1510,8 @@ static struct method_handler vsimth = {
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationHost", CMPI_string, false},
                  {"MigrationSettingData", CMPI_instance, true},
+                 {"NewSystemSettingData", CMPI_instance, true},
+                 {"NewResourceSettingData", CMPI_instanceA, true},
                  ARG_END
         }
 };
@@ -1520,6 +1522,8 @@ static struct method_handler vsimts = {
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationSystem", CMPI_ref, false},
                  {"MigrationSettingData", CMPI_instance, true},
+                 {"NewSystemSettingData", CMPI_instance, true},
+                 {"NewResourceSettingData", CMPI_instanceA, true},
                  ARG_END
         }
 };
@@ -1530,6 +1534,8 @@ static struct method_handler mvsth = {
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationHost", CMPI_string, false},
                  {"MigrationSettingData", CMPI_instance, true},
+                 {"NewSystemSettingData", CMPI_instance, true},
+                 {"NewResourceSettingData", CMPI_instanceA, true},
                  ARG_END
         }
 };
@@ -1540,6 +1546,8 @@ static struct method_handler mvsts = {
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationSystem", CMPI_ref, false},
                  {"MigrationSettingData", CMPI_instance, true},
+                 {"NewSystemSettingData", CMPI_instance, true},
+                 {"NewResourceSettingData", CMPI_instanceA, true},
                  ARG_END
         }
 };
