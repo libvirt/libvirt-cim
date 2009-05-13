@@ -84,7 +84,7 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
                       (CMPIValue *)&array, CMPI_uint16A);
 
         prop_val = (uint16_t)MAX_SAP_SESSIONS;
-        CMSetProperty(inst, "MaxConcurrentEnabledSAPs",
+        CMSetProperty(inst, "MaxCurrentEnabledSAPs",
                       (CMPIValue *)&prop_val, CMPI_uint16);
 
         prop_val = (uint16_t)CIM_CRS_SHARING_MODE;
