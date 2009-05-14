@@ -88,6 +88,16 @@ static void _set_pv_prop(struct domain *dominfo,
                               CMPI_chars);
 }
 
+static void _set_lxc_prop(struct domain *dominfo,
+                          CMPIInstance *inst)
+{
+        if (dominfo->os_info.lxc.init != NULL)
+                CMSetProperty(inst,
+                              "InitPath",
+                              (CMPIValue *)dominfo->os_info.lxc.init,
+                              CMPI_chars);
+}
+
 static int instance_from_dom(virDomainPtr dom,
                              CMPIInstance *inst)
 {
@@ -151,6 +161,8 @@ static int instance_from_dom(virDomainPtr dom,
                 _set_fv_prop(dominfo, inst);
         else if (dominfo->type == DOMAIN_XENPV)
                 _set_pv_prop(dominfo, inst);
+        else if (dominfo->type == DOMAIN_LXC)
+                _set_lxc_prop(dominfo, inst);
         else
                 CU_DEBUG("Unknown domain type %i for creating VSSD",
                          dominfo->type);
