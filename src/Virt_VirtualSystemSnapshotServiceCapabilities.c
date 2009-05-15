@@ -62,9 +62,13 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         element = (uint16_t)APPLY_SNAPSHOT;
         CMSetArrayElementAt(array, 1, &element, CMPI_uint16);
 
-        CMSetProperty(inst, "AsynchronousMethodsSupported",
+        /* There is a typo in the mof - the attribute name in the mof is:
+           AynchronousMethodsSupported, not AsynchronousMethodsSupported.
+           Making a note incase this changes later. */
+        CMSetProperty(inst, "AynchronousMethodsSupported",
                       (CMPIValue *)&array, CMPI_uint16A);
-
+     
+        array = NULL;
         array = CMNewArray(broker, 1, CMPI_uint16, &s);
         if ((s.rc != CMPI_RC_OK) || (array == NULL))
                 goto out;
