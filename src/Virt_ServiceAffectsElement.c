@@ -136,7 +136,7 @@ static CMPIStatus cs_to_service(const CMPIObjectPath *ref,
 
 LIBVIRT_CIM_DEFAULT_MAKEREF()
 
-static char* antecedent[] = {  
+static char* affected_ele[] = {  
         "Xen_ComputerSystem",
         "KVM_ComputerSystem",
         "LXC_ComputerSystem",
@@ -149,7 +149,7 @@ static char* antecedent[] = {
         NULL
 };
 
-static char* dependent[] = {
+static char* affecting_ele[] = {
         "Xen_ConsoleRedirectionService",
         "KVM_ConsoleRedirectionService",
         "LXC_ConsoleRedirectionService",
@@ -164,11 +164,11 @@ static char* assoc_classname[] = {
 };
 
 static struct std_assoc _cs_to_service = {
-        .source_class = (char**)&antecedent,
-        .source_prop = "Antecedent",
+        .source_class = (char**)&affected_ele,
+        .source_prop = "AffectedElement",
 
-        .target_class = (char**)&dependent,
-        .target_prop = "Dependent",
+        .target_class = (char**)&affecting_ele,
+        .target_prop = "AffectingElement",
 
         .assoc_class = (char**)&assoc_classname,
 
@@ -177,11 +177,11 @@ static struct std_assoc _cs_to_service = {
 };
 
 static struct std_assoc _service_to_cs = {
-        .source_class = (char**)&dependent,
-        .source_prop = "Dependent",
+        .source_class = (char**)&affecting_ele,
+        .source_prop = "AffectingElement",
         
-        .target_class = (char**)&antecedent,
-        .target_prop = "Antecedent",
+        .target_class = (char**)&affected_ele,
+        .target_prop = "AffectedElement",
 
         .assoc_class = (char**)&assoc_classname,
         
