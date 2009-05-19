@@ -1239,11 +1239,12 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *path = "/dev/null";
-        const char *dev_path;
-        const char *host;
-        const char *src_dir;
-        int type[3] = {DISK_POOL_DIR, DISK_POOL_FS, DISK_POOL_NETFS};
-        int pool_types = 3;
+        int type[5] = {DISK_POOL_DIR, 
+                       DISK_POOL_FS, 
+                       DISK_POOL_NETFS, 
+                       DISK_POOL_DISK, 
+                       DISK_POOL_ISCSI};
+        int pool_types = 5;
         int i;
 
         switch (template_type) {
@@ -1267,6 +1268,10 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         }
 
         for (i = 0; i < pool_types; i++) {
+                const char *dev_path = NULL;
+                const char *host = NULL;
+                const char *src_dir = NULL;
+
                 inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK, POOL_RASD);
                 if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                         goto out;
@@ -1274,23 +1279,39 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                 CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
 
                 switch (type[i]) {
+                case DISK_POOL_DISK:
+                        dev_path = "/dev/VolGroup00/LogVol100";
+
+                        break;
                 case DISK_POOL_FS:
                         dev_path = "/dev/sda100";
-                        CMSetProperty(inst, "DevicePath", 
-                                      (CMPIValue *)dev_path, CMPI_chars);
+
                         break;
                 case DISK_POOL_NETFS:
                         host = "host_sys.domain.com";
-                        CMSetProperty(inst, "Host", 
-                                      (CMPIValue *)host, CMPI_chars);
-
                         src_dir = "/var/lib/images";
-                        CMSetProperty(inst, "SourceDirectory", 
-                                      (CMPIValue *)src_dir, CMPI_chars);
+
+                        break;
+                case DISK_POOL_ISCSI:
+                        host = "host_sys.domain.com";
+                        dev_path = "iscsi-target";
+
                         break;
                 default:
                         break;
                 }
+
+                if (dev_path != NULL)
+                        CMSetProperty(inst, "DevicePath", 
+                                      (CMPIValue *)dev_path, CMPI_chars);
+
+                if (host != NULL)
+                        CMSetProperty(inst, "Host", 
+                                      (CMPIValue *)host, CMPI_chars);
+
+                if (src_dir != NULL)
+                        CMSetProperty(inst, "SourceDirectory", 
+                                      (CMPIValue *)src_dir, CMPI_chars);
 
                 CMSetProperty(inst, "Type", (CMPIValue *)&type[i], CMPI_uint16);
                 CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
