@@ -179,6 +179,24 @@ static const char *disk_netfs_pool(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *disk_iscsi_pool(CMPIInstance *inst,
+                                   struct virt_pool *pool)
+{
+        const char *val = NULL;
+
+        if (cu_get_str_prop(inst, "DevicePath", &val) != CMPI_RC_OK)
+                return "Missing `DevicePath' property";
+
+        pool->pool_info.disk.device_path = strdup(val);
+
+        if (cu_get_str_prop(inst, "Host", &val) != CMPI_RC_OK)
+                return "Missing `Host' property";
+
+        pool->pool_info.disk.host = strdup(val);
+
+        return NULL;
+}
+
 static const char *disk_rasd_to_pool(CMPIInstance *inst,
                                     struct virt_pool *pool)
 {
@@ -200,6 +218,9 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
                 break;
         case DISK_POOL_NETFS:
                 msg = disk_netfs_pool(inst, pool);
+                break;
+        case DISK_POOL_ISCSI:
+                msg = disk_iscsi_pool(inst, pool);
                 break;
         default:
                 return "Storage pool type not supported";
