@@ -9,3 +9,4 @@ Qualifier Experimental : boolean = false,
 #pragma include ("Core/CIM_HostedResourcePool.mof")
 #pragma include ("Core/CIM_ElementCapabilities.mof")
 #pragma include ("Core/CIM_HostedService.mof")
+#pragma include ("Core/CIM_HostedResourcePool.mof")

@@ -1,5 +1,5 @@
 // Copyright IBM Corp. 2008
 
-class Xen_VirtualSystemSnapshotService : Virt_VirtualSystemSnapshotService { };
-class KVM_VirtualSystemSnapshotService : Virt_VirtualSystemSnapshotService { };
-class LXC_VirtualSystemSnapshotService : Virt_VirtualSystemSnapshotService { };
+class Xen_VirtualSystemSnapshotService : CIM_VirtualSystemSnapshotService { };
+class KVM_VirtualSystemSnapshotService : CIM_VirtualSystemSnapshotService { };
+class LXC_VirtualSystemSnapshotService : CIM_VirtualSystemSnapshotService { };
