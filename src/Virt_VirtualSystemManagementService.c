@@ -2248,6 +2248,9 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         CMSetProperty(inst, "Revision",
                       (CMPIValue *)LIBVIRT_CIM_RV, CMPI_chars);
 
+        CMSetProperty(inst, "Release",
+                      (CMPIValue *)PACKAGE_VERSION, CMPI_chars);
+
         if (is_get_inst) {
                 s = cu_validate_ref(broker, reference, inst);
                 if (s.rc != CMPI_RC_OK)
