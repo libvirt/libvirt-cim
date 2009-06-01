@@ -434,6 +434,9 @@ static CMPIStatus create_child_pool(CMPIMethodMI *self,
         CU_DEBUG("Pool XML:\n%s", xml);
 
         inst = connect_and_create(xml, reference, full_id, pool->type, &s);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
         if (inst == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
