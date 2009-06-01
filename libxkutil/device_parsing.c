@@ -810,6 +810,8 @@ int parse_fq_devid(const char *devid, char **host, char **device)
 static int parse_os(struct domain *dominfo, xmlNode *os)
 {
         xmlNode *child;
+        char **blist = NULL;
+        unsigned bl_size = 0;
 
         for (child = os->children; child != NULL; child = child->next) {
                 if (XSTREQ(child->name, "type"))
@@ -822,10 +824,23 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
                         STRPROP(dominfo, os_info.pv.cmdline, child);
                 else if (XSTREQ(child->name, "loader"))
                         STRPROP(dominfo, os_info.fv.loader, child);
-                else if (XSTREQ(child->name, "boot"))
-                        dominfo->os_info.fv.boot = get_attr_value(child,
-                                                                     "dev");
-                else if (XSTREQ(child->name, "init"))
+                else if (XSTREQ(child->name, "boot")) {
+                        char **tmp_list = NULL;
+
+                        tmp_list = (char **)realloc(blist, 
+                                                    (bl_size + 1) * 
+                                                    sizeof(char *));
+                        if (tmp_list == NULL) {
+                                // Nothing you can do. Just go on.
+                                CU_DEBUG("Could not alloc space for "
+                                         "boot device");
+                                continue;  
+                        }
+                        blist = tmp_list;
+                        
+                        blist[bl_size] = get_attr_value(child, "dev");
+                        bl_size++;
+                } else if (XSTREQ(child->name, "init"))
                         STRPROP(dominfo, os_info.lxc.init, child);
         }
 
@@ -842,6 +857,9 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
                 dominfo->type = DOMAIN_XENPV;
         else
                 dominfo->type = -1;
+
+        dominfo->os_info.fv.bootlist = blist;
+        dominfo->os_info.fv.bootlist_ct = bl_size;
 
         return 1;
 }
@@ -1001,9 +1019,15 @@ void cleanup_dominfo(struct domain **dominfo)
                 free(dom->os_info.pv.cmdline);
         } else if ((dom->type == DOMAIN_XENFV) ||
                    (dom->type == DOMAIN_KVM) || (dom->type == DOMAIN_QEMU)) {
+                int i;
+
                 free(dom->os_info.fv.type);
                 free(dom->os_info.fv.loader);
-                free(dom->os_info.fv.boot);
+                
+                for (i = 0; i < dom->os_info.fv.bootlist_ct; i++) {
+                        free(dom->os_info.fv.bootlist[i]);
+                } 
+                free(dom->os_info.fv.bootlist);
         } else if (dom->type == DOMAIN_LXC) {
                 free(dom->os_info.lxc.type);
                 free(dom->os_info.lxc.init);

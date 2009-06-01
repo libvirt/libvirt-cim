@@ -28,6 +28,7 @@ static void print_u32(FILE *d, const char *name, uint32_t val)
 static void print_os(struct domain *dom,
                      FILE *d)
 {
+        int i;
 
         if (dom->type == DOMAIN_XENPV) {
                 print_value(d, "Domain Type", "Xen PV");
@@ -39,13 +40,18 @@ static void print_os(struct domain *dom,
                 print_value(d, "Domain Type", "Xen FV");
                 print_value(d, "Type", dom->os_info.fv.type);
                 print_value(d, "Loader", dom->os_info.fv.loader);
-                print_value(d, "Boot", dom->os_info.fv.boot);
 
+                for (i = 0; i < dom->os_info.fv.bootlist_ct; i++) {
+                        print_value(d, "Boot", dom->os_info.fv.bootlist[i]);
+                }
         } else if ((dom->type == DOMAIN_KVM) || (dom->type == DOMAIN_QEMU)) {
                 print_value(d, "Domain Type", "KVM/QEMU");
                 print_value(d, "Type", dom->os_info.fv.type);
                 print_value(d, "Loader", dom->os_info.fv.loader);
-                print_value(d, "Boot", dom->os_info.fv.boot);
+
+                for (i = 0; i < dom->os_info.fv.bootlist_ct; i++) {
+                        print_value(d, "Boot", dom->os_info.fv.bootlist[i]);
+                }
         } else if (dom->type == DOMAIN_LXC) {
                 print_value(d, "Init", dom->os_info.lxc.init);
         } else {

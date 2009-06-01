@@ -99,7 +99,8 @@ struct pv_os_info {
 struct fv_os_info {
         char *type; /* Should always be 'hvm' */
         char *loader;
-        char *boot;
+        unsigned bootlist_ct;
+        char **bootlist;
 };
 
 struct lxc_os_info {

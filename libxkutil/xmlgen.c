@@ -435,10 +435,27 @@ static char *_xenpv_os_xml(xmlNodePtr root, struct domain *domain)
         return NULL;
 }
 
+static int _fv_bootlist_xml(xmlNodePtr root, struct fv_os_info *os)
+{
+        unsigned i;
+        xmlNodePtr tmp;
+
+        for (i = 0; i < os->bootlist_ct; i++) {
+                tmp = xmlNewChild(root, NULL, BAD_CAST "boot", NULL);
+                if (tmp == NULL)
+                        return 0;
+
+                xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST os->bootlist[i]);
+        }
+
+        return 1;
+}
+
 static char *_xenfv_os_xml(xmlNodePtr root, struct domain *domain)
 {
         struct fv_os_info *os = &domain->os_info.fv;
         xmlNodePtr tmp;
+        unsigned ret;
 
         if (os->type == NULL)
                 os->type = strdup("hvm");
@@ -446,8 +463,11 @@ static char *_xenfv_os_xml(xmlNodePtr root, struct domain *domain)
         if (os->loader == NULL)
                 os->loader = strdup("/usr/lib/xen/boot/hvmloader");
 
-        if (os->boot == NULL)
-                os->boot = strdup("hd");
+        if (os->bootlist_ct == 0) {
+                os->bootlist_ct = 1;
+                os->bootlist = (char **)calloc(1, sizeof(char *));
+                os->bootlist[0] = strdup("hd");
+        }
 
         tmp = xmlNewChild(root, NULL, BAD_CAST "type", BAD_CAST os->type);
         if (tmp == NULL)
@@ -457,11 +477,9 @@ static char *_xenfv_os_xml(xmlNodePtr root, struct domain *domain)
         if (tmp == NULL)
                 return XML_ERROR;
 
-        tmp = xmlNewChild(root, NULL, BAD_CAST "boot", NULL);
-        if (tmp == NULL)
+        ret = _fv_bootlist_xml(root, os);
+        if (ret == 0)
                 return XML_ERROR;
-
-        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST os->boot);
 
         tmp = xmlNewChild(root, NULL, BAD_CAST "features", NULL);
         xmlNewChild(tmp, NULL, BAD_CAST "pae", NULL);
@@ -475,21 +493,24 @@ static char *_kvm_os_xml(xmlNodePtr root, struct domain *domain)
 {
         struct fv_os_info *os = &domain->os_info.fv;
         xmlNodePtr tmp;
+        unsigned ret;
 
         if (os->type == NULL)
                 os->type = strdup("hvm");
 
-        if (os->boot == NULL)
-                os->boot = strdup("hd");
+        if (os->bootlist_ct == 0) {
+                os->bootlist_ct = 1;
+                os->bootlist = (char **)calloc(1, sizeof(char *));
+                os->bootlist[0] = strdup("hd");
+        }
 
         tmp = xmlNewChild(root, NULL, BAD_CAST "type", BAD_CAST os->type);
         if (tmp == NULL)
                 return XML_ERROR;
-
-        tmp = xmlNewChild(root, NULL, BAD_CAST "boot", NULL);
-        if (tmp == NULL)
+        
+        ret = _fv_bootlist_xml(root, os);
+        if (ret == 0)
                 return XML_ERROR;
-        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST os->boot);
 
         return NULL;
 }
