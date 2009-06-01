@@ -197,6 +197,68 @@ static bool system_has_kvm(const char *pfx)
         return kvm;
 }
 
+static int bootord_vssd_to_domain(CMPIInstance *inst,
+                                  struct domain *domain)
+{
+        int ret;
+        CMPICount i;
+        CMPICount bl_size;
+        CMPIArray *bootlist;
+        CMPIStatus s;
+        CMPIData boot_elem;
+        char **tmp_str_arr;
+
+        for (i = 0; i < domain->os_info.fv.bootlist_ct; i++)
+                free(domain->os_info.fv.bootlist[i]);
+
+        ret = cu_get_array_prop(inst, "BootDevices", &bootlist);
+      
+        if (ret != CMPI_RC_OK)  
+                CU_DEBUG("Failed to get BootDevices property"); 
+
+       
+        bl_size = CMGetArrayCount(bootlist, &s);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Invalid BootDevice array size");
+                return 0;
+        }
+
+        tmp_str_arr = (char **)realloc(domain->os_info.fv.bootlist,
+                                       bl_size * sizeof(char *));
+
+        if (tmp_str_arr == NULL) {
+                CU_DEBUG("Could not alloc BootDevices array");
+                return 0;
+        }
+
+        for (i = 0; i < bl_size; i++) {
+                const char *str;
+
+                boot_elem = CMGetArrayElementAt(bootlist, 
+                                                i, 
+                                                NULL); 
+
+                if (CMIsNullValue(boot_elem)) {
+                        CU_DEBUG("Null BootDevice");
+                        return 0;
+                }
+
+                str = CMGetCharPtr(boot_elem.value.string);
+
+                if (str == NULL) {
+                        CU_DEBUG("Could not extract char pointer from "
+                                 "CMPIArray");
+                        return 0;
+                }
+
+                tmp_str_arr[i] = strdup(str);
+        }
+        domain->os_info.fv.bootlist_ct = bl_size;
+        domain->os_info.fv.bootlist = tmp_str_arr;
+
+        return 1;
+}
+
 static int fv_vssd_to_domain(CMPIInstance *inst,
                              struct domain *domain,
                              const char *pfx)
@@ -216,12 +278,9 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
                 return 0;
         }
 
-        ret = cu_get_str_prop(inst, "BootDevice", &val);
-        if (ret != CMPI_RC_OK)
-                val = "hd";
-
-        free(domain->os_info.fv.boot);
-        domain->os_info.fv.boot = strdup(val);
+        ret = bootord_vssd_to_domain(inst, domain);
+        if (ret != 1)
+                return 0;
 
         ret = cu_get_str_prop(inst, "Emulator", &val);
         if (ret != CMPI_RC_OK)
