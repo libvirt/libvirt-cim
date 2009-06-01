@@ -27,7 +27,7 @@ class Xen_VirtualSystemSettingData : Virt_VirtualSystemSettingData
 
   [Description ("The device to boot from when in fully-virtualized mode."
                 "One of hd,fd,cdrom.")]
-  string BootDevice;
+  string BootDevices[];
 
   [Description ("The emulator the guest should use during runtime.")]
   string Emulator;
@@ -42,8 +42,8 @@ class Xen_VirtualSystemSettingData : Virt_VirtualSystemSettingData
 class KVM_VirtualSystemSettingData : Virt_VirtualSystemSettingData
 {
 
-  [Description ("The device to boot from.  One of hd,fd,cdrom.")]
-  string BootDevice;
+  [Description ("The list of devices to boot from. hd,fd,cdrom.")]
+  string BootDevices[];
 
   [Description ("The emulator the guest should use during runtime.")]
   string Emulator;

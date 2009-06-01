@@ -38,20 +38,91 @@
 
 const static CMPIBroker *_BROKER;
 
-static void _set_fv_prop(struct domain *dominfo,
-                         CMPIInstance *inst)
+static CMPIStatus _set_fv_prop(const CMPIBroker *broker,
+                               struct domain *dominfo,
+                               CMPIInstance *inst)
 {
         bool fv = true;
+        CMPIArray *array;
+        CMPICount bl_ct;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPICount i;
 
         if (dominfo->type == DOMAIN_XENFV)
                 CMSetProperty(inst, "IsFullVirt",
                               (CMPIValue *)&fv, CMPI_boolean);
 
-        if (dominfo->os_info.fv.boot != NULL)
-                CMSetProperty(inst,
-                              "BootDevice",
-                              (CMPIValue *)dominfo->os_info.fv.boot,
-                              CMPI_chars);
+        bl_ct = dominfo->os_info.fv.bootlist_ct;
+        if (bl_ct < 0) 
+                return s;
+
+        CU_DEBUG("bootlist_ct = %d", bl_ct);
+                
+        array = CMNewArray(broker, 
+                           bl_ct,
+                           CMPI_string,
+                           &s);
+
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED, 
+                           "Error creating BootDevices list");
+                CU_DEBUG("CMNewArray call failed");
+
+                goto out;
+        }
+
+        for (i = 0; i < bl_ct; i++) {
+                CMPIString *cm_str;
+
+                CU_DEBUG("BootList[%u]=%s",
+                         i,
+                         dominfo->os_info.fv.bootlist[i]);
+
+                cm_str = CMNewString(broker,
+                                     (const char *)dominfo->os_info.
+                                     fv.bootlist[i],
+                                     &s);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Error creating CMPIString");
+                        cu_statusf(broker, &s, 
+                                   CMPI_RC_ERR_FAILED, 
+                                   "Error creating CMPIString for " 
+                                   "BootDevices item");
+
+                        goto out;
+                }
+
+                s = CMSetArrayElementAt(array,
+                                        i,
+                                        (CMPIValue *)&cm_str,
+                                        CMPI_string);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Error in CMSetArrayElementAT call");
+                        cu_statusf(broker, &s, 
+                                   CMPI_RC_ERR_FAILED, 
+                                   "Error setting BootDevices array element");
+
+                        goto out;
+                }
+        }
+
+        s = CMSetProperty(inst,
+                          "BootDevices",
+                          (CMPIValue *)&array,
+                          CMPI_stringA);
+
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Error in CMSetProperty call");
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED, 
+                           "Error setting BootDevices property");
+
+                goto out;
+        }
+
+ out:
+        return s;
 }
 
 static void _set_pv_prop(struct domain *dominfo,
@@ -98,12 +169,14 @@ static void _set_lxc_prop(struct domain *dominfo,
                               CMPI_chars);
 }
 
-static int instance_from_dom(virDomainPtr dom,
+static int instance_from_dom(const CMPIBroker *broker,
+                             virDomainPtr dom,
                              CMPIInstance *inst)
 {
         char *pfx = NULL;
         char *vsid = NULL;
         int ret = 1;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIObjectPath *op;
         struct domain *dominfo = NULL;
 
@@ -158,7 +231,12 @@ static int instance_from_dom(virDomainPtr dom,
 
         if ((dominfo->type == DOMAIN_XENFV) ||
             (dominfo->type == DOMAIN_KVM) || (dominfo->type == DOMAIN_QEMU))
-                _set_fv_prop(dominfo, inst);
+                s = _set_fv_prop(broker, dominfo, inst);
+                if (s.rc != CMPI_RC_OK) {
+                        ret = 0;
+                        goto out;
+                }
+
         else if (dominfo->type == DOMAIN_XENPV)
                 _set_pv_prop(dominfo, inst);
         else if (dominfo->type == DOMAIN_LXC)
@@ -203,7 +281,7 @@ static CMPIInstance *_get_vssd(const CMPIBroker *broker,
                 goto out;
         }
         
-        if (instance_from_dom(dom, inst) != 1) {
+        if (instance_from_dom(broker, dom, inst) != 1) {
                 cu_statusf(broker, s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get VSSD instance from Domain");
