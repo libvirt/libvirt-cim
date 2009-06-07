@@ -97,6 +97,7 @@ static void print_dev_disk(struct virt_device *dev,
         print_value(d, "Driver", dev->dev.disk.driver);
         print_value(d, "Source", dev->dev.disk.source);
         print_value(d, "Virt Device", dev->dev.disk.virtual_dev);
+        print_value(d, "Bus Type", dev->dev.disk.bus_type);
 }
 
 static void print_dev_vcpu(struct virt_device *dev,

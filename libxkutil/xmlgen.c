@@ -60,6 +60,8 @@ static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
         if (tmp == NULL)
                 return XML_ERROR;
         xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->virtual_dev);
+        if (dev->bus_type)
+                xmlNewProp(tmp, BAD_CAST "bus", BAD_CAST dev->bus_type);
 
         if (dev->readonly)
                 xmlNewChild(disk, NULL, BAD_CAST "readonly", NULL);
@@ -90,6 +92,9 @@ static const char *disk_file_xml(xmlNodePtr root, struct disk_device *dev)
         if (tmp == NULL)
                 return XML_ERROR;
         xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->virtual_dev);
+        if (dev->bus_type)
+                xmlNewProp(tmp, BAD_CAST "bus", BAD_CAST dev->bus_type);
+
 
         if (dev->readonly)
                 xmlNewChild(disk, NULL, BAD_CAST "readonly", NULL);
