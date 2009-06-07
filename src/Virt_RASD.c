@@ -253,6 +253,11 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                       (CMPIValue *)dev->dev.disk.source,
                       CMPI_chars);
 
+        CMSetProperty(inst,
+                      "BusType",
+                      (CMPIValue *)dev->dev.disk.bus_type,
+                      CMPI_chars);
+
         /* There's not much we can do here if we don't recognize the type,
          * so it seems that assuming 'disk' is a reasonable default
          */

@@ -603,6 +603,12 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         else
                 return "Invalid value for EmulatedType";
 
+        free(dev->dev.disk.bus_type);
+        if (cu_get_str_prop(inst, "BusType", &val) != CMPI_RC_OK) 
+                dev->dev.disk.bus_type = NULL;
+        else 
+                dev->dev.disk.bus_type = strdup(val);
+
         free(dev->id);
         dev->id = strdup(dev->dev.disk.virtual_dev);
 
