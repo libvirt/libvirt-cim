@@ -59,6 +59,7 @@ static void cleanup_disk_device(struct disk_device *dev)
         free(dev->driver);
         free(dev->source);
         free(dev->virtual_dev);
+        free(dev->bus_type);
 }
 
 static void cleanup_net_device(struct net_device *dev)
@@ -246,6 +247,7 @@ static int parse_block_device(xmlNode *dnode, struct virt_device **vdevs)
                         ddev->virtual_dev = get_attr_value(child, "dev");
                         if (ddev->virtual_dev == NULL)
                                 goto err;
+                        ddev->bus_type = get_attr_value(child, "bus");
                 } else if (XSTREQ(child->name, "readonly")) {
                         ddev->readonly = true;
                 } else if (XSTREQ(child->name, "shareable")) {
@@ -666,6 +668,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.disk.driver);
                 DUP_FIELD(dev, _dev, dev.disk.source);
                 DUP_FIELD(dev, _dev, dev.disk.virtual_dev);
+                DUP_FIELD(dev, _dev, dev.disk.bus_type);
                 dev->dev.disk.disk_type = _dev->dev.disk.disk_type;
                 dev->dev.disk.readonly = _dev->dev.disk.readonly;
                 dev->dev.disk.shareable = _dev->dev.disk.shareable;
