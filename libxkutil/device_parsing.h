@@ -39,6 +39,7 @@ struct disk_device {
         enum {DISK_UNKNOWN, DISK_PHY, DISK_FILE, DISK_FS} disk_type;
         bool readonly;
         bool shareable;
+        char *bus_type;
 };
 
 struct net_device {

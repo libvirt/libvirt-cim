@@ -13,6 +13,10 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
         ValueMap {"0", "1"},
         Values {"Disk", "CDROM"}]
       uint16 EmulatedType;
+
+      [Description ("Bus type of the device")]
+      string BusType;
+
 };
 
 [Description ("KVM virtual disk configuration"),
@@ -28,6 +32,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
         ValueMap {"0", "1"},
         Values {"Disk", "CDROM"}]
       uint16 EmulatedType;
+
+      [Description ("Bus type of the device")]
+      string BusType;
 };
 
 [Description ("LXC virtual disk configuration"),
