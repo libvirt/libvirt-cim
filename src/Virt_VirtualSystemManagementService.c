@@ -213,9 +213,11 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
 
         ret = cu_get_array_prop(inst, "BootDevices", &bootlist);
       
-        if (ret != CMPI_RC_OK)  
+        if (ret != CMPI_RC_OK) {
                 CU_DEBUG("Failed to get BootDevices property"); 
-
+                domain->os_info.fv.bootlist_ct = 0;
+                goto out;
+        }
        
         bl_size = CMGetArrayCount(bootlist, &s);
         if (s.rc != CMPI_RC_OK) {
@@ -255,6 +257,8 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
         }
         domain->os_info.fv.bootlist_ct = bl_size;
         domain->os_info.fv.bootlist = tmp_str_arr;
+
+ out:
 
         return 1;
 }
