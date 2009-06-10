@@ -3,4 +3,3 @@
 Xen_ServiceAccessBySAP root/virt Virt_ServiceAccessBySAP Virt_ServiceAccessBySAP association
 KVM_ServiceAccessBySAP root/virt Virt_ServiceAccessBySAP Virt_ServiceAccessBySAP association
 LXC_ServiceAccessBySAP root/virt Virt_ServiceAccessBySAP Virt_ServiceAccessBySAP association
-
