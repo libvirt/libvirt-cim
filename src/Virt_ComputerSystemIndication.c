@@ -277,6 +277,9 @@ static bool _do_indication(const CMPIBroker *broker,
                 break;
         }
 
+        CMSetProperty(ind, "SourceInstance",
+                      (CMPIValue *)&affected_inst, CMPI_instance);
+
         set_source_inst_props(broker, ctx, affected_op, ind);
 
         CU_DEBUG("Delivering Indication: %s",
@@ -328,20 +331,18 @@ static bool async_ind(CMPIContext *context,
                       char *prefix,
                       struct ind_args *args)
 {
-        bool rc;
+        bool rc = false;
         char *name = NULL;
         char *type_name = NULL;
+        char *cn = NULL;
+        CMPIObjectPath *op;
         CMPIInstance *affected_inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!lifecycle_enabled) {
                 CU_DEBUG("CSI not enabled, skipping indication delivery");
                 return false;
         }
-
-        affected_inst = get_typed_instance(_BROKER,
-                                           prefix,
-                                           "ComputerSystem",
-                                           args->ns);
 
         name = sys_name_from_xml(prev_dom.xml);
         CU_DEBUG("Name for system: '%s'", name);
@@ -349,6 +350,19 @@ static bool async_ind(CMPIContext *context,
                 rc = false;
                 goto out;
         }
+
+        cn = get_typed_class(prefix, "ComputerSystem");
+
+        op = CMNewObjectPath(_BROKER, args->ns, cn, &s);
+        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
+                goto out;
+
+        /* FIXME: This gets the CS instance after it has been modified. We also
+           need a way to get the instance before it was modified - that
+           value is used when setting the PreviousInstance value.  */
+        s = get_domain_by_name(_BROKER, op, name, &affected_inst);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         switch (ind_type) {
         case CS_CREATED:
@@ -371,6 +385,7 @@ static bool async_ind(CMPIContext *context,
                             ind_type, type_name, prefix, args);
 
  out:
+        free(cn);
         free(name);
         return rc;
 }
