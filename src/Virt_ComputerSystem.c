@@ -1091,7 +1091,7 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         s = __state_change(name, state, reference);
 
         if (s.rc == CMPI_RC_OK) {
-                char *type;
+                char *type = NULL;
 
                 type = get_typed_class(CLASSNAME(reference),
                                        "ComputerSystemModifiedIndication");
@@ -1102,6 +1102,8 @@ static CMPIStatus state_change(CMPIMethodMI *self,
                                         type,
                                         NAMESPACE(reference));
                 rc = 0;
+
+                free(type);
         }
  out:
         CMReturnData(results, &rc, CMPI_uint32);
