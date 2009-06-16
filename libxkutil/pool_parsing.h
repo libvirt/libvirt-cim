@@ -45,7 +45,8 @@ struct disk_pool {
               DISK_POOL_ISCSI, 
               DISK_POOL_LOGICAL} pool_type;
         char *path;
-        char *device_path;
+        char **device_paths;
+        uint16_t device_paths_ct;
         char *host;
         char *src_dir;
 };

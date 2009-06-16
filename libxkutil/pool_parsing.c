@@ -53,10 +53,16 @@ static void cleanup_net_pool(struct net_pool pool) {
 }
 
 static void cleanup_disk_pool(struct disk_pool pool) {
+        uint16_t i;
+
         free(pool.path);
-        free(pool.device_path);
         free(pool.host);
         free(pool.src_dir);
+
+        for (i = 0; i < pool.device_paths_ct; i++) 
+                free(pool.device_paths[i]);
+
+        free(pool.device_paths);
 }
 
 void cleanup_virt_pool(struct virt_pool **pool)
