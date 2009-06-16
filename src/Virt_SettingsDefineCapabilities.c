@@ -1038,7 +1038,11 @@ static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
         struct virt_pool *pool = NULL;
         CMPIInstance *inst = NULL;
         int type = 0;
+        const char *name;
         const char *path;
+        uint16_t alloc = 0;
+        uint16_t cap = 0;
+        const char *units;
 
         switch(template_type) {
         case SDC_RASD_MIN:
@@ -1080,10 +1084,23 @@ static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
                 goto out;
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-        CMSetProperty(inst, "Type", (CMPIValue *)&type, CMPI_uint16);
+        CMSetProperty(inst, "FormatType", (CMPIValue *)&type, CMPI_uint16);
+
+        name = "tmp.img";
+        CMSetProperty(inst, "VolumeName", (CMPIValue *)name, CMPI_chars);
 
         path = "/var/lib/libvirt/images/";
         CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
+
+        alloc = 0;
+        CMSetProperty(inst, "AllocationQuantity", 
+                      (CMPIValue *)&alloc, CMPI_uint16);
+
+        cap = 0;
+        CMSetProperty(inst, "Capacity", (CMPIValue *)&cap, CMPI_uint16);
+
+        units = "G";
+        CMSetProperty(inst, "AllocationUnits", (CMPIValue *)units, CMPI_chars);
 
         inst_list_add(list, inst);
 

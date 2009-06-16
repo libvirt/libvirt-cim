@@ -296,8 +296,12 @@ class LXC_DiskPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingD
 ]
 class Xen_StorageVolumeResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
+      string VolumeName;
       string Path;
-      uint16 Type;
+      uint16 FormatType;
+      uint16 AllocationQuantity;
+      uint16 Capacity;
+      string AllocationUnits;
 };
 
 [Description ("KVM storage volume settings"),
@@ -305,7 +309,11 @@ class Xen_StorageVolumeResourceAllocationSettingData : Xen_ResourceAllocationSet
 ]
 class KVM_StorageVolumeResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
+      string VolumeName;
       string Path;
-      uint16 Type;
+      uint16 FormatType;
+      uint16 AllocationQuantity;
+      uint16 Capacity;
+      string AllocationUnits;
 };
 
