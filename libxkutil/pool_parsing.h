@@ -89,6 +89,8 @@ int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type);
 int define_pool(virConnectPtr conn, const char *xml, int res_type);
 int destroy_pool(virConnectPtr conn, const char *name, int res_type);
 
+int create_resource(virConnectPtr conn, const char *pname,
+                    const char *xml, int res_type);
 
 #endif
 

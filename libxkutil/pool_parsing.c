@@ -329,6 +329,46 @@ int destroy_pool(virConnectPtr conn, const char *name, int res_type)
         return ret;
 }
 
+#if VIR_USE_LIBVIRT_STORAGE
+int create_resource(virConnectPtr conn,
+                    const char *pname,
+                    const char *xml,
+                    int res_type)
+{
+        int ret = 0;
+
+        if (res_type == CIM_RES_TYPE_IMAGE) {
+                virStoragePoolPtr ptr = virStoragePoolLookupByName(conn, pname);
+                if (ptr == NULL) {
+                        CU_DEBUG("Storage pool %s is not defined", pname);
+                        goto out;
+                }
+
+                virStorageVolPtr vptr = virStorageVolCreateXML(ptr, xml, 0);
+                if (vptr == NULL)
+                        goto out;
+
+                virStorageVolFree(vptr);
+                virStoragePoolFree(ptr);
+
+                ret = 1;
+        }
+
+ out:
+
+        return ret;
+}
+#else
+int create_resource(virConnectPtr conn,
+                    const char *pname,
+                    const char *xml,
+                    int res_type)
+{
+          CU_DEBUG("Creating resources within libvirt pools not supported");
+          return 0;
+}
+#endif
+
 /*
  * Local Variables:
  * mode: C
