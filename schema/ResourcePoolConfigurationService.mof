@@ -3,14 +3,71 @@
 [Provider("cmpi::Virt_ResourcePoolConfigurationService")]
 class Xen_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationService
 {
+
+    [Description ( "Create a resource within a specified pool using the "
+                   "specified allocation settings. If 0 is returned, the " 
+                   "function completed successfully." )]
+    uint32 CreateResourceInPool(
+      [IN, Description ( "String containing a representation of a "
+                         "CIM_SettingData instance that is used to specify "
+                         "the settings for the resource." ),
+           EmbeddedInstance ( "CIM_ResourceAllocationSettingData" )]
+      string Settings,
+
+      [IN, Description ( "Reference to the pool to create the resources in." )]
+      CIM_ResourcePool REF Pool,
+
+      [IN ( false ), OUT, Description ( "Reference to the job (may be null "
+                                        "if job completed)." )]
+      CIM_ResourceAllocationSettingData REF Resource 
+    );
+
 };
 
 [Provider("cmpi::Virt_ResourcePoolConfigurationService")]
 class KVM_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationService
 {
+
+    [Description ( "Create a resource within a specified pool using the "
+                   "specified allocation settings. If 0 is returned, the " 
+                   "function completed successfully." )]
+    uint32 CreateResourceInPool(
+      [IN, Description ( "String containing a representation of a "
+                         "CIM_SettingData instance that is used to specify "
+                         "the settings for the resource." ),
+           EmbeddedInstance ( "CIM_ResourceAllocationSettingData" )]
+      string Settings,
+
+      [IN, Description ( "Reference to the pool to create the resources in." )]
+      CIM_ResourcePool REF Pool,
+
+      [IN ( false ), OUT, Description ( "Reference to the job (may be null "
+                                        "if job completed)." )]
+      CIM_ResourceAllocationSettingData REF Resource 
+    );
+
 };
 
 [Provider("cmpi::Virt_ResourcePoolConfigurationService")]
 class LXC_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationService
 {
+
+    [Description ( "Create a resource within a specified pool using the "
+                   "specified allocation settings. If 0 is returned, the " 
+                   "function completed successfully." )]
+    uint32 CreateResourceInPool(
+      [IN, Description ( "String containing a representation of a "
+                         "CIM_SettingData instance that is used to specify "
+                         "the settings for the resource." ),
+           EmbeddedInstance ( "CIM_ResourceAllocationSettingData" )]
+      string Settings,
+
+      [IN, Description ( "Reference to the pool to create the resources in." )]
+      CIM_ResourcePool REF Pool,
+
+      [IN ( false ), OUT, Description ( "Reference to the job (may be null "
+                                        "if job completed)." )]
+      CIM_ResourceAllocationSettingData REF Resource 
+    );
+
 };
