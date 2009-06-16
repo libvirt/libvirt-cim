@@ -784,6 +784,9 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
         CMPIObjectPath *pool;
         struct virt_pool_res *res = NULL;
         const char* msg = NULL;
+        const char *id = NULL;
+        char *pool_id = NULL;
+        char *xml = NULL;
 
         CU_DEBUG("CreateResourceInPool");
 
@@ -808,11 +811,43 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
                 goto out;
         }
 
+        if (cu_get_str_path(pool, "InstanceID", &id) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing InstanceID in resource pool");
+                goto out;
+        }
+
+        pool_id = name_from_pool_id(id);
+        if (pool_id == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Pool has invalid InstanceID");
+                goto out;
+        }
+
+        free(res->pool_id);
+        res->pool_id = strdup(pool_id);
+
+        xml = res_to_xml(res);
+        if (xml == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to generate XML for new resource");
+                goto out;
+        }
+
+        CU_DEBUG("New resource XML:\n%s", xml);
+
+        /*FIXME: Add resource here */
+
+ out:
+        free(pool_id);
+        free(xml);
+
         if (s.rc == CMPI_RC_OK)
                 rc = CIM_SVPC_RETURN_COMPLETED;
         CMReturnData(results, &rc, CMPI_uint32);
-
- out:
 
         return s;
 }
