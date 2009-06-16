@@ -189,20 +189,28 @@ static char *get_dev_paths(CMPIInstance *inst,
         return NULL;
 }
 
-static const char *disk_fs_or_disk_pool(CMPIInstance *inst,
-                                        struct virt_pool *pool)
+static const char *disk_fs_or_disk_or_logical_pool(CMPIInstance *inst,
+                                                   struct virt_pool *pool)
 {
         const char *msg = NULL;
 
         msg = get_dev_paths(inst, 
                             &pool->pool_info.disk.device_paths, 
                             &pool->pool_info.disk.device_paths_ct);
-        
-        if (msg != NULL)
-                return msg;
 
-        if (pool->pool_info.disk.device_paths_ct != 1)
-                return "Specified pool type only takes one device path";
+
+        /* Specifying a value for DevicePaths isn't mandatory for logical
+           pool types.  */ 
+        if (pool->pool_info.disk.pool_type != DISK_POOL_LOGICAL) {
+                if (msg != NULL)
+                        return msg;
+
+                if (pool->pool_info.disk.device_paths_ct != 1) {
+                        CU_DEBUG("%d only takes one device path", 
+                                 pool->pool_info.disk.pool_type);
+                        return "Specified pool type only takes one device path";
+                }
+        }
 
         return NULL;
 }
@@ -261,12 +269,15 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
 
         init_disk_pool(pool);
 
+        pool->pool_info.disk.pool_type = type;
+
         switch (type) {
         case DISK_POOL_DIR:
                 break;
         case DISK_POOL_FS:
         case DISK_POOL_DISK:
-                msg = disk_fs_or_disk_pool(inst, pool);
+        case DISK_POOL_LOGICAL:
+                msg = disk_fs_or_disk_or_logical_pool(inst, pool);
                 break;
         case DISK_POOL_NETFS:
                 msg = disk_netfs_pool(inst, pool);
@@ -280,8 +291,6 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
 
         if (msg != NULL)
                 goto out;
-
-        pool->pool_info.disk.pool_type = type;
 
         if (cu_get_str_prop(inst, "Path", &val) != CMPI_RC_OK)
                 return "Missing `Path' property";
