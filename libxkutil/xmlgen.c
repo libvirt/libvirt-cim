@@ -886,19 +886,20 @@ static const char *set_disk_pool_source(xmlNodePtr disk,
 {
         xmlNodePtr src;
         xmlNodePtr tmp;
+        uint16_t i;
 
         src = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
         if (src == NULL)
                 return XML_ERROR;
 
-        if (pool->device_path != NULL) {
+        for (i = 0; i < pool->device_paths_ct; i++) {
                 tmp = xmlNewChild(src, NULL, BAD_CAST "device", BAD_CAST NULL);
                 if (tmp == NULL)
                         return XML_ERROR;
 
                 if (xmlNewProp(tmp,
                                BAD_CAST "path",
-                               BAD_CAST pool->device_path) == NULL)
+                               BAD_CAST pool->device_paths[i]) == NULL)
                         return XML_ERROR;
         }
 

@@ -142,21 +142,67 @@ static const char *net_rasd_to_pool(CMPIInstance *inst,
 #if VIR_USE_LIBVIRT_STORAGE
 static void init_disk_pool(struct virt_pool *pool)
 {
-        pool->pool_info.disk.device_path = NULL;
+        pool->pool_info.disk.device_paths = NULL;
+        pool->pool_info.disk.device_paths_ct = 0;
         pool->pool_info.disk.path = NULL;
         pool->pool_info.disk.host = NULL;
         pool->pool_info.disk.src_dir = NULL;
 }
 
+static char *get_dev_paths(CMPIInstance *inst, 
+                           char ***path_list,
+                           uint16_t *count)
+{
+        CMPICount i;
+        CMPICount ct;
+        CMPIArray *array;
+        CMPIStatus s;
+        CMPIData elem;
+
+        if (cu_get_array_prop(inst, "DevicePaths", &array) != CMPI_RC_OK)
+                return "Missing `DevicePaths' property";
+
+        ct = CMGetArrayCount(array, &s);
+        if ((s.rc != CMPI_RC_OK) || (ct <= 0))
+                return "Unable to get DevicePaths array count";
+
+        *path_list = calloc(ct, sizeof(char *));
+        if (path_list == NULL)
+                return "Failed to alloc space for device paths";
+
+        *count = ct;
+
+        for (i = 0; i < ct; i++) {
+                const char *str = NULL;
+
+                elem = CMGetArrayElementAt(array, i, NULL);
+                if (CMIsNullValue(elem))
+                        return "Unable to get element from DevicePaths array";
+
+                str = CMGetCharPtr(elem.value.string);
+                if (str == NULL)
+                        return "Unable to get value of DevicePaths element";
+
+                *path_list[i] = strdup(str);
+        }
+
+        return NULL;
+}
+
 static const char *disk_fs_or_disk_pool(CMPIInstance *inst,
                                         struct virt_pool *pool)
 {
-        const char *val = NULL;
+        const char *msg = NULL;
 
-        if (cu_get_str_prop(inst, "DevicePath", &val) != CMPI_RC_OK)
-                return "Missing `DevicePath' property";
+        msg = get_dev_paths(inst, 
+                            &pool->pool_info.disk.device_paths, 
+                            &pool->pool_info.disk.device_paths_ct);
+        
+        if (msg != NULL)
+                return msg;
 
-        pool->pool_info.disk.device_path = strdup(val);
+        if (pool->pool_info.disk.device_paths_ct != 1)
+                return "Specified pool type only takes one device path";
 
         return NULL;
 }
@@ -183,11 +229,17 @@ static const char *disk_iscsi_pool(CMPIInstance *inst,
                                    struct virt_pool *pool)
 {
         const char *val = NULL;
+        const char *msg = NULL;
 
-        if (cu_get_str_prop(inst, "DevicePath", &val) != CMPI_RC_OK)
-                return "Missing `DevicePath' property";
+        msg = get_dev_paths(inst, 
+                            &pool->pool_info.disk.device_paths, 
+                            &pool->pool_info.disk.device_paths_ct);
+        
+        if (msg != NULL)
+                return msg;
 
-        pool->pool_info.disk.device_path = strdup(val);
+        if (pool->pool_info.disk.device_paths_ct != 1)
+                return "Specified pool type only takes one device path";
 
         if (cu_get_str_prop(inst, "Host", &val) != CMPI_RC_OK)
                 return "Missing `Host' property";
