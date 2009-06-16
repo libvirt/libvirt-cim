@@ -39,6 +39,7 @@
 
 typedef const char *(*devfn_t)(xmlNodePtr node, struct domain *dominfo);
 typedef const char *(*poolfn_t)(xmlNodePtr node, struct virt_pool *pool);
+typedef const char *(*resfn_t)(xmlNodePtr node, struct virt_pool_res *res);
 
 static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
 {
@@ -1049,6 +1050,133 @@ char *pool_to_xml(struct virt_pool *pool) {
                 CU_DEBUG("Failed to create pool XML: %s", msg);
         } else {
                 CU_DEBUG("Created pool XML:\n%s\n", xml);
+        }
+
+        xmlFreeNode(root);
+
+        return xml;
+}
+
+static const char *vol_format_type_to_str(uint16_t type)
+{
+        switch (type) {
+        case VOL_FORMAT_RAW:
+                return "raw";
+        default:
+                CU_DEBUG("Unsupported storage volume type");
+        }
+
+        return NULL;
+}
+
+static const char *storage_vol_xml(xmlNodePtr root,
+                                   struct virt_pool_res *res)
+{
+        xmlNodePtr v = NULL;
+        xmlNodePtr name = NULL;
+        xmlNodePtr alloc = NULL;
+        xmlNodePtr cap = NULL;
+        xmlNodePtr target = NULL;
+        xmlNodePtr path = NULL;
+        xmlNodePtr format = NULL;
+        const char *type = NULL;
+        struct storage_vol *vol = &res->res.storage_vol;
+        char *string = NULL;
+        int ret;
+
+        type = vol_format_type_to_str(vol->format_type);
+        if (type == NULL)
+                goto out;
+
+        v = xmlNewChild(root, NULL, BAD_CAST "volume", NULL);
+        if (v == NULL)
+                goto out;
+
+        name = xmlNewChild(v, NULL, BAD_CAST "name", BAD_CAST vol->vol_name);
+        if (name == NULL)
+                goto out;
+
+        ret = asprintf(&string, "%" PRIu16, vol->alloc);
+        if (ret == -1)
+                return XML_ERROR;
+
+        alloc = xmlNewChild(v, NULL, BAD_CAST "allocation", BAD_CAST string); 
+        if (alloc == NULL)
+                goto out;
+
+        free(string);
+        ret = asprintf(&string, "%" PRIu16, vol->cap);
+        if (ret == -1)
+                return XML_ERROR;
+
+        cap = xmlNewChild(v, NULL, BAD_CAST "capacity", BAD_CAST string);
+        if (cap == NULL)
+                goto out;
+
+        free(string);
+
+        if (xmlNewProp(cap, BAD_CAST "unit", BAD_CAST vol->cap_units) == NULL)
+                goto out;
+
+        target = xmlNewChild(v, NULL, BAD_CAST "target", NULL);
+        if (target == NULL)
+                goto out;
+
+        path = xmlNewChild(target, NULL, BAD_CAST "path", BAD_CAST vol->path);
+        if (path == NULL)
+                goto out;
+
+        format = xmlNewChild(target, NULL, BAD_CAST "format", NULL);
+        if (format == NULL)
+                goto out;
+
+        if (xmlNewProp(format, BAD_CAST "type", BAD_CAST type) == NULL)
+                goto out;
+
+        /* FIXME:  Need to add permissions and label tags here */
+
+        return NULL;
+
+ out:
+        free(string);
+        return XML_ERROR;
+ }
+
+char *res_to_xml(struct virt_pool_res *res) {
+        char *xml = NULL;
+        xmlNodePtr root = NULL;
+        int type = res->type;
+        const char *msg = NULL;
+        resfn_t func;
+
+        root = xmlNewNode(NULL, BAD_CAST "tmp");
+        if (root == NULL) {
+                msg = XML_ERROR;
+                goto out;
+        }
+
+        switch (type) {
+        case CIM_RES_TYPE_IMAGE:
+                func = storage_vol_xml;
+                break;
+        default:
+                msg = "res_to_xml: invalid type specified";
+                CU_DEBUG("%s %d", msg, type);
+                goto out;
+        }
+
+        msg = func(root, res);
+        if (msg != NULL)
+                goto out;
+
+        xml = tree_to_xml(root->children);
+        if (xml == NULL)
+                msg = "XML generation failed";
+ out:
+        if (msg != NULL) {
+                CU_DEBUG("Failed to create res XML: %s", msg);
+        } else {
+                CU_DEBUG("Created res XML:\n%s\n", xml);
         }
 
         xmlFreeNode(root);
