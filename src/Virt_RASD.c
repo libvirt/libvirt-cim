@@ -109,7 +109,7 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
-        struct infostore_ctx *info;
+        struct infostore_ctx *info = NULL;
         uint32_t weight;
         uint64_t limit;
         uint64_t count;
