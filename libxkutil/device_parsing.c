@@ -861,8 +861,10 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         else
                 dominfo->type = -1;
 
-        dominfo->os_info.fv.bootlist = blist;
-        dominfo->os_info.fv.bootlist_ct = bl_size;
+        if (STREQC(dominfo->os_info.fv.type, "hvm")) {
+                dominfo->os_info.fv.bootlist_ct = bl_size;
+                dominfo->os_info.fv.bootlist = blist;
+        }
 
         return 1;
 }
