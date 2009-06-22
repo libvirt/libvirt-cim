@@ -57,6 +57,9 @@ class Xen_NetResourceAllocationSettingData : Xen_ResourceAllocationSettingData
       [Description ("Interface type")]
       string NetworkType;
 
+      [Description ("Bridge name")]
+      string NetworkName;
+
 };
 
 [Description ("KVM virtual network configuration"),
@@ -67,6 +70,9 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("Interface type")]
       string NetworkType;
+
+      [Description ("Bridge name")]
+      string NetworkName;
 
 };
 

@@ -164,12 +164,18 @@ static const char *set_net_source(xmlNodePtr nic,
 {
         xmlNodePtr tmp;
 
-        if (dev->source != NULL) {
+        if ((STREQC(src_type, "bridge")) && (dev->name != NULL)) {
                 tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
-                if (tmp == NULL)
+                if (tmp == NULL) 
+                        return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST src_type, BAD_CAST dev->name);
+        } else if ((STREQC(src_type, "network")) && (dev->source != NULL)) {
+                tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
+                if (tmp == NULL) 
                         return XML_ERROR;
                 xmlNewProp(tmp, BAD_CAST src_type, BAD_CAST dev->source);
-        }
+        } else
+                return XML_ERROR;
 
         return NULL;
 }
@@ -225,7 +231,7 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                 if (STREQ(dev->dev.net.type, "network"))
                         msg = set_net_source(nic, net, "network");
                 else if (STREQ(dev->dev.net.type, "bridge"))
-                        msg = bridge_net_to_xml(root, net);
+                        msg = bridge_net_to_xml(nic, net);
                 else if (STREQ(dev->dev.net.type, "user"))
                         continue;
                 else

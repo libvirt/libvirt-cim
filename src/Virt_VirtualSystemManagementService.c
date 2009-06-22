@@ -59,6 +59,8 @@
 
 #define DEFAULT_MAC_PREFIX "00:16:3e"
 #define DEFAULT_XEN_WEIGHT 1024
+#define BRIDGE_TYPE "bridge"
+#define NETWORK_TYPE "network"
 
 const static CMPIBroker *_BROKER;
 
@@ -553,23 +555,37 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         dev->id = strdup(dev->dev.net.mac);
 
         free(dev->dev.net.type);
-        dev->dev.net.type = strdup("network");
+        free(dev->dev.net.name);
+        if (cu_get_str_prop(inst, "NetworkType", &val) != CMPI_RC_OK) 
+                return "No Network Type specified";
 
-        if (cu_get_str_prop(inst, "PoolID", &val) != CMPI_RC_OK)
-                val = _default_network(inst, ns);
+        if (STREQC(val, BRIDGE_TYPE)) {
+                dev->dev.net.type = strdup(BRIDGE_TYPE);
+                if (cu_get_str_prop(inst, "NetworkName", &val) == CMPI_RC_OK) 
+                        if (strlen(val) > 0)
+                                dev->dev.net.name = strdup(val);
+                        else
+                                return "Bridge name is empty";
+                else 
+                        return "No Network bridge name specified";
+         } else if (STREQC(val, NETWORK_TYPE)) {
+                dev->dev.net.type = strdup(NETWORK_TYPE);
+                if (cu_get_str_prop(inst, "PoolID", &val) != CMPI_RC_OK)
+                        val = _default_network(inst, ns);
 
-        if (val == NULL)
-                return "No NetworkPool specified and no default available";
+                if (val == NULL)
+                        return "No NetworkPool specified no default available";
 
-        free(dev->dev.net.source);
-        dev->dev.net.source = name_from_pool_id(val);
-
+                free(dev->dev.net.source);
+                dev->dev.net.source = name_from_pool_id(val);
+        } else
+                return "Invalid Network Type specified";
         free(dev->dev.net.model);
+
         if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK)
                 dev->dev.net.model = NULL; 
         else 
                 dev->dev.net.model = strdup(val);
-
  out:
         return msg;
 }
