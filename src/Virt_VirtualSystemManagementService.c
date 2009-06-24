@@ -1251,6 +1251,8 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         CMPIInstance *inst = NULL;
         char *xml = NULL;
         const char *msg = NULL;
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
 
         struct domain *domain = NULL;
 
@@ -1274,6 +1276,26 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
                            CMPI_RC_ERR_FAILED,
                            "SystemSettings Error");
                 goto out;
+        }
+
+        if (domain->uuid != NULL) {
+                conn = connect_by_classname(_BROKER, CLASSNAME(ref), NULL);
+                if (conn == NULL) {
+                        cu_statusf(_BROKER, s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Error connecting to libvirt");
+                        goto out;
+                }
+
+                dom = virDomainLookupByUUIDString(conn, domain->uuid);
+                if (dom != NULL) {
+                        cu_statusf(_BROKER, s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Guest '%s' is already defined with UUID %s",
+                                   virDomainGetName(dom),
+                                   domain->uuid);
+                        goto out;
+                }
         }
 
         msg = classify_resources(resources, NAMESPACE(ref), domain);
@@ -1303,6 +1325,8 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
  out:
         cleanup_dominfo(&domain);
         free(xml);
+        virDomainFree(dom);
+        virConnectClose(conn);
 
         return inst;
 }
