@@ -538,6 +538,8 @@ static bool get_max_nics(const CMPIObjectPath *ref,
 static CMPIStatus set_net_props(int type,
                                 const CMPIObjectPath *ref,
                                 const char *id,
+                                const char *net_type,
+                                const char *net_name,
                                 uint64_t num_nics,
                                 const char *model,
                                 struct inst_list *list)
@@ -549,6 +551,10 @@ static CMPIStatus set_net_props(int type,
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
+        CMSetProperty(inst, "NetworkType", (CMPIValue *)net_type, CMPI_chars);
+	if (net_name != NULL)
+                CMSetProperty(inst, "NetworkName",
+                      (CMPIValue *)net_name, CMPI_chars);
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "VirtualQuantity",
                       (CMPIValue *)&num_nics, CMPI_uint64);
@@ -571,6 +577,10 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         uint64_t num_nics;
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        int i,j;
+        const char *type[] = {"network", "bridge"};
+        const char *model[] = {"e1000", NULL};
+        const char *name[] = {NULL, "br0"};
 
         switch (template_type) {
         case SDC_RASD_MIN:
@@ -599,12 +609,21 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         }
 
         
-        s = set_net_props(template_type, ref, id, num_nics, "e1000", list);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
-     
-        s = set_net_props(template_type, ref, id, num_nics, NULL, list);
-
+        for (i = 0; i < 2; i++) {
+                for (j = 0; j < 2; j++) {
+                        s = set_net_props(template_type, 
+                                          ref, 
+                                          id, 
+                                          type[i], 
+                                          name[i], 
+                                          num_nics, 
+                                          model[j], 
+                                          list);
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+                }
+        }
+        
  out:
         return s;
 }
