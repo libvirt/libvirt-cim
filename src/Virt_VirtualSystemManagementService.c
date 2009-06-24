@@ -2257,6 +2257,8 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         unsigned long hv_version = 0;
         const char * hv_type = NULL;
         char *caption = NULL;
+        CMPIArray *array;
+        uint16_t op_status;
 
         *_inst = NULL;
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
@@ -2335,6 +2337,16 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
 
         CMSetProperty(inst, "Release",
                       (CMPIValue *)PACKAGE_VERSION, CMPI_chars);
+
+        array = CMNewArray(broker, 1, CMPI_uint16, &s);
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(array)))
+                goto out;
+
+        op_status = CIM_OPERATIONAL_STATUS;
+        CMSetArrayElementAt(array, 0, &op_status, CMPI_uint16);
+
+        CMSetProperty(inst, "OperationalStatus",
+                      (CMPIValue *)&array, CMPI_uint16A);
 
         if (is_get_inst) {
                 s = cu_validate_ref(broker, reference, inst);

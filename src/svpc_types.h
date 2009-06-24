@@ -22,6 +22,8 @@
 #ifndef __SVPC_TYPES_H
 #define __SVPC_TYPES_H
 
+#define CIM_OPERATIONAL_STATUS 2
+
 #define CIM_RES_TYPE_ALL        0
 #define CIM_RES_TYPE_PROC       3
 #define CIM_RES_TYPE_MEM        4
