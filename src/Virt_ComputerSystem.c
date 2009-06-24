@@ -680,6 +680,39 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
+static bool trigger_mod_indication(const CMPIContext *context,
+                                   CMPIInstance *prev_inst,
+                                   const CMPIObjectPath *ref)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *ind_name = "ComputerSystemModifiedIndication";
+        CMPIInstance *ind = NULL;
+        char *type = NULL;
+
+        CU_DEBUG("Preparing ComputerSystem indication");
+
+        ind = get_typed_instance(_BROKER,
+                                 CLASSNAME(ref),
+                                 ind_name,
+                                 NAMESPACE(ref));
+        if (ind == NULL) {
+                CU_DEBUG("Failed to create ind '%s'", ind_name);
+                goto out;
+        }
+
+        CU_DEBUG("Setting PreviousInstance");
+        CMSetProperty(ind, "PreviousInstance",
+                      (CMPIValue *)&prev_inst, CMPI_instance);
+
+        type = get_typed_class(CLASSNAME(ref), ind_name);
+
+        s = stdi_raise_indication(_BROKER, context, type, NAMESPACE(ref), ind);
+
+ out:
+        free(type);
+        return s.rc == CMPI_RC_OK;
+}
+
 static int xen_scheduler_params(struct infostore_ctx *ctx,
                                 virSchedParameter **params)
 {
@@ -1068,10 +1101,12 @@ static CMPIStatus state_change(CMPIMethodMI *self,
                                CMPIArgs *argsout)
 {
         CMPIStatus s;
+        CMPIInstance *prev_inst = NULL;
         uint16_t state;
         int ret;
         const char *name = NULL;
         uint32_t rc = 1;
+        bool ind_rc;
 
         ret = cu_get_u16_arg(argsin, "RequestedState", &state);
         if (ret != CMPI_RC_OK) {
@@ -1088,22 +1123,24 @@ static CMPIStatus state_change(CMPIMethodMI *self,
                 goto out;
         }
 
+        /* Retain original instance of the guest to use for the PreviousInstance           attribute when generating an indication. */
+        s = get_domain_by_name(_BROKER, reference, name, &prev_inst);
+        if (s.rc != CMPI_RC_OK || prev_inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Unable to get instance for guest '%s'",
+                           name);
+                goto out;
+        }
+
         s = __state_change(name, state, reference);
 
         if (s.rc == CMPI_RC_OK) {
-                char *type = NULL;
-
-                type = get_typed_class(CLASSNAME(reference),
-                                       "ComputerSystemModifiedIndication");
-
-                /* Failure to raise the indication is okay */
-                stdi_trigger_indication(_BROKER,
-                                        context,
-                                        type,
-                                        NAMESPACE(reference));
+                ind_rc= trigger_mod_indication(context, prev_inst, reference);
+                if (!ind_rc)
+                        CU_DEBUG("Unable to trigger indication");
+         
                 rc = 0;
-
-                free(type);
         }
  out:
         CMReturnData(results, &rc, CMPI_uint32);
