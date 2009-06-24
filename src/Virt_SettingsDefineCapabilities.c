@@ -1258,12 +1258,13 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *path = "/dev/null";
-        int type[5] = {DISK_POOL_DIR, 
+        int type[6] = {DISK_POOL_DIR, 
                        DISK_POOL_FS, 
                        DISK_POOL_NETFS, 
                        DISK_POOL_DISK, 
-                       DISK_POOL_ISCSI};
-        int pool_types = 5;
+                       DISK_POOL_ISCSI,
+                       DISK_POOL_LOGICAL};
+        int pool_types = 6;
         int i;
 
         switch (template_type) {
