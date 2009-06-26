@@ -222,6 +222,7 @@ static void set_source_inst_props(const CMPIBroker *broker,
 
 static bool _do_indication(const CMPIBroker *broker,
                            const CMPIContext *ctx,
+                           CMPIInstance *prev_inst,
                            CMPIInstance *affected_inst,
                            int ind_type,
                            char *prefix,
@@ -279,7 +280,7 @@ static bool _do_indication(const CMPIBroker *broker,
 
         if (ind_type == CS_MODIFIED) {
                 CMSetProperty(ind, "PreviousInstance",
-                              (CMPIValue *)&affected_inst, CMPI_instance);
+                              (CMPIValue *)&prev_inst, CMPI_instance);
         }
 
         CMSetProperty(ind, "SourceInstance",
@@ -340,6 +341,7 @@ static bool async_ind(CMPIContext *context,
         char *name = NULL;
         char *cn = NULL;
         CMPIObjectPath *op;
+        CMPIInstance *prev_inst;
         CMPIInstance *affected_inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -361,19 +363,21 @@ static bool async_ind(CMPIContext *context,
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
                 goto out;
 
-        /* FIXME: This gets the CS instance after it has been modified. We also
-           need a way to get the instance before it was modified - that
-           value is used when setting the PreviousInstance value.  */
         s = get_domain_by_name(_BROKER, op, name, &affected_inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
+
+        /* FIXME: We are unable to get the previous CS instance after it has 
+                  been modified. Consider keeping track of the previous
+                  state in the place we keep track of the requested state */ 
+        prev_inst = affected_inst;
 
         CMSetProperty(affected_inst, "Name", 
                       (CMPIValue *)name, CMPI_chars);
         CMSetProperty(affected_inst, "UUID",
                       (CMPIValue *)prev_dom.uuid, CMPI_chars);
 
-        rc = _do_indication(_BROKER, context, affected_inst, 
+        rc = _do_indication(_BROKER, context, prev_inst, affected_inst, 
                             ind_type, prefix, args);
 
  out:
