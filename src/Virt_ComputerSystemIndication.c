@@ -224,15 +224,27 @@ static bool _do_indication(const CMPIBroker *broker,
                            const CMPIContext *ctx,
                            CMPIInstance *affected_inst,
                            int ind_type,
-                           const char *ind_type_name,
                            char *prefix,
                            struct ind_args *args)
 {
+        const char *ind_type_name = NULL;
         CMPIObjectPath *affected_op;
         CMPIObjectPath *ind_op;
         CMPIInstance *ind;
         CMPIStatus s;
         bool ret = true;
+
+        switch (ind_type) {
+        case CS_CREATED:
+                ind_type_name = "ComputerSystemCreatedIndication";
+                break;
+        case CS_DELETED:
+                ind_type_name = "ComputerSystemDeletedIndication";
+                break;
+        case CS_MODIFIED:
+                ind_type_name = "ComputerSystemModifiedIndication";
+                break;
+        }
 
         ind = get_typed_instance(broker,
                                  prefix,
@@ -265,16 +277,9 @@ static bool _do_indication(const CMPIBroker *broker,
         }
         CMSetNameSpace(affected_op, args->ns);
 
-        switch (ind_type) {
-        case CS_CREATED:
-        case CS_DELETED:
-                CMSetProperty(ind, "AffectedSystem",
-                              (CMPIValue *)&affected_op, CMPI_ref);
-                break;
-        case CS_MODIFIED:
+        if (ind_type == CS_MODIFIED) {
                 CMSetProperty(ind, "PreviousInstance",
                               (CMPIValue *)&affected_inst, CMPI_instance);
-                break;
         }
 
         CMSetProperty(ind, "SourceInstance",
@@ -333,7 +338,6 @@ static bool async_ind(CMPIContext *context,
 {
         bool rc = false;
         char *name = NULL;
-        char *type_name = NULL;
         char *cn = NULL;
         CMPIObjectPath *op;
         CMPIInstance *affected_inst;
@@ -364,25 +368,13 @@ static bool async_ind(CMPIContext *context,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        switch (ind_type) {
-        case CS_CREATED:
-                type_name = "ComputerSystemCreatedIndication";
-                break;
-        case CS_DELETED:
-                type_name = "ComputerSystemDeletedIndication";
-                break;
-        case CS_MODIFIED:
-                type_name = "ComputerSystemModifiedIndication";
-                break;
-        }
-
         CMSetProperty(affected_inst, "Name", 
                       (CMPIValue *)name, CMPI_chars);
         CMSetProperty(affected_inst, "UUID",
                       (CMPIValue *)prev_dom.uuid, CMPI_chars);
 
         rc = _do_indication(_BROKER, context, affected_inst, 
-                            ind_type, type_name, prefix, args);
+                            ind_type, prefix, args);
 
  out:
         free(cn);
