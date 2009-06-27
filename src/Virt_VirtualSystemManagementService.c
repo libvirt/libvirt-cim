@@ -539,6 +539,7 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
 {
         const char *val = NULL;
         const char *msg = NULL;
+        char *network = NULL;
 
         if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
                 val = _net_rand_mac();
@@ -577,7 +578,14 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                         return "No NetworkPool specified no default available";
 
                 free(dev->dev.net.source);
-                dev->dev.net.source = name_from_pool_id(val);
+                network = name_from_pool_id(val);
+                if (network == NULL) {
+                        msg = "PoolID specified is not formatted properly";
+                        goto out;
+                }
+
+                dev->dev.net.source = strdup(network);
+
         } else
                 return "Invalid Network Type specified";
         free(dev->dev.net.model);
@@ -587,6 +595,7 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         else 
                 dev->dev.net.model = strdup(val);
  out:
+        free(network);
         return msg;
 }
 
