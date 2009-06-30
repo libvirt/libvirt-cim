@@ -230,14 +230,17 @@ class LXC_NetPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingDa
 class Xen_DiskPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
       [Description ("Storage pool type"),
-        ValueMap {"0", "1", "2", "3", "4", "5", "6"},
+        ValueMap {"0", "1", "2", "3", "4", "5", "6", "7"},
         Values {"Unknown", "Directory, File System, Network File System, "
-                "Disk, ISCSI, Logical"}]
+                "Disk, ISCSI, Logical, SCSI Host Bus Adapter"}]
       uint16 Type;
       string Path;
       string DevicePaths[];
       string Host;
       string SourceDirectory;
+      string AdapterName;
+      string PortName;
+      string NodeName;
 };
 
 [Description ("KVM virtual disk pool settings"),
@@ -246,14 +249,17 @@ class Xen_DiskPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingD
 class KVM_DiskPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
       [Description ("Storage pool type"),
-        ValueMap {"0", "1", "2", "3", "4", "5", "6"},
+        ValueMap {"0", "1", "2", "3", "4", "5", "6", "7"},
         Values {"Unknown", "Directory, File System, Network File System, "
-                "Disk, ISCSI, Logical"}]
+                "Disk, ISCSI, Logical, SCSI Host Bus Adapter"}]
       uint16 Type;
       string Path;
       string DevicePaths[];
       string Host;
       string SourceDirectory;
+      string AdapterName;
+      string PortName;
+      string NodeName;
 };
 
 [Description ("LXC virtual disk pool settings"),
@@ -262,13 +268,16 @@ class KVM_DiskPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingD
 class LXC_DiskPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
       [Description ("Storage pool type"),
-        ValueMap {"0", "1", "2", "3", "4", "5", "6"},
+        ValueMap {"0", "1", "2", "3", "4", "5", "6", "7"},
         Values {"Unknown", "Directory, File System, Network File System, "
-                "Disk, ISCSI, Logical"}]
+                "Disk, ISCSI, Logical, SCSI Host Bus Adapter"}]
       uint16 Type;
       string Path;
       string DevicePaths[];
       string Host;
       string SourceDirectory;
+      string AdapterName;
+      string PortName;
+      string NodeName;
 };
 

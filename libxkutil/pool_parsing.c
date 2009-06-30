@@ -58,6 +58,9 @@ static void cleanup_disk_pool(struct disk_pool pool) {
         free(pool.path);
         free(pool.host);
         free(pool.src_dir);
+        free(pool.adapter);
+        free(pool.port_name);
+        free(pool.node_name);
 
         for (i = 0; i < pool.device_paths_ct; i++) 
                 free(pool.device_paths[i]);
