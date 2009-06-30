@@ -874,6 +874,8 @@ static const char *disk_pool_type_to_str(uint16_t type)
                 return "iscsi";      
         case DISK_POOL_LOGICAL:
                 return "logical";      
+        case DISK_POOL_SCSI:
+                return "scsi";      
         default:
                 CU_DEBUG("Unsupported disk pool type");
         }
@@ -923,6 +925,31 @@ static const char *set_disk_pool_source(xmlNodePtr disk,
                                BAD_CAST "path",
                                BAD_CAST pool->src_dir) == NULL)
                         return XML_ERROR;
+        }
+
+        if (pool->adapter != NULL) {
+                tmp = xmlNewChild(src, NULL, BAD_CAST "adapter", BAD_CAST NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+
+                if (xmlNewProp(tmp,
+                               BAD_CAST "name",
+                               BAD_CAST pool->adapter) == NULL)
+                        return XML_ERROR;
+
+                if (pool->port_name != NULL) {
+                        if (xmlNewProp(tmp,
+                                       BAD_CAST "wwpn",
+                                       BAD_CAST pool->port_name) == NULL)
+                                return XML_ERROR;
+                }
+
+                if (pool->node_name != NULL) {
+                        if (xmlNewProp(tmp,
+                                       BAD_CAST "wwnn",
+                                       BAD_CAST pool->node_name) == NULL)
+                                return XML_ERROR;
+                }
         }
 
         return NULL;

@@ -147,6 +147,9 @@ static void init_disk_pool(struct virt_pool *pool)
         pool->pool_info.disk.path = NULL;
         pool->pool_info.disk.host = NULL;
         pool->pool_info.disk.src_dir = NULL;
+        pool->pool_info.disk.adapter = NULL;
+        pool->pool_info.disk.port_name = NULL;
+        pool->pool_info.disk.node_name = NULL;
 }
 
 static char *get_dev_paths(CMPIInstance *inst, 
@@ -257,6 +260,29 @@ static const char *disk_iscsi_pool(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *disk_scsi_pool(CMPIInstance *inst,
+                                  struct virt_pool *pool)
+{
+        const char *val = NULL;
+
+        if (cu_get_str_prop(inst, "AdapterName", &val) != CMPI_RC_OK)
+                return "Missing `AdapterName' property";
+
+        pool->pool_info.disk.adapter = strdup(val);
+
+        if (cu_get_str_prop(inst, "PortName", &val) != CMPI_RC_OK) {
+                CU_DEBUG("No `PortName' property specified");
+        } else
+                pool->pool_info.disk.port_name = strdup(val);
+
+        if (cu_get_str_prop(inst, "NodeName", &val) != CMPI_RC_OK) {
+                CU_DEBUG("No `NodeName' property specified");
+        } else
+                pool->pool_info.disk.node_name = strdup(val);
+
+        return NULL;
+}
+
 static const char *disk_rasd_to_pool(CMPIInstance *inst,
                                     struct virt_pool *pool)
 {
@@ -284,6 +310,9 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
                 break;
         case DISK_POOL_ISCSI:
                 msg = disk_iscsi_pool(inst, pool);
+                break;
+        case DISK_POOL_SCSI:
+                msg = disk_scsi_pool(inst, pool);
                 break;
         default:
                 return "Storage pool type not supported";
