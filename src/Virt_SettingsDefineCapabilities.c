@@ -1259,13 +1259,14 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         CMPIArray *array;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *path = "/dev/null";
-        int type[6] = {DISK_POOL_DIR, 
+        int type[7] = {DISK_POOL_DIR, 
                        DISK_POOL_FS, 
                        DISK_POOL_NETFS, 
                        DISK_POOL_DISK, 
                        DISK_POOL_ISCSI,
-                       DISK_POOL_LOGICAL};
-        int pool_types = 6;
+                       DISK_POOL_LOGICAL,
+                       DISK_POOL_SCSI};
+        int pool_types = 7;
         int i;
 
         switch (template_type) {
@@ -1292,6 +1293,9 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                 const char *dev_path = NULL;
                 const char *host = NULL;
                 const char *src_dir = NULL;
+                const char *adapter = NULL;
+                const char *port_name = NULL;
+                const char *node_name = NULL;
 
                 inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK, POOL_RASD);
                 if ((inst == NULL) || (s.rc != CMPI_RC_OK))
@@ -1316,6 +1320,13 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                 case DISK_POOL_ISCSI:
                         host = "host_sys.domain.com";
                         dev_path = "iscsi-target";
+
+                        break;
+                case DISK_POOL_SCSI:
+                        adapter = "host0";
+                        port_name = "0000111122223333";
+                        node_name = "4444555566667777";
+                        path = "/dev/disk/by-id";
 
                         break;
                 default:
@@ -1354,6 +1365,18 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                 if (src_dir != NULL)
                         CMSetProperty(inst, "SourceDirectory", 
                                       (CMPIValue *)src_dir, CMPI_chars);
+
+                if (adapter != NULL)
+                        CMSetProperty(inst, "AdapterName", 
+                                      (CMPIValue *)adapter, CMPI_chars);
+
+                if (port_name != NULL)
+                        CMSetProperty(inst, "PortName", 
+                                      (CMPIValue *)port_name, CMPI_chars);
+
+                if (node_name != NULL)
+                        CMSetProperty(inst, "NodeName", 
+                                      (CMPIValue *)node_name, CMPI_chars);
 
                 CMSetProperty(inst, "Type", (CMPIValue *)&type[i], CMPI_uint16);
                 CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
