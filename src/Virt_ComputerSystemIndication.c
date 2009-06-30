@@ -651,8 +651,124 @@ static struct std_ind_filter *filters[] = {
         NULL,
 };
 
+static CMPIInstance *get_prev_inst(const CMPIBroker *broker,
+                                   const CMPIInstance *ind,
+                                   CMPIStatus *s)
+{
+        CMPIData data;
+        CMPIInstance *prev_inst = NULL;
+
+        data = CMGetProperty(ind, "PreviousInstance", s); 
+        if (s->rc != CMPI_RC_OK || CMIsNullValue(data)) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_NO_SUCH_PROPERTY,
+                           "Unable to get PreviousInstance of the indication");
+                goto out;
+        }
+
+        if (data.type != CMPI_instance) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_TYPE_MISMATCH,
+                           "Indication SourceInstance is of unexpected type");
+                goto out;
+        }
+
+        prev_inst = data.value.inst;
+
+ out:
+        return prev_inst;
+}
+
+static CMPIStatus raise_indication(const CMPIBroker *broker,
+                                   const CMPIContext *ctx,
+                                   const CMPIInstance *ind)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *prev_inst;
+        CMPIInstance *src_inst;
+        CMPIObjectPath *ref = NULL;
+        struct std_indication_ctx *_ctx = NULL;
+        struct ind_args *args = NULL;
+        char *prefix = NULL;
+        bool rc;
+
+        if (!lifecycle_enabled) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "CSI not enabled, skipping indication delivery");
+                goto out;
+        }
+
+        prev_inst = get_prev_inst(broker, ind, &s);
+        if (s.rc != CMPI_RC_OK || CMIsNullObject(prev_inst))
+                goto out;
+
+        ref = CMGetObjectPath(prev_inst, &s);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get a reference to the guest");
+                goto out;
+        }
+
+        /* FIXME:  This is a Pegasus work around. Pegsus loses the namespace
+                   when an ObjectPath is pulled from an instance */
+        if (STREQ(NAMESPACE(ref), ""))
+                CMSetNameSpace(ref, "root/virt");
+
+        s = get_domain_by_ref(broker, ref, &src_inst);
+        if (s.rc != CMPI_RC_OK || CMIsNullObject(src_inst))
+                goto out;
+
+        _ctx = malloc(sizeof(struct std_indication_ctx));
+        if (_ctx == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate indication context");
+                goto out;
+        }
+
+        _ctx->brkr = broker;
+        _ctx->handler = NULL;
+        _ctx->filters = filters;
+        _ctx->enabled = lifecycle_enabled;
+
+        args = malloc(sizeof(struct ind_args));
+        if (args == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate ind_args");
+                goto out;
+        }
+
+        args->ns = strdup(NAMESPACE(ref));
+        args->classname = strdup(CLASSNAME(ref));
+        args->_ctx = _ctx;
+
+        prefix = class_prefix_name(args->classname);
+
+        rc = _do_indication(broker, ctx, prev_inst, src_inst,
+                            CS_MODIFIED, prefix, args);
+
+        if (!rc) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to generate indication");
+        }
+
+ out:
+        if (args != NULL)
+                stdi_free_ind_args(&args);
+
+        if (_ctx != NULL)
+                free(_ctx);
+
+        free(prefix);
+        return s;
+}
+
 static struct std_indication_handler csi = {
-        .raise_fn = NULL,
+        .raise_fn = raise_indication,
         .trigger_fn = trigger_indication,
         .activate_fn = ActivateFilter,
         .deactivate_fn = DeActivateFilter,
