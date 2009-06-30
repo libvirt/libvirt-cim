@@ -628,15 +628,6 @@ static CMPIStatus trigger_indication(const CMPIContext *context)
         return(CMPIStatus){CMPI_RC_OK, NULL};
 }
 
-static struct std_indication_handler csi = {
-        .raise_fn = NULL,
-        .trigger_fn = trigger_indication,
-        .activate_fn = ActivateFilter,
-        .deactivate_fn = DeActivateFilter,
-        .enable_fn = EnableIndications,
-        .disable_fn = DisableIndications,
-};
-
 DECLARE_FILTER(xen_created, "Xen_ComputerSystemCreatedIndication");
 DECLARE_FILTER(xen_deleted, "Xen_ComputerSystemDeletedIndication");
 DECLARE_FILTER(xen_modified, "Xen_ComputerSystemModifiedIndication");
@@ -660,6 +651,14 @@ static struct std_ind_filter *filters[] = {
         NULL,
 };
 
+static struct std_indication_handler csi = {
+        .raise_fn = NULL,
+        .trigger_fn = trigger_indication,
+        .activate_fn = ActivateFilter,
+        .deactivate_fn = DeActivateFilter,
+        .enable_fn = EnableIndications,
+        .disable_fn = DisableIndications,
+};
 
 DEFAULT_IND_CLEANUP();
 DEFAULT_AF();
