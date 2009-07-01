@@ -1256,6 +1256,7 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
 {
         const char *id;
         CMPIInstance *inst;
+        CMPIArray *array;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *path = "/dev/null";
         int type[6] = {DISK_POOL_DIR, 
@@ -1321,9 +1322,30 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                         break;
                 }
 
-                if (dev_path != NULL)
-                        CMSetProperty(inst, "DevicePath", 
-                                      (CMPIValue *)dev_path, CMPI_chars);
+                if (dev_path != NULL) {
+                        CMPIString *str = NULL;
+
+                        array = CMNewArray(_BROKER, 1, CMPI_string, &s);
+                        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(array))) {
+                                cu_statusf(_BROKER, &s,
+                                           CMPI_RC_ERR_FAILED,
+                                           "Unable to create new array");
+                                goto out;
+                        }
+
+                        str = CMNewString(_BROKER, dev_path, &s);
+                        if ((s.rc = CMPI_RC_OK) || (CMIsNullObject(str))) {
+                                cu_statusf(_BROKER, &s,
+                                           CMPI_RC_ERR_FAILED,
+                                           "Unable to create new string");
+                                goto out;
+                        }
+
+                        CMSetArrayElementAt(array, 0, &str, CMPI_string);
+
+                        CMSetProperty(inst, "DevicePaths",
+                                      (CMPIValue *)&array, CMPI_stringA);
+                }
 
                 if (host != NULL)
                         CMSetProperty(inst, "Host", 
