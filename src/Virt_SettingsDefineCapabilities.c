@@ -578,9 +578,9 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int i,j;
-        const char *type[] = {"network", "bridge"};
+        const char *type[] = {"network", "bridge", "user"};
         const char *model[] = {"e1000", NULL};
-        const char *name[] = {NULL, "br0"};
+        const char *name[] = {NULL, "br0", NULL};
 
         switch (template_type) {
         case SDC_RASD_MIN:
@@ -609,7 +609,7 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         }
 
         
-        for (i = 0; i < 2; i++) {
+        for (i = 0; i < 3; i++) {
                 for (j = 0; j < 2; j++) {
                         s = set_net_props(template_type, 
                                           ref, 

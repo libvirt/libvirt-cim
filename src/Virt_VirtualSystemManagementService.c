@@ -61,6 +61,7 @@
 #define DEFAULT_XEN_WEIGHT 1024
 #define BRIDGE_TYPE "bridge"
 #define NETWORK_TYPE "network"
+#define USER_TYPE "user"
 
 const static CMPIBroker *_BROKER;
 
@@ -585,7 +586,8 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 }
 
                 dev->dev.net.source = strdup(network);
-
+        } else if (STREQC(val, USER_TYPE)) {
+                dev->dev.net.type = strdup(USER_TYPE);
         } else
                 return "Invalid Network Type specified";
         free(dev->dev.net.model);
