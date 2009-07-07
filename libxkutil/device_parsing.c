@@ -307,8 +307,8 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         if (ndev->mac == NULL)
                                 goto err;
                 } else if (XSTREQ(child->name, "source")) {
-                        ndev->source = get_attr_value(child, "bridge");
-                        if (ndev->source != NULL)
+                        ndev->name = get_attr_value(child, "bridge");
+                        if (ndev->name != NULL)
                                 continue;
                         ndev->source = get_attr_value(child, "network");
                         if (ndev->source != NULL)

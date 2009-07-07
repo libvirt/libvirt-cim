@@ -404,6 +404,13 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.net.mac,
                               CMPI_chars);
 
+                if ((dev->dev.net.name != NULL) && 
+                     (STREQ(dev->dev.net.type, "bridge")))
+                        CMSetProperty(inst,
+                                      "NetworkName",
+                                      (CMPIValue *)dev->dev.net.name,
+                                      CMPI_chars);
+
                 if (dev->dev.net.model != NULL)
                         CMSetProperty(inst,
                                       "ResourceSubType",
