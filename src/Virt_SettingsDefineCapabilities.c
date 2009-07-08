@@ -1429,14 +1429,42 @@ static CMPIStatus disk_dev_or_pool_template(const CMPIObjectPath *ref,
         return s;                        
 }
 
+static CMPIStatus set_graphics_props(const CMPIObjectPath *ref,
+                                     const char *id,
+                                     const char *type,
+                                     struct inst_list *list)
+{
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_GRAPHICS, DEVICE_RASD);
+
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+
+        if (STREQC(type, "vnc")) {
+                const char *addr = "127.0.0.1:-1";
+
+                CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
+
+                CMSetProperty(inst, "KeyMap", (CMPIValue *)"en-us", CMPI_chars);
+        }
+
+        CMSetProperty(inst, "ResourceSubType", (CMPIValue *)type, CMPI_chars);
+
+        inst_list_add(list, inst);
+
+        return s;
+}
+
 static CMPIStatus graphics_template(const CMPIObjectPath *ref,
                                     int template_type,
                                     struct inst_list *list)
 {
         const char *id;
-        const char *addr;
-        CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *type[] = {"vnc", "sdl"};
+        int type_ct = 2;
+        int i;
 
         switch(template_type) {
         case SDC_RASD_MIN:
@@ -1458,17 +1486,11 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_GRAPHICS, DEVICE_RASD);
-
-        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-
-        addr = "127.0.0.1:-1";
-        CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
-
-        CMSetProperty(inst, "KeyMap", (CMPIValue *)"en-us", CMPI_chars);
-        CMSetProperty(inst, "ResourceSubType", (CMPIValue *)"vnc", CMPI_chars);
-
-        inst_list_add(list, inst);
+        for (i = 0; i < type_ct; i++) {
+                s = set_graphics_props(ref, id, type[i], list);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+        }
 
  out:
         return s;

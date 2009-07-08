@@ -276,11 +276,17 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
 }
 
 static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
-                                           CMPIInstance *inst)
+                                           CMPIInstance *inst,
+                                           const char *name,
+                                           const char *classname)
 {
         int rc;
         char *addr_str = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
+        struct infostore_ctx *infostore = NULL;
+        bool has_passwd = false;
 
         CMSetProperty(inst, "ResourceSubType", 
                        (CMPIValue *)dev->dev.graphics.type, CMPI_chars);
@@ -300,8 +306,33 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
                              (CMPIValue *)dev->dev.graphics.keymap, CMPI_chars);
         }
 
+        conn = connect_by_classname(_BROKER, classname, &s);
+        if (conn == NULL)
+                goto out;
+
+        dom = virDomainLookupByName(conn, name);
+        if (dom == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Domain %s not found",
+                           name);
+                goto out;
+        }
+
+        infostore = infostore_open(dom);
+        if (infostore != NULL)
+                has_passwd = infostore_get_bool(infostore, "has_vnc_passwd");
+
+        if (has_passwd)
+                CMSetProperty(inst, "Password",
+                              (CMPIValue *)"********", CMPI_chars);
+
+        infostore_close(infostore);
+
  out:
         free(addr_str);
+        virDomainFree(dom);
+        virConnectClose(conn);
 
         return s;
 }
@@ -430,7 +461,7 @@ static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         } else if (dev->type == CIM_RES_TYPE_PROC) {
                 set_proc_rasd_params(broker, ref, dev, host, inst);
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
-                s = set_graphics_rasd_params(dev, inst);
+                s = set_graphics_rasd_params(dev, inst, host, CLASSNAME(ref));
         } else if (dev->type == CIM_RES_TYPE_INPUT) {
                 s = set_input_rasd_params(dev, inst);
         }
