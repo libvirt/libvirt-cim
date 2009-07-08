@@ -419,6 +419,36 @@ bool infostore_set_str(struct infostore_ctx *ctx,
         return xpath_set_string(ctx, key, val);
 }
 
+bool infostore_get_bool(struct infostore_ctx *ctx, const char *key)
+{
+        char *sval = NULL;
+        bool val = false;
+
+        sval = xpath_query_string(ctx, key);
+        if (sval == NULL)
+                goto out;
+
+        if (STREQC(sval, "true"))
+                return true;
+
+ out:
+        free(sval);
+
+        return val;
+}
+
+bool infostore_set_bool(struct infostore_ctx *ctx, const char *key, bool val)
+{
+        bool ret;
+
+        if (val)
+                ret = xpath_set_string(ctx, key, "true");
+        else
+                ret = xpath_set_string(ctx, key, "false");
+
+        return ret;
+}
+
 /*
  * Local Variables:
  * mode: C

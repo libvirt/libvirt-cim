@@ -40,6 +40,9 @@ char *infostore_get_str(struct infostore_ctx *ctx, const char *key);
 bool infostore_set_str(struct infostore_ctx *ctx,
                        const char *key, const char * val);
 
+bool infostore_get_bool(struct infostore_ctx *ctx, const char *key);
+bool infostore_set_bool(struct infostore_ctx *ctx,
+                        const char *key, bool val);
 
 #endif
 
