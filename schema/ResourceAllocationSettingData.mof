@@ -132,6 +132,9 @@ class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingD
 {
       [Description ("Keyboard keymapping")]
       string KeyMap;
+
+      [Description ("VNC password")]
+      string Password;
 };
 
 [Description ("KVM virtual graphics device"),
@@ -141,6 +144,9 @@ class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingD
 {
       [Description ("Keyboard keymapping")]
       string KeyMap;
+
+      [Description ("VNC password")]
+      string Password;
 };
 
 [Description ("LXC virtual graphics device"),
@@ -150,6 +156,9 @@ class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingD
 {
       [Description ("Keyboard keymapping")]
       string KeyMap;
+
+      [Description ("VNC password")]
+      string Password;
 };
 
 [Description ("Xen virtual input device"),

@@ -338,11 +338,21 @@ static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
                         return XML_ERROR;
 
                 xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->type);
+
+                if (STREQC(dev->type, "sdl"))
+                        goto out;
+
                 xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
                 xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->host);
                 xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->keymap);
+
+                if (dev->passwd != NULL)
+                        xmlNewProp(tmp, 
+                                   BAD_CAST "passwd", 
+                                   BAD_CAST dev->passwd);
         }
 
+ out:
         return NULL;
 }
 

@@ -70,6 +70,7 @@ struct graphics_device {
         char *port;
         char *host;
         char *keymap;
+        char *passwd;
 };
 
 struct input_device {

@@ -81,6 +81,7 @@ static void cleanup_graphics_device(struct graphics_device *dev)
         free(dev->port);
         free(dev->host);
         free(dev->keymap);
+        free(dev->passwd);
 }
 
 static void cleanup_input_device(struct input_device *dev)
