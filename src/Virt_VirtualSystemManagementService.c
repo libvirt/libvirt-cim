@@ -771,7 +771,11 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
         const char *keymap;
         int ret;
 
-        dev->dev.graphics.type = strdup("vnc");
+        if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK) {
+                msg = "GraphicsRASD ResourceSubType field not valid";
+                goto out;
+        }
+        dev->dev.graphics.type = strdup(val);
 
         /* FIXME: Add logic to prevent address:port collisions */
         if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
@@ -792,8 +796,13 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
         
         dev->dev.graphics.keymap = strdup(keymap);
 
- out:
+        if (cu_get_str_prop(inst, "Password", &val) != CMPI_RC_OK) {
+                dev->dev.graphics.passwd = NULL;
+        } else {
+                dev->dev.graphics.passwd = strdup(val);
+        }
 
+ out:
         return msg;
 }
 
@@ -893,7 +902,7 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
         dev->type = (int)type;
 
         if (domain->type == DOMAIN_LXC)
-                msg = _container_rasd_to_vdev(inst, dev, type, ns);
+                msg = _container_rasd_to_vdev(inst, dev, type, ns); 
         else
                 msg = _sysvirt_rasd_to_vdev(inst, dev, type, ns);
  out:
@@ -1137,6 +1146,13 @@ static CMPIStatus update_dominfo(const struct domain *dominfo,
 
         infostore_set_u64(ctx, "weight", dev->dev.vcpu.weight);
         infostore_set_u64(ctx, "limit", dev->dev.vcpu.limit);
+
+        dev = dominfo->dev_graphics;
+        if (dev->dev.graphics.passwd != NULL)
+                infostore_set_bool(ctx, "has_vnc_passwd", true);
+        else
+                infostore_set_bool(ctx, "has_vnc_passwd", false);
+
  out:
         infostore_close(ctx);
 
