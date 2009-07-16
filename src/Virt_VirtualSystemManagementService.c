@@ -388,8 +388,16 @@ static int vssd_to_domain(CMPIInstance *inst,
         const char *cn;
         char *pfx = NULL;
         bool fullvirt;
+        CMPIObjectPath *opathp = NULL;
 
-        cn = CLASSNAME(CMGetObjectPath(inst, NULL));
+        
+        opathp = CMGetObjectPath(inst, NULL);
+        if (opathp == NULL) {
+                CU_DEBUG("Got a null object path");
+                return 0;
+        }
+
+        cn = CLASSNAME(opathp);
         pfx = class_prefix_name(cn);
         if (pfx == NULL) {
                 CU_DEBUG("Unknown prefix for class: %s", cn);
