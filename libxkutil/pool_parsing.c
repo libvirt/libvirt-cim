@@ -31,6 +31,7 @@
 #include <libcmpiutil/libcmpiutil.h>
 
 #include "pool_parsing.h"
+#include "device_parsing.h"
 #include "../src/svpc_types.h"
 
 /*
@@ -84,6 +85,169 @@ void cleanup_virt_pool(struct virt_pool **pool)
         free(_pool);
 
         *pool = NULL;
+}
+
+static int parse_disk_target(xmlNode *node, struct disk_pool *pool)
+{
+        xmlNode *child;
+
+        for (child = node->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "path")) {
+                        STRPROP(pool, path, child);
+                        break;
+                }
+        }
+
+        return 1;
+}
+
+static int parse_disk_source(xmlNode *node, struct disk_pool *pool)
+{
+        xmlNode *child;
+        char **dev_paths = NULL;
+        unsigned ct = 0;
+
+        for (child = node->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "device")) {
+                        char **tmp = NULL;
+
+                        tmp = realloc(dev_paths, sizeof(char *) * (ct + 1));
+                        if (tmp == NULL) {
+                                CU_DEBUG("Could not alloc space for dev path");
+                                continue;
+                        }
+                        dev_paths = tmp;
+
+                        dev_paths[ct] = get_attr_value(child, "path");
+                        ct++;
+                } else if (XSTREQ(child->name, "host")) {
+                        pool->host = get_attr_value(child, "name");
+                        if (pool->host == NULL)
+                                goto err;
+                } else if (XSTREQ(child->name, "dir")) {
+                        pool->src_dir = get_attr_value(child, "path");
+                        if (pool->src_dir == NULL)
+                                goto err;
+                } else if (XSTREQ(child->name, "adapter")) {
+                        pool->adapter = get_attr_value(child, "name");
+                        pool->port_name = get_attr_value(child, "wwpn");
+                        pool->node_name = get_attr_value(child, "wwnn");
+                }
+        }
+
+        pool->device_paths_ct = ct;
+        pool->device_paths = dev_paths;
+
+ err:
+
+        return 1;
+}
+
+static const char *parse_disk_pool(xmlNodeSet *nsv, struct disk_pool *pool)
+{
+        xmlNode **nodes = nsv->nodeTab;
+        xmlNode *child;
+        const char *type_str;
+        const char *name;
+        int type = 0;
+
+        type_str = get_attr_value(nodes[0], "type");
+
+        if (STREQC(type_str, "dir"))
+                type = DISK_POOL_DIR;
+        else if (STREQC(type_str, "fs"))
+                type = DISK_POOL_FS;
+        else if (STREQC(type_str, "netfs"))
+                type = DISK_POOL_NETFS;
+        else if (STREQC(type_str, "disk"))
+                type = DISK_POOL_DISK;
+        else if (STREQC(type_str, "iscsi"))
+                type = DISK_POOL_ISCSI;
+        else if (STREQC(type_str, "logical"))
+                type = DISK_POOL_LOGICAL;
+        else if (STREQC(type_str, "scsi"))
+                type = DISK_POOL_SCSI;
+        else
+                type = DISK_POOL_UNKNOWN;
+
+        pool->pool_type = type;
+              
+        for (child = nodes[0]->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "name")) {
+                        name = get_node_content(child);
+                } else if (XSTREQ(child->name, "target"))
+                        parse_disk_target(child, pool);
+                else if (XSTREQ(child->name, "source"))
+                        parse_disk_source(child, pool);
+        }
+
+        return name;
+}
+
+int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type)
+{
+        int len;
+        int ret = 0;
+        xmlDoc *xmldoc;
+        xmlXPathContext *xpathctx;
+        xmlXPathObject *xpathobj;
+        const xmlChar *xpathstr = (xmlChar *)"/pool";
+        const char *name;
+
+	len = strlen(xml) + 1;
+
+        if ((xmldoc = xmlParseMemory(xml, len)) == NULL)
+                goto err1;
+
+        if ((xpathctx = xmlXPathNewContext(xmldoc)) == NULL)
+                goto err2;
+
+        if ((xpathobj = xmlXPathEvalExpression(xpathstr, xpathctx)) == NULL)
+                goto err3;
+
+        /* FIXME: Add support for parsing network pools */
+        if (type == CIM_RES_TYPE_NET) {
+                ret = 0;
+                goto err1;
+        }
+
+        memset(pool, 0, sizeof(*pool));
+
+        pool->type = CIM_RES_TYPE_DISK; 
+        name = parse_disk_pool(xpathobj->nodesetval, 
+                               &(pool)->pool_info.disk);
+        if (name == NULL)
+                ret = 0;
+
+        pool->id = strdup(name); 
+
+        xmlXPathFreeObject(xpathobj);
+ err3:
+        xmlXPathFreeContext(xpathctx);
+ err2:
+        xmlFreeDoc(xmldoc);
+ err1:
+        return ret;
+}
+
+int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
+{
+        char *xml;
+        int ret;
+
+        xml = virStoragePoolGetXMLDesc(poolptr, 0);
+        if (xml == NULL)
+                return 0;
+
+        *pool = malloc(sizeof(**pool));
+        if (*pool == NULL)
+                return 0;
+
+        ret = get_pool_from_xml(xml, *pool, CIM_RES_TYPE_DISK);
+
+        free(xml);
+
+        return ret;
 }
 
 int define_pool(virConnectPtr conn, const char *xml, int res_type)
