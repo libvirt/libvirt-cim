@@ -71,6 +71,7 @@ const static CMPIBroker *_BROKER;
 
 #define DEVICE_RASD 0 
 #define POOL_RASD   1 
+#define NEW_VOL_RASD   2
 
 static bool system_has_vt(virConnectPtr conn)
 {
@@ -280,6 +281,10 @@ static CMPIInstance *sdc_rasd_inst(CMPIStatus *s,
                 ret = rasd_classname_from_type(resource_type, &base);
         else if (rasd_type == POOL_RASD)
                 ret = pool_rasd_classname_from_type(resource_type, &base);
+        else if (rasd_type == NEW_VOL_RASD) {
+                base = "StorageVolumeResourceAllocationSettingData";
+                ret = 0;
+        }
 
         if (ret != CMPI_RC_OK) {
                 cu_statusf(_BROKER, s,
@@ -1023,10 +1028,76 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
 }
 
 #if VIR_USE_LIBVIRT_STORAGE
-static CMPIStatus volume_template(const CMPIObjectPath *ref,
-                                  int template_type,
-                                  virStorageVolPtr volume_ptr,
-                                  struct inst_list *list)
+static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
+                                      int template_type,
+                                      virStoragePoolPtr poolptr,
+                                      struct inst_list *list)
+{
+        const char *id;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret = 0;
+        struct virt_pool *pool = NULL;
+        CMPIInstance *inst = NULL;
+        int type = 0;
+        const char *path;
+
+        switch(template_type) {
+        case SDC_RASD_MIN:
+                id = "New Storage Volume Minimum";
+                break;
+        case SDC_RASD_MAX:
+                id = "New Storage Volume Maximum";
+                break;
+        case SDC_RASD_INC:
+                id = "New Storage Volume Increment";
+                break;
+        case SDC_RASD_DEF:
+                id = "New Storage Volume Default";
+                break;
+        default:
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        ret = get_disk_pool(poolptr, &pool);
+        if (ret == 1) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                virStoragePoolGetConnect(poolptr),
+                                "Error getting referenced configuration");
+                goto out;
+        }
+
+        type = pool->pool_info.disk.pool_type;
+        if (type != DISK_POOL_DIR) {
+                CU_DEBUG("Image creation for this pool type is not supported");
+                goto out;
+        }
+
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_IMAGE, NEW_VOL_RASD);
+        if ((inst == NULL) || (s.rc != CMPI_RC_OK))
+                goto out;
+
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+        CMSetProperty(inst, "Type", (CMPIValue *)&type, CMPI_uint16);
+
+        path = "/var/lib/libvirt/images/";
+        CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
+
+        inst_list_add(list, inst);
+
+ out:
+        cleanup_virt_pool(&pool);
+
+        return s;
+}
+
+static CMPIStatus avail_volume_template(const CMPIObjectPath *ref,
+                                        int template_type,
+                                        virStorageVolPtr volume_ptr,
+                                        struct inst_list *list)
 {
         char *pfx = NULL;
         const char *id;
@@ -1163,6 +1234,10 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        s = new_volume_template(ref, template_type, poolptr, list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;            
+
         if ((numvols = virStoragePoolNumOfVolumes(poolptr)) == -1) {
                 virt_set_status(_BROKER, &s,
                                 CMPI_RC_ERR_FAILED,
@@ -1206,7 +1281,7 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
                         goto out;
                 }         
                 
-                s = volume_template(ref, template_type, volptr, list);
+                s = avail_volume_template(ref, template_type, volptr, list);
 
                 virStorageVolFree(volptr);
 
@@ -1388,9 +1463,9 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         return s;
 }
 
-static CMPIStatus disk_dev_or_pool_template(const CMPIObjectPath *ref,
-                                            int template_type,
-                                            struct inst_list *list)
+static CMPIStatus disk_res_template(const CMPIObjectPath *ref,
+                                    int template_type,
+                                    struct inst_list *list)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
@@ -1421,7 +1496,7 @@ static CMPIStatus disk_dev_or_pool_template(const CMPIObjectPath *ref,
 
         if (val)
                 s = disk_pool_template(ref, template_type, list);
-        else
+        else 
                 s = disk_template(ref, template_type, list);
 
  out:
@@ -1648,7 +1723,7 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                 else if (type == CIM_RES_TYPE_NET)
                         s = net_dev_or_pool_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_DISK)
-                        s = disk_dev_or_pool_template(ref, i, list);
+                        s = disk_res_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_GRAPHICS)
                         s = graphics_template(ref, i, list);
                 else if (type == CIM_RES_TYPE_INPUT)
