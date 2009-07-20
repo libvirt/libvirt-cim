@@ -27,9 +27,6 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <sys/stat.h>
-#include <libxml/tree.h>
-#include <libxml/parser.h>
-#include <libxml/xpath.h>
 
 #include <libcmpiutil/libcmpiutil.h>
 
@@ -49,7 +46,6 @@
 #define DEFAULT_BRIDGE "xenbr0"
 #define DEFAULT_NETWORK "default"
 
-#define XSTREQ(x, y) (STREQ((char *)x, y))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 static void cleanup_disk_device(struct disk_device *dev)
@@ -123,7 +119,7 @@ void cleanup_virt_devices(struct virt_device **_devs, int count)
         *_devs = NULL;
 }
 
-static char *get_attr_value(xmlNode *node, char *attrname)
+char *get_attr_value(xmlNode *node, char *attrname)
 {
         char *buf = NULL;
         char *ret = NULL;
@@ -137,7 +133,7 @@ static char *get_attr_value(xmlNode *node, char *attrname)
         return ret;
 }
 
-static char *get_node_content(xmlNode *node)
+char *get_node_content(xmlNode *node)
 {
         char *buf = NULL;
         xmlChar *ret = NULL;
@@ -808,8 +804,6 @@ int parse_fq_devid(const char *devid, char **host, char **device)
 
         return 1;
 }
-
-#define STRPROP(d, p, n) (d->p = get_node_content(n))
 
 static int parse_os(struct domain *dominfo, xmlNode *os)
 {

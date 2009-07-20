@@ -27,6 +27,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <libvirt/libvirt.h>
+#include <libxml/tree.h>
+#include <libxml/parser.h>
+#include <libxml/xpath.h>
 
 #include "../src/svpc_types.h"
 
@@ -169,12 +172,18 @@ int get_devices(virDomainPtr dom, struct virt_device **list, int type);
 void cleanup_virt_device(struct virt_device *dev);
 void cleanup_virt_devices(struct virt_device **devs, int count);
 
+char *get_node_content(xmlNode *node);
+char *get_attr_value(xmlNode *node, char *attrname);
+
 char *get_fq_devid(char *host, char *_devid);
 int parse_fq_devid(const char *devid, char **host, char **device);
 
 int attach_device(virDomainPtr dom, struct virt_device *dev);
 int detach_device(virDomainPtr dom, struct virt_device *dev);
 int change_device(virDomainPtr dom, struct virt_device *dev);
+
+#define XSTREQ(x, y) (STREQ((char *)x, y))
+#define STRPROP(d, p, n) (d->p = get_node_content(n))
 
 #endif
 
