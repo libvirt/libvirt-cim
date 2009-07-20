@@ -33,6 +33,7 @@
 #define CIM_RES_TYPE_GRAPHICS   24
 #define CIM_RES_TYPE_INPUT      13 
 #define CIM_RES_TYPE_UNKNOWN    1000
+#define CIM_RES_TYPE_IMAGE      32768 
 
 #define CIM_RES_TYPE_COUNT 6
 const static int cim_res_types[CIM_RES_TYPE_COUNT] = 

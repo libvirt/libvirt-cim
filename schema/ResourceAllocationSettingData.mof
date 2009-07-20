@@ -290,3 +290,22 @@ class LXC_DiskPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingD
       string NodeName;
 };
 
+
+[Description ("Xen storage volume settings"),
+ Provider("cmpi::Virt_SettingsDefineCapabilities")
+]
+class Xen_StorageVolumeResourceAllocationSettingData : Xen_ResourceAllocationSettingData
+{
+      string Path;
+      uint16 Type;
+};
+
+[Description ("KVM storage volume settings"),
+ Provider("cmpi::Virt_SettingsDefineCapabilities")
+]
+class KVM_StorageVolumeResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+      string Path;
+      uint16 Type;
+};
+
