@@ -1276,6 +1276,7 @@ static CMPIStatus get_reference_domain(struct domain **domain,
         virDomainPtr dom = NULL;
         char *name = NULL;
         const char *iid;
+        const char *mac;
         CMPIStatus s;
         int ret;
 
@@ -1336,6 +1337,18 @@ static CMPIStatus get_reference_domain(struct domain **domain,
         (*domain)->name = NULL;
         free((*domain)->uuid);
         (*domain)->uuid = NULL;
+        free((*domain)->dev_net->dev.net.mac);
+        (*domain)->dev_net->dev.net.mac = NULL;
+
+        mac = _net_rand_mac();
+        if (mac == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Unable to generate a MAC address for guest %s",
+                           name);
+                goto out;
+        }
+        (*domain)->dev_net->dev.net.mac = strdup(mac);
 
  out:
         virDomainFree(dom);
