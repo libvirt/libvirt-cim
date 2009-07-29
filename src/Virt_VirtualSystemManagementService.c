@@ -1869,6 +1869,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         struct virt_device *list;
         struct virt_device *dev;
         int *count = NULL;
+        const char *msg = NULL;
 
         op = CMGetObjectPath(rasd, &s);
         if ((op == NULL) || (s.rc != CMPI_RC_OK))
@@ -1915,7 +1916,14 @@ static CMPIStatus resource_add(struct domain *dominfo,
         dev = &list[*count];
 
         dev->type = type;
-        rasd_to_vdev(rasd, dominfo, dev, ns);
+        msg = rasd_to_vdev(rasd, dominfo, dev, ns);
+        if (msg != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Add resource failed: %s",
+                           msg);
+                goto out;
+        }
 
         if ((type == CIM_RES_TYPE_GRAPHICS) || (type == CIM_RES_TYPE_INPUT)) {
                 (*count)++;
@@ -1948,6 +1956,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         struct virt_device *list;
         int *count;
         int i;
+        const char *msg = NULL;
 
         if (devid == NULL) {
                 cu_statusf(_BROKER, &s,
@@ -1978,7 +1987,14 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        rasd_to_vdev(rasd, dominfo, dev, ns);
+                        msg = rasd_to_vdev(rasd, dominfo, dev, ns);
+                        if (msg != NULL) {
+                                cu_statusf(_BROKER, &s,
+                                           CMPI_RC_ERR_FAILED,
+                                           "Modify resource failed: %s",
+                                           msg);
+                                goto out;
+                        }
 
                         if ((type == CIM_RES_TYPE_GRAPHICS) ||
                             (type == CIM_RES_TYPE_INPUT))
