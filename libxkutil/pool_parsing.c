@@ -147,8 +147,8 @@ static const char *parse_disk_pool(xmlNodeSet *nsv, struct disk_pool *pool)
 {
         xmlNode **nodes = nsv->nodeTab;
         xmlNode *child;
-        const char *type_str;
-        const char *name;
+        const char *type_str = NULL;
+        const char *name = NULL;
         int type = 0;
 
         type_str = get_attr_value(nodes[0], "type");
