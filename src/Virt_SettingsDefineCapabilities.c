@@ -782,13 +782,6 @@ static CMPIStatus set_disk_props(int type,
         CMPIInstance *inst;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
-        if (type == DOMAIN_LXC) {
-                dev = "/lxc_mnt/tmp";
-        }
-        else {
-                dev = "hda";
-        }
-
         inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_DISK, DEVICE_RASD);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
@@ -798,12 +791,11 @@ static CMPIStatus set_disk_props(int type,
                       (CMPIValue *)"MegaBytes", CMPI_chars);
         CMSetProperty(inst, "Address", (CMPIValue *)disk_path, CMPI_chars);
 
-        if (type == DOMAIN_LXC)
+        if (type == DOMAIN_LXC) {
+                dev = "/lxc_mnt/tmp";
                 CMSetProperty(inst, "MountPoint", (CMPIValue *)dev, CMPI_chars);
-        else {
-                if (emu_type == 0)
-                        CMSetProperty(inst, "VirtualQuantity",
-                                      (CMPIValue *)&disk_size, CMPI_uint64);
+        } else {
+                dev = "hda";
 
                 if (type == DOMAIN_XENPV) {
                         dev = "xvda";
@@ -812,6 +804,13 @@ static CMPIStatus set_disk_props(int type,
                 } else if (type == DOMAIN_XENFV) {
                         CMSetProperty(inst, "Caption",
                                       (CMPIValue *)"FV disk", CMPI_chars);
+                }
+                
+                if (emu_type == 0) {
+                        CMSetProperty(inst, "VirtualQuantity",
+                                      (CMPIValue *)&disk_size, CMPI_uint64);
+                } else if (emu_type == 1) {
+                        dev = "hdc";
                 }
 
                 CMSetProperty(inst, "VirtualDevice",
