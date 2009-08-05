@@ -1011,6 +1011,13 @@ static char *add_device_nodup(struct virt_device *dev,
 
         for (i = 0; i < *index; i++) {
                 struct virt_device *ptr = &list[i];
+                
+                if (dev->type == CIM_RES_TYPE_DISK && 
+                    STREQC(ptr->dev.disk.virtual_dev,
+                           dev->dev.disk.virtual_dev)) 
+                        return "VirtualDevice property must be unique for each "
+                               "DiskResourceAllocationSettingData in a single "
+                               "guest";
 
                 if (STREQC(ptr->id, dev->id)) {
                         CU_DEBUG("Overriding device %s from refconf", ptr->id);
