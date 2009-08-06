@@ -664,6 +664,32 @@ static CMPIStatus delete_pool(CMPIMethodMI *self,
         return s;
 }
 
+static CMPIStatus create_resource_parse_args(const CMPIArgs *argsin,
+                                             CMPIInstance **settings,
+                                             CMPIObjectPath **pool)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (cu_get_inst_arg(argsin, "Settings", settings) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get Settings arg");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `Settings'");
+                goto out;
+        }
+
+        if (cu_get_ref_arg(argsin, "Pool", pool) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get Pool reference arg");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `Pool'");
+                goto out;
+        }
+
+ out:
+        return s;
+}
+
 static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
                                           const CMPIContext *context,
                                           const CMPIResult *results,
@@ -673,12 +699,20 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
 {
         uint32_t rc = CIM_SVPC_RETURN_FAILED;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *settings;
+        CMPIObjectPath *pool;
 
         CU_DEBUG("CreateResourceInPool");
+
+        s = create_resource_parse_args(argsin, &settings, &pool);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         if (s.rc == CMPI_RC_OK)
                 rc = CIM_SVPC_RETURN_COMPLETED;
         CMReturnData(results, &rc, CMPI_uint32);
+
+ out:
 
         return s;
 }
