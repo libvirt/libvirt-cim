@@ -664,6 +664,25 @@ static CMPIStatus delete_pool(CMPIMethodMI *self,
         return s;
 }
 
+static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
+                                          const CMPIContext *context,
+                                          const CMPIResult *results,
+                                          const CMPIObjectPath *reference,
+                                          const CMPIArgs *argsin,
+                                          CMPIArgs *argsout)
+{
+        uint32_t rc = CIM_SVPC_RETURN_FAILED;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CU_DEBUG("CreateResourceInPool");
+
+        if (s.rc == CMPI_RC_OK)
+                rc = CIM_SVPC_RETURN_COMPLETED;
+        CMReturnData(results, &rc, CMPI_uint32);
+
+        return s;
+}
+
 static CMPIStatus dummy_handler(CMPIMethodMI *self,
                                 const CMPIContext *context,
                                 const CMPIResult *results,
@@ -710,12 +729,22 @@ static struct method_handler DeleteResourcePool = {
         }
 };
 
+static struct method_handler CreateResourceInPool = {
+        .name = "CreateResourceInPool",
+        .handler = create_resource_in_pool,
+        .args = {{"Settings", CMPI_instance, true},
+                 {"Pool", CMPI_ref, true},
+                 ARG_END
+        }
+};
+
 static struct method_handler *my_handlers[] = {
         &CreateResourcePool,
         &CreateChildResourcePool,
         &AddResourcesToResourcePool,
         &RemoveResourcesFromResourcePool,
         &DeleteResourcePool,
+        &CreateResourceInPool,
         NULL,
 };
 
