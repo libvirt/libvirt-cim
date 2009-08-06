@@ -1027,6 +1027,26 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
 }
 
 #if VIR_USE_LIBVIRT_STORAGE
+static int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
+{
+        char *xml;
+        int ret;
+
+        xml = virStoragePoolGetXMLDesc(poolptr, 0);
+        if (xml == NULL)
+                return 0;
+
+        *pool = malloc(sizeof(**pool));
+        if (*pool == NULL)
+                return 0;
+
+        ret = get_pool_from_xml(xml, *pool, CIM_RES_TYPE_DISK);
+
+        free(xml);
+
+        return ret;
+}
+
 static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
                                       int template_type,
                                       virStoragePoolPtr poolptr,

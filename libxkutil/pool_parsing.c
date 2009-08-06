@@ -230,26 +230,6 @@ int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type)
         return ret;
 }
 
-int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
-{
-        char *xml;
-        int ret;
-
-        xml = virStoragePoolGetXMLDesc(poolptr, 0);
-        if (xml == NULL)
-                return 0;
-
-        *pool = malloc(sizeof(**pool));
-        if (*pool == NULL)
-                return 0;
-
-        ret = get_pool_from_xml(xml, *pool, CIM_RES_TYPE_DISK);
-
-        free(xml);
-
-        return ret;
-}
-
 int define_pool(virConnectPtr conn, const char *xml, int res_type)
 {
         int ret = 1;
