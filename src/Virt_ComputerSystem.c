@@ -943,16 +943,41 @@ static CMPIStatus state_change_disable(virDomainPtr dom, virDomainInfoPtr info)
         switch (info->state) {
         case VIR_DOMAIN_RUNNING:
         case VIR_DOMAIN_BLOCKED:
-                CU_DEBUG("Stop domain");
+                CU_DEBUG("Disable domain");
+                if (virDomainDestroy(dom) != 0)
+                        virt_set_status(_BROKER, &s,
+                                        CMPI_RC_ERR_FAILED,
+                                        virDomainGetConnect(dom),
+                                        "Unable to disable domain");
+                break;
+        default:
+                CU_DEBUG("Cannot go to disabled state from %i", info->state);
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Invalid state transition");
+        };
+
+        return s;
+}
+
+static CMPIStatus state_change_shutdown(virDomainPtr dom, virDomainInfoPtr info)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        info->state = adjust_state_xen(dom, info->state);
+
+        switch (info->state) {
+        case VIR_DOMAIN_RUNNING:
+        case VIR_DOMAIN_BLOCKED:
+                CU_DEBUG("Shudown domain");
                 if (virDomainShutdown(dom) != 0)
                         virt_set_status(_BROKER, &s,
                                         CMPI_RC_ERR_FAILED,
                                         virDomainGetConnect(dom),
-                                        "Unable to stop domain");
+                                        "Unable to shutdown domain");
                 break;
         default:
-                CU_DEBUG("Cannot go to disabled/shutdown state from %i", 
-                         info->state);
+                CU_DEBUG("Cannot go to shutdown state from %i", info->state);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Invalid state transition");
@@ -1067,8 +1092,10 @@ static CMPIStatus __state_change(const char *name,
 
         if (state == CIM_STATE_ENABLED)
                 s = state_change_enable(dom, &info);
-        else if ((state == CIM_STATE_DISABLED) || (state == CIM_STATE_SHUTDOWN))
+        else if (state == CIM_STATE_DISABLED)
                 s = state_change_disable(dom, &info);
+        else if (state == CIM_STATE_SHUTDOWN)
+                s = state_change_shutdown(dom, &info);
         else if (state == CIM_STATE_PAUSED)
                 s = state_change_pause(dom, &info);
         else if (state == CIM_STATE_REBOOT)
