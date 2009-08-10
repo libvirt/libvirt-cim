@@ -592,6 +592,8 @@ CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
                *type = CIM_RES_TYPE_GRAPHICS;
        else if (STREQ(base, "InputResourceAllocationSettingData"))
                *type = CIM_RES_TYPE_INPUT;
+       else if (STREQ(base, "StorageVolumeResourceAllocationSettingData"))
+               *type = CIM_RES_TYPE_IMAGE;
        else
                goto out;
 

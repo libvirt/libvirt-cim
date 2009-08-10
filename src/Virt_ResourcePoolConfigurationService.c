@@ -690,6 +690,87 @@ static CMPIStatus create_resource_parse_args(const CMPIArgs *argsin,
         return s;
 }
 
+static const char *storage_vol_rasd_to_res(CMPIInstance *inst,
+                                           struct virt_pool_res *res)
+{
+        uint16_t int_val;
+        const char *val;
+        const char *msg;
+
+        if (cu_get_u16_prop(inst, "FormatType", &int_val) != CMPI_RC_OK) {
+                msg = "StorageVolumeRASD FormatType field not valid";
+                goto out;
+        }
+        res->res.storage_vol.format_type = int_val;
+
+        if (cu_get_str_prop(inst, "VolumeName", &val) != CMPI_RC_OK) {
+                msg = "StorageVolumeRASD VolumeName field not valid";
+                goto out;
+        }
+        free(res->res.storage_vol.vol_name);
+        res->res.storage_vol.vol_name = strdup(val);
+
+        if (cu_get_str_prop(inst, "Path", &val) != CMPI_RC_OK) {
+                msg = "StorageVolumeRASD Path field not valid";
+                goto out;
+        }
+        free(res->res.storage_vol.path);
+        res->res.storage_vol.path = strdup(val);
+
+        if (cu_get_u16_prop(inst, "AllocationQuantity", &int_val) == CMPI_RC_OK)
+                res->res.storage_vol.alloc = int_val;
+
+        if (cu_get_u16_prop(inst, "Capacity", &int_val) != CMPI_RC_OK) {
+                msg = "StorageVolumeRASD Capacity field not valid";
+                goto out;
+        }
+        res->res.storage_vol.cap = int_val;
+
+        free(res->res.storage_vol.cap_units);
+        if (cu_get_str_prop(inst, "AllocationUnits", &val) != CMPI_RC_OK)
+                res->res.storage_vol.cap_units = strdup("G");
+        else
+                res->res.storage_vol.cap_units = strdup(val);
+
+ out:
+
+        return msg;
+}
+
+static const char *rasd_to_res(CMPIInstance *inst,
+                               struct virt_pool_res *res,
+                               const char *ns)
+{
+        uint16_t type;
+        CMPIObjectPath *op;
+        const char *msg = NULL;
+
+        op = CMGetObjectPath(inst, NULL);
+        if (op == NULL) {
+                msg = "Unable to get path for resource instance";
+                goto out;
+        }
+
+        if (res_type_from_rasd_classname(CLASSNAME(op), &type) != CMPI_RC_OK) {
+                msg = "Unable to get resource type";
+                goto out;
+        }
+
+        res->type = (int)type;
+
+        if (type == CIM_RES_TYPE_IMAGE) {
+                msg = storage_vol_rasd_to_res(inst, res);
+        }
+        else
+                msg = "This function does not support this resource type";
+
+ out:
+        if (msg)
+                CU_DEBUG("rasd_to_res(%s): %s", CLASSNAME(op), msg);
+
+        return msg;
+}
+
 static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
                                           const CMPIContext *context,
                                           const CMPIResult *results,
@@ -701,12 +782,31 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *settings;
         CMPIObjectPath *pool;
+        struct virt_pool_res *res = NULL;
+        const char* msg = NULL;
 
         CU_DEBUG("CreateResourceInPool");
 
         s = create_resource_parse_args(argsin, &settings, &pool);
         if (s.rc != CMPI_RC_OK)
                 goto out;
+
+        res = calloc(1, sizeof(*res));
+        if (res == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to allocate new resource struct");
+                goto out;
+        }
+
+        msg = rasd_to_res(settings, res, NAMESPACE(reference));
+        if (msg != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get attributes for resource: %s",
+                           msg);
+                goto out;
+        }
 
         if (s.rc == CMPI_RC_OK)
                 rc = CIM_SVPC_RETURN_COMPLETED;
