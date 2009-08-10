@@ -64,6 +64,24 @@ struct virt_pool {
         char *id;
 };
 
+struct storage_vol {
+        enum {VOL_FORMAT_UNKNOWN,
+              VOL_FORMAT_RAW} format_type;
+        char *vol_name;
+        char *path;
+        uint16_t alloc;
+        uint16_t cap;
+        char *cap_units;
+};
+
+struct virt_pool_res {
+        uint16_t type;
+        union {
+                struct storage_vol storage_vol;
+        } res;
+        char *pool_id;
+};
+
 void cleanup_virt_pool(struct virt_pool **pool);
 
 int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type);
