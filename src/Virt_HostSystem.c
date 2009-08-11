@@ -58,7 +58,20 @@ static int resolve_host(char *host, char *buf, int size)
         }
 
         CU_DEBUG("Unable to find FQDN, using hostname.");
-        strncpy(buf, he->h_name, size);
+ 
+        /* FIXME: An ugly hack to ensure we return something for the hostname,
+                  but also be sure the value isn't empty and that it doesn't
+                  contain "localhost" */
+        if ((he->h_name != NULL) && (!STREQC(he->h_name, "")) && 
+            (strstr(he->h_name, "localhost") == NULL))
+                strncpy(buf, he->h_name, size);
+        else if ((host != NULL) && (!STREQC(host, "")) && 
+                 (strstr(host, "localhost") == NULL))
+                strncpy(buf, host, size);
+        else {
+                CU_DEBUG("Unable to find valid hostname value.");
+                return -1;
+        }
 
         return 0;
 }
@@ -78,7 +91,7 @@ static int get_fqdn(char *buf, int size)
         else
                 ret = resolve_host(host, buf, size);
 
-        return 0;
+        return ret;
 }
 
 static int set_host_system_properties(CMPIInstance *instance)
