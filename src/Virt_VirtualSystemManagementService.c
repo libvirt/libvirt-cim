@@ -2418,8 +2418,10 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         const char *ccname = NULL;
         virConnectPtr conn = NULL;
         unsigned long hv_version = 0;
+        unsigned long lv_version = 0;
         const char * hv_type = NULL;
         char *caption = NULL;
+        char *lv_version_string = NULL;
         CMPIArray *array;
         uint16_t op_status;
 
@@ -2483,6 +2485,26 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                 CMSetProperty(inst, "Caption",
                               (CMPIValue *)"Unknown Hypervisor", CMPI_chars);
 
+	if (virGetVersion(&lv_version, hv_type, &hv_version) < 0) {
+                CU_DEBUG("Unable to get libvirt version");
+                lv_version= 0;
+                hv_version= 0;
+        }
+
+        if (asprintf(&lv_version_string, "%lu.%lu.%lu",
+                     lv_version / 1000000,
+                     (lv_version % 1000000) / 1000,
+                     (lv_version % 1000000) % 1000) == -1)
+                lv_version_string = NULL;
+
+        if (lv_version_string != NULL)
+                CMSetProperty(inst, "LibvirtVersion",
+                              (CMPIValue *)lv_version_string, CMPI_chars);
+        else
+                CMSetProperty(inst, "LibvirtVersion",
+                              (CMPIValue *)"Unknown libvirt version",
+                              CMPI_chars);
+
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"Management Service", CMPI_chars);
 
@@ -2522,6 +2544,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                    "");
  out:
         free(caption);
+        free(lv_version_string);
         virConnectClose(conn);
         *_inst = inst;
 

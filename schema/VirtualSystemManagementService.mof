@@ -11,6 +11,9 @@ class Xen_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 
    [Description("Package Version")]
    string Release;
+ 
+   [Description("libvirt Version")]
+   string LibvirtVersion;
 };
 
 [Provider("cmpi::Virt_VirtualSystemManagementService")]
@@ -24,6 +27,9 @@ class KVM_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 
    [Description("Package Version")]
    string Release;
+ 
+   [Description("libvirt Version")]
+   string LibvirtVersion;
 };
 
 [Provider("cmpi::Virt_VirtualSystemManagementService")]
@@ -37,4 +43,7 @@ class LXC_VirtualSystemManagementService : CIM_VirtualSystemManagementService
 
    [Description("Package Version")]
    string Release;
+ 
+   [Description("libvirt Version")]
+   string LibvirtVersion;
 };
