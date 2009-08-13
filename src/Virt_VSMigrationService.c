@@ -48,6 +48,7 @@
 #include "Virt_ComputerSystem.h"
 #include "Virt_VSMigrationSettingData.h"
 #include "svpc_types.h"
+#include "libxkutil/infostore.h"
 
 #include "config.h"
 
@@ -1135,6 +1136,24 @@ static CMPIStatus ensure_dom_offline(virDomainPtr dom)
         return s;
 }
 
+static void clear_infstore_migration_flag(virDomainPtr dom)
+{
+        struct infostore_ctx *infp;
+        bool ret = false;
+
+        infp = infostore_open(dom);
+        if (infp == NULL) {
+                CU_DEBUG("Unable to open domain information store."
+                          "Migration flag won't be cleared");
+                return;
+        }
+
+        ret = infostore_set_bool(infp, "migrating", false);
+        CU_DEBUG("Clearing infostore migrating flag");
+
+        infostore_close(infp);
+}
+
 static CMPIStatus migrate_vs(struct migration_job *job)
 {
         CMPIStatus s;
@@ -1210,6 +1229,7 @@ static CMPIStatus migrate_vs(struct migration_job *job)
                          CMGetCharPtr(s.msg));
         }
  out:
+        clear_infstore_migration_flag(dom);
         raise_deleted_ind(job);
         
         free(uri);
@@ -1249,6 +1269,38 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
         free(job);
 
         return NULL;
+}
+
+static bool set_infstore_migration_flag(const virConnectPtr conn,
+                                        const char *domain)
+{
+        struct infostore_ctx *infp;
+        bool ret = false;
+        virDomainPtr dom = NULL;
+        
+        dom = virDomainLookupByName(conn, domain);
+        if (dom == NULL) {
+                CU_DEBUG("No such domain");
+                goto out;
+        }
+
+        infp = infostore_open(dom);
+        if (infp == NULL) {
+                CU_DEBUG("Unable to open domain information store."
+                         "Migration flag won't be placed");
+                goto out;
+        }
+
+        ret = infostore_set_bool(infp, "migrating", true);
+        CU_DEBUG("Migration flag set");
+
+        infostore_close(infp);
+
+ out:
+        virDomainFree(dom);
+        virConnectClose(conn);
+
+        return ret;
 }
 
 static CMPIInstance *_migrate_job_new_instance(const char *cn,
@@ -1410,6 +1462,10 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
                 CU_DEBUG("Failed to get job instance for create ind", s.rc);
                 goto out;
         }
+
+        rc = set_infstore_migration_flag(job->conn, domain);
+        if (!rc)
+                CU_DEBUG("Failed to set migration flag in infostore");
 
         ind = prepare_indication(_BROKER, inst, job, MIG_CREATED, &s);
         rc = raise_indication(job->context, MIG_CREATED, job->ref_ns, 
