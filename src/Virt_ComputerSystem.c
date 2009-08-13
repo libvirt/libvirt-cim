@@ -187,6 +187,54 @@ static uint16_t state_lv_to_cim_health(const char lv_state)
         }
 }
 
+static uint16_t state_lv_to_cim_oings(const char lv_state, const bool migrating)
+{
+        enum CIM_oping_status {
+                CIM_OPING_STATUS_UNKNOWN = 0,
+                CIM_OPING_STATUS_NOT_AVAILABLE = 1,
+                CIM_OPING_STATUS_SERVICING = 2,
+                CIM_OPING_STATUS_STARTING = 3,
+                CIM_OPING_STATUS_STOPPING = 4,
+                CIM_OPING_STATUS_STOPPED = 5,
+                CIM_OPING_STATUS_ABORTED = 6,
+                CIM_OPING_STATUS_DORMANT = 7,
+                CIM_OPING_STATUS_COMPLETED = 8,
+                CIM_OPING_STATUS_MIGRATING = 9,
+                CIM_OPING_STATUS_EMIGRATING = 10,
+                CIM_OPING_STATUS_IMMIGRATING = 11,
+                CIM_OPING_STATUS_SNAPSHOTTING = 12,
+                CIM_OPING_STATUS_SHUTTING_DOWN = 13,
+                CIM_OPING_STATUS_IN_TEST = 14,
+                CIM_OPING_STATUS_TRANSITIONING = 15,
+                CIM_OPING_STATUS_IN_SERVICE = 16,
+                CIM_OPING_STATUS_STARTED = 32768,
+        };
+
+        
+        if (migrating)
+                return CIM_OPING_STATUS_MIGRATING;
+
+        switch (lv_state) {
+        case VIR_DOMAIN_NOSTATE:
+        case VIR_DOMAIN_SHUTDOWN:
+        case VIR_DOMAIN_SHUTOFF:
+                return CIM_OPING_STATUS_STOPPED;
+
+        case VIR_DOMAIN_CRASHED:
+                return CIM_OPING_STATUS_ABORTED;
+
+        case VIR_DOMAIN_RUNNING:
+                return CIM_OPING_STATUS_STARTED;
+
+        case VIR_DOMAIN_BLOCKED:
+        case VIR_DOMAIN_PAUSED:
+                return CIM_OPING_STATUS_DORMANT;
+
+        default:
+                return CIM_OPING_STATUS_UNKNOWN;
+        }
+}
+
 static uint16_t state_lv_to_cim_os(const char lv_state)
 {
         enum CIM_op_status {
@@ -268,9 +316,11 @@ static int set_state_from_dom(const CMPIBroker *broker,
         uint16_t health_state;
         uint16_t req_state;
         uint16_t op_status;
+        uint16_t oping_status;
         CMPIArray *array;
         CMPIStatus s;
         struct infostore_ctx *infostore = NULL;
+        bool migrating = false;
 
         ret = virDomainGetInfo(dom, &info);
         if (ret != 0) 
@@ -298,6 +348,14 @@ static int set_state_from_dom(const CMPIBroker *broker,
                       (CMPIValue *)&array, CMPI_uint16A);
 
         infostore = infostore_open(dom);
+
+        if (infostore != NULL) 
+                migrating = infostore_get_bool(infostore, "migrating");
+
+        oping_status = state_lv_to_cim_oings((const int)info.state, migrating);
+        CMSetProperty(instance, "OperatingStatus",
+                      (CMPIValue *)&oping_status, CMPI_uint16);
+
         if (infostore != NULL)
                 req_state = (uint16_t)infostore_get_u64(infostore, "reqstate");
         else
