@@ -771,6 +771,60 @@ static const char *rasd_to_res(CMPIInstance *inst,
         return msg;
 }
 
+static CMPIInstance *get_resource_rasd(struct virt_pool_res *res,
+                                       const CMPIObjectPath *ref,
+                                       CMPIStatus *s)
+{
+        CMPIInstance *inst = NULL;
+
+        if (res->type != CIM_RES_TYPE_IMAGE) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Only storage volume resources supported");
+
+                goto out;
+        }
+
+        inst = get_typed_instance(_BROKER,
+                                  CLASSNAME(ref),
+                                  "StorageVolumeResourceAllocationSettingData",
+                                  NAMESPACE(ref));
+        if (inst == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get resource instance");
+
+                goto out;
+        }
+
+        CMSetProperty(inst, "InstanceID",
+                      (CMPIValue *)res->res.storage_vol.path, CMPI_chars);
+
+        CMSetProperty(inst, "Path",
+                      (CMPIValue *)res->res.storage_vol.path, CMPI_chars);
+
+        CMSetProperty(inst, "ResourceType",
+                      (CMPIValue *)&(res->type), CMPI_uint16);
+
+        CMSetProperty(inst, "FormatType",
+                      (CMPIValue *)&(res->res.storage_vol.format_type),
+                      CMPI_uint16);
+
+        CMSetProperty(inst, "VolumeName",
+                      (CMPIValue *)res->res.storage_vol.vol_name, CMPI_chars);
+        CMSetProperty(inst, "AllocationQuantity",
+                      (CMPIValue *)&(res->res.storage_vol.alloc), CMPI_uint16);
+
+        CMSetProperty(inst, "Capacity",
+                      (CMPIValue *)&(res->res.storage_vol.cap), CMPI_uint16);
+
+        CMSetProperty(inst, "AllocationUnits",
+                      (CMPIValue *)res->res.storage_vol.cap_units, CMPI_chars);
+
+ out:
+        return inst;
+}
+
 static CMPIInstance *connect_and_create_res(char *xml,
                                             const CMPIObjectPath *ref,
                                             struct virt_pool_res *res,
@@ -793,7 +847,13 @@ static CMPIInstance *connect_and_create_res(char *xml,
                 goto out;
         }
 
-        /* FIXME: Get instance result here */
+        inst = get_resource_rasd(res, ref, s);
+        if (s->rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get new resource instance");
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to lookup resulting resource");
+        }
 
  out:
         virConnectClose(conn);
