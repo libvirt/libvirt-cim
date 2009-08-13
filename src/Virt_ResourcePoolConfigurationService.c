@@ -771,6 +771,36 @@ static const char *rasd_to_res(CMPIInstance *inst,
         return msg;
 }
 
+static CMPIInstance *connect_and_create_res(char *xml,
+                                            const CMPIObjectPath *ref,
+                                            struct virt_pool_res *res,
+                                            CMPIStatus *s)
+{
+        virConnectPtr conn;
+        CMPIInstance *inst = NULL;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
+        if (conn == NULL) {
+                CU_DEBUG("libvirt connection failed");
+                return NULL;
+        }
+
+        if (create_resource(conn, res->pool_id, xml, res->type) == 0) {
+                virt_set_status(_BROKER, s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to create storage volume");
+                goto out;
+        }
+
+        /* FIXME: Get instance result here */
+
+ out:
+        virConnectClose(conn);
+
+        return inst;
+}
+
 static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
                                           const CMPIContext *context,
                                           const CMPIResult *results,
@@ -787,6 +817,8 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
         const char *id = NULL;
         char *pool_id = NULL;
         char *xml = NULL;
+        CMPIInstance *inst = NULL;
+        CMPIObjectPath *result;
 
         CU_DEBUG("CreateResourceInPool");
 
@@ -839,7 +871,22 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
 
         CU_DEBUG("New resource XML:\n%s", xml);
 
-        /*FIXME: Add resource here */
+        inst = connect_and_create_res(xml, reference, res, &s);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        if (inst == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to create new resource");
+                goto out;
+        }
+
+        result = CMGetObjectPath(inst, &s);
+        if ((result != NULL) && (s.rc == CMPI_RC_OK)) {
+                CMSetNameSpace(result, NAMESPACE(reference));
+                CMAddArg(argsout, "Resource", &result, CMPI_ref);
+        }
 
  out:
         free(pool_id);
