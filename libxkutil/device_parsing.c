@@ -659,6 +659,8 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.mac);
                 DUP_FIELD(dev, _dev, dev.net.type);
                 DUP_FIELD(dev, _dev, dev.net.source);
+                DUP_FIELD(dev, _dev, dev.net.name);
+                DUP_FIELD(dev, _dev, dev.net.model);
         } else if (dev->type == CIM_RES_TYPE_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);
