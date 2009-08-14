@@ -695,7 +695,7 @@ static const char *storage_vol_rasd_to_res(CMPIInstance *inst,
 {
         uint16_t int_val;
         const char *val;
-        const char *msg;
+        const char *msg = NULL;
 
         if (cu_get_u16_prop(inst, "FormatType", &int_val) != CMPI_RC_OK) {
                 msg = "StorageVolumeRASD FormatType field not valid";
