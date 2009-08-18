@@ -50,7 +50,7 @@ static const char *cn_to_uri(const char *classname)
         else if (STARTS_WITH(classname, "KVM"))
                 return "qemu:///system";
         else if (STARTS_WITH(classname, "LXC"))
-                return "lxc:///system";
+                return "lxc:///";
         else
                 return NULL;
 }

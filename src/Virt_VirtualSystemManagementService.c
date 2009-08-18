@@ -323,6 +323,9 @@ static int lxc_vssd_to_domain(CMPIInstance *inst,
 
 static bool default_graphics_device(struct domain *domain)
 {
+        if (domain->type == DOMAIN_LXC)
+                return true;
+
         free(domain->dev_graphics);
         domain->dev_graphics = calloc(1, sizeof(*domain->dev_graphics));
         if (domain->dev_graphics == NULL) {
@@ -946,8 +949,6 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
                 return net_rasd_to_vdev(inst, dev, ns);
         } else if (type == CIM_RES_TYPE_PROC) {
                 return lxc_proc_rasd_to_vdev(inst, dev);
-        } else if (type == CIM_RES_TYPE_GRAPHICS) {
-                return graphics_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_INPUT) {
                 return input_rasd_to_vdev(inst, dev);
         }
