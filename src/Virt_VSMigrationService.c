@@ -1298,7 +1298,6 @@ static bool set_infstore_migration_flag(const virConnectPtr conn,
 
  out:
         virDomainFree(dom);
-        virConnectClose(conn);
 
         return ret;
 }
