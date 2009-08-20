@@ -1403,7 +1403,7 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         }
 
         if (domain->uuid != NULL) {
-                conn = connect_by_classname(_BROKER, CLASSNAME(ref), NULL);
+                conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
                 if (conn == NULL) {
                         cu_statusf(_BROKER, s,
                                    CMPI_RC_ERR_FAILED,
