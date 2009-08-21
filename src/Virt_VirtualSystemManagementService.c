@@ -71,6 +71,37 @@ enum ResourceAction {
         RESOURCE_MOD,
 };
 
+static CMPIStatus check_uuid_in_use(const CMPIObjectPath *ref,
+                                    struct domain *domain)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virConnectPtr conn = NULL;
+        virDomainPtr dom = NULL;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Error connecting to libvirt");
+                goto out;
+        }
+
+        dom = virDomainLookupByUUIDString(conn, domain->uuid);
+        if (dom != NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Guest '%s' is already defined with UUID %s",
+                           virDomainGetName(dom),
+                           domain->uuid);
+        }
+
+ out:
+        virDomainFree(dom);
+        virConnectClose(conn);
+
+        return s;
+}
+
 static CMPIStatus define_system_parse_args(const CMPIArgs *argsin,
                                            CMPIInstance **sys,
                                            const char *ns,
@@ -1402,26 +1433,10 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
                 goto out;
         }
 
-        if (domain->uuid != NULL) {
-                conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
-                if (conn == NULL) {
-                        cu_statusf(_BROKER, s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Error connecting to libvirt");
-                        goto out;
-                }
-
-                dom = virDomainLookupByUUIDString(conn, domain->uuid);
-                if (dom != NULL) {
-                        cu_statusf(_BROKER, s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Guest '%s' is already defined with UUID %s",
-                                   virDomainGetName(dom),
-                                   domain->uuid);
-                        goto out;
-                }
-        }
-
+        *s = check_uuid_in_use(ref, domain);
+        if (s->rc != CMPI_RC_OK)
+                goto out;
+ 
         msg = classify_resources(resources, NAMESPACE(ref), domain);
         if (msg != NULL) {
                 CU_DEBUG("Failed to classify resources: %s", msg);
@@ -1643,6 +1658,10 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
                            "Invalid SystemSettings");
                 goto out;
         }
+
+        s = check_uuid_in_use(ref, dominfo);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
 
         xml = system_to_xml(dominfo);
         if (xml != NULL) {
