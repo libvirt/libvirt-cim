@@ -127,6 +127,7 @@ static CMPIInstance *disk_instance(const CMPIBroker *broker,
 {
         CMPIInstance *inst;
         virConnectPtr conn;
+        uint16_t state;
 
         conn = virDomainGetConnect(dom);
         inst = get_typed_instance(broker,
@@ -136,6 +137,10 @@ static CMPIInstance *disk_instance(const CMPIBroker *broker,
 
         if (!disk_set_name(inst, dev))
                 return NULL;
+
+        //Set HealthState to "OK"
+        state = 5;
+        CMSetProperty(inst, "HealthState", (CMPIValue *)&state, CMPI_uint16);
 
         return inst;
 }
