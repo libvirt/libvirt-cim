@@ -166,6 +166,8 @@ static bool diskpool_set_capacity(virConnectPtr conn,
         virStoragePoolInfo info;
         uint64_t cap;
         uint64_t res;
+        struct virt_pool *pool_vals = NULL;
+        const char *pool_str = NULL;
 
         pool = virStoragePoolLookupByName(conn, _pool->tag);
         if (pool == NULL) {
@@ -187,9 +189,21 @@ static bool diskpool_set_capacity(virConnectPtr conn,
         CMSetProperty(inst, "Reserved",
                       (CMPIValue *)&res, CMPI_uint64);
 
+        if (get_disk_pool(pool, &pool_vals) != 0) {
+                CU_DEBUG("Error getting pool path for: %s", _pool->tag);
+        } else {
+                if (pool_vals->pool_info.disk.path != NULL) {
+                        pool_str = strdup(pool_vals->pool_info.disk.path);
+
+                        CMSetProperty(inst, "Path",
+                                      (CMPIValue *)pool_str, CMPI_chars);
+                }
+        }
+
         result = true;
  out:
         virStoragePoolFree(pool);
+        cleanup_virt_pool(&pool_vals);
 
         return result;
 }
@@ -304,6 +318,9 @@ static bool diskpool_set_capacity(virConnectPtr conn,
 
         CMSetProperty(inst, "Reserved",
                       (CMPIValue *)&res, CMPI_uint64);
+
+        CMSetProperty(inst, "Path",
+                      (CMPIValue *)pool->path, CMPI_chars);
 
         result = true;
  out:

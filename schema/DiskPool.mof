@@ -3,15 +3,24 @@
 [Provider("cmpi::Virt_DevicePool")]
 class Xen_DiskPool : CIM_ResourcePool
 {
+  [Description("Path this storage pool represents")]
+  string Path;
+
 };
 
 [Provider("cmpi::Virt_DevicePool")]
 class KVM_DiskPool : CIM_ResourcePool
 {
+  [Description("Path this storage pool represents")]
+  string Path;
+
 };
 
 [Provider("cmpi::Virt_DevicePool")]
 class LXC_DiskPool : CIM_ResourcePool
 {
+  [Description("Path this storage pool represents")]
+  string Path;
+
 };
 
