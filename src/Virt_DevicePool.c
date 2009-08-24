@@ -45,7 +45,7 @@
 
 static const CMPIBroker *_BROKER;
 
-struct disk_pool {
+struct tmp_disk_pool {
         char *tag;
         char *path;
         bool primordial;
@@ -61,10 +61,10 @@ struct disk_pool {
 # define VIR_USE_LIBVIRT_STORAGE 0
 #endif
 
-static bool get_disk_parent(struct disk_pool **_pools,
+static bool get_disk_parent(struct tmp_disk_pool **_pools,
                             int *_count)
 {
-        struct disk_pool *pools = NULL;
+        struct tmp_disk_pool *pools = NULL;
         int ret = false;
         int count;
 
@@ -93,12 +93,12 @@ static bool get_disk_parent(struct disk_pool **_pools,
 
 #if VIR_USE_LIBVIRT_STORAGE
 static int get_diskpool_config(virConnectPtr conn,
-                               struct disk_pool **_pools)
+                               struct tmp_disk_pool **_pools)
 {
         int count = 0;
         int i;
         char ** names = NULL;
-        struct disk_pool *pools = NULL;
+        struct tmp_disk_pool *pools = NULL;
 
         count = virConnectNumOfStoragePools(conn);
         if (count <= 0)
@@ -139,7 +139,7 @@ static int get_diskpool_config(virConnectPtr conn,
 
 static bool diskpool_set_capacity(virConnectPtr conn,
                                   CMPIInstance *inst,
-                                  struct disk_pool *_pool)
+                                  struct tmp_disk_pool *_pool)
 {
         bool result = false;
         virStoragePoolPtr pool;
@@ -175,7 +175,7 @@ static bool diskpool_set_capacity(virConnectPtr conn,
 }
 
 static bool _diskpool_is_member(virConnectPtr conn,
-                                const struct disk_pool *pool,
+                                const struct tmp_disk_pool *pool,
                                 const char *file)
 {
         virStorageVolPtr vol = NULL;
@@ -206,7 +206,7 @@ static bool _diskpool_is_member(virConnectPtr conn,
         return result;
 }
 #else
-static int parse_diskpool_line(struct disk_pool *pool,
+static int parse_diskpool_line(struct tmp_disk_pool *pool,
                                const char *line)
 {
         int ret;
@@ -222,14 +222,14 @@ static int parse_diskpool_line(struct disk_pool *pool,
 }
 
 static int get_diskpool_config(virConnectPtr conn,
-                               struct disk_pool **_pools)
+                               struct tmp_disk_pool **_pools)
 {
         const char *path = DISK_POOL_CONFIG;
         FILE *config;
         char *line = NULL;
         size_t len = 0;
         int count = 0;
-        struct disk_pool *pools = NULL;
+        struct tmp_disk_pool *pools = NULL;
 
         config = fopen(path, "r");
         if (config == NULL) {
@@ -261,7 +261,7 @@ static int get_diskpool_config(virConnectPtr conn,
 
 static bool diskpool_set_capacity(virConnectPtr conn,
                                   CMPIInstance *inst,
-                                  struct disk_pool *pool)
+                                  struct tmp_disk_pool *pool)
 {
         bool result = false;
         struct statvfs vfs;
@@ -298,7 +298,7 @@ static bool _diskpool_is_member(virConnectPtr conn,
 }
 #endif
 
-static void free_diskpool(struct disk_pool *pools, int count)
+static void free_diskpool(struct tmp_disk_pool *pools, int count)
 {
         int i;
 
@@ -316,7 +316,7 @@ static void free_diskpool(struct disk_pool *pools, int count)
 static char *_diskpool_member_of(virConnectPtr conn,
                                  const char *file)
 {
-        struct disk_pool *pools = NULL;
+        struct tmp_disk_pool *pools = NULL;
         int count;
         int i;
         char *pool = NULL;
@@ -910,7 +910,7 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
         return s;
 }
 
-static CMPIInstance *diskpool_from_path(struct disk_pool *pool,
+static CMPIInstance *diskpool_from_path(struct tmp_disk_pool *pool,
                                         virConnectPtr conn,
                                         const char *ns,
                                         const char *refcn,
@@ -947,7 +947,7 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
                                     const CMPIBroker *broker)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        struct disk_pool *pools = NULL;
+        struct tmp_disk_pool *pools = NULL;
         int count = 0;
         int i;
 
