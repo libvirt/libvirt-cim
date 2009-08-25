@@ -92,6 +92,26 @@ static bool get_disk_parent(struct tmp_disk_pool **_pools,
 
 
 #if VIR_USE_LIBVIRT_STORAGE
+int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
+{
+        char *xml;
+        int ret;
+
+        xml = virStoragePoolGetXMLDesc(poolptr, 0);
+        if (xml == NULL)
+                return 0;
+
+        *pool = malloc(sizeof(**pool));
+        if (*pool == NULL)
+                return 0;
+
+        ret = get_pool_from_xml(xml, *pool, CIM_RES_TYPE_DISK);
+
+        free(xml);
+
+        return ret;
+}
+
 static int get_diskpool_config(virConnectPtr conn,
                                struct tmp_disk_pool **_pools)
 {

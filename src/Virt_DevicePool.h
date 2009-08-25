@@ -26,6 +26,8 @@
 #include <libcmpiutil/libcmpiutil.h>
 #include <stdint.h>
 
+#include "pool_parsing.h"
+
 /**
  * Get the InstanceID of a pool that a given RASD id (for type) is in
  *
@@ -132,6 +134,15 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
                                   const CMPIObjectPath *reference,
                                   uint16_t type,
                                   CMPIStatus *status);
+
+/**
+ * Get the configuration settings of a given storage pool 
+ *
+ * @param poolptr A pointer to the given storage pool 
+ * @param pool A struct to hold the configuration settings of the storage pool 
+ * @returns An int that indicates whether the function was successful 
+ */
+int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool);
 
 #endif
 
