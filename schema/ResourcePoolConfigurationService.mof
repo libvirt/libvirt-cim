@@ -17,9 +17,24 @@ class Xen_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationServic
       [IN, Description ( "Reference to the pool to create the resources in." )]
       CIM_ResourcePool REF Pool,
 
+      [IN ( false ), OUT, Description ( "Reference to the resource created." )]
+      CIM_ResourceAllocationSettingData REF Resource 
+    );
+
+    [Description ( "Delete a resource within a specified pool using the "
+                   "specified allocation settings. If 0 is returned, the " 
+                   "function completed successfully." )]
+    uint32 DeleteResourceInPool(
+      [IN, Description ( "Reference to the resource to delete." ),
+           EmbeddedInstance ( "CIM_ResourceAllocationSettingData" )]
+      string Resource,
+
+      [IN, Description ( "The pool to remove the resource from." )]
+      CIM_ResourcePool REF Pool,
+
       [IN ( false ), OUT, Description ( "Reference to the job (may be null "
                                         "if job completed)." )]
-      CIM_ResourceAllocationSettingData REF Resource 
+      CIM_ConcreteJob REF Job
     );
 
 };
@@ -41,9 +56,24 @@ class KVM_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationServic
       [IN, Description ( "Reference to the pool to create the resources in." )]
       CIM_ResourcePool REF Pool,
 
+      [IN ( false ), OUT, Description ( "Reference to the resource created." )]
+      CIM_ResourceAllocationSettingData REF Resource 
+    );
+
+    [Description ( "Delete a resource within a specified pool using the "
+                   "specified allocation settings. If 0 is returned, the " 
+                   "function completed successfully." )]
+    uint32 DeleteResourceInPool(
+      [IN, Description ( "Reference to the resource to delete." ),
+           EmbeddedInstance ( "CIM_ResourceAllocationSettingData" )]
+      string Resource,
+
+      [IN, Description ( "The pool to remove the resource from." )]
+      CIM_ResourcePool REF Pool,
+
       [IN ( false ), OUT, Description ( "Reference to the job (may be null "
                                         "if job completed)." )]
-      CIM_ResourceAllocationSettingData REF Resource 
+      CIM_ConcreteJob REF Job
     );
 
 };
@@ -65,9 +95,24 @@ class LXC_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationServic
       [IN, Description ( "Reference to the pool to create the resources in." )]
       CIM_ResourcePool REF Pool,
 
+      [IN ( false ), OUT, Description ( "Reference to the resource created." )]
+      CIM_ResourceAllocationSettingData REF Resource 
+    );
+
+    [Description ( "Delete a resource within a specified pool using the "
+                   "specified allocation settings. If 0 is returned, the " 
+                   "function completed successfully." )]
+    uint32 DeleteResourceInPool(
+      [IN, Description ( "Reference to the resource to delete." ),
+           EmbeddedInstance ( "CIM_ResourceAllocationSettingData" )]
+      string Resource,
+
+      [IN, Description ( "The pool to remove the resource from." )]
+      CIM_ResourcePool REF Pool,
+
       [IN ( false ), OUT, Description ( "Reference to the job (may be null "
                                         "if job completed)." )]
-      CIM_ResourceAllocationSettingData REF Resource 
+      CIM_ConcreteJob REF Job
     );
 
 };
