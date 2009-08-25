@@ -959,6 +959,105 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
         return s;
 }
 
+static CMPIStatus delete_resource_parse_args(const CMPIArgs *argsin,
+                                             CMPIInstance **resource,
+                                             CMPIObjectPath **pool)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (cu_get_inst_arg(argsin, "Resource", resource) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get Resource arg");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `Resource'");
+                goto out;
+        }
+
+        if (cu_get_ref_arg(argsin, "Pool", pool) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get Pool reference arg");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_INVALID_PARAMETER,
+                           "Missing argument `Pool'");
+                goto out;
+        }
+
+ out:
+        return s;
+}
+
+static CMPIStatus delete_resource_in_pool(CMPIMethodMI *self,
+                                          const CMPIContext *context,
+                                          const CMPIResult *results,
+                                          const CMPIObjectPath *reference,
+                                          const CMPIArgs *argsin,
+                                          CMPIArgs *argsout)
+{
+        uint32_t rc = CIM_SVPC_RETURN_FAILED;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *resource;
+        CMPIObjectPath *pool;
+        CMPIObjectPath *res;
+        const char *id = NULL;
+        virConnectPtr conn = NULL;
+        uint16_t type;
+
+        CU_DEBUG("DeleteResourceInPool");
+
+        s = delete_resource_parse_args(argsin, &resource, &pool);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        res = CMGetObjectPath(resource, &s);
+        if ((res == NULL) && (s.rc != CMPI_RC_OK)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get ObjectPath of Resource instance");
+                goto out;
+        }
+
+        if (res_type_from_rasd_classname(CLASSNAME(res), &type) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get resource type");
+                goto out;
+        }
+
+        if (type == CIM_RES_TYPE_DISK)
+                type = CIM_RES_TYPE_IMAGE;
+
+        if (cu_get_str_prop(resource, "Address", &id) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Missing Address in resource RASD");
+                goto out;
+        }
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "libvirt connection failed");
+                goto out;
+        }
+
+        if (delete_resource(conn, id, type) == 0) {
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to delete resource");
+                goto out;
+        }
+
+ out:
+        virConnectClose(conn);
+
+        if (s.rc == CMPI_RC_OK)
+                rc = CIM_SVPC_RETURN_COMPLETED;
+        CMReturnData(results, &rc, CMPI_uint32);
+
+        return s;
+}
+
 static CMPIStatus dummy_handler(CMPIMethodMI *self,
                                 const CMPIContext *context,
                                 const CMPIResult *results,
@@ -1014,6 +1113,15 @@ static struct method_handler CreateResourceInPool = {
         }
 };
 
+static struct method_handler DeleteResourceInPool = {
+        .name = "DeleteResourceInPool",
+        .handler = delete_resource_in_pool,
+        .args = {{"Resource", CMPI_instance, true},
+                 {"Pool", CMPI_ref, true},
+                 ARG_END
+        }
+};
+
 static struct method_handler *my_handlers[] = {
         &CreateResourcePool,
         &CreateChildResourcePool,
@@ -1021,6 +1129,7 @@ static struct method_handler *my_handlers[] = {
         &RemoveResourcesFromResourcePool,
         &DeleteResourcePool,
         &CreateResourceInPool,
+        &DeleteResourceInPool,
         NULL,
 };
 
