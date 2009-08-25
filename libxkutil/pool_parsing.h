@@ -92,6 +92,8 @@ int destroy_pool(virConnectPtr conn, const char *name, int res_type);
 int create_resource(virConnectPtr conn, const char *pname,
                     const char *xml, int res_type);
 
+int delete_resource(virConnectPtr conn, const char *rname, int res_type);
+
 #endif
 
 /*

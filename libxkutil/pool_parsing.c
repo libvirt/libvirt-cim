@@ -358,6 +358,34 @@ int create_resource(virConnectPtr conn,
 
         return ret;
 }
+
+int delete_resource(virConnectPtr conn,
+                    const char *rname,
+                    int res_type)
+{
+        int ret = 0;
+
+        if (res_type == CIM_RES_TYPE_IMAGE) {
+                virStorageVolPtr ptr = virStorageVolLookupByPath(conn, rname);
+                if (ptr == NULL) {
+                        CU_DEBUG("Storage volume %s is not defined", rname);
+                        goto out;
+                }
+
+                ret = virStorageVolDelete(ptr, 0);
+                if (ret != 0) {
+                        CU_DEBUG("Unable to delete storage volume %s", rname);
+                } else {
+                        ret = 1;
+                }
+
+                virStorageVolFree(ptr);
+        }
+
+ out:
+
+        return ret;
+}
 #else
 int create_resource(virConnectPtr conn,
                     const char *pname,
@@ -365,6 +393,14 @@ int create_resource(virConnectPtr conn,
                     int res_type)
 {
           CU_DEBUG("Creating resources within libvirt pools not supported");
+          return 0;
+}
+
+int delete_resource(virConnectPtr conn,
+                    const char *rname,
+                    int res_type)
+{
+          CU_DEBUG("Deleting resources within libvirt pools not supported");
           return 0;
 }
 #endif
