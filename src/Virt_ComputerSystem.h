@@ -66,7 +66,9 @@ CMPIStatus get_domain_by_name(const CMPIBroker *broker,
 /**
  * Create a domain instance from the domain structure. Note that the instance
  * doesn't necessarily represents an existing domain (can represent a deleted
- * one, for instance)
+ * one, for instance).
+ * Also, the states of the instance created are not set (i.e. HealthState, 
+ * EnableState and others)
  *
  * @param broker A pointer to the current broker
  * @param namespace The namespace to used by the domain instance

@@ -330,6 +330,51 @@ static bool dom_in_list(char *uuid, int count, struct dom_xml *list)
         return false;
 }
 
+static bool set_instance_state(CMPIInstance *instance)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIUint16 cim_state;
+        CMPIString *cim_state_other = NULL;
+        CMPIUint16 health_state;
+        CMPIUint16 req_state;
+        CMPIUint16 oping_status;
+        CMPIUint16 op_status;
+        CMPIArray *array;
+
+        cim_state = CIM_STATE_OTHER;
+        cim_state_other = CMNewString(_BROKER, "Guest destroyed", &s);
+        CMSetProperty(instance, "EnabledState",
+                      (CMPIValue *)&cim_state, CMPI_uint16);
+        CMSetProperty(instance, "OtherEnabledState", 
+                      (CMPIValue *)&cim_state_other, CMPI_string);
+
+        health_state = CIM_HEALTH_UNKNOWN;
+        CMSetProperty(instance, "HealthState",
+                      (CMPIValue *)&health_state, CMPI_uint16);
+
+        array = CMNewArray(_BROKER, 2, CMPI_uint16, &s);
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(array)))
+                return false;
+
+        op_status = CIM_OP_STATUS_COMPLETED;
+        CMSetArrayElementAt(array, 0, &op_status, CMPI_uint16);
+        op_status = CIM_OP_STATUS_OK;
+        CMSetArrayElementAt(array, 1, &op_status, CMPI_uint16);
+
+        CMSetProperty(instance, "OperationalStatus",
+                      (CMPIValue *)&array, CMPI_uint16A);
+
+        oping_status = CIM_OPING_STATUS_COMPLETED;
+        CMSetProperty(instance, "OperatingStatus",
+                      (CMPIValue *)&oping_status, CMPI_uint16);
+
+        req_state = CIM_STATE_UNKNOWN;
+        CMSetProperty(instance, "RequestedState",
+                      (CMPIValue *)&req_state, CMPI_uint16);
+ 
+        return true;
+}
+
 static bool create_deleted_guest_inst(char *xml, 
                                       char *namespace, 
                                       char *prefix,
@@ -355,9 +400,10 @@ static bool create_deleted_guest_inst(char *xml,
                 CU_DEBUG("instance from domain info error: %s", s.msg);
                 goto out;
         }
-        /* Must set guest state */
 
-        rc = true;
+        rc = set_instance_state(*inst);
+        if (!rc) 
+                CU_DEBUG("Error setting instance state");
 
  out:
         cleanup_dominfo(&dominfo);

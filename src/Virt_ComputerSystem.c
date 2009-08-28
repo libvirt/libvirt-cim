@@ -47,18 +47,6 @@
 
 const static CMPIBroker *_BROKER;
 
-enum CIM_state {
-        CIM_STATE_UNKNOWN      = 0,
-        CIM_STATE_ENABLED      = 2,
-        CIM_STATE_DISABLED     = 3,
-        CIM_STATE_SHUTDOWN     = 4,
-        CIM_STATE_NOCHANGE     = 5,
-        CIM_STATE_SUSPENDED    = 6,
-        CIM_STATE_PAUSED       = 9,
-        CIM_STATE_REBOOT       = 10,
-        CIM_STATE_RESET        = 11,
-};
-
 /* Set the "Name" property of an instance from a domain */
 static int set_name_from_dom(virDomainPtr dom, CMPIInstance *instance)
 {
@@ -159,15 +147,6 @@ static uint16_t state_lv_to_cim(const char lv_state)
 
 static uint16_t state_lv_to_cim_health(const char lv_state)
 {
-        enum CIM_health_state {
-                CIM_HEALTH_UNKNOWN = 0,
-                CIM_HEALTH_OK = 5,
-                CIM_HEALTH_MINOR_FAILURE = 15,
-                CIM_HEALTH_MAJOR_FAILURE = 20,
-                CIM_HEALTH_CRITICAL_FAILURE = 25,
-                CIM_HEALTH_NON_RECOVERABLE = 30,
-        };
-
         switch (lv_state) {
         case VIR_DOMAIN_NOSTATE:
         case VIR_DOMAIN_SHUTDOWN:
@@ -189,28 +168,6 @@ static uint16_t state_lv_to_cim_health(const char lv_state)
 
 static uint16_t state_lv_to_cim_oings(const char lv_state, const bool migrating)
 {
-        enum CIM_oping_status {
-                CIM_OPING_STATUS_UNKNOWN = 0,
-                CIM_OPING_STATUS_NOT_AVAILABLE = 1,
-                CIM_OPING_STATUS_SERVICING = 2,
-                CIM_OPING_STATUS_STARTING = 3,
-                CIM_OPING_STATUS_STOPPING = 4,
-                CIM_OPING_STATUS_STOPPED = 5,
-                CIM_OPING_STATUS_ABORTED = 6,
-                CIM_OPING_STATUS_DORMANT = 7,
-                CIM_OPING_STATUS_COMPLETED = 8,
-                CIM_OPING_STATUS_MIGRATING = 9,
-                CIM_OPING_STATUS_EMIGRATING = 10,
-                CIM_OPING_STATUS_IMMIGRATING = 11,
-                CIM_OPING_STATUS_SNAPSHOTTING = 12,
-                CIM_OPING_STATUS_SHUTTING_DOWN = 13,
-                CIM_OPING_STATUS_IN_TEST = 14,
-                CIM_OPING_STATUS_TRANSITIONING = 15,
-                CIM_OPING_STATUS_IN_SERVICE = 16,
-                CIM_OPING_STATUS_STARTED = 32768,
-        };
-
-        
         if (migrating)
                 return CIM_OPING_STATUS_MIGRATING;
 
@@ -237,27 +194,6 @@ static uint16_t state_lv_to_cim_oings(const char lv_state, const bool migrating)
 
 static uint16_t state_lv_to_cim_os(const char lv_state)
 {
-        enum CIM_op_status {
-                CIM_OP_STATUS_UNKNOWN = 0,
-                CIM_OP_STATUS_OTHER = 1,
-                CIM_OP_STATUS_OK = 2,
-                CIM_OP_STATUS_DEGRADED = 3,
-                CIM_OP_STATUS_STRESSED = 4,
-                CIM_OP_STATUS_PREDICTIVE_FAILURE = 5,
-                CIM_OP_STATUS_ERROR = 6,
-                CIM_OP_STATUS_NON_RECOVERABLE = 7,
-                CIM_OP_STATUS_STARTING = 8,
-                CIM_OP_STATUS_STOPPING = 9,
-                CIM_OP_STATUS_STOPPED = 10,
-                CIM_OP_STATUS_IN_SERVICE = 11,
-                CIM_OP_STATUS_NO_CONTACT = 12,
-                CIM_OP_STATUS_LOST_COMMS = 13,
-                CIM_OP_STATUS_ABORTED = 14,
-                CIM_OP_STATUS_DORMANT = 15,
-                CIM_OP_STATUS_COMPLETED = 17,
-                CIM_OP_STATUS_POWER_MODE = 18,
-        };
-
         switch (lv_state) {
         case VIR_DOMAIN_NOSTATE:
         case VIR_DOMAIN_SHUTDOWN:
