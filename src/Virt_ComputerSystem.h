@@ -22,6 +22,7 @@
 #define __VIRT_COMPUTERSYSTEM_H
 
 #include "misc_util.h"
+#include  "device_parsing.h"
 
 /**
  * Get a list of domain instances
@@ -61,6 +62,25 @@ CMPIStatus get_domain_by_name(const CMPIBroker *broker,
                               const CMPIObjectPath *reference,
                               const char *name,
                               CMPIInstance **_inst);
+
+/**
+ * Create a domain instance from the domain structure. Note that the instance
+ * doesn't necessarily represents an existing domain (can represent a deleted
+ * one, for instance)
+ *
+ * @param broker A pointer to the current broker
+ * @param namespace The namespace to used by the domain instance
+ * @param prefix The virtualization prefix (i.e. KVM, Xen, LXC)
+ * @param dominfo A pointer to the struct domain used to fill the instance
+ * @param _inst In case of success the pointer to the instance
+ * @returns CMPIStatus
+ */
+CMPIStatus instance_from_dominfo(const CMPIBroker *broker,
+                                 const char *namespace,
+                                 const char *prefix,
+                                 struct domain *dominfo,
+                                 CMPIInstance **_inst);
+
 
 #endif
 

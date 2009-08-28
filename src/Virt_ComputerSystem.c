@@ -439,6 +439,98 @@ static int set_other_id_info(const CMPIBroker *broker,
         return 1;
 }
 
+static CMPIStatus set_properties_from_dominfo(const CMPIBroker *broker,
+                                              const char *prefix,
+                                              struct domain *dominfo,
+                                              CMPIInstance *instance)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIObjectPath *ref = NULL;
+
+        ref = CMGetObjectPath(instance, &s);
+        if ((ref == NULL) || (s.rc != CMPI_RC_OK))
+                return s;
+
+        CMSetProperty(instance, "Name",
+                      (CMPIValue *)dominfo->name, CMPI_chars);
+
+        CMSetProperty(instance, "ElementName",
+                      (CMPIValue *)dominfo->name, CMPI_chars);
+
+        CMSetProperty(instance, "UUID",
+                      (CMPIValue *)dominfo->uuid, CMPI_chars);
+
+        if (!set_capdesc_from_dominfo(broker, dominfo, ref, instance)) {
+                CU_DEBUG("Problem in set_capdesc_from_dominfo function");
+                cu_statusf(broker, &s, 
+                           CMPI_RC_ERR_FAILED, 
+                           "Could not set caption and description properties");
+                goto out;
+        }
+
+        /* We don't set state, because struct domain doesn't have that
+         * information */
+
+        if (!set_creation_class(instance)) {
+                CU_DEBUG("Problem in set_creation_class function");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not set creation class");
+                goto out;
+        }
+
+        if (!set_other_id_info(broker, dominfo->uuid, prefix, instance)) {
+                CU_DEBUG("Problem in set_other_id_info function");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not set other OtherIdentifyingInfo and "
+                           "IdentifyingDescription");
+                goto out;
+        }
+
+ out:
+        return s;
+}
+
+CMPIStatus instance_from_dominfo(const CMPIBroker *broker,
+                                 const char *namespace,
+                                 const char *prefix,
+                                 struct domain *dominfo,
+                                 CMPIInstance **_inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst = NULL;
+
+        inst = get_typed_instance(broker,
+                                  prefix,
+                                  "ComputerSystem",
+                                  namespace);
+
+        if (inst == NULL) {
+                CU_DEBUG("Could not init CS instance. "
+                         "typestr: %s, namespace: %s", prefix, namespace);
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to init ComputerSystem instance");
+                goto out;
+        }
+       
+        s = set_properties_from_dominfo(broker,
+                                        prefix,
+                                        dominfo,
+                                        inst);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Could not set instance properties");
+                goto out;
+        }
+
+        *_inst = inst;
+
+ out:
+        return s;
+
+}
+
 /* Populate an instance with information from a domain */
 static CMPIStatus set_properties(const CMPIBroker *broker,
                                  virDomainPtr dom,

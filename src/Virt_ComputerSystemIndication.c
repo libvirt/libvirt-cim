@@ -330,6 +330,41 @@ static bool dom_in_list(char *uuid, int count, struct dom_xml *list)
         return false;
 }
 
+static bool create_deleted_guest_inst(char *xml, 
+                                      char *namespace, 
+                                      char *prefix,
+                                      CMPIInstance **inst)
+{
+        bool rc = false;
+        struct domain *dominfo = NULL;
+        int res;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        res = get_dominfo_from_xml(xml, &dominfo);
+        if (res == 0) {
+                CU_DEBUG("failed to extract domain info from xml");
+                goto out;
+        }
+
+        s = instance_from_dominfo(_BROKER, 
+                                  namespace, 
+                                  prefix,
+                                  dominfo, 
+                                  inst); 
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("instance from domain info error: %s", s.msg);
+                goto out;
+        }
+        /* Must set guest state */
+
+        rc = true;
+
+ out:
+        cleanup_dominfo(&dominfo);
+
+        return rc;
+}
+
 static bool async_ind(CMPIContext *context,
                       virConnectPtr conn,
                       int ind_type,
@@ -360,12 +395,27 @@ static bool async_ind(CMPIContext *context,
         cn = get_typed_class(prefix, "ComputerSystem");
 
         op = CMNewObjectPath(_BROKER, args->ns, cn, &s);
-        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op))
+        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op)) {
+                CU_DEBUG("op error");
                 goto out;
+        }
 
-        s = get_domain_by_name(_BROKER, op, name, &affected_inst);
-        if (s.rc != CMPI_RC_OK)
-                goto out;
+        if (ind_type == CS_CREATED || ind_type == CS_MODIFIED) {
+                s = get_domain_by_name(_BROKER, op, name, &affected_inst);
+                if (s.rc != CMPI_RC_OK) { 
+                        CU_DEBUG("domain by name error");
+                        goto out;
+                }
+        } else if (ind_type == CS_DELETED) {
+                rc = create_deleted_guest_inst(prev_dom.xml, 
+                                               args->ns, 
+                                               prefix, 
+                                               &affected_inst);
+                if (!rc) {
+                        CU_DEBUG("Could not recreate guest instance");
+                        goto out;
+                }
+        }
 
         /* FIXME: We are unable to get the previous CS instance after it has 
                   been modified. Consider keeping track of the previous
