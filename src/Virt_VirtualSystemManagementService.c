@@ -1621,6 +1621,7 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         virDomainPtr dom = NULL;
         struct domain *dominfo = NULL;
         char *xml = NULL;
+        const char *uuid = NULL;
 
         ret = cu_get_str_prop(vssd, "VirtualSystemIdentifier", &name);
         if (ret != CMPI_RC_OK) {
@@ -1652,6 +1653,8 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
                 goto out;
         }
 
+        uuid = strdup(dominfo->uuid);
+
         if (!vssd_to_domain(vssd, dominfo)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -1659,9 +1662,18 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
                 goto out;
         }
 
-        s = check_uuid_in_use(ref, dominfo);
-        if (s.rc != CMPI_RC_OK)
+        if ((dominfo->uuid == NULL) || (STREQ(dominfo->uuid, ""))) {
+                dominfo->uuid = strdup(uuid);
+        } else if (!STREQ(uuid, dominfo->uuid)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "%s is already defined with UUID %s - cannot change "
+                           "UUID to the UUID specified %s", 
+                           name, 
+                           uuid, 
+                           dominfo->uuid);
                 goto out;
+        } 
 
         xml = system_to_xml(dominfo);
         if (xml != NULL) {
