@@ -144,14 +144,28 @@ CIMV2_REGS = \
 	schema/ElementConformsToProfile.registration \
 	schema/HostedAccessPoint.registration
 
-pkgdata_DATA = $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)
 pkgdata_SCRIPTS = provider-register.sh
 
-EXTRA_DIST = schema $(pkgdata_DATA) $(pkgdata_SCRIPTS)	\
-             libvirt-cim.spec.in libvirt-cim.spec	\
+EXTRA_DIST = schema $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS) \
+             $(pkgdata_SCRIPTS)	libvirt-cim.spec.in libvirt-cim.spec \
 	     doc/CodingStyle doc/SubmittingPatches      \
              .changeset .revision 			\
 	     examples/diskpool.conf
+
+install-data-local:
+	$(mkinstalldirs) "$(DESTDIR)$(pkgdatadir)"
+	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(MOFS)
+	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(REGS)
+	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_MOFS)
+	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_REGS)
+
+uninstall-local:
+	@list='$(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)'; \
+	for p in $$list; do \
+	f=`echo "$$p" | sed 's|^.*/||;'`; \
+	echo " rm -f '$(DESTDIR)$(pkgdatadir)/$$f'"; \
+	rm -f "$(DESTDIR)$(pkgdatadir)/$$f"; \
+	done
 
 preinstall:
 	sh -x base_schema/install_base_schema.sh `pwd`/base_schema
