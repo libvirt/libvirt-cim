@@ -57,7 +57,8 @@
 
 #include "config.h"
 
-#define DEFAULT_MAC_PREFIX "00:16:3e"
+#define XEN_MAC_PREFIX "00:16:3e"
+#define KVM_MAC_PREFIX "00:1A:4A"
 #define DEFAULT_XEN_WEIGHT 1024
 #define BRIDGE_TYPE "bridge"
 #define NETWORK_TYPE "network"
@@ -530,7 +531,7 @@ static const char *_default_network(CMPIInstance *inst,
         return poolid;
 }
 
-static const char *_net_rand_mac(void)
+static const char *_net_rand_mac(const CMPIObjectPath *ref)
 {
         int r;
         int ret;
@@ -540,6 +541,8 @@ static const char *_net_rand_mac(void)
         CMPIString *str = NULL;
         CMPIStatus status;
         struct timeval curr_time;
+        const char *mac_prefix = NULL;
+        char *cn_prefix = NULL;
 
         ret = gettimeofday(&curr_time, NULL);
         if (ret != 0)
@@ -549,9 +552,18 @@ static const char *_net_rand_mac(void)
         s = curr_time.tv_usec;
         r = rand_r(&s);
 
+        cn_prefix = class_prefix_name(CLASSNAME(ref));
+
+        if (STREQ(cn_prefix, "KVM")) 
+            mac_prefix = KVM_MAC_PREFIX;
+        else
+            mac_prefix = XEN_MAC_PREFIX;
+
+        free(cn_prefix);
+
         ret = asprintf(&mac,
                        "%s:%02x:%02x:%02x",
-                       DEFAULT_MAC_PREFIX,
+                       mac_prefix,
                        r & 0xFF,
                        (r & 0xFF00) >> 8,
                        (r & 0xFF0000) >> 16);
@@ -646,9 +658,16 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         const char *val = NULL;
         const char *msg = NULL;
         char *network = NULL;
+        CMPIObjectPath *op = NULL;
+
+        op = CMGetObjectPath(inst, NULL);
+        if (op == NULL) {
+                msg = "Unable to determine classname of NetRASD";
+                goto out;
+        }
 
         if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
-                val = _net_rand_mac();
+                val = _net_rand_mac(op);
                 if (val == NULL) {
                         msg = "Unable to generate a MAC address";
                         goto out;
@@ -1379,7 +1398,7 @@ static CMPIStatus get_reference_domain(struct domain **domain,
         free((*domain)->dev_net->dev.net.mac);
         (*domain)->dev_net->dev.net.mac = NULL;
 
-        mac = _net_rand_mac();
+        mac = _net_rand_mac(ref);
         if (mac == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
