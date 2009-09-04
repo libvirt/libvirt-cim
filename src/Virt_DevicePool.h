@@ -28,6 +28,12 @@
 
 #include "pool_parsing.h"
 
+#if LIBVIR_VERSION_NUMBER > 4000
+# define VIR_USE_LIBVIRT_STORAGE 1
+#else
+# define VIR_USE_LIBVIRT_STORAGE 0
+#endif
+
 /**
  * Get the InstanceID of a pool that a given RASD id (for type) is in
  *
@@ -135,6 +141,7 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
                                   uint16_t type,
                                   CMPIStatus *status);
 
+#if VIR_USE_LIBVIRT_STORAGE
 /**
  * Get the configuration settings of a given storage pool 
  *
@@ -143,6 +150,7 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
  * @returns An int that indicates whether the function was successful 
  */
 int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool);
+#endif
 
 #endif
 
