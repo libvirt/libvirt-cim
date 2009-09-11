@@ -66,6 +66,13 @@ int list_rasds(virConnectPtr conn,
                const uint16_t type,
                const char *host,
                struct virt_device **list);
+
+CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
+                             struct virt_device *dev,
+                             const char *host,
+                             const CMPIObjectPath *ref,
+                             const char **properties);
+
 #endif
 
 /*

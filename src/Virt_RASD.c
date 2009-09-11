@@ -368,7 +368,7 @@ static CMPIStatus set_input_rasd_params(const struct virt_device *dev,
         return s;
 }
 
-static CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
+CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                     struct virt_device *dev,
                                     const char *host,
                                     const CMPIObjectPath *ref,
