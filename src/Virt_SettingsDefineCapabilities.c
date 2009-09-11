@@ -1089,7 +1089,7 @@ static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
         name = "tmp.img";
         CMSetProperty(inst, "VolumeName", (CMPIValue *)name, CMPI_chars);
 
-        path = "/var/lib/libvirt/images/";
+        path = pool->pool_info.disk.path;
         CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
 
         alloc = 0;
