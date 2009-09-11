@@ -192,9 +192,9 @@ static bool dom_changed(struct dom_xml prev_dom,
         return ret;
 }
 
-static void set_source_inst_props(const CMPIBroker *broker,
+void set_source_inst_props(const CMPIBroker *broker,
                                   const CMPIContext *context,
-                                  CMPIObjectPath *ref,
+                                  const CMPIObjectPath *ref,
                                   CMPIInstance *ind)
 {
         const char *host;

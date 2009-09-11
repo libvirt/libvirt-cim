@@ -29,6 +29,10 @@ bool cs_lifecycle_indication(const CMPIBroker *broker,
                              const CMPIObjectPath *newsystem,
                              char *type);
 
+void set_source_inst_props(const CMPIBroker *broker,
+                           const CMPIContext *context,
+                           const CMPIObjectPath *ref,
+                           CMPIInstance *ind);
 #endif
 
 /*
