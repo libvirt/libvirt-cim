@@ -48,6 +48,7 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_VirtualSystemSnapshotServiceCapabilities.la \
                        libVirt_SystemDevice.la \
                        libVirt_ComputerSystemIndication.la \
+                       libVirt_ResourceAllocationSettingDataIndication.la \
                        libVirt_ComputerSystemMigrationIndication.la \
                        libVirt_VirtualSystemManagementCapabilities.la \
                        libVirt_AllocationCapabilities.la \
@@ -85,6 +86,10 @@ libVirt_Device_la_SOURCES = Virt_Device.c
 libVirt_ComputerSystemIndication_la_DEPENDENCIES = libVirt_ComputerSystem.la libVirt_HostSystem.la
 libVirt_ComputerSystemIndication_la_SOURCES = Virt_ComputerSystemIndication.c
 libVirt_ComputerSystemIndication_la_LIBADD = -lVirt_ComputerSystem -lVirt_HostSystem -lpthread -lrt
+
+libVirt_ResourceAllocationSettingDataIndication_la_DEPENDENCIES = libVirt_ComputerSystem.la
+libVirt_ResourceAllocationSettingDataIndication_la_SOURCES = Virt_ResourceAllocationSettingDataIndication.c
+libVirt_ResourceAllocationSettingDataIndication_la_LIBADD = -lVirt_ComputerSystem
 
 libVirt_ComputerSystemMigrationIndication_la_DEPENDENCIES = libVirt_ComputerSystem.la
 libVirt_ComputerSystemMigrationIndication_la_SOURCES = Virt_ComputerSystemMigrationIndication.c

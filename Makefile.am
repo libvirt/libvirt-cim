@@ -27,6 +27,7 @@ MOFS = \
 	schema/RegisteredProfile.mof \
 	schema/ElementConformsToProfile.mof \
 	schema/ComputerSystemIndication.mof \
+	schema/ResourceAllocationSettingDataIndication.mof \
 	schema/ComputerSystemMigrationIndication.mof \
 	schema/Virt_ResourceAllocationSettingData.mof \
 	schema/ResourceAllocationSettingData.mof \
@@ -101,6 +102,7 @@ REGS = \
 	schema/DiskPool.registration \
 	schema/HostedResourcePool.registration \
 	schema/ComputerSystemIndication.registration \
+	schema/ResourceAllocationSettingDataIndication.registration \
 	schema/ComputerSystemMigrationIndication.registration \
 	schema/ResourceAllocationSettingData.registration \
 	schema/ResourcePoolConfigurationService.registration \
