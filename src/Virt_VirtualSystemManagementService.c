@@ -63,6 +63,9 @@
 #define BRIDGE_TYPE "bridge"
 #define NETWORK_TYPE "network"
 #define USER_TYPE "user"
+#define RASD_IND_CREATED "ResourceAllocationSettingDataCreatedIndication"
+#define RASD_IND_DELETED "ResourceAllocationSettingDataDeletedIndication"
+#define RASD_IND_MODIFIED "ResourceAllocationSettingDataModifiedIndication"
 
 const static CMPIBroker *_BROKER;
 
@@ -442,7 +445,7 @@ static int vssd_to_domain(CMPIInstance *inst,
         ret = cu_get_str_prop(inst, "VirtualSystemIdentifier", &val);
         if (ret != CMPI_RC_OK)
                 goto out;
-
+        
         free(domain->name);
         domain->name = strdup(val);
 
@@ -1416,7 +1419,67 @@ static CMPIStatus get_reference_domain(struct domain **domain,
         return s;
 }
 
-static CMPIInstance *create_system(CMPIInstance *vssd,
+static CMPIStatus raise_rasd_indication(const CMPIContext *context,
+                                        const char *base_type,
+                                        CMPIInstance *prev_inst,
+                                        const CMPIObjectPath *ref,
+                                        struct inst_list *list)
+{
+        char *type;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *instc = NULL;
+        CMPIInstance *ind = NULL;
+        CMPIObjectPath *op = NULL;
+        int i;
+
+        CU_DEBUG("raise_rasd_indication");
+
+        type = get_typed_class(CLASSNAME(ref), base_type);
+        ind = get_typed_instance(_BROKER, 
+                                 CLASSNAME(ref), 
+                                 base_type, 
+                                 NAMESPACE(ref));
+        if (ind == NULL)  {
+                CU_DEBUG("Failed to get indication instance");
+                s.rc = CMPI_RC_ERR_FAILED;
+                goto out;
+        }
+        
+        /* PreviousInstance is set only for modify case. */
+        if (prev_inst != NULL)
+                CMSetProperty(ind, 
+                              "PreviousInstance", 
+                              (CMPIValue *)&prev_inst, 
+                              CMPI_instance);
+
+        for (i = 0; i < list->cur; i++) {
+                instc = list->list[i];
+                op = CMGetObjectPath(instc, NULL);
+                CMPIString *str = CMGetClassName(op, NULL);
+
+                CU_DEBUG("class name is %s\n", CMGetCharsPtr(str, NULL));
+
+                CMSetProperty(ind, 
+                              "SourceInstance", 
+                              (CMPIValue *)&instc, 
+                              CMPI_instance);
+                set_source_inst_props(_BROKER, context, ref, ind);
+
+                s = stdi_raise_indication(_BROKER, 
+                                          context, 
+                                          type, 
+                                          NAMESPACE(ref), 
+                                          ind);
+        }
+
+ out:
+        free(type);
+        return s;
+
+}
+
+static CMPIInstance *create_system(const CMPIContext *context,
+                                   CMPIInstance *vssd,
                                    CMPIArray *resources,
                                    const CMPIObjectPath *ref,
                                    const CMPIObjectPath *refconf,
@@ -1427,8 +1490,12 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         const char *msg = NULL;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
+        struct inst_list list;
+        const char *props[] = {NULL};
 
         struct domain *domain = NULL;
+
+        inst_list_init(&list);
 
         if (refconf != NULL) {
                 *s = get_reference_domain(&domain, ref, refconf);
@@ -1477,14 +1544,35 @@ static CMPIInstance *create_system(CMPIInstance *vssd,
         CU_DEBUG("System XML:\n%s", xml);
 
         inst = connect_and_create(xml, ref, s);
-        if (inst != NULL)
+        if (inst != NULL) {
                 update_dominfo(domain, CLASSNAME(ref));
+
+                *s = enum_rasds(_BROKER, 
+                                ref, 
+                                domain->name, 
+                                CIM_RES_TYPE_ALL, 
+                                props, 
+                                &list);
+
+                if (s->rc != CMPI_RC_OK) {
+                        CU_DEBUG("Failed to enumerate rasd\n");
+                        goto out;
+                }
+
+                raise_rasd_indication(context,
+                                      RASD_IND_CREATED,
+                                      NULL, 
+                                      ref, 
+                                      &list);
+        }
+
 
  out:
         cleanup_dominfo(&domain);
         free(xml);
         virDomainFree(dom);
         virConnectClose(conn);
+        inst_list_free(&list);
 
         return inst;
 }
@@ -1530,7 +1618,7 @@ static CMPIStatus define_system(CMPIMethodMI *self,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        sys = create_system(vssd, res, reference, refconf, &s);
+        sys = create_system(context, vssd, res, reference, refconf, &s);
         if (sys == NULL)
                 goto out;
 
@@ -1564,12 +1652,15 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
         CMPIObjectPath *sys;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
+        struct inst_list list;
+        const char *props[] = {NULL};
 
+        inst_list_init(&list);
         conn = connect_by_classname(_BROKER,
                                     CLASSNAME(reference),
                                     &status);
         if (conn == NULL) {
-                rc = -1;
+                rc = IM_RC_NOT_SUPPORTED;
                 goto error;
         }
 
@@ -1579,6 +1670,18 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
         dom_name = get_key_from_ref_arg(argsin, "AffectedSystem", "Name");
         if (dom_name == NULL)
                 goto error;
+
+        status = enum_rasds(_BROKER, 
+                            reference, 
+                            dom_name, 
+                            CIM_RES_TYPE_ALL, 
+                            props, 
+                            &list);
+
+        if (status.rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to enumerate rasd");
+                goto error;
+        }
 
         dom = virDomainLookupByName(conn, dom_name);
         if (dom == NULL) {
@@ -1605,11 +1708,17 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
 
 error:
         if (rc == IM_RC_SYS_NOT_FOUND)
-                virt_set_status(_BROKER, &status,
+                virt_set_status(_BROKER, 
+                                &status,
                                 CMPI_RC_ERR_NOT_FOUND,
                                 conn,
                                 "Referenced domain `%s' does not exist", 
                                 dom_name);
+        else if (rc == IM_RC_NOT_SUPPORTED)
+                virt_set_status(_BROKER, &status,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Unable to connect to libvirt");
         else if (rc == IM_RC_FAILED)
                 virt_set_status(_BROKER, &status,
                                 CMPI_RC_ERR_NOT_FOUND,
@@ -1617,6 +1726,11 @@ error:
                                 "Unable to retrieve domain name");
         else if (rc == IM_RC_OK) {
                 status = (CMPIStatus){CMPI_RC_OK, NULL};
+                raise_rasd_indication(context, 
+                                      RASD_IND_DELETED, 
+                                      NULL, 
+                                      reference, 
+                                      &list);
                 trigger_indication(context,
                                    "ComputerSystemDeletedIndication",
                                    reference);
@@ -1625,7 +1739,7 @@ error:
         virDomainFree(dom);
         virConnectClose(conn);
         CMReturnData(results, &rc, CMPI_uint32);
-
+        inst_list_free(&list);
         return status;
 }
 
@@ -2071,7 +2185,51 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         return s;
 }
 
-static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
+static CMPIInstance *get_previous_instance(struct domain *dominfo,
+                                           const CMPIObjectPath *ref,
+                                           uint16_t type,
+                                           const char *devid)
+{
+        CMPIStatus s;
+        const char *props[] = {NULL};
+        const char *inst_id;
+        struct inst_list list;
+        CMPIInstance  *prev_inst = NULL;
+        int i, ret;
+
+        inst_list_init(&list);
+        s = enum_rasds(_BROKER, ref, dominfo->name, type, props, &list);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Failed to enumerate rasd");
+                goto out;
+        }
+
+        for(i = 0; i < list.cur; i++) {
+                prev_inst = list.list[i];
+                ret = cu_get_str_prop(prev_inst, 
+                                      "InstanceID", 
+                                      &inst_id);
+
+                if (ret != CMPI_RC_OK) {
+                        CU_DEBUG("Cannot get InstanceID ... ignoring");
+                        continue;
+                }
+
+                if (STREQ(inst_id, get_fq_devid(dominfo->name, (char *)devid)))
+                        break;
+        }
+
+	if (prev_inst == NULL)
+                CU_DEBUG("PreviousInstance is NULL");
+
+ out:
+        inst_list_free(&list);
+
+        return prev_inst;
+}
+
+static CMPIStatus _update_resources_for(const CMPIContext *context,
+                                        const CMPIObjectPath *ref,
                                         virDomainPtr dom,
                                         const char *devid,
                                         CMPIInstance *rasd,
@@ -2081,8 +2239,12 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
         struct domain *dominfo = NULL;
         uint16_t type;
         char *xml = NULL;
+        const char *indication;
         CMPIObjectPath *op;
+        struct inst_list list;
+        CMPIInstance  *prev_inst = NULL;
 
+        inst_list_init(&list);
         if (!get_dominfo(dom, &dominfo)) {
                 virt_set_status(_BROKER, &s,
                                 CMPI_RC_ERR_FAILED,
@@ -2116,6 +2278,27 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
         if (xml != NULL) {
                 CU_DEBUG("New XML:\n%s", xml);
                 connect_and_create(xml, ref, &s);
+
+                if (func == &resource_add) {
+                        indication = strdup(RASD_IND_CREATED);
+                }
+                else if (func == &resource_del) {
+                        indication = strdup(RASD_IND_DELETED);
+                }
+                else {
+                        indication = strdup(RASD_IND_MODIFIED);
+                        prev_inst = get_previous_instance(dominfo, ref, type, devid);
+                }
+
+                if (inst_list_add(&list, rasd) == 0) {
+                        CU_DEBUG("Unable to add RASD instance to the list\n");
+                        goto out;
+                }
+                raise_rasd_indication(context, 
+                                      indication, 
+                                      prev_inst, 
+                                      ref, 
+                                      &list);
         } else {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -2125,6 +2308,7 @@ static CMPIStatus _update_resources_for(const CMPIObjectPath *ref,
  out:
         cleanup_dominfo(&dominfo);
         free(xml);
+        inst_list_free(&list);
 
         return s;
 }
@@ -2153,7 +2337,8 @@ static CMPIStatus get_instanceid(CMPIInstance *rasd,
         return s;
 }
 
-static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
+static CMPIStatus _update_resource_settings(const CMPIContext *context,
+                                            const CMPIObjectPath *ref,
                                             const char *domain,
                                             CMPIArray *resources,
                                             const CMPIResult *results,
@@ -2208,9 +2393,14 @@ static CMPIStatus _update_resource_settings(const CMPIObjectPath *ref,
                         goto end;
                 }
 
-                s = _update_resources_for(ref, dom, devid, inst, func);
+                s = _update_resources_for(context, 
+                                          ref, 
+                                          dom, 
+                                          devid, 
+                                          inst, 
+                                          func);
 
-        end:
+ end:
                 free(name);
                 free(devid);
                 virDomainFree(dom);
@@ -2310,7 +2500,9 @@ static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                 return s;
         }
 
-        if (cu_get_ref_arg(argsin, "AffectedConfiguration", &sys) != CMPI_RC_OK) {
+        if (cu_get_ref_arg(argsin, 
+                           "AffectedConfiguration", 
+                           &sys) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
                            "Missing AffectedConfiguration parameter");
@@ -2324,11 +2516,13 @@ static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                 return s;
         }
 
-        s = _update_resource_settings(reference,
+        s = _update_resource_settings(context,
+                                      reference,
                                       domain,
                                       arr,
                                       results,
                                       resource_add);
+                
         free(domain);
 
         return s;
@@ -2351,7 +2545,8 @@ static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
                 return s;
         }
 
-        return _update_resource_settings(reference,
+        return _update_resource_settings(context,
+                                         reference,
                                          NULL,
                                          arr,
                                          results,
@@ -2384,7 +2579,8 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = _update_resource_settings(reference,
+        s = _update_resource_settings(context,
+                                      reference,
                                       NULL,
                                       resource_arr,
                                       results,
