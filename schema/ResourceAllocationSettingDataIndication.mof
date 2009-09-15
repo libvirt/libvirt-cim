@@ -1,0 +1,66 @@
+// Copyright IBM Corp. 2007
+
+[Description ("Xen_ResourceAllocationSettingData created"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class Xen_ResourceAllocationSettingDataCreatedIndication : CIM_InstCreation
+{
+};
+
+[Description ("Xen_ResourceAllocationSettingData deleted"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class Xen_ResourceAllocationSettingDataDeletedIndication : CIM_InstDeletion
+{
+};
+
+[Description ("Xen_ResourceAllocationSettingData modified"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class Xen_ResourceAllocationSettingDataModifiedIndication : CIM_InstModification
+{
+};
+
+
+[Description ("KVM_ResourceAllocationSettingData created"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class KVM_ResourceAllocationSettingDataCreatedIndication : CIM_InstCreation
+{
+};
+
+[Description ("KVM_ResourceAllocationSettingData deleted"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class KVM_ResourceAllocationSettingDataDeletedIndication : CIM_InstDeletion
+{
+};
+
+[Description ("KVM_ResourceAllocationSettingData modified"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class KVM_ResourceAllocationSettingDataModifiedIndication : CIM_InstModification
+{
+};
+
+
+[Description ("LXC_ResourceAllocationSettingData created"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class LXC_ResourceAllocationSettingDataCreatedIndication : CIM_InstCreation
+{
+};
+
+[Description ("LXC_ResourceAllocationSettingData deleted"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class LXC_ResourceAllocationSettingDataDeletedIndication : CIM_InstDeletion
+{
+};
+
+[Description ("LXC_ResourceAllocationSettingData modified"),
+ Provider("cmpi::Virt_ResourceAllocationSettingDataIndication")
+]
+class LXC_ResourceAllocationSettingDataModifiedIndication : CIM_InstModification
+{
+};
