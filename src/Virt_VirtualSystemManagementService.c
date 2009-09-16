@@ -2268,6 +2268,17 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
                 goto out;
         }
 
+        if (func == &resource_add) {
+                indication = strdup(RASD_IND_CREATED);
+        }
+        else if (func == &resource_del) {
+                indication = strdup(RASD_IND_DELETED);
+        }
+        else {
+                indication = strdup(RASD_IND_MODIFIED);
+                prev_inst = get_previous_instance(dominfo, ref, type, devid);
+        }
+
         s = func(dominfo, rasd, type, devid, NAMESPACE(ref));
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("Resource transform function failed");
@@ -2278,17 +2289,6 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
         if (xml != NULL) {
                 CU_DEBUG("New XML:\n%s", xml);
                 connect_and_create(xml, ref, &s);
-
-                if (func == &resource_add) {
-                        indication = strdup(RASD_IND_CREATED);
-                }
-                else if (func == &resource_del) {
-                        indication = strdup(RASD_IND_DELETED);
-                }
-                else {
-                        indication = strdup(RASD_IND_MODIFIED);
-                        prev_inst = get_previous_instance(dominfo, ref, type, devid);
-                }
 
                 if (inst_list_add(&list, rasd) == 0) {
                         CU_DEBUG("Unable to add RASD instance to the list\n");
