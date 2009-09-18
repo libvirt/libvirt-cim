@@ -2185,49 +2185,6 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         return s;
 }
 
-static CMPIInstance *get_previous_instance(struct domain *dominfo,
-                                           const CMPIObjectPath *ref,
-                                           uint16_t type,
-                                           const char *devid)
-{
-        CMPIStatus s;
-        const char *props[] = {NULL};
-        const char *inst_id;
-        struct inst_list list;
-        CMPIInstance  *prev_inst = NULL;
-        int i, ret;
-
-        inst_list_init(&list);
-        s = enum_rasds(_BROKER, ref, dominfo->name, type, props, &list);
-        if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("Failed to enumerate rasd");
-                goto out;
-        }
-
-        for(i = 0; i < list.cur; i++) {
-                prev_inst = list.list[i];
-                ret = cu_get_str_prop(prev_inst, 
-                                      "InstanceID", 
-                                      &inst_id);
-
-                if (ret != CMPI_RC_OK) {
-                        CU_DEBUG("Cannot get InstanceID ... ignoring");
-                        continue;
-                }
-
-                if (STREQ(inst_id, get_fq_devid(dominfo->name, (char *)devid)))
-                        break;
-        }
-
-	if (prev_inst == NULL)
-                CU_DEBUG("PreviousInstance is NULL");
-
- out:
-        inst_list_free(&list);
-
-        return prev_inst;
-}
-
 static CMPIStatus _update_resources_for(const CMPIContext *context,
                                         const CMPIObjectPath *ref,
                                         virDomainPtr dom,
@@ -2276,7 +2233,24 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
         }
         else {
                 indication = strdup(RASD_IND_MODIFIED);
-                prev_inst = get_previous_instance(dominfo, ref, type, devid);
+                char *dummy_name = NULL;
+
+                if (asprintf(&dummy_name, "%s/%s",dominfo->name, devid) == -1) {
+                        CU_DEBUG("Unable to set name");
+                        goto out;
+                }
+                s = get_rasd_by_name(_BROKER,
+                                     ref,
+                                     dummy_name,
+                                     type,
+                                     NULL,
+                                     &prev_inst);
+                free(dummy_name);
+
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Failed to get Previous Instance");
+                        goto out;
+                }
         }
 
         s = func(dominfo, rasd, type, devid, NAMESPACE(ref));
