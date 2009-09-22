@@ -664,6 +664,7 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
         int count;
         int i;
         struct virt_device *devs = NULL;
+        const char *host = NULL;
 
         count = get_devices(dom, &devs, type);
         if (count <= 0)
@@ -672,8 +673,13 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
         /* Bit hackish, but for proc we need to cut list down to one. */
         if (type == CIM_RES_TYPE_PROC) {
                 struct virt_device *tmp_dev = NULL;
-                tmp_dev = calloc(1, sizeof(*tmp_dev));
                 tmp_dev = virt_device_dup(&devs[count - 1]);
+                if (tmp_dev == NULL) {
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to allocate memory for proc RASD");
+                        goto out;
+                }
 
                 tmp_dev->id = strdup("proc");
 
@@ -685,15 +691,16 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
                 count = 1;
         }
 
+        host = virDomainGetName(dom);
+        if (host == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get domain name");
+                goto out;
+        }
+
         for (i = 0; i < count; i++) {
                 CMPIInstance *dev = NULL;
-                const char *host = NULL;
-
-                host = virDomainGetName(dom);
-                if (host == NULL) {
-                        cleanup_virt_device(&devs[i]);
-                        continue;
-                }
 
                 dev = rasd_from_vdev(broker,
                                      &devs[i],
