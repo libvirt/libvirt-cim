@@ -47,16 +47,15 @@ MOFS = \
 	schema/VirtualSystemSnapshotServiceCapabilities.mof \
 	schema/ConcreteComponent.mof \
 	schema/ConsoleRedirectionService.mof \
-        schema/ConsoleRedirectionServiceCapabilities.mof \
-        schema/ServiceAffectsElement.mof \
-        schema/KVMRedirectionSAP.mof \
-        schema/DisplayController.mof \
-        schema/PointingDevice.mof \
-        schema/GraphicsPool.mof \
-        schema/InputPool.mof \
-        schema/HostedAccessPoint.mof \
-        schema/ServiceAccessBySAP.mof \
-        schema/SAPAvailableForElement.mof
+	schema/ConsoleRedirectionServiceCapabilities.mof \
+	schema/ServiceAffectsElement.mof \
+	schema/KVMRedirectionSAP.mof \
+	schema/DisplayController.mof \
+	schema/PointingDevice.mof \
+	schema/InputPool.mof \
+	schema/HostedAccessPoint.mof \
+	schema/ServiceAccessBySAP.mof \
+	schema/SAPAvailableForElement.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -122,16 +121,16 @@ REGS = \
 	schema/VirtualSystemSnapshotServiceCapabilities.registration \
 	schema/ConcreteComponent.registration \
 	schema/ConsoleRedirectionService.registration \
-        schema/ConsoleRedirectionServiceCapabilities.registration \
-        schema/ServiceAffectsElement.registration \
-        schema/KVMRedirectionSAP.registration \
-        schema/DisplayController.registration \
-        schema/PointingDevice.registration \
-        schema/GraphicsPool.registration \
-        schema/InputPool.registration \
-        schema/HostedAccessPoint.registration \
-        schema/ServiceAccessBySAP.registration \
-        schema/SAPAvailableForElement.registration
+	schema/ConsoleRedirectionServiceCapabilities.registration \
+	schema/ServiceAffectsElement.registration \
+	schema/KVMRedirectionSAP.registration \
+	schema/DisplayController.registration \
+	schema/PointingDevice.registration \
+	schema/GraphicsPool.registration \
+	schema/InputPool.registration \
+	schema/HostedAccessPoint.registration \
+	schema/ServiceAccessBySAP.registration \
+	schema/SAPAvailableForElement.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \
