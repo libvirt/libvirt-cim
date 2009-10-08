@@ -168,21 +168,16 @@ static bool save_xml(struct infostore_ctx *ctx)
         return size >= 0;
 }
 
-static struct infostore_ctx *_infostore_open(virDomainPtr dom)
+static struct infostore_ctx *_generic_infostore_open(char *filename)
 {
         struct infostore_ctx *isc;
         struct stat s;
-        char *filename = NULL;
 
         isc = calloc(1, sizeof(*isc));
         if (isc == NULL) {
                 CU_DEBUG("Unable to allocate domain_details struct");
                 return NULL;
         }
-
-        filename = make_filename(dom);
-        if (filename == NULL)
-                goto err;
 
         isc->fd = open(filename, O_RDWR|O_CREAT, 0600);
         if (isc->fd < 0) {
@@ -211,6 +206,27 @@ static struct infostore_ctx *_infostore_open(virDomainPtr dom)
                 CU_DEBUG("Failed to parse XML");
                 goto err;
         }
+
+        return isc;
+
+ err:
+        infostore_cleanup_ctx(isc);
+
+        return NULL;
+}
+
+static struct infostore_ctx *_infostore_open(virDomainPtr dom)
+{
+        struct infostore_ctx *isc = NULL;
+        char *filename = NULL;
+
+        filename = make_filename(dom);
+        if (filename == NULL)
+                return NULL;
+
+        isc = _generic_infostore_open(filename);
+        if (isc == NULL)
+                return NULL;
 
         if (!xmlStrEqual(isc->root->name, BAD_CAST "dominfo")) {
                 CU_DEBUG("XML does not start with <dominfo>");
@@ -286,13 +302,18 @@ struct infostore_ctx *infostore_open(virDomainPtr dom)
         return isc;
 }
 
-void infostore_close(struct infostore_ctx *ctx)
+static void _infostore_close(struct infostore_ctx *ctx)
 {
         if (ctx == NULL)
                 return;
 
         save_xml(ctx);
         infostore_cleanup_ctx(ctx);
+}
+
+void infostore_close(struct infostore_ctx *ctx)
+{
+        _infostore_close(ctx);
 }
 
 void infostore_delete(const char *type, const char *name)
