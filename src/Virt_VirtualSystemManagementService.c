@@ -1435,24 +1435,25 @@ static CMPIStatus raise_rasd_indication(const CMPIContext *context,
         CU_DEBUG("raise_rasd_indication");
 
         type = get_typed_class(CLASSNAME(ref), base_type);
-        ind = get_typed_instance(_BROKER, 
-                                 CLASSNAME(ref), 
-                                 base_type, 
-                                 NAMESPACE(ref));
-        if (ind == NULL)  {
-                CU_DEBUG("Failed to get indication instance");
-                s.rc = CMPI_RC_ERR_FAILED;
-                goto out;
-        }
-        
-        /* PreviousInstance is set only for modify case. */
-        if (prev_inst != NULL)
-                CMSetProperty(ind, 
-                              "PreviousInstance", 
-                              (CMPIValue *)&prev_inst, 
-                              CMPI_instance);
 
         for (i = 0; i < list->cur; i++) {
+                ind = get_typed_instance(_BROKER, 
+                                         CLASSNAME(ref), 
+                                         base_type, 
+                                         NAMESPACE(ref));
+                if (ind == NULL)  {
+                        CU_DEBUG("Failed to get indication instance");
+                        s.rc = CMPI_RC_ERR_FAILED;
+                        goto out;
+                }
+        
+                /* PreviousInstance is set only for modify case. */
+                if (prev_inst != NULL)
+                        CMSetProperty(ind, 
+                                      "PreviousInstance", 
+                                      (CMPIValue *)&prev_inst, 
+                                      CMPI_instance);
+
                 instc = list->list[i];
                 op = CMGetObjectPath(instc, NULL);
                 CMPIString *str = CMGetClassName(op, NULL);
