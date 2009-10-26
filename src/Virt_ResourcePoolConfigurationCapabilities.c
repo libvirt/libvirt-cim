@@ -70,17 +70,23 @@ static CMPIStatus get_rpc_cap(const CMPIObjectPath *reference,
                                   pfx_from_conn(conn),
                                   "ResourcePoolConfigurationCapabilities",
                                   NAMESPACE(reference));
-        if (inst == NULL)
+        if (inst == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Can't create ResourcePoolConfigurationCapabilities instance");
+                           "Can't create RPCC instance");
+                goto out;
+        }
 
         CMSetProperty(inst, "InstanceID",
                       (CMPIValue *)"RPCC", CMPI_chars);
 
         array = CMNewArray(_BROKER, 2, CMPI_uint32, &s);
-        if (s.rc != CMPI_RC_OK)
-                return s;
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Can't create new CMPI array to store values");
+                goto out;
+        }
 
         val = CreateChildResourcePool;
         CMSetArrayElementAt(array, 0, (CMPIValue *)&val, CMPI_uint32);

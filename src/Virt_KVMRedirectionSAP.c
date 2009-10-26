@@ -316,7 +316,6 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
 
         for (i = 0; i < count; i++) {
                 if (!check_graphics(domain_list[i], &dominfo)) {
-                        virDomainFree(domain_list[i]);
                         cleanup_dominfo(&dominfo);
                         continue;
                 }
@@ -328,6 +327,7 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
                         cu_statusf(broker, &s,
                                    CMPI_RC_ERR_FAILED,
                                    "Unable to guest's console port");
+                        cleanup_dominfo(&dominfo);
                         goto out;
                 }
 
@@ -336,6 +336,7 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
                         cu_statusf(broker, &s,
                                    CMPI_RC_ERR_FAILED,
                                    "Unable to allocate string");
+                        cleanup_dominfo(&dominfo);
                         goto out;
                 }
 
@@ -343,7 +344,6 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
                 port_list.list[port_list.cur]->remote_port = -1;
                 port_list.cur++;
 
-                virDomainFree(domain_list[i]);
                 cleanup_dominfo(&dominfo);
         }
 
@@ -355,6 +355,7 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
                 goto out;
 
  out:
+        free_domain_list(domain_list, count);
         free(domain_list);
 
         for (i = 0; i < count; i++) {

@@ -139,7 +139,7 @@ CMPIStatus get_migration_caps(const CMPIObjectPath *ref,
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get instance for %s", CLASSNAME(ref));
-                return s;
+                goto out;
         }
 
         CMSetProperty(inst, "InstanceID",

@@ -336,25 +336,29 @@ int create_resource(virConnectPtr conn,
                     int res_type)
 {
         int ret = 0;
+        virStoragePoolPtr ptr = NULL;
+        virStorageVolPtr vptr = NULL;
 
         if (res_type == CIM_RES_TYPE_IMAGE) {
-                virStoragePoolPtr ptr = virStoragePoolLookupByName(conn, pname);
+                ptr = virStoragePoolLookupByName(conn, pname);
                 if (ptr == NULL) {
                         CU_DEBUG("Storage pool %s is not defined", pname);
                         goto out;
                 }
 
-                virStorageVolPtr vptr = virStorageVolCreateXML(ptr, xml, 0);
-                if (vptr == NULL)
+                vptr = virStorageVolCreateXML(ptr, xml, 0);
+                if (vptr == NULL) {
+                        CU_DEBUG("Unable to create storage volume in %s", 
+                                 pname);
                         goto out;
-
-                virStorageVolFree(vptr);
-                virStoragePoolFree(ptr);
+                }
 
                 ret = 1;
         }
 
  out:
+        virStoragePoolFree(ptr);
+        virStorageVolFree(vptr);
 
         return ret;
 }

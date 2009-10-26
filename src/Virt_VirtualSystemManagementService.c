@@ -1695,6 +1695,8 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
 
         virDomainDestroy(dom); /* Okay for this to fail */
 
+        virDomainFree(dom);
+
         dom = virDomainLookupByName(conn, dom_name);
         if (dom == NULL) {
                 CU_DEBUG("Domain successfully destroyed");

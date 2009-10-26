@@ -417,8 +417,7 @@ bool domain_online(virDomainPtr dom)
                 compare_flags = 2;
         }
 
-        _dom = virDomainLookupByName(virDomainGetConnect(dom),
-                                     virDomainGetName(dom));
+        _dom = virDomainLookupByName(conn, virDomainGetName(dom));
         if (_dom == NULL) {
                 CU_DEBUG("Unable to re-lookup domain");
                 goto out;

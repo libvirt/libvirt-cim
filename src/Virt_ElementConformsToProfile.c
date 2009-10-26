@@ -199,7 +199,7 @@ static CMPIStatus elem_to_prof(const CMPIObjectPath *ref,
 
         conn = connect_by_classname(_BROKER, CLASSNAME(vref), &s);
         if (conn == NULL)
-                return s;
+                goto out;
 
         for (i = 0; profiles[i] != NULL; i++) {
 
