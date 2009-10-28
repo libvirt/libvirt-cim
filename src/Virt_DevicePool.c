@@ -1210,6 +1210,14 @@ CMPIStatus get_pool_by_name(const CMPIBroker *broker,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
+        if (list.cur == 0) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "No such instance (%s)",
+                           id);
+                goto out;
+        }
+
         *_inst = list.list[0];
 
  out:
