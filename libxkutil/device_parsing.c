@@ -866,6 +866,18 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         return 1;
 }
 
+static int parse_features(struct domain *dominfo, xmlNode *features)
+{
+        xmlNode *child;
+
+        for (child = features->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "acpi"))
+                        dominfo->acpi = true;
+        }
+
+        return 1;
+}
+
 static void set_action(int *val, xmlNode *child)
 {
         const char *action = (char *)xmlNodeGetContent(child);
@@ -910,6 +922,8 @@ static int parse_domain(xmlNodeSet *nsv, struct domain *dominfo)
                         set_action(&dominfo->on_crash, child);
                 else if (XSTREQ(child->name, "clock"))
                         dominfo->clock = get_attr_value(child, "offset");
+                else if (XSTREQ(child->name, "features"))
+                        parse_features(dominfo, child);
         }
 
         return 1;

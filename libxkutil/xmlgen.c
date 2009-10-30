@@ -503,11 +503,6 @@ static char *_xenfv_os_xml(xmlNodePtr root, struct domain *domain)
         if (ret == 0)
                 return XML_ERROR;
 
-        tmp = xmlNewChild(root, NULL, BAD_CAST "features", NULL);
-        xmlNewChild(tmp, NULL, BAD_CAST "pae", NULL);
-        xmlNewChild(tmp, NULL, BAD_CAST "acpi", NULL);
-        xmlNewChild(tmp, NULL, BAD_CAST "apic", NULL);
-
         return NULL;
 }
 
@@ -574,6 +569,25 @@ static char *os_xml(xmlNodePtr root, struct domain *domain)
                 return _lxc_os_xml(os, domain);
         else
                 return "Unsupported domain type";
+}
+
+static char *features_xml(xmlNodePtr root, struct domain *domain)
+{
+        xmlNodePtr features;
+
+        features = xmlNewChild(root, NULL, BAD_CAST "features", NULL);
+        if (features == NULL)
+                return "Failed to allocate XML memory";
+
+        if (domain->type == DOMAIN_XENFV) {
+                xmlNewChild(features, NULL, BAD_CAST "pae", NULL);
+                xmlNewChild(features, NULL, BAD_CAST "apic", NULL);
+        }
+
+        if (domain->acpi)
+                xmlNewChild(features, NULL, BAD_CAST "acpi", NULL);
+
+        return NULL;
 }
 
 static char *tree_to_xml(xmlNodePtr root)
@@ -745,6 +759,10 @@ char *system_to_xml(struct domain *dominfo)
                 goto out;
 
         msg = os_xml(root, dominfo);
+        if (msg != NULL)
+                goto out;
+
+        msg = features_xml(root, dominfo);
         if (msg != NULL)
                 goto out;
 

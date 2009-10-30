@@ -211,6 +211,9 @@ static int instance_from_dom(const CMPIBroker *broker,
         CMSetProperty(inst, "AutomaticRecoveryAction",
                       (CMPIValue *)&dominfo->on_crash, CMPI_uint16);
 
+        CMSetProperty(inst, "EnableACPI",
+                      (CMPIValue *)&dominfo->acpi, CMPI_boolean);
+
         if (dominfo->clock != NULL) {
                 uint16_t clock = VSSD_CLOCK_UTC;
 

@@ -425,6 +425,7 @@ static int vssd_to_domain(CMPIInstance *inst,
         const char *val;
         const char *cn;
         char *pfx = NULL;
+        bool bool_val;
         bool fullvirt;
         CMPIObjectPath *opathp = NULL;
 
@@ -469,6 +470,13 @@ static int vssd_to_domain(CMPIInstance *inst,
 
         if (cu_get_bool_prop(inst, "IsFullVirt", &fullvirt) != CMPI_RC_OK)
                 fullvirt = false;
+
+        if (cu_get_bool_prop(inst, "EnableACPI", &bool_val) != CMPI_RC_OK) {
+                if (fullvirt || STREQC(pfx, "KVM"))
+                        bool_val = true;
+        }
+
+        domain->acpi = bool_val;
 
         if (cu_get_u16_prop(inst, "ClockOffset", &tmp) == CMPI_RC_OK) {
                 if (tmp == VSSD_CLOCK_UTC)

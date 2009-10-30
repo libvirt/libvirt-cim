@@ -15,4 +15,7 @@ class Virt_VirtualSystemSettingData : CIM_VirtualSystemSettingData
   [Description("UUID assigned to this DomU.")]
   string UUID;
 
+  [Description ("Flag to determine whether this guest has acpi enabled")]
+  boolean EnableACPI;
+
 };
