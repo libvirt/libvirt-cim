@@ -3,3 +3,8 @@
 Xen_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance
 KVM_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance
 LXC_RegisteredProfile root/interop Virt_RegisteredProfile Virt_RegisteredProfile instance
+# -- These providers will be included only if pegasus is available. Check Makefile.am for details
+Xen_RegisteredProfile root/PG_InterOp Virt_RegisteredProfile Virt_RegisteredProfile instance
+KVM_RegisteredProfile root/PG_InterOp Virt_RegisteredProfile Virt_RegisteredProfile instance
+LXC_RegisteredProfile root/PG_InterOp Virt_RegisteredProfile Virt_RegisteredProfile instance
+# --!

@@ -9,3 +9,8 @@ KVM_ElementConformsToProfile root/cimv2 Virt_ElementConformsToProfile Virt_Eleme
 LXC_ElementConformsToProfile root/virt Virt_ElementConformsToProfile Virt_ElementConformsToProfile  association
 LXC_ElementConformsToProfile root/interop Virt_ElementConformsToProfile Virt_ElementConformsToProfile  association
 LXC_ElementConformsToProfile root/cimv2 Virt_ElementConformsToProfile Virt_ElementConformsToProfile  association
+# -- These providers will be included only if pegasus is available. Check Makefile.am for details
+Xen_ElementConformsToProfile root/PG_InterOp Virt_ElementConformsToProfile Virt_ElementConformsToProfile  association
+KVM_ElementConformsToProfile root/PG_InterOp Virt_ElementConformsToProfile Virt_ElementConformsToProfile  association
+LXC_ElementConformsToProfile root/PG_InterOp Virt_ElementConformsToProfile Virt_ElementConformsToProfile  association
+# --!

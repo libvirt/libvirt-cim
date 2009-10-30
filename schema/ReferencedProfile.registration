@@ -3,3 +3,8 @@
 Xen_ReferencedProfile root/interop Virt_ReferencedProfile Virt_ReferencedProfile association
 KVM_ReferencedProfile root/interop Virt_ReferencedProfile Virt_ReferencedProfile association
 LXC_ReferencedProfile root/interop Virt_ReferencedProfile Virt_ReferencedProfile association
+# -- These providers will be included only if pegasus is available. Check Makefile.am for details
+Xen_ReferencedProfile root/PG_InterOp Virt_ReferencedProfile Virt_ReferencedProfile association
+KVM_ReferencedProfile root/PG_InterOp Virt_ReferencedProfile Virt_ReferencedProfile association
+LXC_ReferencedProfile root/PG_InterOp Virt_ReferencedProfile Virt_ReferencedProfile association
+# --!
