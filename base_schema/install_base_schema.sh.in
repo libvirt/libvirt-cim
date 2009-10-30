@@ -22,6 +22,7 @@ unpack_schema() {
 fix_schema() {
     cp -a ${DATA}/cimv2.21.0-interop_mof ${TMPDIR}/cimv2.21.0-interop.mof
     cp -a ${DATA}/cimv2.21.0-cimv2_mof ${TMPDIR}/cimv2.21.0-cimv2.mof
+    cp -a ${DATA}/cimv2.21.0-pginterop_mof ${TMPDIR}/cimv2.21.0-pginterop.mof
 
 }
 
@@ -74,6 +75,7 @@ install_schema_pegasus() {
     cimmofl -uc -aEV -R$repo -n $NS qualifiers_optional.mof
     cimmofl -uc -aEV -R$repo -n /root/interop cimv?.??.?-interop.mof
     cimmofl -uc -aEV -R$repo -n /root/cimv2 cimv?.??.?-cimv2.mof
+    cimmofl -uc -aEV -R$repo -n /root/PG_InterOp cimv?.??.?-pginterop.mof
 }
 
 install_schema_sfcb() {
