@@ -230,12 +230,13 @@ static int instance_from_dom(const CMPIBroker *broker,
 
 
         if ((dominfo->type == DOMAIN_XENFV) ||
-            (dominfo->type == DOMAIN_KVM) || (dominfo->type == DOMAIN_QEMU))
+            (dominfo->type == DOMAIN_KVM) || (dominfo->type == DOMAIN_QEMU)) {
                 s = _set_fv_prop(broker, dominfo, inst);
                 if (s.rc != CMPI_RC_OK) {
                         ret = 0;
                         goto out;
                 }
+        }
 
         else if (dominfo->type == DOMAIN_XENPV)
                 _set_pv_prop(dominfo, inst);
