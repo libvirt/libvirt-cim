@@ -54,6 +54,9 @@ rm -fr $RPM_BUILD_ROOT
 %define INTEROP_REG %{_datadir}/%{name}/{RegisteredProfile,ElementConformsToProfile,ReferencedProfile}.registration
 %define INTEROP_MOF %{_datadir}/%{name}/{ComputerSystem,HostSystem,RegisteredProfile,DiskPool,MemoryPool,NetPool,ProcessorPool,VSMigrationService,ElementConformsToProfile,ReferencedProfile,AllocationCapabilities}.mof
 
+%define PGINTEROP_REG %{_datadir}/%{name}/{RegisteredProfile,ElementConformsToProfile,ReferencedProfile}.registration
+%define PGINTEROP_MOF %{_datadir}/%{name}/{RegisteredProfile,ElementConformsToProfile,ReferencedProfile}.mof
+
 %define CIMV2_REG %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,ElementConformsToProfile,HostedAccessPoint}.registration
 %define CIMV2_MOF %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,RegisteredProfile,ComputerSystem,ElementConformsToProfile,HostedAccessPoint}.mof
 
@@ -78,6 +81,9 @@ rm -fr $RPM_BUILD_ROOT
         -n root/interop \
         -r %{INTEROP_REG} -m %{INTEROP_MOF} -v >/dev/null 2>&1 || true
 %{_datadir}/%{name}/provider-register.sh -t pegasus \
+        -n root/PG_InterOp \
+        -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} -v >/dev/null 2>&1 || true
+%{_datadir}/%{name}/provider-register.sh -t pegasus \
         -n root/cimv2\
         -r %{CIMV2_REG} -m %{CIMV2_MOF} -v >/dev/null 2>&1 || true
 
@@ -85,6 +91,9 @@ rm -fr $RPM_BUILD_ROOT
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
 	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+        -n root/PG_InterOp \
+        -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
 
 %postun -p /sbin/ldconfig
 
@@ -105,5 +114,7 @@ rm -fr $RPM_BUILD_ROOT
 %{_datadir}/libvirt-cim/cimv*-MOFs.zip
 
 %changelog
+* Wed Oct 28 2009 Richard Maciel <rmaciel@linux.vnet.ibm.com> - 0.1-1
+- Added profile classes to the PG_InterOp namespace
 * Fri Oct 26 2007 Daniel Veillard <veillard@redhat.com> - 0.1-1
 - created
