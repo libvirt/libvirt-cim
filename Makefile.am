@@ -174,16 +174,16 @@ preinstall:
 # Un/Register the providers and class definitions from/to the current CIMOM.
 # @CIMSERVER@ is set by the configure script
 postinstall:
-	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
-	sh provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
-	sh provider-register.sh -v -t @CIMSERVER@ -n root/cimv2 -r $(CIMV2_REGS) -m $(CIMV2_MOFS)
+	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst schema,$(pkgdatadir), $(REGS)) -m $(subst schema,$(pkgdatadir), $(MOFS))
+	sh provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(subst schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst schema,$(pkgdatadir), $(INTEROP_MOFS))
+	sh provider-register.sh -v -t @CIMSERVER@ -n root/cimv2 -r $(subst schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst schema,$(pkgdatadir), $(CIMV2_MOFS))
 	virsh -v | grep -q '^0.3' && cp examples/diskpool.conf $(DISK_POOL_CONFIG) || true
 	mkdir -p $(INFO_STORE)
 
 preuninstall:
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(REGS) -m $(MOFS)
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/interop -r $(INTEROP_REGS) -m $(INTEROP_MOFS)
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/cimv2 -r $(CIMV2_REGS) -m $(CIMV2_MOFS)
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst schema,$(pkgdatadir), $(REGS)) -m $(subst schema,$(pkgdatadir), $(MOFS))
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/interop -r $(subst schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst schema,$(pkgdatadir), $(INTEROP_MOFS))
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/cimv2 -r $(subst schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst schema,$(pkgdatadir), $(CIMV2_MOFS))
 
 rpm: clean
 	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.gz)
