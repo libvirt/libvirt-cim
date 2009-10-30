@@ -110,8 +110,7 @@ rm -fr $RPM_BUILD_ROOT
 %{_datadir}/libvirt-cim/cimv*-interop_mof
 %{_datadir}/libvirt-cim/cimv*-cimv2_mof
 %{_datadir}/libvirt-cim/*.registration
-%{_datadir}/libvirt-cim/fix_schema.patch
-%{_datadir}/libvirt-cim/cimv*-MOFs.zip
+%{_datadir}/libvirt-cim/cim_schema_*-MOFs.zip
 
 %changelog
 * Wed Oct 28 2009 Richard Maciel <rmaciel@linux.vnet.ibm.com> - 0.1-1
