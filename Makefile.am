@@ -70,6 +70,11 @@ INTEROP_MOFS = \
 	schema/ReferencedProfile.mof \
 	schema/AllocationCapabilities.mof
 
+PGINTEROP_MOFS = \
+	schema/RegisteredProfile.mof \
+	schema/ElementConformsToProfile.mof \
+	schema/ReferencedProfile.mof
+
 CIMV2_MOFS = \
 	schema/HostedResourcePool.mof \
 	schema/ElementCapabilities.mof \
@@ -137,6 +142,11 @@ INTEROP_REGS = \
 	schema/ElementConformsToProfile.registration \
 	schema/ReferencedProfile.registration
 
+PGINTEROP_REGS = \
+	schema/RegisteredProfile.registration \
+	schema/ElementConformsToProfile.registration \
+	schema/ReferencedProfile.registration
+
 CIMV2_REGS = \
 	schema/HostedResourcePool.registration \
 	schema/ElementCapabilities.registration \
@@ -153,12 +163,16 @@ EXTRA_DIST = schema $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS) \
              .changeset .revision 			\
 	     examples/diskpool.conf
 
+# If Pegasus isn't the CIMOM target, then remove the PG_InterOp namespace from the appropriate files
 install-data-local:
 	$(mkinstalldirs) "$(DESTDIR)$(pkgdatadir)"
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(MOFS)
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(REGS)
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_MOFS)
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_REGS)
+	if [[ @CIMSERVER@ != pegasus ]]; then \
+	sed -i '/^# --/,/^# --!/d' $(subst schema,$(pkgdatadir), $(PGINTEROP_REGS)); \
+	fi
 
 uninstall-local:
 	@list='$(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)'; \
@@ -177,6 +191,9 @@ postinstall:
 	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst schema,$(pkgdatadir), $(REGS)) -m $(subst schema,$(pkgdatadir), $(MOFS))
 	sh provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(subst schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst schema,$(pkgdatadir), $(INTEROP_MOFS))
 	sh provider-register.sh -v -t @CIMSERVER@ -n root/cimv2 -r $(subst schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst schema,$(pkgdatadir), $(CIMV2_MOFS))
+	if [[ @CIMSERVER@ = pegasus ]]; then \
+	sh provider-register.sh -v -t @CIMSERVER@ -n root/PG_InterOp -r $(subst schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
+	fi
 	virsh -v | grep -q '^0.3' && cp examples/diskpool.conf $(DISK_POOL_CONFIG) || true
 	mkdir -p $(INFO_STORE)
 
@@ -184,6 +201,9 @@ preuninstall:
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst schema,$(pkgdatadir), $(REGS)) -m $(subst schema,$(pkgdatadir), $(MOFS))
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/interop -r $(subst schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst schema,$(pkgdatadir), $(INTEROP_MOFS))
 	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/cimv2 -r $(subst schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst schema,$(pkgdatadir), $(CIMV2_MOFS))
+	if [[ @CIMSERVER@ = pegasus ]]; then \
+	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/PG_InterOp -r $(subst schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
+	fi
 
 rpm: clean
 	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.gz)
