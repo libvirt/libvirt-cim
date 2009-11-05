@@ -127,6 +127,7 @@ struct domain {
         char *bootloader_args;
         char *clock;
         bool acpi;
+        bool apic;
 
         union {
                 struct pv_os_info pv;

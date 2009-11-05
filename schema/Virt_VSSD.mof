@@ -18,4 +18,7 @@ class Virt_VirtualSystemSettingData : CIM_VirtualSystemSettingData
   [Description ("Flag to determine whether this guest has acpi enabled")]
   boolean EnableACPI;
 
+  [Description ("Flag to determine whether this guest has apic enabled")]
+  boolean EnableAPIC;
+
 };

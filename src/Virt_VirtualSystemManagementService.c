@@ -472,11 +472,24 @@ static int vssd_to_domain(CMPIInstance *inst,
                 fullvirt = false;
 
         if (cu_get_bool_prop(inst, "EnableACPI", &bool_val) != CMPI_RC_OK) {
+                /* Always set for XenFV and KVM guests */
                 if (fullvirt || STREQC(pfx, "KVM"))
                         bool_val = true;
+                else
+                        bool_val = false;
         }
 
         domain->acpi = bool_val;
+
+        if (cu_get_bool_prop(inst, "EnableAPIC", &bool_val) != CMPI_RC_OK) {
+                /* Always set for XenFV guests */
+                if (fullvirt && !STREQC(pfx, "KVM"))
+                        bool_val = true;
+                else
+                        bool_val = false;
+        }
+
+        domain->apic = bool_val;
 
         if (cu_get_u16_prop(inst, "ClockOffset", &tmp) == CMPI_RC_OK) {
                 if (tmp == VSSD_CLOCK_UTC)

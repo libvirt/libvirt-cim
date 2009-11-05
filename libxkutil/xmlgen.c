@@ -581,11 +581,13 @@ static char *features_xml(xmlNodePtr root, struct domain *domain)
 
         if (domain->type == DOMAIN_XENFV) {
                 xmlNewChild(features, NULL, BAD_CAST "pae", NULL);
-                xmlNewChild(features, NULL, BAD_CAST "apic", NULL);
         }
 
         if (domain->acpi)
                 xmlNewChild(features, NULL, BAD_CAST "acpi", NULL);
+
+        if (domain->apic)
+                xmlNewChild(features, NULL, BAD_CAST "apic", NULL);
 
         return NULL;
 }
