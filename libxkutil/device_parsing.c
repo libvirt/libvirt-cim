@@ -875,6 +875,8 @@ static int parse_features(struct domain *dominfo, xmlNode *features)
                         dominfo->acpi = true;
                 else if (XSTREQ(child->name, "apic"))
                         dominfo->apic = true;
+                else if (XSTREQ(child->name, "pae"))
+                        dominfo->pae = true;
         }
 
         return 1;

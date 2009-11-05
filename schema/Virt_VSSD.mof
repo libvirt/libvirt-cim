@@ -21,4 +21,7 @@ class Virt_VirtualSystemSettingData : CIM_VirtualSystemSettingData
   [Description ("Flag to determine whether this guest has apic enabled")]
   boolean EnableAPIC;
 
+  [Description ("Flag to determine whether this guest has pae enabled")]
+  boolean EnablePAE;
+
 };

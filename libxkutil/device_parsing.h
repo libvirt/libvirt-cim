@@ -128,6 +128,7 @@ struct domain {
         char *clock;
         bool acpi;
         bool apic;
+        bool pae;
 
         union {
                 struct pv_os_info pv;
