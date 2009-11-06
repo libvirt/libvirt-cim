@@ -903,6 +903,44 @@ static const char *lxc_proc_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static int parse_vnc_address(const char *id,
+                      char **ip,
+                      char **port)
+{
+        int ret;
+        char *tmp_ip = NULL;
+        char *tmp_port = NULL;
+
+        CU_DEBUG("Entering parse_vnc_address, address is %s", id);
+        if (strstr(id, "[") != NULL) {
+                /* its an ipv6 address */
+                ret = sscanf(id, "%a[^]]]:%as",  &tmp_ip, &tmp_port);
+                strcat(tmp_ip, "]");
+        } else {
+                ret = sscanf(id, "%a[^:]:%as", &tmp_ip, &tmp_port);
+        }
+
+        if (ret != 2) {
+                ret = 0;
+                goto out;
+        }
+
+        if (ip)
+                *ip = strdup(tmp_ip);
+
+        if (port)
+                *port = strdup(tmp_port);
+
+        ret = 1;
+
+ out:
+        CU_DEBUG("Exiting parse_vnc_address, ip is %s, port is %s", *ip, *port);
+        free(tmp_ip);
+        free(tmp_port);
+
+        return ret;
+}
+
 static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev)
 {
@@ -922,7 +960,7 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.graphics.port = strdup("-1");
                 dev->dev.graphics.host = strdup("127.0.0.1");
         } else {
-               ret = parse_id(val,
+               ret = parse_vnc_address(val,
                               &dev->dev.graphics.host, 
                               &dev->dev.graphics.port); 
                 if (ret != 1) {
