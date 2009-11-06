@@ -130,6 +130,10 @@ class LXC_MemResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 ]
 class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
+      [Description ("VNC Address. IPv4 in a.b.c.d:port or"
+       "IPv6 in [ip]:port format")]
+      string Address;
+
       [Description ("Keyboard keymapping")]
       string KeyMap;
 
@@ -142,6 +146,10 @@ class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingD
 ]
 class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
+      [Description ("VNC Address. IPv4 in a.b.c.d:port or"
+       "IPv6 in [ip]:port format")]
+      string Address;
+
       [Description ("Keyboard keymapping")]
       string KeyMap;
 
@@ -154,6 +162,10 @@ class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingD
 ]
 class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
+      [Description ("VNC Address. IPv4 in a.b.c.d:port or"
+       "IPv6 in [ip]:port format")]
+      string Address;
+
       [Description ("Keyboard keymapping")]
       string KeyMap;
 
