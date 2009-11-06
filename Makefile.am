@@ -52,6 +52,7 @@ MOFS = \
 	schema/KVMRedirectionSAP.mof \
 	schema/DisplayController.mof \
 	schema/PointingDevice.mof \
+	schema/GraphicsPool.mof \
 	schema/InputPool.mof \
 	schema/HostedAccessPoint.mof \
 	schema/ServiceAccessBySAP.mof \
