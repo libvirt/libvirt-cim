@@ -1523,6 +1523,7 @@ static CMPIStatus disk_res_template(const CMPIObjectPath *ref,
 static CMPIStatus set_graphics_props(const CMPIObjectPath *ref,
                                      const char *id,
                                      const char *type,
+                                     const char *addr,
                                      struct inst_list *list)
 {
         CMPIInstance *inst;
@@ -1533,8 +1534,6 @@ static CMPIStatus set_graphics_props(const CMPIObjectPath *ref,
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
 
         if (STREQC(type, "vnc")) {
-                const char *addr = "127.0.0.1:-1";
-
                 CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
 
                 CMSetProperty(inst, "KeyMap", (CMPIValue *)"en-us", CMPI_chars);
@@ -1553,9 +1552,10 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
 {
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        const char *type[] = {"vnc", "sdl"};
+        const char *type[] = {"sdl", "vnc"};
+        const char *addr[] = {NULL, "127.0.0.1:-1", "[::1]:-1"};
         int type_ct = 2;
-        int i;
+        int i,j;
 
         switch(template_type) {
         case SDC_RASD_MIN:
@@ -1578,9 +1578,18 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
         }
 
         for (i = 0; i < type_ct; i++) {
-                s = set_graphics_props(ref, id, type[i], list);
-                if (s.rc != CMPI_RC_OK)
-                        goto out;
+                for (j = 1; j < 3; j++){
+                        s = set_graphics_props(ref,
+                                               id,
+                                               type[i],
+                                               addr[i*j],
+                                               list);
+                        if (s.rc != CMPI_RC_OK)
+                                goto out;
+
+                        if (i == 0)
+                                break;
+                }
         }
 
  out:
