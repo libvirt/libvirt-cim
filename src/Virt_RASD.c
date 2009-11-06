@@ -407,6 +407,8 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                   CLASSNAME(ref),
                                   base,
                                   NAMESPACE(ref));
+        free(base);
+
         if (inst == NULL)
                 return inst;
 
@@ -523,6 +525,8 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
         else
                 *_inst = inst;
         
+        cleanup_virt_device(dev);
+
  out:
         virConnectClose(conn);
         free(host);
@@ -696,6 +700,10 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to get domain name");
+
+                for (i = 0; i < count; i++)
+                        cleanup_virt_device(&devs[i]);
+
                 goto out;
         }
 

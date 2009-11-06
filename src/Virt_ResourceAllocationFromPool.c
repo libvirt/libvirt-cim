@@ -120,6 +120,8 @@ static int filter_by_pool(struct inst_list *dest,
                         inst_list_add(dest, inst);
         }
 
+        free(poolid);
+
         return dest->cur;
 }
 

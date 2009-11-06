@@ -102,11 +102,14 @@ int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
                 return 0;
 
         *pool = malloc(sizeof(**pool));
-        if (*pool == NULL)
-                return 0;
+        if (*pool == NULL) {
+                ret = 0;
+                goto out;
+        }
 
         ret = get_pool_from_xml(xml, *pool, CIM_RES_TYPE_DISK);
 
+ out:
         free(xml);
 
         return ret;
@@ -130,15 +133,14 @@ static int get_diskpool_config(virConnectPtr conn,
                 goto out;
         }
 
-        pools = calloc(count, sizeof(*pools));
-        if (pools == NULL) {
-                CU_DEBUG("Failed to alloc space for %i pool structs", count);
+        if (virConnectListStoragePools(conn, names, count) == -1) {
+                CU_DEBUG("Failed to get storage pools");
                 goto out;
         }
 
-        if (virConnectListStoragePools(conn, names, count) == -1) {
-                CU_DEBUG("Failed to get storage pools");
-                free(pools);
+        pools = calloc(count, sizeof(*pools));
+        if (pools == NULL) {
+                CU_DEBUG("Failed to alloc space for %i pool structs", count);
                 goto out;
         }
 
@@ -148,11 +150,13 @@ static int get_diskpool_config(virConnectPtr conn,
         }
 
  out:
+        for (i = 0; i < count; i++)
+                free(names[i]);
+        free(names);
+
         get_disk_parent(&pools, &count);
 
         *_pools = pools;
-
-        free(names);
 
         return count;
 }
@@ -464,6 +468,8 @@ static virNetworkPtr bridge_to_network(virConnectPtr conn,
                 free(_bridge);
         }
 
+        for (i = 0; i < num; i++)
+                free(networks[i]);
         free(networks);
 
         return network;
@@ -870,12 +876,12 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
         }
 
         set_params(inst, CIM_RES_TYPE_NET, id, NULL, cap, false);
-        free(id);
         free(cap);
-        free(bridge);
 
         inst_list_add(list, inst);
  out:
+        free(bridge);
+        free(id);
         virNetworkFree(network);
 
         return s;
@@ -890,7 +896,7 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         char **netnames = NULL;
         int i;
-        int nets;
+        int nets = 0;
 
         if (id != NULL) {
                 return _netpool_for_network(list,
@@ -942,6 +948,8 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
         }
 
  out:
+        for (i = 0; i < nets; i++)
+                free(netnames[i]);
         free(netnames);
 
         return s;
@@ -1350,8 +1358,6 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
                         break;
                 }
 
-                inst_list_free(&list);
-
                 if (inst == NULL) {
                         cu_statusf(broker, s,
                                    CMPI_RC_ERR_FAILED,
@@ -1362,6 +1368,7 @@ CMPIInstance *default_device_pool(const CMPIBroker *broker,
         }
 
  out:
+        inst_list_free(&list);
 
         return inst;
 }
