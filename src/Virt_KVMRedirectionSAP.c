@@ -39,7 +39,8 @@
 
 #include "Virt_KVMRedirectionSAP.h"
 
-#define PROC_TCP "/proc/net/tcp"
+#define PROC_TCP4 "/proc/net/tcp"
+#define PROC_TCP6 "/proc/net/tcp6"
 
 const static CMPIBroker *_BROKER;
 
@@ -139,50 +140,47 @@ static CMPIInstance *get_console_sap(const CMPIBroker *broker,
         return inst;
 }
 
-static CMPIStatus get_vnc_sessions(const CMPIBroker *broker,
-                                   const CMPIObjectPath *ref,
-                                   virConnectPtr conn,
-                                   struct vnc_ports ports,
-                                   struct inst_list *list)
+static CMPIStatus read_tcp_file(const CMPIBroker *broker,
+                                const CMPIObjectPath *ref,
+                                virConnectPtr conn,
+                                struct vnc_ports ports,
+                                struct inst_list *list,
+                                FILE *fl)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
-        const char *path = PROC_TCP;
         unsigned int lport = 0;
         unsigned int rport = 0;
-        FILE *tcp_info;
         char *line = NULL;
         size_t len = 0;
         int val;
         int ret;
         int i;
 
-        tcp_info = fopen(path, "r");
-        if (tcp_info == NULL) {
-                cu_statusf(broker, &s,
+        if (getline(&line, &len, fl) == -1) {
+                cu_statusf(broker, 
+                           &s,
                            CMPI_RC_ERR_FAILED,
-                           "Failed to open %s: %m", tcp_info);
+                           "Failed to read from %s", 
+                           fl);
                 goto out;
         }
 
-        if (getline(&line, &len, tcp_info) == -1) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to read from %s", tcp_info);
-                goto out;
-        }
-
-        while (getline(&line, &len, tcp_info) > 0) {
-                ret = sscanf(line, "%d: %*[^:]:%X %*[^:]:%X", &val, &lport,
+        while (getline(&line, &len, fl) > 0) {
+                ret = sscanf(line, 
+                             "%d: %*[^:]:%X %*[^:]:%X", 
+                             &val, 
+                             &lport, 
                              &rport);
                 if (ret != 3) {
-                        cu_statusf(broker, &s,
+                        cu_statusf(broker, 
+                                   &s,
                                    CMPI_RC_ERR_FAILED,
                                    "Unable to determine active sessions");
                         goto out;
                 }
 
-               for (i = 0; i < ports.max; i++) { 
+                for (i = 0; i < ports.max; i++) { 
                        if (lport != ports.list[i]->port)
                                continue;
 
@@ -198,6 +196,46 @@ static CMPIStatus get_vnc_sessions(const CMPIBroker *broker,
                        inst_list_add(list, inst);
                 }
         }
+ 
+ out:
+        return s;
+}
+
+static CMPIStatus get_vnc_sessions(const CMPIBroker *broker,
+                                   const CMPIObjectPath *ref,
+                                   virConnectPtr conn,
+                                   struct vnc_ports ports,
+                                   struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *inst;
+        const char *path[2] = {PROC_TCP4, PROC_TCP6};
+        FILE *tcp_info;
+        int i, j;
+        int error = 0;
+
+        for (j = 0; j < 2; j++) {
+                tcp_info = fopen(path[j], "r");
+                if (tcp_info == NULL) {
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to open %s: %m", tcp_info);
+                        error++;
+                        continue;
+                }
+
+                s = read_tcp_file(broker,
+                                  ref,
+                                  conn,
+                                  ports,
+                                  list,
+                                  tcp_info);
+
+                fclose(tcp_info);
+
+                if (s.rc != CMPI_RC_OK)
+                        error++; 
+        }
 
         /* Handle any guests that were missed.  These guest don't have active 
            or enabled sessions. */
@@ -212,8 +250,10 @@ static CMPIStatus get_vnc_sessions(const CMPIBroker *broker,
                 inst_list_add(list, inst);
         }
 
+        if (error != 2)
+                s.rc = CMPI_RC_OK; 
+
  out:
-        fclose(tcp_info);
         return s;
 }
 
