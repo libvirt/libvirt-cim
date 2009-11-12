@@ -130,11 +130,13 @@ static int get_diskpool_config(virConnectPtr conn,
         names = calloc(count, sizeof(char *));
         if (names == NULL) {
                 CU_DEBUG("Failed to alloc space for %i pool names", count);
+                count = 0;
                 goto out;
         }
 
         if (virConnectListStoragePools(conn, names, count) == -1) {
                 CU_DEBUG("Failed to get storage pools");
+                count = 0;
                 goto out;
         }
 
@@ -145,7 +147,7 @@ static int get_diskpool_config(virConnectPtr conn,
         }
 
         for (i = 0; i < count; i++) {
-                pools[i].tag = names[i];
+                pools[i].tag = strdup(names[i]);
                 pools[i].primordial = false;
         }
 
@@ -936,7 +938,7 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
                 goto out;
         }
 
-        netnames[nets - 1] = "0";
+        netnames[nets - 1] = strdup("0");
 
         for (i = 0; i < nets; i++) {
                 _netpool_for_network(list,

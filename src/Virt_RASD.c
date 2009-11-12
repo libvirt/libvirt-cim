@@ -377,7 +377,7 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         CMPIStatus s;
         CMPIInstance *inst;
         uint16_t type;
-        char *base;
+        const char *base;
         char *id;
         const char *keys[] = {"InstanceID", NULL};
 
@@ -407,8 +407,6 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                   CLASSNAME(ref),
                                   base,
                                   NAMESPACE(ref));
-        free(base);
-
         if (inst == NULL)
                 return inst;
 
