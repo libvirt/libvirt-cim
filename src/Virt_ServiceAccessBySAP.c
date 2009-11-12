@@ -42,7 +42,7 @@ static CMPIStatus service_to_rsap(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *instance = NULL;
-        char* classname;
+        char *classname = NULL;
 
         if (!match_hypervisor_prefix(ref, info))
                 goto out;
@@ -56,6 +56,8 @@ static CMPIStatus service_to_rsap(const CMPIObjectPath *ref,
         s = enum_console_sap(_BROKER, ref, list); 
 
  out:
+        free(classname);
+
         return s;
 }
 

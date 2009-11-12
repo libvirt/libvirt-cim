@@ -1308,7 +1308,9 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         s = cdrom_template(ref, template_type, list);
 
  out:
-        free(pfx);
+        free(pfx); 
+        for (i = 0; i < numvolsret; i++)
+                free(volnames[i]);
         free(volnames);
         free(host);
         virStoragePoolFree(poolptr);

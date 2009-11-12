@@ -126,9 +126,9 @@ static CMPIStatus get_dev_from_pool(const CMPIObjectPath *ref,
                         inst_list_add(list, inst);
         }
 
-        inst_list_free(&tmp);
-
  out:
+        free(poolid);
+        inst_list_free(&tmp);
 
         return s;
 }

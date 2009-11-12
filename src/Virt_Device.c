@@ -630,9 +630,9 @@ static CMPIStatus return_enum_devices(const CMPIObjectPath *reference,
         else
                 cu_return_instances(results, &list);
 
+ out:
         inst_list_free(&list);
 
- out:
         return s;
 }
 

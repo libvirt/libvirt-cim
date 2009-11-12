@@ -121,6 +121,12 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
         }
 
  out:
+        if (args != NULL)
+                stdi_free_ind_args(&args);
+
+        if (_ctx != NULL)
+                free(_ctx);
+
         return s;
 }
 

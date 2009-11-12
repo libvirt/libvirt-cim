@@ -198,6 +198,8 @@ static CMPIStatus read_tcp_file(const CMPIBroker *broker,
         }
  
  out:
+        free(line);
+
         return s;
 }
 
@@ -497,6 +499,7 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
         if (port != NULL)
                 free(port->name);
         free(port);
+        cleanup_dominfo(&dominfo);
 
         return s;
 }
