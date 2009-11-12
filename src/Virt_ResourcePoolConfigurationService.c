@@ -952,6 +952,8 @@ static CMPIStatus create_resource_in_pool(CMPIMethodMI *self,
         free(pool_id);
         free(xml);
 
+        cleanup_virt_pool_res(&res);
+
         if (s.rc == CMPI_RC_OK)
                 rc = CIM_SVPC_RETURN_COMPLETED;
         CMReturnData(results, &rc, CMPI_uint32);

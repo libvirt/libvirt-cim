@@ -83,6 +83,7 @@ struct virt_pool_res {
 };
 
 void cleanup_virt_pool(struct virt_pool **pool);
+void cleanup_virt_pool_res(struct virt_pool_res **res);
 
 int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type);
 

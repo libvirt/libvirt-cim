@@ -87,6 +87,29 @@ void cleanup_virt_pool(struct virt_pool **pool)
         *pool = NULL;
 }
 
+static void cleanup_image_res(struct storage_vol vol) 
+{
+        free(vol.vol_name);
+        free(vol.path);
+        free(vol.cap_units);
+}
+
+void cleanup_virt_pool_res(struct virt_pool_res **res)
+{
+        struct virt_pool_res *_res = *res;
+
+        if ((res == NULL) || (*res == NULL))
+                return;
+
+        if (_res->type == CIM_RES_TYPE_IMAGE)
+                cleanup_image_res(_res->res.storage_vol);
+
+        free(_res->pool_id);
+        free(_res);
+
+        *res = NULL;
+}
+
 static int parse_disk_target(xmlNode *node, struct disk_pool *pool)
 {
         xmlNode *child;
