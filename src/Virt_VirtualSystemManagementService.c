@@ -2388,7 +2388,8 @@ static CMPIStatus _update_resource_settings(const CMPIContext *context,
                                             const char *domain,
                                             CMPIArray *resources,
                                             const CMPIResult *results,
-                                            resmod_fn func)
+                                            resmod_fn func,
+                                            struct inst_list *list)
 {
         int i;
         virConnectPtr conn = NULL;
@@ -2454,6 +2455,7 @@ static CMPIStatus _update_resource_settings(const CMPIContext *context,
                 if (s.rc != CMPI_RC_OK)
                         break;
 
+                inst_list_add(list, inst);
         }
  out:
         if (s.rc == CMPI_RC_OK)
@@ -2527,6 +2529,48 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
         return s;
 }
 
+static CMPIArray *set_result_res(struct inst_list *list,
+                                 const char *ns)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIObjectPath *op = NULL;
+        CMPIArray *res = NULL;
+        int i = 0;
+
+        if (list->cur == 0) {
+                CU_DEBUG("No resources were added or modified");
+                return res;
+        }
+
+        res = CMNewArray(_BROKER, list->cur, CMPI_ref, &s);
+        if ((s.rc != CMPI_RC_OK) || (res == NULL)) {
+                CU_DEBUG("Unable to create results array");
+                goto out;
+        }
+
+        for (i = 0; list->list[i] != NULL; i++) {
+                op = CMGetObjectPath(list->list[i], NULL);
+                if (op == NULL) {
+                       CU_DEBUG("Unable to RASD reference");
+                       goto out;
+                }
+
+                CMSetNameSpace(op, ns);
+
+                s = CMSetArrayElementAt(res, i, (CMPIValue *)&op, CMPI_ref);
+                if (s.rc != CMPI_RC_OK) {
+                       CU_DEBUG("Error setting results array element");
+                       goto out;
+                }
+         }
+
+ out:
+         if (s.rc != CMPI_RC_OK)
+                 res = NULL;
+
+         return res;
+}
+
 static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                                         const CMPIContext *context,
                                         const CMPIResult *results,
@@ -2538,6 +2582,10 @@ static CMPIStatus add_resource_settings(CMPIMethodMI *self,
         CMPIStatus s;
         CMPIObjectPath *sys;
         char *domain = NULL;
+        CMPIArray *res = NULL;
+        struct inst_list list;
+
+        inst_list_init(&list);
 
         if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -2567,9 +2615,16 @@ static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                                       domain,
                                       arr,
                                       results,
-                                      resource_add);
-                
+                                      resource_add,
+                                      &list);
+
         free(domain);
+
+        res = set_result_res(&list, NAMESPACE(reference));
+
+        inst_list_free(&list);
+
+        CMAddArg(argsout, "ResultingResourceSettings", &res, CMPI_refA);
 
         return s;
 }
@@ -2583,6 +2638,10 @@ static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
 {
         CMPIArray *arr;
         CMPIStatus s;
+        CMPIArray *res = NULL;
+        struct inst_list list;
+
+        inst_list_init(&list);
 
         if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -2591,12 +2650,21 @@ static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
                 return s;
         }
 
-        return _update_resource_settings(context,
-                                         reference,
-                                         NULL,
-                                         arr,
-                                         results,
-                                         resource_mod);
+        s = _update_resource_settings(context,
+                                      reference,
+                                      NULL,
+                                      arr,
+                                      results,
+                                      resource_mod,
+                                      &list);
+
+        res = set_result_res(&list, NAMESPACE(reference));
+
+        inst_list_free(&list);
+
+        CMAddArg(argsout, "ResultingResourceSettings", &res, CMPI_refA);
+
+        return s;
 }
 
 static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
@@ -2613,6 +2681,9 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
         CMPIArray *arr;
         CMPIArray *resource_arr;
         CMPIStatus s;
+        struct inst_list list;
+
+        inst_list_init(&list);
 
         if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -2630,8 +2701,11 @@ static CMPIStatus rm_resource_settings(CMPIMethodMI *self,
                                       NULL,
                                       resource_arr,
                                       results,
-                                      resource_del);
+                                      resource_del,
+                                      &list);
  out:
+        inst_list_free(&list);
+
         return s;
 }
 
