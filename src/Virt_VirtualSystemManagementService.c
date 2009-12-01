@@ -970,6 +970,7 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
         const char *val;
         const char *msg = NULL;
         const char *keymap;
+        bool ipv6 = false;
         int ret;
 
         if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK) {
@@ -980,8 +981,14 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
 
         /* FIXME: Add logic to prevent address:port collisions */
         if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
+                CU_DEBUG("no graphics port defined, giving default");
+                if (cu_get_bool_prop(inst, "IsIPv6Only", &ipv6) != CMPI_RC_OK)
+                        ipv6 = false;
+                if (ipv6)
+                        dev->dev.graphics.host = strdup("[::1]");
+                else
+                        dev->dev.graphics.host = strdup("127.0.0.1");
                 dev->dev.graphics.port = strdup("-1");
-                dev->dev.graphics.host = strdup("127.0.0.1");
         } else {
                ret = parse_vnc_address(val,
                               &dev->dev.graphics.host, 
