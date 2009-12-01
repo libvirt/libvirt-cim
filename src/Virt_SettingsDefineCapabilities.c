@@ -1555,7 +1555,8 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *type[] = {"sdl", "vnc"};
-        const char *addr[] = {NULL, "127.0.0.1:-1", "[::1]:-1"};
+        const char *addr[] = {NULL, "127.0.0.1:-1", "[::1]:-1", 
+                              "True", "False"};
         int type_ct = 2;
         int i,j;
 
@@ -1580,7 +1581,7 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
         }
 
         for (i = 0; i < type_ct; i++) {
-                for (j = 1; j < 3; j++){
+                for (j = 1; j < 5; j++){
                         s = set_graphics_props(ref,
                                                id,
                                                type[i],
