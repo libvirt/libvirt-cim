@@ -139,6 +139,9 @@ class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingD
 
       [Description ("VNC password")]
       string Password;
+
+      [Description ("Is IPv6 only addressing is to be used")]
+      boolean IsIPv6Only;
 };
 
 [Description ("KVM virtual graphics device"),
@@ -155,6 +158,9 @@ class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingD
 
       [Description ("VNC password")]
       string Password;
+
+      [Description ("Is IPv6 only addressing is to be used")]
+      boolean IsIPv6Only;
 };
 
 [Description ("LXC virtual graphics device"),
@@ -171,6 +177,9 @@ class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingD
 
       [Description ("VNC password")]
       string Password;
+
+      [Description ("Is IPv6 only addressing is to be used")]
+      boolean IsIPv6Only;
 };
 
 [Description ("Xen virtual input device"),
