@@ -452,7 +452,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
                         goto err;
 
                 if (gdev->host == NULL)
-                        gdev->host = strdup("127.0.0.1");
+                        goto err;
         }
 
         vdev->type = CIM_RES_TYPE_GRAPHICS;
