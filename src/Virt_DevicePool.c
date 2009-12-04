@@ -490,12 +490,6 @@ static char *_netpool_member_of(virConnectPtr conn,
                 goto out;
         }
 
-        if (ndev->source == NULL) {
-                CU_DEBUG("Unable to determine pool since no network "
-                         "source defined");
-                goto out;
-        }
-
         if (STREQ(ndev->type, "bridge"))
                 net = bridge_to_network(conn, ndev->source);
         else if (STREQ(ndev->type, "network"))
