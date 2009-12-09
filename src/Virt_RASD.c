@@ -435,11 +435,11 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.net.mac,
                               CMPI_chars);
 
-                if ((dev->dev.net.name != NULL) && 
-                     (STREQ(dev->dev.net.type, "bridge")))
+                if ((dev->dev.net.source != NULL) 
+                   && (STREQ(dev->dev.net.type, "bridge")))
                         CMSetProperty(inst,
                                       "NetworkName",
-                                      (CMPIValue *)dev->dev.net.name,
+                                      (CMPIValue *)dev->dev.net.source,
                                       CMPI_chars);
 
                 if (dev->dev.net.model != NULL)

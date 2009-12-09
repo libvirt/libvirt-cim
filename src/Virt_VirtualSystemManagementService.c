@@ -720,15 +720,15 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         dev->id = strdup(dev->dev.net.mac);
 
         free(dev->dev.net.type);
-        free(dev->dev.net.name);
         if (cu_get_str_prop(inst, "NetworkType", &val) != CMPI_RC_OK) 
                 return "No Network Type specified";
 
+        free(dev->dev.net.source);
         if (STREQC(val, BRIDGE_TYPE)) {
                 dev->dev.net.type = strdup(BRIDGE_TYPE);
                 if (cu_get_str_prop(inst, "NetworkName", &val) == CMPI_RC_OK) 
                         if (strlen(val) > 0)
-                                dev->dev.net.name = strdup(val);
+                                dev->dev.net.source = strdup(val);
                         else
                                 return "Bridge name is empty";
                 else 
@@ -741,7 +741,6 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 if (val == NULL)
                         return "No NetworkPool specified no default available";
 
-                free(dev->dev.net.source);
                 network = name_from_pool_id(val);
                 if (network == NULL) {
                         msg = "PoolID specified is not formatted properly";

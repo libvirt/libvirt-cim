@@ -304,8 +304,8 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         if (ndev->mac == NULL)
                                 goto err;
                 } else if (XSTREQ(child->name, "source")) {
-                        ndev->name = get_attr_value(child, "bridge");
-                        if (ndev->name != NULL)
+                        ndev->source = get_attr_value(child, "bridge");
+                        if (ndev->source != NULL)
                                 continue;
                         ndev->source = get_attr_value(child, "network");
                         if (ndev->source != NULL)
@@ -659,7 +659,6 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.mac);
                 DUP_FIELD(dev, _dev, dev.net.type);
                 DUP_FIELD(dev, _dev, dev.net.source);
-                DUP_FIELD(dev, _dev, dev.net.name);
                 DUP_FIELD(dev, _dev, dev.net.model);
         } else if (dev->type == CIM_RES_TYPE_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);

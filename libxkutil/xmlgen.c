@@ -165,12 +165,7 @@ static const char *set_net_source(xmlNodePtr nic,
 {
         xmlNodePtr tmp;
 
-        if ((STREQC(src_type, "bridge")) && (dev->name != NULL)) {
-                tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
-                if (tmp == NULL) 
-                        return XML_ERROR;
-                xmlNewProp(tmp, BAD_CAST src_type, BAD_CAST dev->name);
-        } else if ((STREQC(src_type, "network")) && (dev->source != NULL)) {
+        if (dev->source != NULL) {
                 tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
                 if (tmp == NULL) 
                         return XML_ERROR;
