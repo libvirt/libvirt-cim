@@ -789,6 +789,8 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.disk.device = strdup("disk");
         else if (type == VIRT_DISK_TYPE_CDROM)
                 dev->dev.disk.device = strdup("cdrom");
+        else if (type == VIRT_DISK_TYPE_FLOPPY)
+                dev->dev.disk.device = strdup("floppy");
         else
                 return "Invalid value for EmulatedType";
 
