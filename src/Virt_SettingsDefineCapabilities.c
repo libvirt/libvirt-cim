@@ -806,11 +806,13 @@ static CMPIStatus set_disk_props(int type,
                                       (CMPIValue *)"FV disk", CMPI_chars);
                 }
                 
-                if (emu_type == 0) {
+                if (emu_type == VIRT_DISK_TYPE_DISK) {
                         CMSetProperty(inst, "VirtualQuantity",
                                       (CMPIValue *)&disk_size, CMPI_uint64);
-                } else if (emu_type == 1) {
+                } else if (emu_type == VIRT_DISK_TYPE_CDROM) {
                         dev = "hdc";
+                } else if (emu_type == VIRT_DISK_TYPE_FLOPPY) {
+                        dev = "fda";
                 }
 
                 CMSetProperty(inst, "VirtualDevice",
@@ -825,34 +827,48 @@ static CMPIStatus set_disk_props(int type,
         return s;
 }
 
-static CMPIStatus cdrom_template(const CMPIObjectPath *ref,
-                                  int template_type,
-                                  struct inst_list *list)
+static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
+                                           int template_type,
+                                           uint16_t emu_type,
+                                           struct inst_list *list)
 {
         char *pfx = NULL;
         const char *id;
         const char *vol_path = "/dev/null";
         uint64_t vol_size = 0;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        uint16_t emu_type = 1;
+        const char *dev_str = NULL;
+        char *id_str = NULL;
+
+        if (emu_type == VIRT_DISK_TYPE_CDROM)
+                dev_str = "CDROM";
+        else
+                dev_str = "floppy";
 
         switch(template_type) {
         case SDC_RASD_MIN:
-                id = "Minimum CDROM";
+                id = "Minimum";
                 break;
         case SDC_RASD_MAX:
-                id = "Maximum CDROM";
+                id = "Maximum";
                 break;
         case SDC_RASD_INC:
-                id = "Increment CDROM";
+                id = "Increment";
                 break;
         case SDC_RASD_DEF:
-                id = "Default CDROM";
+                id = "Default";
                 break;
         default:
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unsupported sdc_rasd type");
+                goto out;
+        }
+
+        if (asprintf(&id_str, "%s %s", id, dev_str) == -1) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_NOT_FOUND,
+                           "Unable to build disk device caption");
                 goto out;
         }
 
@@ -864,7 +880,7 @@ static CMPIStatus cdrom_template(const CMPIObjectPath *ref,
                 for (; i < 2; i++) {
                         s = set_disk_props(xen_type[i],
                                            ref, 
-                                           id,
+                                           id_str,
                                            vol_path, 
                                            vol_size, 
                                            emu_type, 
@@ -873,7 +889,7 @@ static CMPIStatus cdrom_template(const CMPIObjectPath *ref,
         } else if (STREQ(pfx, "KVM")) {
                 s = set_disk_props(DOMAIN_KVM,
                                    ref, 
-                                   id,
+                                   id_str,
                                    vol_path, 
                                    vol_size, 
                                    emu_type, 
@@ -887,6 +903,7 @@ static CMPIStatus cdrom_template(const CMPIObjectPath *ref,
 
  out:
         free(pfx);
+        free(id_str);
 
         return s;
 }
@@ -1305,7 +1322,17 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
                         goto out;            
         }
 
-        s = cdrom_template(ref, template_type, list);
+        s = cdrom_or_floppy_template(ref, 
+                                     template_type, 
+                                     VIRT_DISK_TYPE_CDROM, 
+                                     list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;            
+
+        s = cdrom_or_floppy_template(ref, 
+                                     template_type, 
+                                     VIRT_DISK_TYPE_FLOPPY, 
+                                     list);
 
  out:
         free(pfx); 
@@ -1334,7 +1361,17 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         if (STREQ(pfx, "LXC"))
                 goto out;
 
-        s = cdrom_template(ref, template_type, list);
+        s = cdrom_or_floppy_template(ref, 
+                                     template_type, 
+                                     VIRT_DISK_TYPE_CDROM, 
+                                     list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        s = cdrom_or_floppy_template(ref, 
+                                     template_type, 
+                                     VIRT_DISK_TYPE_FLOPPY, 
+                                     list);
 
  out:
         free(pfx);
