@@ -1129,8 +1129,12 @@ static const char *storage_vol_xml(xmlNodePtr root,
 
         free(string);
 
-        if (xmlNewProp(cap, BAD_CAST "unit", BAD_CAST vol->cap_units) == NULL)
-                goto out;
+        if (vol->cap_units != NULL) {
+                xmlAttrPtr tmp = NULL;
+                tmp = xmlNewProp(cap, BAD_CAST "unit", BAD_CAST vol->cap_units);
+                if (tmp == NULL)
+                        goto out;
+        }
 
         target = xmlNewChild(v, NULL, BAD_CAST "target", NULL);
         if (target == NULL)

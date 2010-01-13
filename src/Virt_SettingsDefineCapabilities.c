@@ -1044,10 +1044,11 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
 }
 
 #if VIR_USE_LIBVIRT_STORAGE
-static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
-                                      int template_type,
-                                      virStoragePoolPtr poolptr,
-                                      struct inst_list *list)
+static CMPIStatus _new_volume_template(const CMPIObjectPath *ref,
+                                       int template_type,
+                                       virStoragePoolPtr poolptr,
+                                       const char *units,
+                                       struct inst_list *list)
 {
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -1059,7 +1060,6 @@ static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
         const char *path;
         uint16_t alloc = 0;
         uint16_t cap = 0;
-        const char *units;
 
         switch(template_type) {
         case SDC_RASD_MIN:
@@ -1116,14 +1116,34 @@ static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
         cap = 0;
         CMSetProperty(inst, "Capacity", (CMPIValue *)&cap, CMPI_uint16);
 
-        units = "G";
-        CMSetProperty(inst, "AllocationUnits", (CMPIValue *)units, CMPI_chars);
+        if (units != NULL)
+                CMSetProperty(inst, "AllocationUnits", 
+                              (CMPIValue *)units, CMPI_chars);
 
         inst_list_add(list, inst);
 
  out:
         cleanup_virt_pool(&pool);
 
+        return s;
+}
+
+static CMPIStatus new_volume_template(const CMPIObjectPath *ref,
+                                      int template_type,
+                                      virStoragePoolPtr poolptr,
+                                      struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *units = NULL;
+
+        s = _new_volume_template(ref, template_type, poolptr, units, list);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        units = "G";
+        s = _new_volume_template(ref, template_type, poolptr, units, list);
+
+ out:
         return s;
 }
 

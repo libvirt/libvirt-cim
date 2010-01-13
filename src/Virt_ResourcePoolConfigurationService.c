@@ -727,10 +727,10 @@ static const char *storage_vol_rasd_to_res(CMPIInstance *inst,
         res->res.storage_vol.cap = int_val;
 
         free(res->res.storage_vol.cap_units);
-        if (cu_get_str_prop(inst, "AllocationUnits", &val) != CMPI_RC_OK)
-                res->res.storage_vol.cap_units = strdup("G");
-        else
+        if (cu_get_str_prop(inst, "AllocationUnits", &val) == CMPI_RC_OK)
                 res->res.storage_vol.cap_units = strdup(val);
+        else
+                res->res.storage_vol.cap_units = NULL;
 
  out:
 
