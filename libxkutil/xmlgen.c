@@ -217,6 +217,14 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                         return XML_ERROR;
                 xmlNewProp(tmp, BAD_CAST "address", BAD_CAST net->mac);
 
+                if (net->device != NULL) {
+                        tmp = xmlNewChild(nic, NULL, BAD_CAST "target", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST net->device);
+                }
+
+
                 if (net->model != NULL) {
                         tmp = xmlNewChild(nic, NULL, BAD_CAST "model", NULL);
                         if (tmp == NULL)

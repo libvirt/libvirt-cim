@@ -50,6 +50,7 @@ struct net_device {
         char *mac;
         char *source;
         char *model;
+        char *device;
 };
 
 struct mem_device {
