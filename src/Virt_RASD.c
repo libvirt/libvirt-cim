@@ -278,6 +278,45 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
         return s;
 }
 
+static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
+                                       const CMPIObjectPath *ref,
+                                       const struct virt_device *dev,
+                                       CMPIInstance *inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CMSetProperty(inst,
+                      "NetworkType",
+                      (CMPIValue *)dev->dev.net.type,
+                      CMPI_chars);
+
+        CMSetProperty(inst,
+                      "Address",
+                      (CMPIValue *)dev->dev.net.mac,
+                      CMPI_chars);
+
+        if ((dev->dev.net.source != NULL) &&
+            (STREQ(dev->dev.net.type, "bridge")))
+                CMSetProperty(inst,
+                              "NetworkName",
+                              (CMPIValue *)dev->dev.net.source,
+                              CMPI_chars);
+
+        if (dev->dev.net.device != NULL)
+                CMSetProperty(inst,
+                              "VirtualDevice",
+                              (CMPIValue *)dev->dev.net.device,
+                              CMPI_chars);
+
+        if (dev->dev.net.model != NULL)
+                CMSetProperty(inst,
+                              "ResourceSubType",
+                              (CMPIValue *)dev->dev.net.model,
+                              CMPI_chars);
+
+        return s;
+}
+
 static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
                                            CMPIInstance *inst,
                                            const char *name,
@@ -429,27 +468,7 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         if (dev->type == CIM_RES_TYPE_DISK) {
                 s = set_disk_rasd_params(broker, ref, dev, inst);
         } else if (dev->type == CIM_RES_TYPE_NET) {
-                CMSetProperty(inst,
-                              "NetworkType",
-                              (CMPIValue *)dev->dev.net.type,
-                              CMPI_chars);
-                CMSetProperty(inst,
-                              "Address",
-                              (CMPIValue *)dev->dev.net.mac,
-                              CMPI_chars);
-
-                if ((dev->dev.net.source != NULL) 
-                   && (STREQ(dev->dev.net.type, "bridge")))
-                        CMSetProperty(inst,
-                                      "NetworkName",
-                                      (CMPIValue *)dev->dev.net.source,
-                                      CMPI_chars);
-
-                if (dev->dev.net.model != NULL)
-                        CMSetProperty(inst,
-                                      "ResourceSubType",
-                                      (CMPIValue *)dev->dev.net.model,
-                                      CMPI_chars);
+                s = set_net_rasd_params(broker, ref, dev, inst);
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 const char *units = "KiloBytes";
 

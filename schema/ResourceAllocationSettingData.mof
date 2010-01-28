@@ -60,6 +60,8 @@ class Xen_NetResourceAllocationSettingData : Xen_ResourceAllocationSettingData
       [Description ("Bridge name")]
       string NetworkName;
 
+      [Description ("Target device as seen by the guest")]
+      string VirtualDevice;
 };
 
 [Description ("KVM virtual network configuration"),
@@ -74,6 +76,8 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       [Description ("Bridge name")]
       string NetworkName;
 
+      [Description ("Target device as seen by the guest")]
+      string VirtualDevice;
 };
 
 [Description ("LXC virtual network configuration"),
@@ -81,6 +85,8 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 ]
 class LXC_NetResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
+      [Description ("Target device as seen by the guest")]
+      string VirtualDevice;
 };
 
 [Description ("Xen virtual processor"),
