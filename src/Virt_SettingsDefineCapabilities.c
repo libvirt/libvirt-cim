@@ -546,6 +546,7 @@ static CMPIStatus set_net_props(int type,
                                 const char *net_type,
                                 const char *net_name,
                                 uint64_t num_nics,
+                                const char *device,
                                 const char *model,
                                 struct inst_list *list)
 {
@@ -563,6 +564,10 @@ static CMPIStatus set_net_props(int type,
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "VirtualQuantity",
                       (CMPIValue *)&num_nics, CMPI_uint64);
+
+        if (model != NULL)
+                CMSetProperty(inst, "VirtualDevice", 
+                             (CMPIValue *)device, CMPI_chars);
 
         if (model != NULL)
                 CMSetProperty(inst, "ResourceSubType", 
@@ -584,6 +589,7 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int i,j;
         const char *type[] = {"network", "bridge", "user"};
+        const char *device[] = {"vtap1", NULL};
         const char *model[] = {"e1000", NULL};
         const char *name[] = {NULL, "br0", NULL};
 
@@ -622,6 +628,7 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
                                           type[i], 
                                           name[i], 
                                           num_nics, 
+                                          device[j], 
                                           model[j], 
                                           list);
                         if (s.rc != CMPI_RC_OK)

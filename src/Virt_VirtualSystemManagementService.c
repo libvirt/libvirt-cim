@@ -752,6 +752,13 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.net.type = strdup(USER_TYPE);
         } else
                 return "Invalid Network Type specified";
+
+        free(dev->dev.net.device);
+        if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
+                dev->dev.net.device = NULL; 
+        else 
+                dev->dev.net.device = strdup(val);
+
         free(dev->dev.net.model);
 
         if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK)
