@@ -302,10 +302,23 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.net.source,
                               CMPI_chars);
 
+        if ((dev->dev.net.source != NULL) &&
+            (STREQ(dev->dev.net.type, "direct")))
+                CMSetProperty(inst,
+                              "SourceDevice",
+                              (CMPIValue *)dev->dev.net.source,
+                              CMPI_chars);
+
         if (dev->dev.net.device != NULL)
                 CMSetProperty(inst,
                               "VirtualDevice",
                               (CMPIValue *)dev->dev.net.device,
+                              CMPI_chars);
+
+        if (dev->dev.net.net_mode != NULL)
+                CMSetProperty(inst,
+                              "NetworkMode",
+                              (CMPIValue *)dev->dev.net.net_mode,
                               CMPI_chars);
 
         if (dev->dev.net.model != NULL)

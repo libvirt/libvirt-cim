@@ -547,6 +547,8 @@ static CMPIStatus set_net_props(int type,
                                 const char *net_name,
                                 uint64_t num_nics,
                                 const char *device,
+                                const char *src_dev,
+                                const char *net_mode,
                                 const char *model,
                                 struct inst_list *list)
 {
@@ -565,9 +567,17 @@ static CMPIStatus set_net_props(int type,
         CMSetProperty(inst, "VirtualQuantity",
                       (CMPIValue *)&num_nics, CMPI_uint64);
 
-        if (model != NULL)
+        if (device != NULL)
                 CMSetProperty(inst, "VirtualDevice", 
                              (CMPIValue *)device, CMPI_chars);
+
+        if (net_mode != NULL)
+                CMSetProperty(inst, "NetworkMode", 
+                             (CMPIValue *)net_mode, CMPI_chars);
+
+        if (src_dev != NULL)
+                CMSetProperty(inst, "SourceDevice",
+                             (CMPIValue *)src_dev, CMPI_chars);
 
         if (model != NULL)
                 CMSetProperty(inst, "ResourceSubType", 
@@ -590,6 +600,8 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         int i,j;
         const char *type[] = {"network", "bridge", "user"};
         const char *device[] = {"vtap1", NULL};
+        const char *src_dev[] = {NULL, NULL};
+        const char *net_mode[] = {NULL, NULL};
         const char *model[] = {"e1000", NULL};
         const char *name[] = {NULL, "br0", NULL};
 
@@ -629,13 +641,18 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
                                           name[i], 
                                           num_nics, 
                                           device[j], 
+                                          src_dev[j],
+                                          net_mode[j],
                                           model[j], 
                                           list);
                         if (s.rc != CMPI_RC_OK)
                                 goto out;
                 }
         }
-        
+	
+        s = set_net_props(template_type, ref, id, "direct", NULL, num_nics,
+                          NULL, "eth1", "vepa", NULL, list);
+
  out:
         return s;
 }

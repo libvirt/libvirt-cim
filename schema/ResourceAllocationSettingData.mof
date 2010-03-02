@@ -62,6 +62,12 @@ class Xen_NetResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 
       [Description ("Target device as seen by the guest")]
       string VirtualDevice;
+
+      [Description ("Source Device for bridge mode")]
+      string SourceDevice;
+
+      [Description ("Network mode, could be 'vepa', 'pepa' etc.")]
+      string NetworkMode;
 };
 
 [Description ("KVM virtual network configuration"),
@@ -78,6 +84,12 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("Target device as seen by the guest")]
       string VirtualDevice;
+
+      [Description ("Source Device for bridge mode")]
+      string SourceDevice;
+
+      [Description ("Network mode, could be 'vepa', 'pepa' etc.")]
+      string NetworkMode;
 };
 
 [Description ("LXC virtual network configuration"),
