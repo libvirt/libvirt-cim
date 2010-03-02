@@ -63,6 +63,7 @@
 #define BRIDGE_TYPE "bridge"
 #define NETWORK_TYPE "network"
 #define USER_TYPE "user"
+#define DIRECT_TYPE "direct"
 #define RASD_IND_CREATED "ResourceAllocationSettingDataCreatedIndication"
 #define RASD_IND_DELETED "ResourceAllocationSettingDataDeletedIndication"
 #define RASD_IND_MODIFIED "ResourceAllocationSettingDataModifiedIndication"
@@ -750,6 +751,15 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.net.source = strdup(network);
         } else if (STREQC(val, USER_TYPE)) {
                 dev->dev.net.type = strdup(USER_TYPE);
+        } else if (STREQC(val, DIRECT_TYPE)) {
+                dev->dev.net.type = strdup(DIRECT_TYPE);
+                if (cu_get_str_prop(inst, "SourceDevice", &val) == CMPI_RC_OK) 
+                        if (strlen(val) > 0)
+                                dev->dev.net.source = strdup(val);
+                        else
+                                return "Source Device is empty";
+                else 
+                        return "No Source Device specified";
         } else
                 return "Invalid Network Type specified";
 
@@ -758,6 +768,12 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.net.device = NULL; 
         else 
                 dev->dev.net.device = strdup(val);
+
+        free(dev->dev.net.net_mode);
+        if (cu_get_str_prop(inst, "NetworkMode", &val) != CMPI_RC_OK)
+                dev->dev.net.net_mode = NULL; 
+        else 
+                dev->dev.net.net_mode = strdup(val);
 
         free(dev->dev.net.model);
 

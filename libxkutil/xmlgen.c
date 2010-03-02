@@ -169,7 +169,14 @@ static const char *set_net_source(xmlNodePtr nic,
                 tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
                 if (tmp == NULL) 
                         return XML_ERROR;
-                xmlNewProp(tmp, BAD_CAST src_type, BAD_CAST dev->source);
+                if (STREQ(src_type, "direct")) {
+                        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->source);
+                        if (dev->net_mode != NULL)
+                                xmlNewProp(tmp, BAD_CAST "mode", 
+                                           BAD_CAST dev->net_mode);
+                } else  
+                        xmlNewProp(tmp, BAD_CAST src_type, 
+                                   BAD_CAST dev->source);
         } else
                 return XML_ERROR;
 
@@ -212,10 +219,12 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                         return XML_ERROR;
                 xmlNewProp(nic, BAD_CAST "type", BAD_CAST net->type);
 
-                tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
-                if (tmp == NULL)
-                        return XML_ERROR;
-                xmlNewProp(tmp, BAD_CAST "address", BAD_CAST net->mac);
+                if (net->mac != NULL) {
+                        tmp = xmlNewChild(nic, NULL, BAD_CAST "mac", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "address", BAD_CAST net->mac);
+                }
 
                 if (net->device != NULL) {
                         tmp = xmlNewChild(nic, NULL, BAD_CAST "target", NULL);
@@ -238,6 +247,8 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                         msg = bridge_net_to_xml(nic, net);
                 else if (STREQ(dev->dev.net.type, "user"))
                         continue;
+                else if (STREQ(dev->dev.net.type, "direct"))
+                        msg = set_net_source(nic, net, "direct");
                 else
                         msg = "Unknown interface type";
         }
