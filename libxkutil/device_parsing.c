@@ -65,6 +65,7 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->source);
         free(dev->model);
         free(dev->device);
+        free(dev->net_mode);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -310,6 +311,10 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                                 continue;
                         ndev->source = get_attr_value(child, "network");
                         if (ndev->source != NULL)
+                                continue;
+                        ndev->source = get_attr_value(child, "dev");
+                        ndev->net_mode = get_attr_value(child, "mode");
+                        if ((ndev->source != NULL) && (ndev->net_mode != NULL))
                                 continue;
                         goto err;
                 } else if (XSTREQ(child->name, "target")) {
@@ -666,6 +671,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.source);
                 DUP_FIELD(dev, _dev, dev.net.model);
                 DUP_FIELD(dev, _dev, dev.net.device);
+                DUP_FIELD(dev, _dev, dev.net.net_mode);
         } else if (dev->type == CIM_RES_TYPE_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);

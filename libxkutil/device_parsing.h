@@ -51,6 +51,7 @@ struct net_device {
         char *source;
         char *model;
         char *device;
+        char *net_mode;
 };
 
 struct mem_device {
