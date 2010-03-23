@@ -832,6 +832,7 @@ static CMPIInstance *connect_and_create_res(char *xml,
 {
         virConnectPtr conn;
         CMPIInstance *inst = NULL;
+        char *path = NULL;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (conn == NULL) {
@@ -839,7 +840,8 @@ static CMPIInstance *connect_and_create_res(char *xml,
                 return NULL;
         }
 
-        if (create_resource(conn, res->pool_id, xml, res->type) == 0) {
+        path = create_resource(conn, res->pool_id, xml, res->type); 
+        if (path == NULL) {
                 virt_set_status(_BROKER, s,
                                 CMPI_RC_ERR_FAILED,
                                 conn,
@@ -855,7 +857,10 @@ static CMPIInstance *connect_and_create_res(char *xml,
                            "Failed to lookup resulting resource");
         }
 
+        CMSetProperty(inst, "InstanceID", (CMPIValue *)path, CMPI_chars);
+
  out:
+        free(path);
         virConnectClose(conn);
 
         return inst;

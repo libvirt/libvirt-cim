@@ -353,12 +353,12 @@ int destroy_pool(virConnectPtr conn, const char *name, int res_type)
 }
 
 #if VIR_USE_LIBVIRT_STORAGE
-int create_resource(virConnectPtr conn,
-                    const char *pname,
-                    const char *xml,
-                    int res_type)
+char *create_resource(virConnectPtr conn,
+                      const char *pname,
+                      const char *xml,
+                      int res_type)
 {
-        int ret = 0;
+        char *path = NULL;
         virStoragePoolPtr ptr = NULL;
         virStorageVolPtr vptr = NULL;
 
@@ -376,14 +376,19 @@ int create_resource(virConnectPtr conn,
                         goto out;
                 }
 
-                ret = 1;
+                path = virStorageVolGetPath(vptr);
+                if (path == NULL) {
+                        CU_DEBUG("Unable to get storage volume path");
+                        goto out;
+                }
+
         }
 
  out:
         virStoragePoolFree(ptr);
         virStorageVolFree(vptr);
 
-        return ret;
+        return path;
 }
 
 int delete_resource(virConnectPtr conn,
@@ -414,13 +419,13 @@ int delete_resource(virConnectPtr conn,
         return ret;
 }
 #else
-int create_resource(virConnectPtr conn,
-                    const char *pname,
-                    const char *xml,
-                    int res_type)
+char *create_resource(virConnectPtr conn,
+                      const char *pname,
+                      const char *xml,
+                      int res_type)
 {
           CU_DEBUG("Creating resources within libvirt pools not supported");
-          return 0;
+          return NULL;
 }
 
 int delete_resource(virConnectPtr conn,
