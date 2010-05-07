@@ -1138,6 +1138,14 @@ static const char *storage_vol_xml(xmlNodePtr root,
                 goto out;
 
         free(string);
+
+        if (vol->cap_units != NULL) {
+                xmlAttrPtr tmp = NULL;
+                tmp = xmlNewProp(cap, BAD_CAST "unit", BAD_CAST vol->cap_units);
+                if (tmp == NULL)
+                        goto out;
+        }
+
         ret = asprintf(&string, "%" PRIu16, vol->cap);
         if (ret == -1)
                 return XML_ERROR;
