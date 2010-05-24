@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <sys/stat.h>
 #include <sys/file.h>
 #include <string.h>
 
