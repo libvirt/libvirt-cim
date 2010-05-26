@@ -1235,8 +1235,7 @@ static CMPIStatus migrate_vs(struct migration_job *job)
         }
  out:
         clear_infstore_migration_flag(dom);
-        raise_deleted_ind(job);
-        
+       
         free(uri);
         free(xml);
         virDomainFree(dom);
@@ -1266,6 +1265,7 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
                                       CIM_JOBSTATE_COMPLETE,
                                       "Completed");
 
+        raise_deleted_ind(job);
         virConnectClose(job->conn);
         free(job->domain);
         free(job->ref_cn);
