@@ -757,6 +757,11 @@ static bool raise_indication(const CMPIContext *context,
         ind_name = ind_type_to_name(ind_type);
 
         ref = CMGetObjectPath(inst, &s);
+
+        /* This is a workaround for Pegasus, it loses its objectpath by
+           CMGetObjectPath. So set it back. */
+        inst->ft->setObjectPath((CMPIInstance *)inst, ref);
+
         if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
                 CU_DEBUG("Failed to get job reference");
         } else {

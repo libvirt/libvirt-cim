@@ -113,6 +113,10 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
         args->classname = strdup(CLASSNAME(ref));
         args->_ctx = _ctx;
 
+        /* This is a workaround for Pegasus, it loses its objectpath by
+           CMGetObjectPath. So set it back. */
+        ind->ft->setObjectPath((CMPIInstance *)ind, ref);
+
         s = stdi_deliver(broker, ctx, args, (CMPIInstance *)ind);
         if (s.rc == CMPI_RC_OK) {
                 CU_DEBUG("Indication delivered");
