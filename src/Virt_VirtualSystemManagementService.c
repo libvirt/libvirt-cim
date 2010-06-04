@@ -810,8 +810,11 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
 
         if (type == VIRT_DISK_TYPE_DISK)
                 dev->dev.disk.device = strdup("disk");
-        else if (type == VIRT_DISK_TYPE_CDROM)
+        else if (type == VIRT_DISK_TYPE_CDROM) {
                 dev->dev.disk.device = strdup("cdrom");
+                if (dev->dev.disk.disk_type == DISK_UNKNOWN)
+                        dev->dev.disk.disk_type = DISK_PHY;
+        }
         else if (type == VIRT_DISK_TYPE_FLOPPY)
                 dev->dev.disk.device = strdup("floppy");
         else
