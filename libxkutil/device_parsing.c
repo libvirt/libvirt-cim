@@ -58,6 +58,17 @@ static void cleanup_disk_device(struct disk_device *dev)
         free(dev->bus_type);
 }
 
+static void cleanup_vsi_device(struct vsi_device *dev)
+{
+        free(dev->vsi_type);
+        free(dev->manager_id);
+        free(dev->type_id);
+        free(dev->type_id_version);
+        free(dev->instance_id);
+        free(dev->filter_ref);
+        free(dev->profile_id);
+}
+
 static void cleanup_net_device(struct net_device *dev)
 {
         free(dev->type);
@@ -66,6 +77,7 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->model);
         free(dev->device);
         free(dev->net_mode);
+        cleanup_vsi_device(&dev->vsi);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -288,6 +300,7 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
         struct net_device *ndev = NULL;
+        struct vsi_device *vsi_dev = NULL;
         xmlNode *child = NULL;
 
         vdev = calloc(1, sizeof(*vdev));
@@ -295,6 +308,7 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                 goto err;
 
         ndev = &(vdev->dev.net);
+        vsi_dev = &(ndev->vsi);
 
         ndev->type = get_attr_value(inode, "type");
         if (ndev->type == NULL)
@@ -325,11 +339,27 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         ndev->model = get_attr_value(child, "type");
                         if (ndev->model == NULL)
                                 goto err;
+                } else if (XSTREQ(child->name, "virtualport")) {
+                        vsi_dev->vsi_type = get_attr_value(child, "type");
+                        if (vsi_dev->vsi_type == NULL)
+                                goto err;
+                } else if (XSTREQ(child->name, "parameters")) {
+                        vsi_dev->manager_id = get_attr_value(child, "managerid");
+                        if (vsi_dev->manager_id == NULL)
+                                goto err;
+
+                        vsi_dev->type_id = get_attr_value(child, "typeid");
+                        if (vsi_dev->type_id == NULL)
+                                goto err;
+
+                        vsi_dev->type_id_version = get_attr_value(child, "typeidversion");
+                        if (vsi_dev->type_id_version == NULL)
+                                goto err;
+
+                        vsi_dev->instance_id = get_attr_value(child, "instanceid");
+                        vsi_dev->profile_id = get_attr_value(child, "profileid");
                 }
         }
-
-        if (ndev->mac == NULL)
-                goto err;
 
         if (ndev->source == NULL)
                 CU_DEBUG("No network source defined, leaving blank\n");
@@ -602,6 +632,7 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
         int len = 0;
         int count = 0;
 
+        CU_DEBUG("In parse_deviceso - type is %d", type);
         xmlDoc *xmldoc;
         xmlXPathContext *xpathCtx;
         xmlXPathObject *xpathObj;
@@ -672,6 +703,13 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.model);
                 DUP_FIELD(dev, _dev, dev.net.device);
                 DUP_FIELD(dev, _dev, dev.net.net_mode);
+                DUP_FIELD(dev, _dev, dev.net.vsi.vsi_type);
+                DUP_FIELD(dev, _dev, dev.net.vsi.manager_id);
+                DUP_FIELD(dev, _dev, dev.net.vsi.type_id);
+                DUP_FIELD(dev, _dev, dev.net.vsi.type_id_version);
+                DUP_FIELD(dev, _dev, dev.net.vsi.instance_id);
+                DUP_FIELD(dev, _dev, dev.net.vsi.filter_ref);
+                DUP_FIELD(dev, _dev, dev.net.vsi.profile_id);
         } else if (dev->type == CIM_RES_TYPE_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);
@@ -980,6 +1018,7 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
 {
         int ret;
 
+        CU_DEBUG("In get_dominfo_from_xml");
         *dominfo = malloc(sizeof(**dominfo));
         if (*dominfo == NULL)
                 return 0;
@@ -1019,8 +1058,8 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
 {
         char *xml;
         int ret;
-
         xml = virDomainGetXMLDesc(dom, 0);
+
         if (xml == NULL)
                 return 0;
 

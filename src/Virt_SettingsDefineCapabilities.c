@@ -550,6 +550,12 @@ static CMPIStatus set_net_props(int type,
                                 const char *src_dev,
                                 const char *net_mode,
                                 const char *model,
+                                const char *vsi,
+                                const char *manager,
+                                const char *typeid,
+                                const char *version,
+                                const char *instance,
+                                const char *profile,
                                 struct inst_list *list)
 {
         CMPIInstance *inst;
@@ -583,6 +589,31 @@ static CMPIStatus set_net_props(int type,
                 CMSetProperty(inst, "ResourceSubType", 
                              (CMPIValue *)model, CMPI_chars);
 
+        if (vsi != NULL)
+                s = CMSetProperty(inst, "VSIType", 
+                             (CMPIValue *)vsi, CMPI_chars);
+
+
+        if (manager != NULL)
+                CMSetProperty(inst, "VSIManagerID", 
+                             (CMPIValue *)manager, CMPI_chars);
+
+        if (typeid != NULL)
+                CMSetProperty(inst, "VSITypeID", 
+                             (CMPIValue *)typeid, CMPI_chars);
+
+        if (version != NULL)
+                CMSetProperty(inst, "VSITypeIDVersion", 
+                             (CMPIValue *)version, CMPI_chars);
+
+        if (instance != NULL)
+                CMSetProperty(inst, "VSIInstanceID", 
+                             (CMPIValue *)instance, CMPI_chars);
+
+        if (profile != NULL)
+                CMSetProperty(inst, "ProfileID", 
+                             (CMPIValue *)profile, CMPI_chars);
+
         inst_list_add(list, inst);
 
  out:
@@ -600,8 +631,6 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         int i,j;
         const char *type[] = {"network", "bridge", "user"};
         const char *device[] = {"vtap1", NULL};
-        const char *src_dev[] = {NULL, NULL};
-        const char *net_mode[] = {NULL, NULL};
         const char *model[] = {"e1000", NULL};
         const char *name[] = {NULL, "br0", NULL};
 

@@ -33,6 +33,16 @@
 
 #include "../src/svpc_types.h"
 
+struct vsi_device {
+        char *vsi_type;
+        char *manager_id;
+        char *type_id;
+        char *type_id_version;
+        char *instance_id;
+        char *filter_ref;
+        char *profile_id;
+};
+
 struct disk_device {
         char *type;
         char *device;
@@ -52,6 +62,7 @@ struct net_device {
         char *model;
         char *device;
         char *net_mode;
+        struct vsi_device vsi;
 };
 
 struct mem_device {

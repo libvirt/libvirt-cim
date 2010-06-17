@@ -68,6 +68,29 @@ class Xen_NetResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 
       [Description ("Network mode, could be 'vepa', 'pepa' etc.")]
       string NetworkMode;
+
+      [Description ("VSI type")]
+      string VSIType;
+
+      [Description ("VSI manager id")]
+      string VSIManagerID;
+
+      [Description ("VSI type")]
+      string VSITypeID;
+
+      [Description ("expected/desired version of VTID")]
+      string VSITypeIDVersion;
+
+      [Description ("A globally unique ID for the connection instance."
+                   " The ID shall be done consistent with IETF RFC 4122.")]
+      string VSIInstanceID;
+
+      [Description ("Profile ID")]
+      string ProfileID;
+
+      [Description ("Filter REF")]
+      string FilterRef;
+
 };
 
 [Description ("KVM virtual network configuration"),
@@ -90,6 +113,28 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("Network mode, could be 'vepa', 'pepa' etc.")]
       string NetworkMode;
+
+      [Description ("VSI type")]
+      string VSIType;
+
+      [Description ("VSI manager id")]
+      string VSIManagerID;
+
+      [Description ("VSI type")]
+      string VSITypeID;
+
+      [Description ("expected/desired version of VTID")]
+      string VSITypeIDVersion;
+
+      [Description ("A globally unique ID for the connection instance."
+                   " The ID shall be done consistent with IETF RFC 4122.")]
+      string VSIInstanceID;
+
+      [Description ("Profile ID")]
+      string ProfileID;
+
+      [Description ("Filter REF")]
+      string FilterRef;
 };
 
 [Description ("LXC virtual network configuration"),

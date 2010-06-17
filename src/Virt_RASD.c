@@ -278,6 +278,57 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
         return s;
 }
 
+static CMPIStatus set_net_vsi_rasd_params(const CMPIBroker *broker,
+                                       const CMPIObjectPath *ref,
+                                       const struct vsi_device vsi,
+                                       CMPIInstance *inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CMSetProperty(inst,
+                      "VSIType",
+                      (CMPIValue *)vsi.vsi_type,
+                      CMPI_chars);
+
+        if (vsi.manager_id != NULL)
+                CMSetProperty(inst,
+                              "VSIManagerID",
+                              (CMPIValue *)vsi.manager_id,
+                              CMPI_chars);
+
+        if (vsi.type_id != NULL)
+                CMSetProperty(inst,
+                              "VSITypeID",
+                              (CMPIValue *)vsi.type_id,
+                              CMPI_chars);
+
+        if (vsi.type_id_version != NULL)
+                CMSetProperty(inst,
+                              "VSITypeIDVersion",
+                              (CMPIValue *)vsi.type_id_version,
+                              CMPI_chars);
+
+        if (vsi.instance_id != NULL)
+                CMSetProperty(inst,
+                              "VSIInstanceID",
+                              (CMPIValue *)vsi.instance_id,
+                              CMPI_chars);
+
+        if (vsi.filter_ref != NULL)
+                CMSetProperty(inst,
+                              "FilterRef",
+                              (CMPIValue *)vsi.filter_ref,
+                              CMPI_chars);
+
+        if (vsi.profile_id != NULL)
+                CMSetProperty(inst,
+                              "ProfileID",
+                              (CMPIValue *)vsi.profile_id,
+                              CMPI_chars);
+
+        return s;
+}
+
 static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                                        const CMPIObjectPath *ref,
                                        const struct virt_device *dev,
@@ -482,6 +533,13 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 s = set_disk_rasd_params(broker, ref, dev, inst);
         } else if (dev->type == CIM_RES_TYPE_NET) {
                 s = set_net_rasd_params(broker, ref, dev, inst);
+                if ((s.rc == CMPI_RC_OK) && 
+                     (dev->dev.net.vsi.vsi_type != NULL))
+                        s = set_net_vsi_rasd_params(broker, 
+                                                    ref, 
+                                                    dev->dev.net.vsi, 
+                                                    inst);
+
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 const char *units = "KiloBytes";
 

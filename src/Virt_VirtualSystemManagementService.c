@@ -760,6 +760,50 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                                 return "Source Device is empty";
                 else 
                         return "No Source Device specified";
+
+                free(dev->dev.net.vsi.vsi_type);
+                if (cu_get_str_prop(inst, "VSIType", &val) != CMPI_RC_OK)
+                        dev->dev.net.vsi.vsi_type = NULL;
+                else 
+                        dev->dev.net.vsi.vsi_type = strdup(val);
+
+                free(dev->dev.net.vsi.manager_id);
+                if (cu_get_str_prop(inst, "VSIManagerID", &val) != CMPI_RC_OK)
+                        dev->dev.net.vsi.manager_id = NULL;
+                else 
+                        dev->dev.net.vsi.manager_id = strdup(val);
+
+                free(dev->dev.net.vsi.type_id);
+                if (cu_get_str_prop(inst, "VSITypeID", &val) != CMPI_RC_OK)
+                        dev->dev.net.vsi.type_id = NULL;
+                else 
+                        dev->dev.net.vsi.type_id = strdup(val);
+
+                free(dev->dev.net.vsi.type_id_version);
+                if (cu_get_str_prop(inst, "VSITypeIDVersion", &val) != 
+                    CMPI_RC_OK)
+                        dev->dev.net.vsi.type_id_version = NULL;
+                else 
+                        dev->dev.net.vsi.type_id_version = strdup(val);
+
+                free(dev->dev.net.vsi.instance_id);
+                if (cu_get_str_prop(inst, "VSIInstanceID", &val) != CMPI_RC_OK)
+                        dev->dev.net.vsi.instance_id = NULL;
+                else 
+                        dev->dev.net.vsi.instance_id = strdup(val);
+
+                free(dev->dev.net.vsi.filter_ref);
+                if (cu_get_str_prop(inst, "FilterRef", &val) != CMPI_RC_OK)
+                        dev->dev.net.vsi.filter_ref = NULL;
+                else 
+                        dev->dev.net.vsi.filter_ref = strdup(val);
+
+                free(dev->dev.net.vsi.profile_id);
+                if (cu_get_str_prop(inst, "ProfileID", &val) != CMPI_RC_OK)
+                        dev->dev.net.vsi.profile_id = NULL;
+                else 
+                        dev->dev.net.vsi.profile_id = strdup(val);
+
         } else
                 return "Invalid Network Type specified";
 

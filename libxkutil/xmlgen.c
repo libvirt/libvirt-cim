@@ -159,6 +159,40 @@ static const char *disk_xml(xmlNodePtr root, struct domain *dominfo)
         return msg;
 }
 
+static const char *set_net_vsi(xmlNodePtr nic, struct vsi_device *dev)
+{
+        xmlNodePtr tmp;
+
+        tmp = xmlNewChild(nic, NULL, BAD_CAST "virtualport", NULL);
+        if (tmp == NULL) 
+                return XML_ERROR;
+        xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->vsi_type);
+
+        tmp = xmlNewChild(tmp, NULL, BAD_CAST "parameters", NULL);
+        if (tmp == NULL) 
+                return XML_ERROR;
+        if (STREQ(dev->vsi_type, "802.1Qbh")) {
+                if (dev->profile_id != NULL)
+                        xmlNewProp(tmp, BAD_CAST "profileid", 
+                                   BAD_CAST dev->profile_id);
+        } else {
+                if (dev->manager_id != NULL)
+                        xmlNewProp(tmp, BAD_CAST "managerid", 
+                                   BAD_CAST dev->manager_id);
+                if (dev->type_id != NULL)
+                        xmlNewProp(tmp, BAD_CAST "typeid", 
+                                   BAD_CAST dev->type_id);
+                if (dev->type_id_version != NULL)
+                        xmlNewProp(tmp, BAD_CAST "typeidversion", 
+                                   BAD_CAST dev->type_id_version);
+                if (dev->instance_id != NULL)
+                        xmlNewProp(tmp, BAD_CAST "instanceid", 
+                                   BAD_CAST dev->instance_id);
+        }
+               
+        return NULL;
+}
+
 static const char *set_net_source(xmlNodePtr nic, 
                                   struct net_device *dev,
                                   const char *src_type)
@@ -247,8 +281,13 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                         msg = bridge_net_to_xml(nic, net);
                 else if (STREQ(dev->dev.net.type, "user"))
                         continue;
-                else if (STREQ(dev->dev.net.type, "direct"))
+                else if (STREQ(dev->dev.net.type, "direct")) {
                         msg = set_net_source(nic, net, "direct");
+                        if (net->vsi.vsi_type != NULL) {
+                                struct vsi_device *vsi = &dev->dev.net.vsi;
+                                msg = set_net_vsi(nic, vsi);
+                        }
+                }
                 else
                         msg = "Unknown interface type";
         }
