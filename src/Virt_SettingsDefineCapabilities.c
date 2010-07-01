@@ -566,7 +566,7 @@ static CMPIStatus set_net_props(int type,
                 goto out;
 
         CMSetProperty(inst, "NetworkType", (CMPIValue *)net_type, CMPI_chars);
-	if (net_name != NULL)
+        if (net_name != NULL)
                 CMSetProperty(inst, "NetworkName",
                       (CMPIValue *)net_name, CMPI_chars);
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
@@ -670,17 +670,40 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
                                           name[i], 
                                           num_nics, 
                                           device[j], 
-                                          src_dev[j],
-                                          net_mode[j],
+                                          NULL,
+                                          NULL,
                                           model[j], 
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                          NULL,
                                           list);
                         if (s.rc != CMPI_RC_OK)
                                 goto out;
                 }
         }
-	
-        s = set_net_props(template_type, ref, id, "direct", NULL, num_nics,
-                          NULL, "eth1", "vepa", NULL, list);
+        
+        s = set_net_props(template_type, ref, id, "direct", NULL,
+                          num_nics, NULL, "eth1", "vepa", NULL,
+                          NULL, NULL, NULL, NULL, NULL, NULL, list);
+       /* profile id*/
+        s = set_net_props(template_type, ref, id, "direct", NULL,
+                              num_nics, NULL, "eth1", "vepa", NULL,
+                              "802.1Qbh", NULL, NULL, NULL,
+                              NULL, "my_profile", list);
+       /* no profile id but with instance id*/
+        s = set_net_props(template_type, ref, id, "direct", NULL,
+                              num_nics, NULL, "eth1", "vepa", NULL,
+                              "802.1Qbg", "managerid", "typeid",
+                              "typeidversion", "instanceid", NULL,
+                              list);
+       /* no profile id and no instance id*/
+        s = set_net_props(template_type, ref, id, "direct", NULL,
+                              num_nics, NULL, "eth1", "vepa", NULL,
+                              "802.1Qbg", "managerid", "typeid",
+                              "typeidversion", "NULL", "NULL", list);
 
  out:
         return s;
