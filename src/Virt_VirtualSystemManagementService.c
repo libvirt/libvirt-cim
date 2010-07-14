@@ -1356,6 +1356,7 @@ static CMPIInstance *connect_and_create(char *xml,
         virDomainPtr dom;
         const char *name;
         CMPIInstance *inst = NULL;
+        bool autoStartFlag = false;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (conn == NULL) {
@@ -1372,6 +1373,11 @@ static CMPIInstance *connect_and_create(char *xml,
                                 "Failed to define domain");
                 goto out;
         }
+
+        if (cu_get_bool_prop(inst, "autoStart", &autoStartFlag) != CMPI_RC_OK)
+                autoStartFlag = false;
+        if(virDomainSetAutostart(dom, (autoStartFlag) ? 1 : 0) == -1)
+                CU_DEBUG("Failed to set autostart flag.");
 
         name = virDomainGetName(dom);
 

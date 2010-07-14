@@ -10,6 +10,9 @@ class Xen_ComputerSystem : CIM_ComputerSystem
    [Description("UUID assigned to this DomU.")]
    string UUID;
 
+   [Description("Flag to set VM autostart.")]
+   boolean autoStart;
+
 };
 
 [Description (
@@ -23,6 +26,9 @@ class KVM_ComputerSystem : CIM_ComputerSystem
    [Description("UUID assigned to this virtual machine.")]
    string UUID;
 
+   [Description("Flag to set VM autostart.")]
+   boolean autoStart;
+
 };
 
 [Description (
@@ -35,6 +41,9 @@ class LXC_ComputerSystem : CIM_ComputerSystem
 
    [Description("UUID assigned to this virtual machine.")]
    string UUID;
+
+   [Description("Flag to set VM autostart.")]
+   boolean autoStart;
 
 };
 
