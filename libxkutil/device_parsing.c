@@ -77,7 +77,6 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->model);
         free(dev->device);
         free(dev->net_mode);
-        cleanup_vsi_device(&dev->vsi);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -296,11 +295,55 @@ static int parse_disk_device(xmlNode *dnode, struct virt_device **vdevs)
         }
 }
 
+static int parse_vsi_device(xmlNode *dnode, struct net_device *vdevs)
+{
+        struct vsi_device *vsi_dev = NULL;
+        xmlNode * child = NULL;
+
+        vsi_dev = calloc(1, sizeof(*vsi_dev));
+        if (vsi_dev == NULL)
+                goto err;
+
+        vsi_dev->vsi_type = get_attr_value(dnode, "type");
+        if (vsi_dev->vsi_type == NULL)
+                goto err;
+
+        for (child = dnode->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "parameters")) {
+                        vsi_dev->manager_id = get_attr_value(child, 
+                                                             "managerid");
+                        if (vsi_dev->manager_id == NULL)
+                                goto err;
+
+                        vsi_dev->type_id = get_attr_value(child, "typeid");
+                        if (vsi_dev->type_id == NULL)
+                                goto err;
+
+                        vsi_dev->type_id_version = 
+                                get_attr_value(child, "typeidversion");
+                        if (vsi_dev->type_id_version == NULL)
+                                goto err;
+
+                        vsi_dev->instance_id = get_attr_value(child, 
+                                                              "instanceid");
+                        vsi_dev->profile_id = get_attr_value(child, 
+                                                             "profileid");
+                 }
+        }
+
+        memcpy(&(vdevs->vsi), vsi_dev, sizeof(*vsi_dev));
+        return 1;
+
+err:
+        cleanup_vsi_device(vsi_dev);
+        free(vsi_dev);
+        return 0;
+}
+
 static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
         struct net_device *ndev = NULL;
-        struct vsi_device *vsi_dev = NULL;
         xmlNode *child = NULL;
 
         vdev = calloc(1, sizeof(*vdev));
@@ -308,7 +351,6 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                 goto err;
 
         ndev = &(vdev->dev.net);
-        vsi_dev = &(ndev->vsi);
 
         ndev->type = get_attr_value(inode, "type");
         if (ndev->type == NULL)
@@ -340,24 +382,7 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         if (ndev->model == NULL)
                                 goto err;
                 } else if (XSTREQ(child->name, "virtualport")) {
-                        vsi_dev->vsi_type = get_attr_value(child, "type");
-                        if (vsi_dev->vsi_type == NULL)
-                                goto err;
-                } else if (XSTREQ(child->name, "parameters")) {
-                        vsi_dev->manager_id = get_attr_value(child, "managerid");
-                        if (vsi_dev->manager_id == NULL)
-                                goto err;
-
-                        vsi_dev->type_id = get_attr_value(child, "typeid");
-                        if (vsi_dev->type_id == NULL)
-                                goto err;
-
-                        vsi_dev->type_id_version = get_attr_value(child, "typeidversion");
-                        if (vsi_dev->type_id_version == NULL)
-                                goto err;
-
-                        vsi_dev->instance_id = get_attr_value(child, "instanceid");
-                        vsi_dev->profile_id = get_attr_value(child, "profileid");
+                        parse_vsi_device(child, ndev);
                 }
         }
 
