@@ -11,7 +11,7 @@ class Xen_ComputerSystem : CIM_ComputerSystem
    string UUID;
 
    [Description("Flag to set VM autostart.")]
-   boolean autoStart;
+   string autoStart;
 
 };
 
@@ -27,7 +27,7 @@ class KVM_ComputerSystem : CIM_ComputerSystem
    string UUID;
 
    [Description("Flag to set VM autostart.")]
-   boolean autoStart;
+   string autoStart;
 
 };
 
@@ -43,7 +43,7 @@ class LXC_ComputerSystem : CIM_ComputerSystem
    string UUID;
 
    [Description("Flag to set VM autostart.")]
-   boolean autoStart;
+   string autoStart;
 
 };
 

@@ -135,6 +135,7 @@ struct domain {
         char *name;
         char *typestr; /*xen, kvm, etc */
         char *uuid;
+        int autostart;
         char *bootloader;
         char *bootloader_args;
         char *clock;
