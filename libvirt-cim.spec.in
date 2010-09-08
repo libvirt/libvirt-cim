@@ -3,7 +3,7 @@
 Summary: A CIM provider for libvirt
 Name: libvirt-cim
 Version: @PACKAGE_VERSION@
-Release: 1%{?dist}%{?extra_release}
+Release: 3%{?dist}%{?extra_release}
 License: LGPLv2+
 Group: Development/Libraries
 Source: libvirt-cim-%{version}.tar.gz
@@ -66,6 +66,7 @@ rm -fr $RPM_BUILD_ROOT
 
 %post
 /sbin/ldconfig
+mkdir -p @INFO_STORE@
 
 %{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
 
