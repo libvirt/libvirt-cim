@@ -151,66 +151,6 @@ static CMPIStatus fake_host(const CMPIBroker *broker,
         return s;
 }
 
-static CMPIStatus sblim_host(const CMPIBroker *broker,
-                             const CMPIContext *context,
-                             const CMPIObjectPath *ref,
-                             CMPIInstance **inst)
-{
-        CMPIObjectPath *path;
-        CMPIEnumeration *en  = NULL;
-        CMPIData data;
-        CMPIStatus s;
-        const char *cn = "Linux_ComputerSystem";
-
-        path = CMNewObjectPath(broker, "root/cimv2", cn, &s);
-        if ((path == NULL) || (s.rc != CMPI_RC_OK)) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to create HostSystem path");
-                return s;
-        }
-
-        /* FIXME:  This approach may return the wrong instance if more than
-           one SBLIM Linux_ComputerSystem instance exists on the system.
-           This isn't likely to happen in most cases, but a better approach 
-           should be used here.
-         */
-        en = CBEnumInstances(broker, context, path, NULL, &s);
-        if (en == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Upcall EnumInstances of %s class failed",
-                           cn);
-                goto out;
-        }
-
-        if (CMHasNext(en, &s)) {
-                data = CMGetNext(en, &s);
-                if (CMIsNullObject(data.value.inst)) {
-                        cu_statusf(broker, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Failed to retrieve enumeration entry");
-                        goto out;
-                }
-
-                *inst = data.value.inst;
-        } else {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No entry found");
-                goto out;
-        }
-
- out:
-        if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("SBLIM: %i %s", s.rc, CMGetCharPtr(s.msg));
-        } else {
-                CU_DEBUG("SBLIM: Returned instance");
-        }
-
-        return s;
-}
-
 CMPIStatus get_host(const CMPIBroker *broker,
                     const CMPIContext *context,
                     const CMPIObjectPath *reference,
@@ -218,10 +158,6 @@ CMPIStatus get_host(const CMPIBroker *broker,
                     bool is_get_inst)
 {
         CMPIStatus s;
-
-        s = sblim_host(broker, context, reference, _inst);
-        if (s.rc != CMPI_RC_OK)
-                s = fake_host(broker, reference, _inst);
 
         if (!is_get_inst && (s.rc == CMPI_RC_ERR_NOT_FOUND)) {
                 /* This is not an error */
