@@ -38,6 +38,7 @@
 
 const static CMPIBroker *_BROKER;
 
+/*
 static int resolve_host(char *host, char *buf, int size)
 {
         struct hostent *he;
@@ -59,9 +60,9 @@ static int resolve_host(char *host, char *buf, int size)
 
         CU_DEBUG("Unable to find FQDN, using hostname.");
  
-        /* FIXME: An ugly hack to ensure we return something for the hostname,
-                  but also be sure the value isn't empty and that it doesn't
-                  contain "localhost" */
+        //FIXME: An ugly hack to ensure we return something for the hostname,
+        //          but also be sure the value isn't empty and that it doesn't
+        //          contain "localhost"
         if ((he->h_name != NULL) && (!STREQC(he->h_name, "")) && 
             (strstr(he->h_name, "localhost") == NULL))
                 strncpy(buf, he->h_name, size);
@@ -75,7 +76,9 @@ static int resolve_host(char *host, char *buf, int size)
 
         return 0;
 }
+*/
 
+/*
 static int get_fqdn(char *buf, int size)
 {
         char host[256];
@@ -93,7 +96,9 @@ static int get_fqdn(char *buf, int size)
 
         return ret;
 }
+*/
 
+/*
 static int set_host_system_properties(CMPIInstance *instance)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -114,7 +119,9 @@ static int set_host_system_properties(CMPIInstance *instance)
         
         return 1;
 }
+*/
 
+/*
 static CMPIStatus fake_host(const CMPIBroker *broker,
                             const CMPIObjectPath *reference,
                             CMPIInstance **_inst)
@@ -150,6 +157,7 @@ static CMPIStatus fake_host(const CMPIBroker *broker,
 
         return s;
 }
+*/
 
 CMPIStatus get_host(const CMPIBroker *broker,
                     const CMPIContext *context,
@@ -157,7 +165,7 @@ CMPIStatus get_host(const CMPIBroker *broker,
                     CMPIInstance **_inst,
                     bool is_get_inst)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (!is_get_inst && (s.rc == CMPI_RC_ERR_NOT_FOUND)) {
                 /* This is not an error */
