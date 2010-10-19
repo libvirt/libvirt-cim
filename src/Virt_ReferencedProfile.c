@@ -126,7 +126,14 @@ static CMPIStatus enum_reg_prof_by_source(const CMPIObjectPath *ref,
         if (conn == NULL)
                 goto out;
 
-        s = get_scoping_prof_by_source(ref, info, conn, source, list);
+        // NOTE: Autonomous or scoping profiles are dependent profiles.
+	// Return them according to role
+	if ((!source->scoping_profile ||
+		STREQC(source->reg_name, "System Virtualization")) &&
+		info->role && !STREQC(info->role, "Dependent"))
+		goto out;
+
+	s = get_scoping_prof_by_source(ref, info, conn, source, list);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
