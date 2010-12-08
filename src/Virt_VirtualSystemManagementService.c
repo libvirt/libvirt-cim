@@ -836,6 +836,7 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         const char *val = NULL;
         uint16_t type;
 
+        CU_DEBUG("Enter disk_rasd_to_vdev");
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
                 return "Missing `VirtualDevice' property";
 
@@ -863,6 +864,8 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.disk.device = strdup("floppy");
         else
                 return "Invalid value for EmulatedType";
+        
+        CU_DEBUG("device type is %s", dev->dev.disk.device);
 
         free(dev->dev.disk.bus_type);
         if (cu_get_str_prop(inst, "BusType", &val) != CMPI_RC_OK) 
@@ -1411,6 +1414,7 @@ static CMPIStatus update_dominfo(const struct domain *dominfo,
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
 
+        CU_DEBUG("Enter update_dominfo");
         if (dominfo->dev_vcpu_ct != 1) {
                 /* Right now, we only have extra info for processors */
                 CU_DEBUG("Domain has no vcpu devices!");
@@ -1444,10 +1448,12 @@ static CMPIStatus update_dominfo(const struct domain *dominfo,
         infostore_set_u64(ctx, "limit", dev->dev.vcpu.limit);
 
         dev = dominfo->dev_graphics;
-        if (dev->dev.graphics.passwd != NULL)
-                infostore_set_bool(ctx, "has_vnc_passwd", true);
-        else
-                infostore_set_bool(ctx, "has_vnc_passwd", false);
+        if(dev != NULL){
+                if (dev->dev.graphics.passwd != NULL)
+                        infostore_set_bool(ctx, "has_vnc_passwd", true);
+                else
+                        infostore_set_bool(ctx, "has_vnc_passwd", false);
+        }
 
  out:
         infostore_close(ctx);
@@ -2068,6 +2074,7 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
         virDomainPtr dom;
         int (*func)(virDomainPtr, struct virt_device *);
 
+        CU_DEBUG("Enter _resource_dynamic");
         if (action == RESOURCE_ADD)
                 func = attach_device;
         else if (action == RESOURCE_DEL)
@@ -2292,6 +2299,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         int i;
         const char *msg = NULL;
 
+        CU_DEBUG("Enter resource_mod");
         if (devid == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
@@ -2361,8 +2369,10 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
         const char *indication;
         CMPIObjectPath *op;
         struct inst_list list;
-        CMPIInstance  *prev_inst = NULL;
+        CMPIInstance *prev_inst = NULL;
+        CMPIInstance *orig_inst = NULL;
 
+        CU_DEBUG("Enter _update_resources_for");
         inst_list_init(&list);
         if (!get_dominfo(dom, &dominfo)) {
                 virt_set_status(_BROKER, &s,
@@ -2406,14 +2416,23 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
                                      dummy_name,
                                      type,
                                      NULL,
-                                     &prev_inst);
+                                     &orig_inst);
                 free(dummy_name);
 
                 if (s.rc != CMPI_RC_OK) {
                         CU_DEBUG("Failed to get Previous Instance");
                         goto out;
                 }
-        }
+
+                s = cu_merge_instances(rasd, orig_inst);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Failed to merge Instances");
+                        goto out;
+                }
+                prev_inst = orig_inst;
+                rasd = orig_inst;
+        
+        } 
 
         s = func(dominfo, rasd, type, devid, NAMESPACE(ref));
         if (s.rc != CMPI_RC_OK) {
@@ -2487,6 +2506,7 @@ static CMPIStatus _update_resource_settings(const CMPIContext *context,
         int count;
         uint32_t rc = CIM_SVPC_RETURN_FAILED;
 
+        CU_DEBUG("Enter _update_resource_settings");
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
         if (conn == NULL) {
                 cu_statusf(_BROKER, &s,
@@ -2731,6 +2751,7 @@ static CMPIStatus mod_resource_settings(CMPIMethodMI *self,
         CMPIArray *res = NULL;
         struct inst_list list;
 
+        CU_DEBUG("Enter mod_resource_settings");
         inst_list_init(&list);
 
         if (cu_get_array_arg(argsin, "ResourceSettings", &arr) != CMPI_RC_OK) {

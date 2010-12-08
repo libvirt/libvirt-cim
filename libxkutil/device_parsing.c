@@ -1179,6 +1179,28 @@ static int _change_device(virDomainPtr dom,
 
 }
 
+static int change_disk(virDomainPtr dom,
+                       struct virt_device *dev)
+{
+       
+        char *xml = NULL;
+        int ret = 0;
+
+        xml = device_to_xml(dev);
+
+        CU_DEBUG("New XML is %s", xml);
+        
+        if (virDomainAttachDevice(dom, xml) != 0) {
+                goto out;
+        }
+
+        ret = 1;
+ out:
+        free(xml);
+
+        return ret;
+}
+
 static int change_memory(virDomainPtr dom,
                          struct virt_device *dev)
 {
@@ -1246,8 +1268,10 @@ int change_device(virDomainPtr dom, struct virt_device *dev)
 {
         if (dev->type == CIM_RES_TYPE_MEM)
                 return change_memory(dom, dev);
-        else if (dev->type == CIM_RES_TYPE_PROC)
+        if (dev->type == CIM_RES_TYPE_PROC)
                 return change_vcpus(dom, dev);
+        if (dev->type == CIM_RES_TYPE_DISK)
+                return change_disk(dom, dev) ;
 
         CU_DEBUG("Unhandled device type %i", dev->type);
 
