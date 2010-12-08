@@ -232,6 +232,8 @@ static bool _do_indication(const CMPIBroker *broker,
         CMPIObjectPath *affected_op;
         CMPIObjectPath *ind_op;
         CMPIInstance *ind;
+	CMPIData uuid;
+	CMPIDateTime *timestamp;
         CMPIStatus s;
         bool ret = true;
 
@@ -278,7 +280,15 @@ static bool _do_indication(const CMPIBroker *broker,
         }
         CMSetNameSpace(affected_op, args->ns);
 
-        if (ind_type == CS_MODIFIED) {
+        uuid = CMGetProperty(affected_inst, "UUID", &s);
+	CMSetProperty(ind, "IndicationIdentifier", 
+		(CMPIValue *)&uuid, CMPI_string);
+
+	timestamp =  CMNewDateTime(broker, &s);
+	CMSetProperty(ind, "IndicationTime", 
+		(CMPIValue *)timestamp, CMPI_dateTime);
+
+	if (ind_type == CS_MODIFIED) {
                 CMSetProperty(ind, "PreviousInstance",
                               (CMPIValue *)&prev_inst, CMPI_instance);
         }
