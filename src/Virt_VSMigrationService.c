@@ -811,11 +811,11 @@ static CMPIInstance *prepare_indication(const CMPIBroker *broker,
         CMPIInstance *ind = NULL;
         CMPIInstance *prev_inst = NULL;
         const char *pfx = NULL;
-	virDomainPtr dom = NULL;
+        virDomainPtr dom = NULL;
         char uuid[VIR_UUID_STRING_BUFLEN];
-	CMPIDateTime *timestamp = NULL;
+        CMPIDateTime *timestamp = NULL;
         
-	ind_name = ind_type_to_name(ind_type);
+        ind_name = ind_type_to_name(ind_type);
 
         CU_DEBUG("Creating indication.");
 
@@ -830,24 +830,24 @@ static CMPIInstance *prepare_indication(const CMPIBroker *broker,
                          job->ref_ns, pfx, ind_name);
                 goto out;
         }
-	
-	dom = virDomainLookupByName(job->conn, job->domain);
-	if(dom == NULL) {
-		CU_DEBUG("Failed to connect to domain %s", job->domain);
-		goto out;
-	}
+        
+        dom = virDomainLookupByName(job->conn, job->domain);
+        if(dom == NULL) {
+                CU_DEBUG("Failed to connect to domain %s", job->domain);
+                goto out;
+        }
 
-	if(virDomainGetUUIDString(dom, uuid) != 0) {
-		CU_DEBUG("Failed to get UUID from domain name");
-		goto out;
-	}
+        if(virDomainGetUUIDString(dom, uuid) != 0) {
+                CU_DEBUG("Failed to get UUID from domain name");
+                goto out;
+        }
 
-	CMSetProperty(ind, "IndicationIdentifier",
-		(CMPIValue *)uuid, CMPI_chars);
+        CMSetProperty(ind, "IndicationIdentifier",
+                (CMPIValue *)uuid, CMPI_chars);
 
-	timestamp = CMNewDateTime(broker, s);
-	CMSetProperty(ind, "IndicationTime",
-		(CMPIValue *)timestamp, CMPI_dateTime);
+        timestamp = CMNewDateTime(broker, s);
+        CMSetProperty(ind, "IndicationTime",
+                (CMPIValue *)timestamp, CMPI_dateTime);
 
         if (ind_type == MIG_MODIFIED) {
                 /* Need to copy job inst before attaching as PreviousInstance 
@@ -865,7 +865,7 @@ static CMPIInstance *prepare_indication(const CMPIBroker *broker,
         }
 
  out:
-	virDomainFree(dom);
+        virDomainFree(dom);
         return ind;
 }
 
