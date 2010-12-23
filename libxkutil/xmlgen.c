@@ -1134,6 +1134,8 @@ static const char *vol_format_type_to_str(uint16_t type)
         switch (type) {
         case VOL_FORMAT_RAW:
                 return "raw";
+        case VOL_FORMAT_QCOW2:
+                return "qcow2";
         default:
                 CU_DEBUG("Unsupported storage volume type");
         }

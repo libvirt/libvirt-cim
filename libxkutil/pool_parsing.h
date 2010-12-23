@@ -66,7 +66,8 @@ struct virt_pool {
 
 struct storage_vol {
         enum {VOL_FORMAT_UNKNOWN,
-              VOL_FORMAT_RAW} format_type;
+              VOL_FORMAT_RAW,
+              VOL_FORMAT_QCOW2} format_type;
         char *vol_name;
         char *path;
         uint16_t alloc;
