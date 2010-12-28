@@ -87,6 +87,7 @@ void cleanup_virt_pool(struct virt_pool **pool);
 void cleanup_virt_pool_res(struct virt_pool_res **res);
 
 int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type);
+char *get_disk_pool_type(uint16_t type);
 
 int define_pool(virConnectPtr conn, const char *xml, int res_type);
 int destroy_pool(virConnectPtr conn, const char *name, int res_type);

@@ -172,6 +172,7 @@ static bool diskpool_set_capacity(virConnectPtr conn,
         virStoragePoolInfo info;
         uint64_t cap;
         uint64_t res;
+        uint16_t type;
         struct virt_pool *pool_vals = NULL;
         const char *pool_str = NULL;
 
@@ -204,6 +205,10 @@ static bool diskpool_set_capacity(virConnectPtr conn,
                         CMSetProperty(inst, "Path",
                                       (CMPIValue *)pool_str, CMPI_chars);
                 }
+                type = pool_vals->pool_info.disk.pool_type;
+                CMSetProperty(inst, "OtherResourceType", 
+                              (CMPIValue *)get_disk_pool_type(type), 
+                              CMPI_chars);
         }
 
         result = true;
@@ -957,10 +962,18 @@ static CMPIInstance *diskpool_from_path(struct tmp_disk_pool *pool,
                                         const char *refcn,
                                         const CMPIBroker *broker)
 {
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
         char *poolid = NULL;
 
         inst = get_typed_instance(broker, refcn, "DiskPool", ns);
+
+        if (inst == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to init DiskPool instance");
+                goto out;
+        }
 
         if (asprintf(&poolid, "DiskPool/%s", pool->tag) == -1)
                 return NULL;
@@ -976,6 +989,7 @@ static CMPIInstance *diskpool_from_path(struct tmp_disk_pool *pool,
                 CU_DEBUG("Failed to set capacity for disk pool: %s",
                          pool->tag);
 
+out:
         free(poolid);
 
         return inst;

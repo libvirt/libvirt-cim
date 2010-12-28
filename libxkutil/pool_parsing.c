@@ -166,6 +166,30 @@ static int parse_disk_source(xmlNode *node, struct disk_pool *pool)
         return 1;
 }
 
+char *get_disk_pool_type(uint16_t type)
+{
+
+        switch (type) {
+        case DISK_POOL_DIR:
+                return "dir";
+        case DISK_POOL_FS:
+                return "fs";
+        case DISK_POOL_NETFS:
+                return "netfs";
+        case DISK_POOL_DISK:
+                return "disk";
+        case DISK_POOL_ISCSI:
+                return "iscsi";
+        case DISK_POOL_LOGICAL:
+                return "logical";
+        case DISK_POOL_SCSI:
+                return "scsi";
+        default:
+                return NULL;
+        }
+
+}
+
 static const char *parse_disk_pool(xmlNodeSet *nsv, struct disk_pool *pool)
 {
         xmlNode **nodes = nsv->nodeTab;
