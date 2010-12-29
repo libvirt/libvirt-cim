@@ -787,12 +787,13 @@ static CMPIInstance *get_prev_inst(const CMPIBroker *broker,
 
 static CMPIStatus raise_indication(const CMPIBroker *broker,
                                    const CMPIContext *ctx,
+                                   const CMPIObjectPath *ref,
                                    const CMPIInstance *ind)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *prev_inst;
         CMPIInstance *src_inst;
-        CMPIObjectPath *ref = NULL;
+        CMPIObjectPath *_ref = NULL;
         struct std_indication_ctx *_ctx = NULL;
         struct ind_args *args = NULL;
         char *prefix = NULL;
@@ -809,7 +810,7 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
         if (s.rc != CMPI_RC_OK || CMIsNullObject(prev_inst))
                 goto out;
 
-        ref = CMGetObjectPath(prev_inst, &s);
+        _ref = CMGetObjectPath(prev_inst, &s);
         if (s.rc != CMPI_RC_OK) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -819,10 +820,10 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
 
         /* FIXME:  This is a Pegasus work around. Pegsus loses the namespace
                    when an ObjectPath is pulled from an instance */
-        if (STREQ(NAMESPACE(ref), ""))
-                CMSetNameSpace(ref, "root/virt");
+        if (STREQ(NAMESPACE(_ref), ""))
+                CMSetNameSpace(_ref, "root/virt");
 
-        s = get_domain_by_ref(broker, ref, &src_inst);
+        s = get_domain_by_ref(broker, _ref, &src_inst);
         if (s.rc != CMPI_RC_OK || CMIsNullObject(src_inst))
                 goto out;
 
@@ -847,8 +848,8 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
                 goto out;
         }
 
-        args->ns = strdup(NAMESPACE(ref));
-        args->classname = strdup(CLASSNAME(ref));
+        args->ns = strdup(NAMESPACE(_ref));
+        args->classname = strdup(CLASSNAME(_ref));
         args->_ctx = _ctx;
 
         prefix = class_prefix_name(args->classname);

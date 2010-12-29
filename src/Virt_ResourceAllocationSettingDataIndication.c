@@ -68,12 +68,13 @@ static struct std_ind_filter *filters[] = {
 
 static CMPIStatus raise_indication(const CMPIBroker *broker,
                                    const CMPIContext *ctx,
+                                   const CMPIObjectPath *ref,
                                    const CMPIInstance *ind)
 {
         struct std_indication_ctx *_ctx = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         struct ind_args *args = NULL;
-        CMPIObjectPath *ref = NULL;
+        CMPIObjectPath *_ref = NULL;
 
         _ctx = malloc(sizeof(struct std_indication_ctx));
         if (_ctx == NULL) {
@@ -96,8 +97,8 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
                 goto out;
         }
 
-        ref = CMGetObjectPath(ind, &s);
-        if (ref == NULL) {
+        _ref = CMGetObjectPath(ind, &s);
+        if (_ref == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Got a null object path");
@@ -108,14 +109,14 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
                    when an ObjectPath is pulled from an instance */
 
 
-        CMSetNameSpace(ref, "root/virt");
-        args->ns = strdup(NAMESPACE(ref));
-        args->classname = strdup(CLASSNAME(ref));
+        CMSetNameSpace(_ref, "root/virt");
+        args->ns = strdup(NAMESPACE(_ref));
+        args->classname = strdup(CLASSNAME(_ref));
         args->_ctx = _ctx;
 
         /* This is a workaround for Pegasus, it loses its objectpath by
            CMGetObjectPath. So set it back. */
-        ind->ft->setObjectPath((CMPIInstance *)ind, ref);
+        ind->ft->setObjectPath((CMPIInstance *)ind, _ref);
 
         s = stdi_deliver(broker, ctx, args, (CMPIInstance *)ind);
         if (s.rc == CMPI_RC_OK) {
