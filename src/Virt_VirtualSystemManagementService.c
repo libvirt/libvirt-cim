@@ -1378,16 +1378,6 @@ static CMPIInstance *connect_and_create(char *xml,
                 goto out;
         }
 
-        if (cu_get_str_prop(inst, "autoStart", &autoStartFlag) != CMPI_RC_OK)
-                autoStartFlag = strdup("disable");
-        
-        if (STREQ(autoStartFlag, "enable"))
-                autoflag = 1;
-        else
-                autoflag = 0;  
-        if((virDomainSetAutostart(dom, autoflag)) == -1)
-                CU_DEBUG("Failed to set autostart flag.");
-
         name = virDomainGetName(dom);
 
         *s = get_domain_by_name(_BROKER, ref, name, &inst);
@@ -1396,6 +1386,20 @@ static CMPIInstance *connect_and_create(char *xml,
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to lookup resulting system");
+                goto out;
+        }
+
+        if (inst != NULL) {
+                if (cu_get_str_prop(inst, "autoStart", 
+                    &autoStartFlag) != CMPI_RC_OK)
+                        autoStartFlag = strdup("disable");
+
+                if (STREQ(autoStartFlag, "enable"))
+                        autoflag = 1;
+                else
+                        autoflag = 0;
+                if((virDomainSetAutostart(dom, autoflag)) == -1)
+                        CU_DEBUG("Failed to set autostart flag.");
         }
 
  out:
@@ -2424,12 +2428,12 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
                         goto out;
                 }
 
+                prev_inst = orig_inst;
                 s = cu_merge_instances(rasd, orig_inst);
                 if (s.rc != CMPI_RC_OK) {
                         CU_DEBUG("Failed to merge Instances");
                         goto out;
                 }
-                prev_inst = orig_inst;
                 rasd = orig_inst;
         
         } 
