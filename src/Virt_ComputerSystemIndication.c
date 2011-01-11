@@ -282,11 +282,11 @@ static bool _do_indication(const CMPIBroker *broker,
 
         uuid = CMGetProperty(affected_inst, "UUID", &s);
         CMSetProperty(ind, "IndicationIdentifier", 
-                (CMPIValue *)&uuid, CMPI_string);
+                (CMPIValue *)&(uuid.value), CMPI_string);
 
         timestamp =  CMNewDateTime(broker, &s);
         CMSetProperty(ind, "IndicationTime", 
-                (CMPIValue *)timestamp, CMPI_dateTime);
+                (CMPIValue *)&timestamp, CMPI_dateTime);
 
         if (ind_type == CS_MODIFIED) {
                 CMSetProperty(ind, "PreviousInstance",

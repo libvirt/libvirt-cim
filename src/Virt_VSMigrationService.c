@@ -755,6 +755,7 @@ static bool raise_indication(const CMPIContext *context,
                 return false;
 
         ind_name = ind_type_to_name(ind_type);
+        CU_DEBUG("Raising %s indication", ind_name);
 
         ref = CMGetObjectPath(inst, &s);
 
@@ -847,7 +848,7 @@ static CMPIInstance *prepare_indication(const CMPIBroker *broker,
 
         timestamp = CMNewDateTime(broker, s);
         CMSetProperty(ind, "IndicationTime",
-                (CMPIValue *)timestamp, CMPI_dateTime);
+                (CMPIValue *)&timestamp, CMPI_dateTime);
 
         if (ind_type == MIG_MODIFIED) {
                 /* Need to copy job inst before attaching as PreviousInstance 
