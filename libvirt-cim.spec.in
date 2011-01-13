@@ -3,7 +3,7 @@
 Summary: A CIM provider for libvirt
 Name: libvirt-cim
 Version: @PACKAGE_VERSION@
-Release: 15%{?dist}%{?extra_release}
+Release: 1%{?dist}%{?extra_release}
 License: LGPLv2+
 Group: Development/Libraries
 Source: libvirt-cim-%{version}.tar.gz
