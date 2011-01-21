@@ -13,7 +13,7 @@ Requires: libxml2 >= 2.6.0
 Requires: libvirt >= 0.6.3
 Requires: unzip
 BuildRequires: tog-pegasus-devel
-BuildRequires: libvirt-devel >= 0.5.3
+BuildRequires: libvirt-devel >= 0.5.4
 BuildRequires: e2fsprogs-devel
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
