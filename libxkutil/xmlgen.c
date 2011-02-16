@@ -84,6 +84,15 @@ static const char *disk_file_xml(xmlNodePtr root, struct disk_device *dev)
         xmlNewProp(disk, BAD_CAST "type", BAD_CAST "file");
         xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
 
+        tmp = xmlNewChild(disk, NULL, BAD_CAST "driver", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+        if(dev->driver != NULL) {
+                xmlNewProp(tmp, BAD_CAST "name", BAD_CAST dev->driver);
+                if(dev->cache != NULL) 
+                        xmlNewProp(tmp, BAD_CAST "cache", BAD_CAST dev->cache);
+        }
+
         tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
         if (tmp == NULL)
                 return XML_ERROR;

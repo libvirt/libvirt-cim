@@ -20,6 +20,9 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
       [Description ("readonly mode for disk")]
       boolean readonly;
 
+      [Description ("cache setting for device")]
+      string cache;
+
 };
 
 [Description ("KVM virtual disk configuration"),
@@ -41,6 +44,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("readonly mode for disk")]
       boolean readonly;
+
+      [Description ("cache setting for device")]
+      string cache;
 };
 
 [Description ("LXC virtual disk configuration"),

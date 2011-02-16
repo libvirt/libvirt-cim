@@ -53,6 +53,7 @@ struct disk_device {
         bool readonly;
         bool shareable;
         char *bus_type;
+        char *cache;
 };
 
 struct net_device {
