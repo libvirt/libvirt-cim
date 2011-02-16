@@ -275,6 +275,12 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                       (CMPIValue *)&type,
                       CMPI_uint16);
 
+        if(dev->dev.disk.readonly)
+                CMSetProperty(inst,
+                              "readonly",
+                              (CMPIValue *)&(dev->dev.disk.readonly),
+                              CMPI_boolean);
+
         return s;
 }
 

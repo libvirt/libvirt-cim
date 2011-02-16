@@ -17,6 +17,9 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
       [Description ("Bus type of the device")]
       string BusType;
 
+      [Description ("readonly mode for disk")]
+      boolean readonly;
+
 };
 
 [Description ("KVM virtual disk configuration"),
@@ -35,6 +38,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("Bus type of the device")]
       string BusType;
+
+      [Description ("readonly mode for disk")]
+      boolean readonly;
 };
 
 [Description ("LXC virtual disk configuration"),

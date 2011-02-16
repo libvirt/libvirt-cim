@@ -852,6 +852,7 @@ static CMPIStatus set_disk_props(int type,
                                  const char *disk_path,
                                  uint64_t disk_size,
                                  uint16_t emu_type,
+                                 bool readonly,
                                  struct inst_list *list)
 {
         const char *dev;
@@ -895,6 +896,9 @@ static CMPIStatus set_disk_props(int type,
                               (CMPIValue *)dev, CMPI_chars);
                 CMSetProperty(inst, "EmulatedType",
                               (CMPIValue *)&emu_type, CMPI_uint16);
+                if(readonly)
+                        CMSetProperty(inst, "readonly",
+                                      (CMPIValue *)&readonly, CMPI_boolean);
         }
 
         inst_list_add(list, inst);
@@ -915,6 +919,7 @@ static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *dev_str = NULL;
         char *id_str = NULL;
+        bool readonly = true;
 
         if (emu_type == VIRT_DISK_TYPE_CDROM)
                 dev_str = "CDROM";
@@ -960,6 +965,7 @@ static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
                                            vol_path, 
                                            vol_size, 
                                            emu_type, 
+                                           readonly,
                                            list); 
                 }
         } else if (STREQ(pfx, "KVM")) {
@@ -969,6 +975,7 @@ static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
                                    vol_path, 
                                    vol_size, 
                                    emu_type, 
+                                   readonly,
                                    list); 
 
         } else if (!STREQ(pfx, "LXC")){
@@ -1042,6 +1049,7 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
         const char *id;
         int type = 0;
         bool ret;
+        bool readonly = true;
 
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -1092,6 +1100,7 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
                                            disk_path,
                                            disk_size,
                                            emu_type,
+                                           readonly,
                                            list);
                         if (s.rc != CMPI_RC_OK)
                                 goto out;
@@ -1111,6 +1120,7 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
                                    disk_path,
                                    disk_size,
                                    emu_type,
+                                   readonly,
                                    list);
         }
 
@@ -1236,6 +1246,7 @@ static CMPIStatus avail_volume_template(const CMPIObjectPath *ref,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int ret;
         uint16_t emu_type = 0;
+        bool readonly = false;
 
         ret = virStorageVolGetInfo(volume_ptr, &vol_info);
         if (ret == -1) {
@@ -1292,6 +1303,7 @@ static CMPIStatus avail_volume_template(const CMPIObjectPath *ref,
                                            vol_path,
                                            vol_size,
                                            emu_type,
+                                           readonly,
                                            list);
                 }
         } else if (STREQ(pfx, "KVM")) {
@@ -1301,6 +1313,7 @@ static CMPIStatus avail_volume_template(const CMPIObjectPath *ref,
                                    vol_path,
                                    vol_size,
                                    emu_type,
+                                   readonly,
                                    list);
         } else {
                 cu_statusf(_BROKER, &s,
@@ -1457,7 +1470,7 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         if (STREQ(pfx, "LXC"))
                 goto out;
 
-        s = cdrom_or_floppy_template(ref, 
+        s = odrom_or_floppy_template(ref, 
                                      template_type, 
                                      VIRT_DISK_TYPE_CDROM, 
                                      list);

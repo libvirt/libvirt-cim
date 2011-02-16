@@ -835,6 +835,7 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
 {
         const char *val = NULL;
         uint16_t type;
+        bool read = false;
 
         CU_DEBUG("Enter disk_rasd_to_vdev");
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
@@ -867,6 +868,11 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         
         CU_DEBUG("device type is %s", dev->dev.disk.device);
 
+        if (cu_get_bool_prop(inst, "readonly", &read) != CMPI_RC_OK)
+                dev->dev.disk.readonly = false;
+        else
+                dev->dev.disk.readonly = read;
+              
         free(dev->dev.disk.bus_type);
         if (cu_get_str_prop(inst, "BusType", &val) != CMPI_RC_OK) 
                 dev->dev.disk.bus_type = NULL;
