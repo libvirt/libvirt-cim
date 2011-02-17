@@ -623,6 +623,7 @@ static const char *_net_rand_mac(const CMPIObjectPath *ref)
         return _mac;
 }
 
+/*
 static const char *filter_by_address(struct inst_list *src,
                                     const char *address)
 {
@@ -665,8 +666,8 @@ static const char *check_duplicate_mac(CMPIInstance *inst,
                 goto out;
         }
 
-        /* FIXME:  This is a Pegasus work around. Pegsus loses the namespace
-                   when an ObjectPath is pulled from an instance */
+         FIXME:  This is a Pegasus work around. Pegsus loses the namespace
+                   when an ObjectPath is pulled from an instance 
 
         if (STREQ(NAMESPACE(op), ""))
                 CMSetNameSpace(op, ns);
@@ -684,7 +685,7 @@ out:
         inst_list_free(&in_list);
         return msg;
 }
-
+*/
 
 static const char *net_rasd_to_vdev(CMPIInstance *inst,
                                     struct virt_device *dev,
@@ -709,10 +710,12 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 }
         }
 
+/*
         msg = check_duplicate_mac(inst, val, ns);
         if (msg != NULL) { 
                 goto out;
         }
+*/
 
         free(dev->dev.net.mac);
         dev->dev.net.mac = strdup(val);
