@@ -1374,8 +1374,6 @@ static CMPIInstance *connect_and_create(char *xml,
         virDomainPtr dom;
         const char *name;
         CMPIInstance *inst = NULL;
-        const char *autoStartFlag = NULL;
-        int autoflag;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (conn == NULL) {
@@ -1402,19 +1400,6 @@ static CMPIInstance *connect_and_create(char *xml,
                            CMPI_RC_ERR_FAILED,
                            "Failed to lookup resulting system");
                 goto out;
-        }
-
-        if (inst != NULL) {
-                if (cu_get_str_prop(inst, "autoStart", 
-                    &autoStartFlag) != CMPI_RC_OK)
-                        autoStartFlag = strdup("disable");
-
-                if (STREQ(autoStartFlag, "enable"))
-                        autoflag = 1;
-                else
-                        autoflag = 0;
-                if((virDomainSetAutostart(dom, autoflag)) == -1)
-                        CU_DEBUG("Failed to set autostart flag.");
         }
 
  out:
@@ -1663,6 +1648,74 @@ static CMPIStatus raise_rasd_indication(const CMPIContext *context,
 
 }
 
+static CMPIStatus set_autostart(CMPIInstance *vssd,
+                                const CMPIObjectPath *ref,
+                                virDomainPtr dom)
+{
+        CMPIStatus s;
+        const char *name = NULL;
+        CMPIrc ret;
+        virConnectPtr conn = NULL;
+        virDomainPtr inst_dom = NULL;
+        uint16_t val = 0;
+        int i = 0;
+
+        CU_DEBUG("Enter set_autostart");
+        ret = cu_get_str_prop(vssd, "VirtualSystemIdentifier", &name);
+        if (ret != CMPI_RC_OK) {
+                CU_DEBUG("Missing VirtualSystemIdentifier");
+                cu_statusf(_BROKER, &s,
+                           ret,
+                           "Missing VirtualSystemIdentifier");
+                goto out;
+        }
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (conn == NULL) {
+                CU_DEBUG("Failed to connect");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to connect");
+                goto out;
+        }
+
+        inst_dom = virDomainLookupByName(conn, name);
+        if (inst_dom == NULL) {
+                CU_DEBUG("reference domain '%s' does not exist", name);
+                virt_set_status(_BROKER, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Referenced domain `%s' does not exist", name);
+                goto out;
+        }
+
+        if (cu_get_u16_prop(vssd, "AutoStart", &val) != CMPI_RC_OK) {
+                if (dom != NULL) {
+                        /* Read the current domain's autostart setting.
+                           Since the user did not specify any new 
+                           autostart, the updated VM will use the same 
+                           autostart setting as used before this 
+                           update. */
+                           if (virDomainGetAutostart(dom, &i) != 0) 
+                                   i = 0;
+                } 
+        } 
+        else 
+                i = val;
+        CU_DEBUG("setting  VM's autostart to %d", i);
+        if (virDomainSetAutostart(inst_dom, i) == -1) {
+                CU_DEBUG("Failed to set autostart");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to set autostart");
+        }
+
+ out:
+        virDomainFree(inst_dom);
+        virConnectClose(conn);
+        return s;
+}
+
 static CMPIInstance *create_system(const CMPIContext *context,
                                    CMPIInstance *vssd,
                                    CMPIArray *resources,
@@ -1673,15 +1726,13 @@ static CMPIInstance *create_system(const CMPIContext *context,
         CMPIInstance *inst = NULL;
         char *xml = NULL;
         const char *msg = NULL;
-        virConnectPtr conn = NULL;
-        virDomainPtr dom = NULL;
         struct inst_list list;
         const char *props[] = {NULL};
-
         struct domain *domain = NULL;
 
         inst_list_init(&list);
 
+        CU_DEBUG("Enter create_system");
         if (refconf != NULL) {
                 *s = get_reference_domain(&domain, ref, refconf);
                 if (s->rc != CMPI_RC_OK)
@@ -1731,6 +1782,7 @@ static CMPIInstance *create_system(const CMPIContext *context,
         inst = connect_and_create(xml, ref, s);
         if (inst != NULL) {
                 update_dominfo(domain, CLASSNAME(ref));
+                set_autostart(vssd, ref, NULL);
 
                 *s = enum_rasds(_BROKER, 
                                 ref, 
@@ -1755,8 +1807,6 @@ static CMPIInstance *create_system(const CMPIContext *context,
  out:
         cleanup_dominfo(&domain);
         free(xml);
-        virDomainFree(dom);
-        virConnectClose(conn);
         inst_list_free(&list);
 
         return inst;
@@ -1943,6 +1993,7 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         char *xml = NULL;
         const char *uuid = NULL;
 
+        CU_DEBUG("Enter update_system_settings");
         ret = cu_get_str_prop(vssd, "VirtualSystemIdentifier", &name);
         if (ret != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
@@ -2002,6 +2053,7 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         }
 
         if (s.rc == CMPI_RC_OK) {
+                set_autostart(vssd, ref, dom);
                 trigger_indication(context,
                                    "ComputerSystemModifiedIndication",
                                    ref);

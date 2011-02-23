@@ -65,33 +65,6 @@ static int set_name_from_dom(virDomainPtr dom, CMPIInstance *instance)
         return 1;
 }
 
-/* Set the "autoStart" property of an instance from a domain */
-static int set_autostart_from_dom(virDomainPtr dom, 
-                                  CMPIInstance *instance, 
-                                  struct domain *dominfo)
-{
-        int autoFlag = 0;
-        char autovalue[16];
-
-        if((virDomainGetAutostart(dom, &autoFlag)) == -1) {
-                CU_DEBUG("Could not read autostart value from xml");
-        } else {
-                CU_DEBUG("Autostart for current domain is set to %d", 
-                         autoFlag);
-                dominfo->autostart = autoFlag;
-        }
-
-        if(autoFlag)
-                strcpy(autovalue, "enable");
-        else
-                strcpy(autovalue, "disable");
-
-        CMSetProperty(instance, "autoStart",
-                      (CMPIValue *)autovalue, CMPI_chars);
-
-        return 1;
-}
-
 /* Set the "UUID" property of an instance from a domain */
 static int set_uuid_from_dom(virDomainPtr dom, 
                              CMPIInstance *instance, 
@@ -523,15 +496,6 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
                                 CMPI_RC_ERR_FAILED,
                                 virDomainGetConnect(dom),
                                 "Unable to get domain name");
-                goto out;
-        }
-
-        if (!set_autostart_from_dom(dom, instance, domain)) {
-                virt_set_status(broker, &s,
-                                CMPI_RC_ERR_FAILED,
-                                virDomainGetConnect(dom),
-                                "Unable to get domain autostart flag");
-
                 goto out;
         }
 

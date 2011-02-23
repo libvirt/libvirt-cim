@@ -220,6 +220,9 @@ static int instance_from_dom(const CMPIBroker *broker,
         CMSetProperty(inst, "EnablePAE",
                       (CMPIValue *)&dominfo->pae, CMPI_boolean);
 
+        CMSetProperty(inst, "AutoStart",
+                      (CMPIValue *)&dominfo->autostrt, CMPI_uint16);
+
         if (dominfo->clock != NULL) {
                 uint16_t clock = VSSD_CLOCK_UTC;
 

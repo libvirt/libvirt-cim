@@ -1086,12 +1086,17 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
 {
         char *xml;
         int ret;
+        int start;
         xml = virDomainGetXMLDesc(dom, 0);
 
         if (xml == NULL)
                 return 0;
 
         ret = get_dominfo_from_xml(xml, dominfo);
+        if (virDomainGetAutostart(dom,  &start) !=  0)
+                return 0;
+
+        (*dominfo)->autostrt = start;
 
         free(xml);
 

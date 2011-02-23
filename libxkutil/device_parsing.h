@@ -136,13 +136,13 @@ struct domain {
         char *name;
         char *typestr; /*xen, kvm, etc */
         char *uuid;
-        int autostart;
         char *bootloader;
         char *bootloader_args;
         char *clock;
         bool acpi;
         bool apic;
         bool pae;
+        int autostrt;
 
         union {
                 struct pv_os_info pv;

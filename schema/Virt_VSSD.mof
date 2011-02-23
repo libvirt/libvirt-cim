@@ -24,4 +24,7 @@ class Virt_VirtualSystemSettingData : CIM_VirtualSystemSettingData
   [Description ("Flag to determine whether this guest has pae enabled")]
   boolean EnablePAE;
 
+  [Description ("Flag to determine whether this guest has to be autostarted on reboot")]
+  uint16 AutoStart;
+
 };
