@@ -1,0 +1,27 @@
+// Copyright IBM Corp. 2011
+
+[Provider("cmpi::Virt_SwitchService")]
+class Xen_SwitchService : CIM_SwitchService 
+{
+    [Description("Flag to determine if VSI is supported on the switch")]
+    boolean IsVSISupported;
+
+};
+
+[Provider("cmpi::Virt_SwitchService")]
+class KVM_SwitchService : CIM_SwitchService 
+{
+    [Description("Flag to determine if VSI is supported on the switch")]
+    boolean IsVSISupported;
+
+};
+
+[Provider("cmpi::Virt_SwitchService")]
+class LXC_SwitchService : CIM_SwitchService 
+{
+    [Description("Flag to determine if VSI is supported on the switch")]
+    boolean IsVSISupported;
+
+};
+
+
