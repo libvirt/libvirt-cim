@@ -400,6 +400,9 @@ char *create_resource(virConnectPtr conn,
                         goto out;
                 }
 
+                if ((virStoragePoolRefresh(ptr, 0)) == -1)
+                        CU_DEBUG("Unable to refresh storage pool");
+
                 path = virStorageVolGetPath(vptr);
                 if (path == NULL) {
                         CU_DEBUG("Unable to get storage volume path");
@@ -420,9 +423,11 @@ int delete_resource(virConnectPtr conn,
                     int res_type)
 {
         int ret = 0;
+        virStorageVolPtr ptr;
+        virStoragePoolPtr pool_ptr;
 
         if (res_type == CIM_RES_TYPE_IMAGE) {
-                virStorageVolPtr ptr = virStorageVolLookupByPath(conn, rname);
+                ptr = virStorageVolLookupByPath(conn, rname);
                 if (ptr == NULL) {
                         CU_DEBUG("Storage volume %s is not defined", rname);
                         goto out;
@@ -432,6 +437,16 @@ int delete_resource(virConnectPtr conn,
                 if (ret != 0) {
                         CU_DEBUG("Unable to delete storage volume %s", rname);
                 } else {
+                        pool_ptr = virStoragePoolLookupByVolume(ptr);
+                        if (pool_ptr == NULL) {
+                                CU_DEBUG("Unable to get storage pool "
+                                         "from volume");
+                        } else {
+                                ret = virStoragePoolRefresh(pool_ptr, 0);
+                                if (ret != 0) 
+                                        CU_DEBUG("Unable to refresh storage "
+                                                 "pool");
+                        }
                         ret = 1;
                 }
 

@@ -182,6 +182,10 @@ static bool diskpool_set_capacity(virConnectPtr conn,
                 goto out;
         }
 
+        if ((virStoragePoolRefresh(pool, 0)) == -1)
+                CU_DEBUG("Unable to refresh storage pool");
+
+
         if (virStoragePoolGetInfo(pool, &info) == -1) {
                 CU_DEBUG("Failed to get info for pool `%s'", _pool->tag);
                 goto out;
