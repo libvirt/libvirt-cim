@@ -48,7 +48,8 @@ static CMPIStatus check_vsi_support(char *command)
         const char *searchStr[] = {"	supported forwarding mode: "
                                    "(0x40) reflective relay",
                                    "	supported capabilities: "
-                                   "(0x07) RTE ECP VDP"};
+                                   "(0x07) RTE ECP VDP",
+                                   NULL};
         int  matched = 0;
 
         // Run lldptool command to find vsi support.
