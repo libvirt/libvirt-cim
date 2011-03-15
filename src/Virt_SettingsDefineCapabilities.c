@@ -1598,7 +1598,7 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                         }
 
                         str = CMNewString(_BROKER, dev_path, &s);
-                        if ((s.rc = CMPI_RC_OK) || (CMIsNullObject(str))) {
+                        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(str))) {
                                 cu_statusf(_BROKER, &s,
                                            CMPI_RC_ERR_FAILED,
                                            "Unable to create new string");

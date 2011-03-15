@@ -77,7 +77,7 @@ static int net_set_hwaddr(CMPIInstance *instance,
                 return 0;
 
         str = CMNewString(broker, dev->mac, &s);
-        if ((s.rc = CMPI_RC_OK) || (CMIsNullObject(str)))
+        if ((s.rc != CMPI_RC_OK) || (CMIsNullObject(str)))
                 return 0;
 
         CMSetArrayElementAt(array, 0, &str, CMPI_string);

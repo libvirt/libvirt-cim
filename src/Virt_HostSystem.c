@@ -101,7 +101,7 @@ static int set_host_system_properties(CMPIInstance *instance)
         char hostname[256] = {0};
 
         op = CMGetObjectPath(instance, &s);
-        if ((s.rc == CMPI_RC_OK) || !CMIsNullObject(op)) {
+        if ((s.rc == CMPI_RC_OK) && !CMIsNullObject(op)) {
                 CMSetProperty(instance, "CreationClassName",
                               (CMPIValue *)CLASSNAME(op), CMPI_chars);
         }
@@ -109,6 +109,7 @@ static int set_host_system_properties(CMPIInstance *instance)
         if (get_fqdn(hostname, sizeof(hostname)) != 0)
                 strcpy(hostname, "unknown");
 
+        CU_DEBUG("hostname is %s", hostname);
         CMSetProperty(instance, "Name",
                       (CMPIValue *)hostname, CMPI_chars);
         

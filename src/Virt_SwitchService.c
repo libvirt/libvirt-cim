@@ -34,6 +34,7 @@
 
 #include "misc_util.h"
 #include "config.h"
+#include "Virt_HostSystem.h"
 
 #define MAX_LEN 512
 #define CMD "/sbin/ifconfig -a | /bin/grep eth | /bin/awk '{print$1}'"
@@ -149,6 +150,41 @@ static char **run_command(char *func, int *len, CMPIStatus *s) {
         return arr;
 }
 
+static CMPIStatus set_inst_properties(const CMPIBroker *broker,
+                                      const CMPIContext *context,
+                                      const CMPIObjectPath *reference,
+                                      CMPIInstance *inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *name = NULL;
+        const char *ccname = NULL;
+
+        s = get_host_system_properties(&name,
+                                       &ccname,
+                                       reference,
+                                       broker,
+                                       context);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get host attributes");
+                goto out;
+        }
+
+        CMSetProperty(inst, "Name",
+                      (CMPIValue *)"Switch Virtualization Capabilities", 
+                      CMPI_chars);
+
+        CMSetProperty(inst, "SystemName",
+                      (CMPIValue *)name, CMPI_chars);
+
+        CMSetProperty(inst, "SystemCreationClassName",
+                      (CMPIValue *)ccname, CMPI_chars);
+
+ out:
+        return s;
+}
+
 static CMPIStatus get_switchservice(const CMPIObjectPath *reference,
                          CMPIInstance **_inst,
                          const CMPIBroker *broker,
@@ -188,10 +224,12 @@ static CMPIStatus get_switchservice(const CMPIObjectPath *reference,
                 goto out;
         }
 
-        CMSetProperty(inst, "Name",
-                      (CMPIValue *)"Switch Virtualization Capabilities", 
-                      CMPI_chars);
-    
+        s = set_inst_properties(broker, context, reference, inst);
+        if (s.rc != CMPI_RC_OK) { 
+                CU_DEBUG("Failed to set instance properties");
+                goto out;
+        }
+
         if_list = run_command(CMD, &count, &s);
         if (if_list == 0) {
                 CU_DEBUG("Failed to get network interfaces");
