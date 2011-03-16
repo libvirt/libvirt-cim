@@ -32,6 +32,43 @@ pegasus_path()
     return 1
 }
 
+pegasus_version()
+{
+    CIMSERVER=`pegasus_path cimserver`
+    if test $? != 0
+    then
+        echo "Error: cimserver not found" >&2
+        return 1
+    fi
+
+    VERSION=`$CIMSERVER --version`
+    if test $? != 0
+    then
+        echo "Error: could not determine cimserver version" >&2
+        return 1
+    fi
+
+    echo $VERSION
+    return 0
+}
+
+compare_version()
+{
+    source=`echo "$1" | awk -F. '{printf("%02d%02d%02d\n", $1,$2,$3); }'`
+    target=`echo "$2" | awk -F. '{printf("%02d%02d%02d\n", $1,$2,$3); }'`
+
+    if test $source \<  $target
+    then
+         chatter $source " < " $target
+         echo "true"
+         return 0
+    else
+         chatter $source " >= " $target
+         echo "false"
+         return 1
+    fi
+}
+
 pegasus_transform()
 {
     OUTFILE=$1
@@ -49,10 +86,15 @@ pegasus_transform()
     
 # produce ProviderModules
     echo > $OUTFILE
-    chatter "Processing provider modules:" $PROVIDERMODULES
-    for pm in $PROVIDERMODULES
-    do
-      cat >> $OUTFILE <<EOFPM
+    version=`pegasus_version`
+    chatter "cimserver version is " $version
+    if compare_version "$version" "2.11.0"
+    then
+        chatter "Processing provider modules (w/o ModuleGroupName):" \
+	$PROVIDERMODULES
+        for pm in $PROVIDERMODULES
+        do
+           cat >> $OUTFILE <<EOFPM
 instance of PG_ProviderModule
 {
    Name = "$pm";
@@ -65,7 +107,29 @@ instance of PG_ProviderModule
 
 EOFPM
     done
+
+    else
+        chatter "Processing provider modules (w/ ModuleGroupName):" \ 
+	$PROVIDERMODULES
+        for pm in $PROVIDERMODULES
+        do
+           cat >> $OUTFILE <<EOFPM
+instance of PG_ProviderModule
+{
+   Name = "$pm";
+   Location = "$pm";
+   Vendor = "SBLIM";
+   Version = "2.0.0";
+   InterfaceType = "CMPI";
+   InterfaceVersion = "2.0.0";
+   ModuleGroupName = "libvirt-cim";
+};
+
+EOFPM
+    done
     
+    fi
+
 # produce Providers
     set -- $PROVIDERS
     while test x$1 != x
@@ -170,6 +234,7 @@ pegasus_install()
     myregs=
     mofmode=1
     namespace=$1
+    version=`pegasus_version`
     shift
 
     while test x$1 != x
@@ -206,7 +271,7 @@ pegasus_install()
 
     if pegasus_transform $_REGFILENAME $namespace $myregs
     then
-	chatter Registering providers with $state cimserver
+	chatter Registering providers with $state cimserver '('$version')'
 	$CIMMOF -uc -I $mofpath -n $namespace $mymofs &&
 	$CIMMOF -uc -n root/PG_Interop $_REGFILENAME
     else
