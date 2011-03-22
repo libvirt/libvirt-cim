@@ -405,7 +405,13 @@ static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
                 if (STREQC(dev->type, "sdl"))
                         goto out;
 
-                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
+                if (STREQC(dev->port, "-1"))
+                        xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "yes");
+                else {
+                        xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "no");
+                        xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
+                }
+
                 xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->host);
                 xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->keymap);
 
