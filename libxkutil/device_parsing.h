@@ -47,6 +47,7 @@ struct disk_device {
         char *type;
         char *device;
         char *driver;
+        char *driver_type;
         char *source;
         char *virtual_dev;
         enum {DISK_UNKNOWN, DISK_PHY, DISK_FILE, DISK_FS} disk_type;

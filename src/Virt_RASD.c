@@ -281,9 +281,21 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)&(dev->dev.disk.readonly),
                               CMPI_boolean);
 
+        if(dev->dev.disk.driver)
+                CMSetProperty(inst,
+                              "DriverName",
+                              (CMPIValue *)dev->dev.disk.driver,
+                              CMPI_chars);
+
+        if(dev->dev.disk.driver_type)
+                CMSetProperty(inst,
+                              "DriverType",
+                              (CMPIValue *)dev->dev.disk.driver_type,
+                              CMPI_chars);
+
         if(dev->dev.disk.cache)
                 CMSetProperty(inst,
-                              "cache",
+                              "DriverCache",
                               (CMPIValue *)dev->dev.disk.cache,
                               CMPI_chars);
 

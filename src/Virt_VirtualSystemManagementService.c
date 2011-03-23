@@ -882,8 +882,20 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         else 
                 dev->dev.disk.bus_type = strdup(val);
               
+        free(dev->dev.disk.driver);
+        if (cu_get_str_prop(inst, "DriverName", &val) != CMPI_RC_OK) 
+                dev->dev.disk.driver = NULL;
+        else 
+                dev->dev.disk.driver = strdup(val);
+
+        free(dev->dev.disk.driver_type);
+        if (cu_get_str_prop(inst, "DriverType", &val) != CMPI_RC_OK) 
+                dev->dev.disk.driver_type = NULL;
+        else 
+                dev->dev.disk.driver_type = strdup(val);
+
         free(dev->dev.disk.cache);
-        if (cu_get_str_prop(inst, "cache", &val) != CMPI_RC_OK) 
+        if (cu_get_str_prop(inst, "DriverCache", &val) != CMPI_RC_OK) 
                 dev->dev.disk.cache = NULL;
         else 
                 dev->dev.disk.cache = strdup(val);

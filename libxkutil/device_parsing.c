@@ -53,6 +53,7 @@ static void cleanup_disk_device(struct disk_device *dev)
         free(dev->type);
         free(dev->device);
         free(dev->driver);
+        free(dev->driver_type);
         free(dev->cache);
         free(dev->source);
         free(dev->virtual_dev);
@@ -242,6 +243,7 @@ static int parse_block_device(xmlNode *dnode, struct virt_device **vdevs)
                         ddev->driver = get_attr_value(child, "name");
                         if (ddev->driver == NULL)
                                 goto err;
+                        ddev->driver_type = get_attr_value(child, "type");
                         ddev->cache = get_attr_value(child, "cache");
                 } else if (XSTREQ(child->name, "source")) {
                         ddev->source = get_attr_value(child, "file");
@@ -741,6 +743,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);
                 DUP_FIELD(dev, _dev, dev.disk.driver);
+                DUP_FIELD(dev, _dev, dev.disk.driver_type);
                 DUP_FIELD(dev, _dev, dev.disk.cache);
                 DUP_FIELD(dev, _dev, dev.disk.source);
                 DUP_FIELD(dev, _dev, dev.disk.virtual_dev);

@@ -50,7 +50,20 @@ static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
         if (disk == NULL)
                 return XML_ERROR;
         xmlNewProp(disk, BAD_CAST "type", BAD_CAST "block");
-        xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
+        if (dev->device)
+                xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
+
+        if (dev->driver) {
+                tmp = xmlNewChild(disk, NULL, BAD_CAST "driver", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST "name", BAD_CAST dev->driver);
+                if (dev->driver_type)
+                        xmlNewProp(tmp, BAD_CAST "type", 
+                                   BAD_CAST dev->driver_type);
+                if (dev->cache)
+                        xmlNewProp(tmp, BAD_CAST "cache", BAD_CAST dev->cache);
+        }
 
         tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
         if (tmp == NULL)
@@ -82,14 +95,18 @@ static const char *disk_file_xml(xmlNodePtr root, struct disk_device *dev)
         if (disk == NULL)
                 return XML_ERROR;
         xmlNewProp(disk, BAD_CAST "type", BAD_CAST "file");
-        xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
+        if (dev->device)
+                xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
 
-        tmp = xmlNewChild(disk, NULL, BAD_CAST "driver", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-        if(dev->driver != NULL) {
+        if (dev->driver) {
+                tmp = xmlNewChild(disk, NULL, BAD_CAST "driver", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
                 xmlNewProp(tmp, BAD_CAST "name", BAD_CAST dev->driver);
-                if(dev->cache != NULL) 
+                if (dev->driver_type)
+                        xmlNewProp(tmp, BAD_CAST "type", 
+                                   BAD_CAST dev->driver_type);
+                if (dev->cache)
                         xmlNewProp(tmp, BAD_CAST "cache", BAD_CAST dev->cache);
         }
 
@@ -411,7 +428,6 @@ static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
                         xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "no");
                         xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
                 }
-
                 xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->host);
                 xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->keymap);
 

@@ -20,9 +20,14 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
       [Description ("readonly mode for disk")]
       boolean readonly;
 
-      [Description ("cache setting for device")]
-      string cache;
+      [Description ("Primary backend driver name")]
+      string DriverName;
 
+      [Description ("Optional subtype backend driver")]
+      string DriverType;
+
+      [Description ("cache setting for device")]
+      string DriverCache;
 };
 
 [Description ("KVM virtual disk configuration"),
@@ -45,8 +50,14 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       [Description ("readonly mode for disk")]
       boolean readonly;
 
+      [Description ("Primary backend driver name")]
+      string DriverName;
+
+      [Description ("Optional subtype backend driver")]
+      string DriverType;
+
       [Description ("cache setting for device")]
-      string cache;
+      string DriverCache;
 };
 
 [Description ("LXC virtual disk configuration"),
