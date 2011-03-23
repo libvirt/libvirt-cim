@@ -76,17 +76,21 @@ static int inst_from_dom(const CMPIBroker *broker,
         pfx = class_prefix_name(CLASSNAME(ref));
         sccn = get_typed_class(pfx, "ComputerSystem");
 
-        CMSetProperty(inst, "Name",
-                      (CMPIValue *)id, CMPI_chars);
+        if (id != NULL)
+                CMSetProperty(inst, "Name",
+                              (CMPIValue *)id, CMPI_chars);
 
-        CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)port->name, CMPI_chars);
+        if (port->name != NULL)
+                CMSetProperty(inst, "SystemName",
+                              (CMPIValue *)port->name, CMPI_chars);
 
-        CMSetProperty(inst, "SystemCreationClassName",
-                      (CMPIValue *)sccn, CMPI_chars);
+        if (sccn != NULL)
+                CMSetProperty(inst, "SystemCreationClassName",
+                              (CMPIValue *)sccn, CMPI_chars);
 
-        CMSetProperty(inst, "ElementName",
-                      (CMPIValue *)id, CMPI_chars);
+        if (id != NULL)
+                CMSetProperty(inst, "ElementName",
+                              (CMPIValue *)id, CMPI_chars);
 
         prop_val = (uint16_t)CIM_CRS_VNC;
         CMSetProperty(inst, "KVMProtocol",

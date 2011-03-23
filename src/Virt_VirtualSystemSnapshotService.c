@@ -626,8 +626,8 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
                                       CMPIInstance *inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        const char *name;
-        const char *ccname;
+        const char *name = NULL;
+        const char *ccname = NULL;
 
         s = get_host_system_properties(&name,
                                        &ccname,
@@ -644,11 +644,13 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"SnapshotService", CMPI_chars);
 
-        CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)name, CMPI_chars);
+        if (name != NULL)
+                CMSetProperty(inst, "SystemName",
+                              (CMPIValue *)name, CMPI_chars);
 
-        CMSetProperty(inst, "SystemCreationClassName",
-                      (CMPIValue *)ccname, CMPI_chars);
+        if (ccname != NULL)
+                CMSetProperty(inst, "SystemCreationClassName",
+                              (CMPIValue *)ccname, CMPI_chars);
 
  out:
         return s;

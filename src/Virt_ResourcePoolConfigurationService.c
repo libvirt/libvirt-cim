@@ -1200,11 +1200,13 @@ CMPIStatus get_rpcs(const CMPIObjectPath *reference,
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"RPCS", CMPI_chars);
 
-        CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)name, CMPI_chars);
+        if (name != NULL)
+                CMSetProperty(inst, "SystemName",
+                              (CMPIValue *)name, CMPI_chars);
 
-        CMSetProperty(inst, "SystemCreationClassName",
-                      (CMPIValue *)ccname, CMPI_chars);
+        if (ccname != NULL)
+                CMSetProperty(inst, "SystemCreationClassName",
+                              (CMPIValue *)ccname, CMPI_chars);
 
         if (is_get_inst) {
                 s = cu_validate_ref(broker, reference, inst);

@@ -85,9 +85,16 @@ static CMPIInstance *get_bridge_instance(const CMPIContext *context,
                 goto out;
 
         CMAddKey(path, "CreationClassName", cn, CMPI_chars);
-        CMAddKey(path, "SystemName", sys, CMPI_chars);
-        CMAddKey(path, "SystemCreationClassName", syscc, CMPI_chars);
-        CMAddKey(path, "DeviceID", bridge, CMPI_chars);
+
+        if (sys != NULL)
+                CMAddKey(path, "SystemName", sys, CMPI_chars);
+
+        if (syscc != NULL)
+                CMAddKey(path, "SystemCreationClassName", 
+                         syscc, CMPI_chars);
+
+        if (bridge != NULL)
+                CMAddKey(path, "DeviceID", bridge, CMPI_chars);
 
         inst = CBGetInstance(_BROKER, context, path, NULL, s);
  out:

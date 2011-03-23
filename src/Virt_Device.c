@@ -344,8 +344,9 @@ static int device_set_systemname(CMPIInstance *instance,
         if (conn) {
                 char *sccn = NULL;
                 sccn = get_typed_class(pfx_from_conn(conn), "ComputerSystem");
-                CMSetProperty(instance, "SystemCreationClassName",
-                              (CMPIValue *)sccn, CMPI_chars);
+                if (sccn != NULL)
+                        CMSetProperty(instance, "SystemCreationClassName",
+                                      (CMPIValue *)sccn, CMPI_chars);
                 free(sccn);
         }
 

@@ -3069,11 +3069,13 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"Management Service", CMPI_chars);
 
-        CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)name, CMPI_chars);
+        if (name != NULL)
+                CMSetProperty(inst, "SystemName",
+                              (CMPIValue *)name, CMPI_chars);
 
-        CMSetProperty(inst, "SystemCreationClassName",
-                      (CMPIValue *)ccname, CMPI_chars);
+        if (ccname != NULL)
+                CMSetProperty(inst, "SystemCreationClassName",
+                              (CMPIValue *)ccname, CMPI_chars);
 
         CMSetProperty(inst, "Changeset",
                       (CMPIValue *)LIBVIRT_CIM_CS, CMPI_chars);

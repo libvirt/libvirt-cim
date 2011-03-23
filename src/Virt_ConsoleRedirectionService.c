@@ -67,11 +67,13 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
         CMSetProperty(inst, "Name",
                       (CMPIValue *)"ConsoleRedirectionService", CMPI_chars);
 
-        CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)name, CMPI_chars);
+        if (name != NULL)
+                CMSetProperty(inst, "SystemName",
+                              (CMPIValue *)name, CMPI_chars);
 
-        CMSetProperty(inst, "SystemCreationClassName",
-                      (CMPIValue *)ccname, CMPI_chars);
+        if (ccname != NULL)
+                CMSetProperty(inst, "SystemCreationClassName",
+                              (CMPIValue *)ccname, CMPI_chars);
 
         array = CMNewArray(broker, 1, CMPI_uint16, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(array))

@@ -175,11 +175,13 @@ static CMPIStatus set_inst_properties(const CMPIBroker *broker,
                       (CMPIValue *)"Switch Virtualization Capabilities", 
                       CMPI_chars);
 
-        CMSetProperty(inst, "SystemName",
-                      (CMPIValue *)name, CMPI_chars);
+        if (name != NULL)
+                CMSetProperty(inst, "SystemName",
+                              (CMPIValue *)name, CMPI_chars);
 
-        CMSetProperty(inst, "SystemCreationClassName",
-                      (CMPIValue *)ccname, CMPI_chars);
+        if (ccname != NULL)
+                CMSetProperty(inst, "SystemCreationClassName",
+                              (CMPIValue *)ccname, CMPI_chars);
 
  out:
         return s;
