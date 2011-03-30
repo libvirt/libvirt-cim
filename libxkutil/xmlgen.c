@@ -401,43 +401,93 @@ static const char *emu_xml(xmlNodePtr root, struct domain *dominfo)
         return NULL;
 }
 
+static const char *graphics_vnc_xml(xmlNodePtr root, 
+                       struct graphics_device *dev)
+{
+        xmlNodePtr tmp = NULL;
+       
+        tmp = xmlNewChild(root, NULL, BAD_CAST "graphics", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+
+        xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->type);
+
+        if (STREQC(dev->type, "sdl"))
+               return NULL;
+
+        if (dev->port) {
+                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
+                if (STREQC(dev->port, "-1"))
+                        xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "yes");
+                else
+                        xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "no");
+        }
+
+        if (dev->host)        
+                xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->host);
+
+        if (dev->passwd)
+                xmlNewProp(tmp, BAD_CAST "passwd", BAD_CAST dev->passwd);
+
+        if (dev->keymap)
+                xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->keymap);
+
+        return NULL;
+}
+
+static const char *graphics_pty_xml(xmlNodePtr root, 
+                       struct graphics_device *dev)
+{
+        xmlNodePtr pty = NULL;
+        xmlNodePtr tmp = NULL;
+       
+        pty = xmlNewChild(root, NULL, BAD_CAST dev->type, NULL);
+        if (pty == NULL)
+                return XML_ERROR;
+
+        xmlNewProp(pty, BAD_CAST "type", BAD_CAST "pty");
+        
+        tmp = xmlNewChild(pty, NULL, BAD_CAST "source", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+       
+        if(dev->host)
+                xmlNewProp(tmp, BAD_CAST "path", BAD_CAST dev->host);
+       
+        tmp = xmlNewChild(pty, NULL, BAD_CAST "target", NULL);
+        if (tmp == NULL)
+                return XML_ERROR;
+       
+        if(dev->port)
+                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
+
+        return NULL;
+}
+
 static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
 {
+        const char *msg = NULL;
         int i;
 
         for (i = 0; i < dominfo->dev_graphics_ct; i++) {
-                xmlNodePtr tmp;
                 struct virt_device *_dev = &dominfo->dev_graphics[i];
                 if (_dev->type == CIM_RES_TYPE_UNKNOWN)
                         continue;
 
                 struct graphics_device *dev = &_dev->dev.graphics;
 
-                tmp = xmlNewChild(root, NULL, BAD_CAST "graphics", NULL);
-                if (tmp == NULL)
-                        return XML_ERROR;
-
-                xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->type);
-
-                if (STREQC(dev->type, "sdl"))
-                        goto out;
-
-                if (STREQC(dev->port, "-1"))
-                        xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "yes");
-                else {
-                        xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "no");
-                        xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
-                }
-                xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->host);
-                xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->keymap);
-
-                if (dev->passwd != NULL)
-                        xmlNewProp(tmp, 
-                                   BAD_CAST "passwd", 
-                                   BAD_CAST dev->passwd);
+                if (STREQC(dev->type, "vnc") || STREQC(dev->type, "sdl"))
+                        msg = graphics_vnc_xml(root, dev);
+                else if (STREQC(dev->type, "console") || 
+                        STREQC(dev->type, "serial")) 
+                        msg = graphics_pty_xml(root, dev);
+                else
+                        continue;
+                
+                if(msg != NULL)
+                        return msg;
         }
 
- out:
         return NULL;
 }
 

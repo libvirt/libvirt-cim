@@ -1694,10 +1694,9 @@ static CMPIStatus set_graphics_props(const CMPIObjectPath *ref,
         inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_GRAPHICS, DEVICE_RASD);
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-
+        CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
+        
         if (STREQC(type, "vnc")) {
-                CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
-
                 CMSetProperty(inst, "KeyMap", (CMPIValue *)"en-us", CMPI_chars);
         }
 

@@ -189,14 +189,13 @@ static int graphics_set_attr(CMPIInstance *instance,
         int rc;
         char *vp_str = NULL;
 
-        if (STREQC(dev->type, "vnc"))
+        if (STREQC(dev->type, "sdl"))
+                rc = asprintf(&vp_str, "%s", dev->type);
+        else 
                 rc = asprintf(&vp_str, "%s/%s:%s", 
                               dev->type, 
                               dev->host, 
                               dev->port);
-        else
-                rc = asprintf(&vp_str, "%s", dev->type); 
-
         if (rc == -1)
                 return 0;
 

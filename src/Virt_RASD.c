@@ -421,43 +421,55 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
         CMSetProperty(inst, "ResourceSubType", 
                        (CMPIValue *)dev->dev.graphics.type, CMPI_chars);
          
-        if (STREQC(dev->dev.graphics.type, "vnc")) {
+        if (STREQC(dev->dev.graphics.type, "sdl"))
+                rc = asprintf(&addr_str, "%s", dev->dev.graphics.type);
+        else {
                 rc = asprintf(&addr_str, 
                               "%s:%s", 
                               dev->dev.graphics.host, 
                               dev->dev.graphics.port);
-                if (rc == -1)
+        }
+       
+        CU_DEBUG("graphics Address = %s", addr_str);
+         
+        if (rc == -1)
+                goto out;
+
+        CMSetProperty(inst, "Address", 
+                (CMPIValue *)addr_str, CMPI_chars);
+
+        if (STREQC(dev->dev.graphics.type, "vnc")) {
+                CMSetProperty(inst, "KeyMap",
+                             (CMPIValue *)dev->dev.graphics.keymap, CMPI_chars);        
+                
+                conn = connect_by_classname(_BROKER, classname, &s);
+                if (conn == NULL)
                         goto out;
 
-                CMSetProperty(inst, "Address", 
-                              (CMPIValue *)addr_str, CMPI_chars);
+                dom = virDomainLookupByName(conn, name);
+                if (dom == NULL) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_NOT_FOUND,
+                                   "Domain %s not found",
+                                   name);
+                        goto out;
+                }
 
-                CMSetProperty(inst, "KeyMap",
-                             (CMPIValue *)dev->dev.graphics.keymap, CMPI_chars);
+                infostore = infostore_open(dom);
+                if (infostore != NULL)
+                        has_passwd = infostore_get_bool(infostore, 
+                                "has_vnc_passwd");
+
+                if (has_passwd) {
+                        CU_DEBUG("has password");
+                        CMSetProperty(inst, "Password",
+                                      (CMPIValue *)"********", CMPI_chars);
+                }
+
+                infostore_close(infostore);
+
+                /* FIXME: Populate the IsIPv6Only */
         }
-
-        conn = connect_by_classname(_BROKER, classname, &s);
-        if (conn == NULL)
-                goto out;
-
-        dom = virDomainLookupByName(conn, name);
-        if (dom == NULL) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_NOT_FOUND,
-                           "Domain %s not found",
-                           name);
-                goto out;
-        }
-
-        infostore = infostore_open(dom);
-        if (infostore != NULL)
-                has_passwd = infostore_get_bool(infostore, "has_vnc_passwd");
-
-        if (has_passwd)
-                CMSetProperty(inst, "Password",
-                              (CMPIValue *)"********", CMPI_chars);
-
-        infostore_close(infostore);
 
  out:
         free(addr_str);

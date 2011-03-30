@@ -216,8 +216,10 @@ class LXC_MemResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 ]
 class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 {
-      [Description ("VNC Address. IPv4 in a.b.c.d:port or"
-       "IPv6 in [ip]:port format")]
+      [Description ("If ResourceSubType is 'vnc', this is a VNC Address. "
+       "IPv4 in a.b.c.d:port or IPv6 in [ip]:port format. If ResourceSubType "
+       "is 'console', this is a character device path in "
+       "path:port format (e.g., '/dev/pts/3:0'\)")]
       string Address;
 
       [Description ("Keyboard keymapping")]
@@ -235,8 +237,10 @@ class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingD
 ]
 class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
-      [Description ("VNC Address. IPv4 in a.b.c.d:port or"
-       "IPv6 in [ip]:port format")]
+      [Description ("If ResourceSubType is 'vnc', this is a VNC Address. "
+       "IPv4 in a.b.c.d:port or IPv6 in [ip]:port format. If ResourceSubType "
+       "is 'console', this is a character device path in "
+       "path:port format (e.g., '/dev/pts/3:0'\)")]
       string Address;
 
       [Description ("Keyboard keymapping")]
@@ -254,8 +258,10 @@ class KVM_GraphicsResourceAllocationSettingData : KVM_ResourceAllocationSettingD
 ]
 class LXC_GraphicsResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
-      [Description ("VNC Address. IPv4 in a.b.c.d:port or"
-       "IPv6 in [ip]:port format")]
+      [Description ("If ResourceSubType is 'vnc', this is a VNC Address. "
+       "IPv4 in a.b.c.d:port or IPv6 in [ip]:port format. If ResourceSubType "
+       "is 'console', this is a character device path in "
+       "path:port format (e.g., '/dev/pts/3:0'\)")]
       string Address;
 
       [Description ("Keyboard keymapping")]

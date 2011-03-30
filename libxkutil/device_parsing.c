@@ -40,7 +40,8 @@
 #define NET_XPATH       (xmlChar *)"/domain/devices/interface"
 #define EMU_XPATH       (xmlChar *)"/domain/devices/emulator"
 #define MEM_XPATH       (xmlChar *)"/domain/memory | /domain/currentMemory"
-#define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics"
+#define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics | "\
+        "/domain/devices/console | /domain/devices/serial"
 #define INPUT_XPATH     (xmlChar *)"/domain/devices/input"
 
 #define DEFAULT_BRIDGE "xenbr0"
@@ -501,6 +502,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
         struct graphics_device *gdev = NULL;
+        xmlNode *child = NULL;
 
         vdev = calloc(1, sizeof(*vdev));
         if (vdev == NULL)
@@ -509,23 +511,50 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         gdev = &(vdev->dev.graphics);
 
         gdev->type = get_attr_value(node, "type");
-        gdev->port = get_attr_value(node, "port");
-        gdev->host = get_attr_value(node, "listen");
-        gdev->keymap = get_attr_value(node, "keymap");
-
         if (gdev->type == NULL)
                 goto err;
 
+        CU_DEBUG("graphics device type = %s", gdev->type);
+
         if (STREQC(gdev->type, "vnc")) {
-                if (gdev->port == NULL)
+                gdev->port = get_attr_value(node, "port");
+                gdev->host = get_attr_value(node, "listen");
+                gdev->keymap = get_attr_value(node, "keymap");
+        
+                if (gdev->port == NULL || gdev->host == NULL)
+                        goto err;
+        }
+        else if (STREQC(gdev->type, "pty")) {
+                if (node->name == NULL)
                         goto err;
 
-                if (gdev->host == NULL)
-                        goto err;
+                /* Change type to serial, console, etc. It will be converted 
+                 * back in xmlgen.c */
+                free(gdev->type);
+                gdev->type = strdup((char *)node->name);
+
+                for (child = node->children; child != NULL; 
+                        child = child->next) {
+                        if (XSTREQ(child->name, "source")) 
+                                gdev->host = get_attr_value(child, "path");
+                        else if (XSTREQ(child->name, "target"))
+                                gdev->port = get_attr_value(child, "port");
+                }
+        }
+        else {
+                CU_DEBUG("Unknown graphics type %s", gdev->type);
+                goto err;
         }
 
         vdev->type = CIM_RES_TYPE_GRAPHICS;
         vdev->id = strdup("graphics");
+
+        /* FIXME: IDs should be unique, but that breaks existing tests.
+        ret = asprintf(&vdev->id, "graphics:%s", gdev->type);
+        if(ret == -1) {
+                CU_DEBUG("Failed to create graphics is string");
+                goto err;
+        } */
 
         *vdevs = vdev;
 

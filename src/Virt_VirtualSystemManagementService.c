@@ -405,7 +405,7 @@ static bool default_input_device(struct domain *domain)
 
 static bool add_default_devs(struct domain *domain)
 {
-        if (domain->dev_graphics_ct != 1) {
+        if (domain->dev_graphics_ct < 1) {
                 if (!default_graphics_device(domain))        
                         return false;
         }
@@ -1027,6 +1027,38 @@ static const char *lxc_proc_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static int parse_console_address(const char *id,
+                        char **path,
+                        char **port)
+{
+        int ret;
+        char *tmp_path = NULL;
+        char *tmp_port = NULL;
+
+        CU_DEBUG("Entering parse_console_address, address is %s", id);
+
+        ret = sscanf(id, "%a[^:]:%as", &tmp_path, &tmp_port);
+
+        if (ret != 2) {
+                ret = 0;
+                goto out;
+        }
+
+        if (path)
+                *path = strdup(tmp_path);
+
+        if (port)
+                *port = strdup(tmp_port);
+
+        ret = 1;
+
+ out:        
+        CU_DEBUG("Exiting parse_console_address, ip is %s, port is %s", 
+               *path, *port);
+
+        return ret;
+}
+
 static int parse_vnc_address(const char *id,
                       char **ip,
                       char **port)
@@ -1058,9 +1090,8 @@ static int parse_vnc_address(const char *id,
         ret = 1;
 
  out:
-        CU_DEBUG("Exiting parse_vnc_address, ip is %s, port is %s", *ip, *port);
-        free(tmp_ip);
-        free(tmp_port);
+        CU_DEBUG("Exiting parse_vnc_address, ip is %s, port is %s", 
+                *ip, *port);
 
         return ret;
 }
@@ -1068,9 +1099,8 @@ static int parse_vnc_address(const char *id,
 static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev)
 {
-        const char *val;
+        const char *val = NULL;
         const char *msg = NULL;
-        const char *keymap;
         bool ipv6 = false;
         int ret;
 
@@ -1080,36 +1110,69 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
         }
         dev->dev.graphics.type = strdup(val);
 
+        CU_DEBUG("graphics type = %s", dev->dev.graphics.type);
+
         /* FIXME: Add logic to prevent address:port collisions */
-        if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
-                CU_DEBUG("no graphics port defined, giving default");
-                if (cu_get_bool_prop(inst, "IsIPv6Only", &ipv6) != CMPI_RC_OK)
-                        ipv6 = false;
-                if (ipv6)
-                        dev->dev.graphics.host = strdup("[::1]");
-                else
-                        dev->dev.graphics.host = strdup("127.0.0.1");
-                dev->dev.graphics.port = strdup("-1");
-        } else {
-               ret = parse_vnc_address(val,
-                              &dev->dev.graphics.host, 
-                              &dev->dev.graphics.port); 
+        if (STREQC(dev->dev.graphics.type, "vnc")) {
+                if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
+                        CU_DEBUG("graphics Address empty, using default");
+
+                        if (cu_get_bool_prop(inst, "IsIPV6Only", &ipv6) != 
+                                CMPI_RC_OK)
+                                ipv6 = false;
+
+                        if(ipv6)
+                                val = "[::1]:-1";
+                        else
+                                val = "127.0.0.1:-1";
+                }
+
+                ret = parse_vnc_address(val,
+                                &dev->dev.graphics.host, 
+                                &dev->dev.graphics.port); 
                 if (ret != 1) {
                         msg = "GraphicsRASD field Address not valid";
                         goto out;
                 }
-        }
-
-        if (cu_get_str_prop(inst, "KeyMap", &keymap) != CMPI_RC_OK)
-                keymap = "en-us";
+                
+                if (cu_get_str_prop(inst, "KeyMap", &val) != CMPI_RC_OK)
+                        dev->dev.graphics.keymap = strdup("en-us");
+                else
+                        dev->dev.graphics.keymap = strdup(val);
         
-        dev->dev.graphics.keymap = strdup(keymap);
-
-        if (cu_get_str_prop(inst, "Password", &val) != CMPI_RC_OK) {
-                dev->dev.graphics.passwd = NULL;
-        } else {
-                dev->dev.graphics.passwd = strdup(val);
+                if (cu_get_str_prop(inst, "Password", &val) != CMPI_RC_OK) {
+                        CU_DEBUG("vnc password is not set");
+                        dev->dev.graphics.passwd = NULL;
+                } else {
+                        CU_DEBUG("vnc password is set");
+                        dev->dev.graphics.passwd = strdup(val);
+                }
         }
+        else if (STREQC(dev->dev.graphics.type, "console") ||
+                STREQC(dev->dev.graphics.type, "serial")) {
+                if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
+                        CU_DEBUG("graphics Address empty, using default");
+                        val = "/dev/pts/0:0";
+                }
+
+                ret = parse_console_address(val,
+                                &dev->dev.graphics.host, 
+                                &dev->dev.graphics.port); 
+                if (ret != 1) {
+                         msg = "GraphicsRASD field Address not valid";
+                         goto out;
+                }
+       } else { 
+                CU_DEBUG("Unsupported graphics type %s", 
+                        dev->dev.graphics.type);
+                msg = "Unsupported graphics type";
+                goto out;
+       }
+
+        CU_DEBUG("graphics = %s:%s:%s", 
+                dev->dev.graphics.type,
+                dev->dev.graphics.host,
+                dev->dev.graphics.port);
 
  out:
         return msg;
@@ -1250,6 +1313,9 @@ static char *add_device_nodup(struct virt_device *dev,
                                "DiskResourceAllocationSettingData in a single "
                                "guest";
 
+                if (dev->type == CIM_RES_TYPE_GRAPHICS)
+                        continue;
+
                 if (STREQC(ptr->id, dev->id)) {
                         CU_DEBUG("Overriding device %s from refconf", ptr->id);
                         cleanup_virt_device(ptr);
@@ -1358,11 +1424,19 @@ static const char *classify_resources(CMPIArray *resources,
                                                        ncount,
                                                        &domain->dev_net_ct);
                 } else if (type == CIM_RES_TYPE_GRAPHICS) {
-                        domain->dev_graphics_ct = 1;
+                        struct virt_device dev;
+                        int ncount = count + domain->dev_graphics_ct;
+
+                        memset(&dev, 0, sizeof(dev));
                         msg = rasd_to_vdev(inst,
                                            domain,
-                                           &domain->dev_graphics[0],
+                                           &dev,
                                            ns);
+                        if (msg == NULL)
+                                msg = add_device_nodup(&dev,
+                                                domain->dev_graphics,
+                                                ncount,
+                                                &domain->dev_graphics_ct);
                 } else if (type == CIM_RES_TYPE_INPUT) {
                         domain->dev_input_ct = 1;
                         msg = rasd_to_vdev(inst,
@@ -2315,13 +2389,6 @@ static CMPIStatus resource_add(struct domain *dominfo,
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "[TEMP] Cannot add resources of type %" PRIu16, type);
-                goto out;
-        }
-
-        if ((type == CIM_RES_TYPE_GRAPHICS) && (*count > 0)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "A resource already exists for type %" PRIu16, type);
                 goto out;
         }
 
