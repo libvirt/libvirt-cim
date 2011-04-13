@@ -1521,19 +1521,24 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                        DISK_POOL_SCSI};
         int pool_types = 7;
         int i;
+        uint16_t autostart;
 
         switch (template_type) {
         case SDC_RASD_MIN:
                 id = "Minimum";
+                autostart = 0;
                 break;
         case SDC_RASD_MAX:
                 id = "Maximum";
+                autostart = 1;
                 break;
         case SDC_RASD_INC:
                 id = "Increment";
+                autostart = 1;
                 break;
         case SDC_RASD_DEF:
                 id = "Default";
+                autostart = 0;
                 break;
         default:
                 cu_statusf(_BROKER, &s,
@@ -1633,6 +1638,8 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
 
                 CMSetProperty(inst, "Type", (CMPIValue *)&type[i], CMPI_uint16);
                 CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
+                CMSetProperty(inst, "Autostart", (CMPIValue *)&autostart, 
+                              CMPI_uint16);
 
                 inst_list_add(list, inst);
         }

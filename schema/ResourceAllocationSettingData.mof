@@ -356,6 +356,7 @@ class Xen_DiskPoolResourceAllocationSettingData : Xen_ResourceAllocationSettingD
         Values {"Unknown", "Directory, File System, Network File System, "
                 "Disk, ISCSI, Logical, SCSI Host Bus Adapter"}]
       uint16 Type;
+      uint16 Autostart;
       string Path;
       string DevicePaths[];
       string Host;
@@ -375,6 +376,7 @@ class KVM_DiskPoolResourceAllocationSettingData : KVM_ResourceAllocationSettingD
         Values {"Unknown", "Directory, File System, Network File System, "
                 "Disk, ISCSI, Logical, SCSI Host Bus Adapter"}]
       uint16 Type;
+      uint16 Autostart;
       string Path;
       string DevicePaths[];
       string Host;
@@ -394,6 +396,7 @@ class LXC_DiskPoolResourceAllocationSettingData : LXC_ResourceAllocationSettingD
         Values {"Unknown", "Directory, File System, Network File System, "
                 "Disk, ISCSI, Logical, SCSI Host Bus Adapter"}]
       uint16 Type;
+      uint16 Autostart;
       string Path;
       string DevicePaths[];
       string Host;

@@ -101,6 +101,8 @@ int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
         if (xml == NULL)
                 return 0;
 
+        CU_DEBUG("pool xml is %s", xml);
+
         *pool = malloc(sizeof(**pool));
         if (*pool == NULL) {
                 ret = 0;
@@ -175,6 +177,8 @@ static bool diskpool_set_capacity(virConnectPtr conn,
         uint16_t type;
         struct virt_pool *pool_vals = NULL;
         const char *pool_str = NULL;
+        uint16_t autostart;
+        int  start;
 
         pool = virStoragePoolLookupByName(conn, _pool->tag);
         if (pool == NULL) {
@@ -214,6 +218,17 @@ static bool diskpool_set_capacity(virConnectPtr conn,
                               (CMPIValue *)get_disk_pool_type(type), 
                               CMPI_chars);
         }
+
+        if (virStoragePoolGetAutostart(pool, &start) == -1) {
+                CU_DEBUG("Failed to read if %s StoragePool is set for "
+                         "Autostart", _pool->tag);
+                goto out;
+        }
+
+        autostart = start;
+
+        CMSetProperty(inst, "Autostart",
+                      (CMPIValue *)&autostart, CMPI_uint16);
 
         result = true;
  out:

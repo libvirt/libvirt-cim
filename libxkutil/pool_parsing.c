@@ -241,6 +241,7 @@ int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type)
         const xmlChar *xpathstr = (xmlChar *)"/pool";
         const char *name;
 
+        CU_DEBUG("Pool XML : %s", xml);
 	len = strlen(xml) + 1;
 
         if ((xmldoc = xmlParseMemory(xml, len)) == NULL)
@@ -277,11 +278,11 @@ int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type)
         return ret;
 }
 
-int define_pool(virConnectPtr conn, const char *xml, int res_type)
+int define_pool(virConnectPtr conn, const char *xml, struct virt_pool *pool)
 {
         int ret = 1;
 
-        if (res_type == CIM_RES_TYPE_NET) {
+        if (pool->type == CIM_RES_TYPE_NET) {
                 virNetworkPtr ptr = virNetworkDefineXML(conn, xml);
                 if (ptr == NULL) {
                         CU_DEBUG("Unable to define virtual network");
@@ -297,7 +298,7 @@ int define_pool(virConnectPtr conn, const char *xml, int res_type)
                 }
 
                 virNetworkFree(ptr);
-        } else if (res_type == CIM_RES_TYPE_DISK) {
+        } else if (pool->type == CIM_RES_TYPE_DISK) {
 #if VIR_USE_LIBVIRT_STORAGE
                 virStoragePoolPtr ptr = virStoragePoolDefineXML(conn, xml, 0);
                 if (ptr == NULL) {
@@ -311,6 +312,11 @@ int define_pool(virConnectPtr conn, const char *xml, int res_type)
 
                         if (virStoragePoolUndefine(ptr) != 0)
                                 CU_DEBUG("Unable to undefine storage pool");
+                }
+
+                if (pool->pool_info.disk.autostart == 1) {
+                        if (virStoragePoolSetAutostart(ptr, 1) != 0) 
+                                CU_DEBUG("Unable to set autostart for pool");
                 }
 
                 virStoragePoolFree(ptr);

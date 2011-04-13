@@ -150,6 +150,7 @@ static void init_disk_pool(struct virt_pool *pool)
         pool->pool_info.disk.adapter = NULL;
         pool->pool_info.disk.port_name = NULL;
         pool->pool_info.disk.node_name = NULL;
+        pool->pool_info.disk.autostart = 0;
 }
 
 static char *get_dev_paths(CMPIInstance *inst, 
@@ -289,6 +290,7 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
         const char *val = NULL;
         const char *msg = NULL;
         uint16_t type;
+        uint16_t autostart;
 
         if (cu_get_u16_prop(inst, "Type", &type) != CMPI_RC_OK)
                 return "Missing `Type' property";
@@ -325,6 +327,14 @@ static const char *disk_rasd_to_pool(CMPIInstance *inst,
                 return "Missing `Path' property";
 
         pool->pool_info.disk.path = strdup(val);
+
+        if (cu_get_u16_prop(inst, "Autostart", &autostart) != CMPI_RC_OK) {
+                CU_DEBUG("Failed to get Autostart, defaulting "
+                         "to no autostart");
+                autostart = 0;
+        }
+
+        pool->pool_info.disk.autostart = autostart;
 
  out:
         return msg;
@@ -440,7 +450,7 @@ static char *get_pool_id(int res_type,
 static CMPIInstance *connect_and_create(char *xml,
                                         const CMPIObjectPath *ref,
                                         const char *id,
-                                        int res_type,
+                                        struct virt_pool *pool,
                                         CMPIStatus *s)
 {
         virConnectPtr conn;
@@ -452,7 +462,7 @@ static CMPIInstance *connect_and_create(char *xml,
                 return NULL;
         }
 
-        if (define_pool(conn, xml, res_type) == 0) {
+        if (define_pool(conn, xml, pool) == 0) {
                 virt_set_status(_BROKER, s,
                                 CMPI_RC_ERR_FAILED,
                                 conn,
@@ -544,7 +554,7 @@ static CMPIStatus create_child_pool(CMPIMethodMI *self,
 
         CU_DEBUG("Pool XML:\n%s", xml);
 
-        inst = connect_and_create(xml, reference, full_id, pool->type, &s);
+        inst = connect_and_create(xml, reference, full_id, pool, &s);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
