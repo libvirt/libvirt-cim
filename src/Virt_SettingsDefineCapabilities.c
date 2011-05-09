@@ -26,7 +26,7 @@
 #include <stdbool.h>
 #include <sys/vfs.h>
 #include <errno.h>
-#include <uuid/uuid.h>
+#include <uuid.h>
 
 #include <libvirt/libvirt.h>
 

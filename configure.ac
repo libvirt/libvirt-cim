@@ -148,10 +148,14 @@ CHECK_PROVIDERDIR
 # Check for presense of a CIM server (this macro is defined in acinclude.m4)
 CHECK_CIMSERVER
 
+# Check pkg-config program
+PKG_PROG_PKG_CONFIG
+
 # Check for presence of libraries
 CHECK_LIBVIRT
 CHECK_LIBXML2
 CHECK_LIBCU
+CHECK_LIBUUID
 
 CFLAGS_STRICT="-Werror"
 

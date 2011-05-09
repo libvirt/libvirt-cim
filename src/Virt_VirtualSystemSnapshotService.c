@@ -24,7 +24,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include <uuid/uuid.h>
+#include <uuid.h>
 
 #include <cmpidt.h>
 #include <cmpift.h>

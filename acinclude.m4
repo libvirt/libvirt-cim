@@ -238,8 +238,30 @@ AC_DEFUN([CHECK_LIBCU],
 AC_DEFUN([CHECK_LIBVIRT],
 	[
 	PKG_CHECK_MODULES([LIBVIRT], [libvirt >= 0.3.2])
+	AC_SUBST([LIBVIRT_CFLAGS])
+	AC_SUBST([LIBVIRT_LIBS])
 	CPPFLAGS="$CPPFLAGS $LIBVIRT_CFLAGS"
 	LDFLAGS="$LDFLAGS $LIBVIRT_LIBS"
+	])
+
+AC_DEFUN([CHECK_LIBUUID],
+	[
+	PKG_CHECK_MODULES([LIBUUID], [uuid >= 1.41.2],
+			  [LIBUUID_FOUND=yes], [LIBUUID_FOUND=no])
+	if test "$LIBUUID_FOUND" = "no" ; then
+	    PKG_CHECK_MODULES([LIBUUID], [uuid],
+			      [LIBUUID_FOUND=yes], [LIBUUID_FOUND=no])
+	    if test "$LIBUUID_FOUND" = "no" ; then
+		AC_MSG_ERROR([libuuid development files required])
+	    else
+		LIBUUID_INCLUDEDIR=$(pkg-config --variable=includedir uuid)
+		LIBUUID_CFLAGS+=" -I$LIBUUID_INCLUDEDIR/uuid "
+	    fi
+	fi
+	AC_SUBST([LIBUUID_CFLAGS])
+	AC_SUBST([LIBUUID_LIBS])
+	CPPFLAGS="$CPPFLAGS $LIBUUID_CFLAGS"
+	LDFLAGS="$LDFLAGS $LIBUUID_LIBS"
 	])
 
 # A convenience macro that spits out a fail message for a particular test

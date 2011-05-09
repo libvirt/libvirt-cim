@@ -22,7 +22,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <inttypes.h>
-#include <uuid/uuid.h>
+#include <uuid.h>
 
 #include <libxml/tree.h>
 #include <libxml/xmlsave.h>
