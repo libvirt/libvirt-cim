@@ -503,6 +503,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         struct virt_device *vdev = NULL;
         struct graphics_device *gdev = NULL;
         xmlNode *child = NULL;
+        int ret;
 
         vdev = calloc(1, sizeof(*vdev));
         if (vdev == NULL)
@@ -547,14 +548,16 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         }
 
         vdev->type = CIM_RES_TYPE_GRAPHICS;
-        vdev->id = strdup("graphics");
+        
+        if (STREQC(gdev->type, "vnc")) 
+                ret = asprintf(&vdev->id, "%s", gdev->type);
+        else
+                ret = asprintf(&vdev->id, "%s:%s", gdev->type, gdev->port);
 
-        /* FIXME: IDs should be unique, but that breaks existing tests.
-        ret = asprintf(&vdev->id, "graphics:%s", gdev->type);
-        if(ret == -1) {
+        if (ret == -1) {
                 CU_DEBUG("Failed to create graphics is string");
                 goto err;
-        } */
+        }
 
         *vdevs = vdev;
 
