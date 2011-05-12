@@ -1,0 +1,6 @@
+// Copyright IBM Corp. 2011
+[Association,
+ Provider("cmpi::Virt_EntriesInFilterList")]
+class KVM_EntriesInFilterList : CIM_EntriesInFilterList
+{
+};

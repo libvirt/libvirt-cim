@@ -23,7 +23,9 @@ noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_VSMigrationSettingData.h \
     Virt_ConsoleRedirectionService.h \
     Virt_ConsoleRedirectionServiceCapabilities.h \
-    Virt_KVMRedirectionSAP.h
+    Virt_KVMRedirectionSAP.h \
+    Virt_FilterList.h \
+    Virt_FilterEntry.h
 
 XKUADD = $(top_builddir)/libxkutil/libxkutil.la
 
@@ -78,7 +80,13 @@ provider_LTLIBRARIES = libVirt_ComputerSystem.la \
                        libVirt_ServiceAffectsElement.la \
                        libVirt_HostedAccessPoint.la \
                        libVirt_ServiceAccessBySAP.la \
-                       libVirt_SAPAvailableForElement.la
+                       libVirt_SAPAvailableForElement.la \
+                       libVirt_FilterList.la \
+                       libVirt_FilterEntry.la \
+                       libVirt_EntriesInFilterList.la \
+                       libVirt_NestedFilterList.la \
+                       libVirt_HostedFilterList.la \
+                       libVirt_AppliedFilterList.la
 
 libVirt_ComputerSystem_la_SOURCES = Virt_ComputerSystem.c
 libVirt_ComputerSystem_la_DEPENDENCIES = libVirt_VirtualSystemSnapshotService.la
@@ -244,3 +252,26 @@ libVirt_SAPAvailableForElement_la_DEPENDENCIES = libVirt_ComputerSystem.la libVi
 libVirt_SAPAvailableForElement_la_SOURCES = Virt_SAPAvailableForElement.c
 libVirt_SAPAvailableForElement_la_LIBADD = -lVirt_ComputerSystem -lVirt_KVMRedirectionSAP
 
+libVirt_FilterEntry_la_DEPENDENCIES = libVirt_HostSystem.la
+libVirt_FilterEntry_la_SOURCES = Virt_FilterEntry.c
+libVirt_FilterEntry_la_LIBADD = -lVirt_HostSystem
+
+libVirt_FilterList_la_DEPENDENCIES = libVirt_HostSystem.la
+libVirt_FilterList_la_SOURCES = Virt_FilterList.c
+libVirt_FilterList_la_LIBADD = -lVirt_HostSystem
+
+libVirt_EntriesInFilterList_la_DEPENDENCIES = libVirt_FilterEntry.la libVirt_FilterList.la 
+libVirt_EntriesInFilterList_la_SOURCES = Virt_EntriesInFilterList.c
+libVirt_EntriesInFilterList_la_LIBADD = -lVirt_FilterEntry -lVirt_FilterList
+
+libVirt_NestedFilterList_la_DEPENDENCIES = libVirt_FilterList.la 
+libVirt_NestedFilterList_la_SOURCES = Virt_NestedFilterList.c
+libVirt_NestedFilterList_la_LIBADD = -lVirt_FilterList
+
+libVirt_HostedFilterList_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_FilterList.la 
+libVirt_HostedFilterList_la_SOURCES = Virt_HostedFilterList.c
+libVirt_HostedFilterList_la_LIBADD = -lVirt_HostSystem -lVirt_FilterList
+
+libVirt_AppliedFilterList_la_DEPENDENCIES = libVirt_Device.la libVirt_FilterList.la
+libVirt_AppliedFilterList_la_SOURCES = Virt_AppliedFilterList.c
+libVirt_AppliedFilterList_la_LIBADD = -lVirt_Device -lVirt_FilterList

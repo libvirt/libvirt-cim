@@ -1,0 +1,4 @@
+// Copyright IBM Corp. 2011
+class KVM_FilterList : CIM_FilterList
+{
+};

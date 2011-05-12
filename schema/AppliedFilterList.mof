@@ -1,0 +1,8 @@
+// Copyright IBM Corp. 2011
+[Association,
+ Provider("cmpi::Virt_AppliedFilterList")]
+class KVM_AppliedFilterList : CIM_ConcreteDependency
+{
+        CIM_NetworkPort ref Antecedent;
+        CIM_FilterList ref Dependent;
+};

@@ -23,6 +23,7 @@
 
 #include "device_parsing.h"
 #include "pool_parsing.h"
+#include "acl_parsing.h"
 
 #include "cmpidt.h"
 
@@ -37,5 +38,7 @@ char *device_to_xml(struct virt_device *dev);
 char *pool_to_xml(struct virt_pool *pool);
 
 char *res_to_xml(struct virt_pool_res *res);
+
+char *filter_to_xml(struct acl_filter *filter);
 
 #endif

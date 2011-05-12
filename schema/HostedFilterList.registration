@@ -1,0 +1,3 @@
+# Copyright IBM Corp. 2011
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+KVM_HostedFilterList root/virt Virt_HostedFilterList Virt_HostedFilterList association

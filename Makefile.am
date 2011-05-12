@@ -57,7 +57,13 @@ MOFS = \
 	schema/InputPool.mof \
 	schema/HostedAccessPoint.mof \
 	schema/ServiceAccessBySAP.mof \
-	schema/SAPAvailableForElement.mof
+	schema/SAPAvailableForElement.mof \
+	schema/FilterEntry.mof \
+	schema/FilterList.mof \
+	schema/EntriesInFilterList.mof \
+	schema/NestedFilterList.mof \
+	schema/AppliedFilterList.mof \
+	schema/HostedFilterList.mof
 
 INTEROP_MOFS = \
 	schema/ComputerSystem.mof \
@@ -138,7 +144,13 @@ REGS = \
 	schema/InputPool.registration \
 	schema/HostedAccessPoint.registration \
 	schema/ServiceAccessBySAP.registration \
-	schema/SAPAvailableForElement.registration
+	schema/SAPAvailableForElement.registration \
+	schema/FilterEntry.registration \
+	schema/FilterList.registration \
+	schema/EntriesInFilterList.registration \
+	schema/NestedFilterList.registration \
+	schema/AppliedFilterList.registration \
+	schema/HostedFilterList.registration
 
 INTEROP_REGS = \
 	schema/RegisteredProfile.registration \

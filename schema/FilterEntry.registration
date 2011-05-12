@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2011
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+KVM_Hdr8021Filter root/virt Virt_FilterEntry Virt_FilterEntry instance
+KVM_IPHeadersFilter root/virt Virt_FilterEntry Virt_FilterEntry instance

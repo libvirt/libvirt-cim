@@ -1,0 +1,8 @@
+// Copyright IBM Corp. 2011
+[Association,
+ Provider("cmpi::Virt_NestedFilterList")]
+class KVM_NestedFilterList : CIM_ConcreteDependency
+{
+        CIM_FilterList ref Antecedent;
+        CIM_FilterList ref Dependent;
+};

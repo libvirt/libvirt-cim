@@ -64,6 +64,7 @@ struct net_device {
         char *model;
         char *device;
         char *net_mode;
+        char *filter_ref;
         struct vsi_device vsi;
 };
 

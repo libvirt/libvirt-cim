@@ -80,6 +80,7 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->model);
         free(dev->device);
         free(dev->net_mode);
+        free(dev->filter_ref);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -386,9 +387,12 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         ndev->model = get_attr_value(child, "type");
                         if (ndev->model == NULL)
                                 goto err;
+                } else if (XSTREQ(child->name, "filterref")) {
+                        ndev->filter_ref = get_attr_value(child, "filter");
                 } else if (XSTREQ(child->name, "virtualport")) {
                         parse_vsi_device(child, ndev);
                 }
+
         }
 
         if (ndev->source == NULL)
@@ -764,6 +768,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.model);
                 DUP_FIELD(dev, _dev, dev.net.device);
                 DUP_FIELD(dev, _dev, dev.net.net_mode);
+                DUP_FIELD(dev, _dev, dev.net.filter_ref);
                 DUP_FIELD(dev, _dev, dev.net.vsi.vsi_type);
                 DUP_FIELD(dev, _dev, dev.net.vsi.manager_id);
                 DUP_FIELD(dev, _dev, dev.net.vsi.type_id);

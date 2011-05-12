@@ -301,6 +301,15 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                         xmlNewProp(tmp, BAD_CAST "type", BAD_CAST net->model);
                 }
 
+                if (net->filter_ref != NULL) {
+                        tmp = xmlNewChild(nic, NULL, 
+                                BAD_CAST "filterref", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "filter", 
+                                BAD_CAST net->filter_ref);
+                }
+
                 if (STREQ(dev->dev.net.type, "network"))
                         msg = set_net_source(nic, net, "network");
                 else if (STREQ(dev->dev.net.type, "bridge"))
