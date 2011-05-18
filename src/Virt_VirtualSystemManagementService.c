@@ -1162,17 +1162,26 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                          msg = "GraphicsRASD field Address not valid";
                          goto out;
                 }
-       } else { 
+        } else { 
                 CU_DEBUG("Unsupported graphics type %s", 
                         dev->dev.graphics.type);
                 msg = "Unsupported graphics type";
                 goto out;
-       }
+        }
 
-        CU_DEBUG("graphics = %s:%s:%s", 
-                dev->dev.graphics.type,
-                dev->dev.graphics.host,
-                dev->dev.graphics.port);
+        free(dev->id);
+        if (STREQC(dev->dev.graphics.type, "vnc"))
+                ret = asprintf(&dev->id, "%s", dev->dev.graphics.type);
+        else
+                ret = asprintf(&dev->id, "%s:%s",
+                               dev->dev.graphics.type, dev->dev.graphics.port);
+
+        if (ret == -1) {
+                msg = "Failed to create graphics is string";
+                goto out;
+        }
+
+        CU_DEBUG("graphics = %s", dev->id);
 
  out:
         return msg;
@@ -1313,9 +1322,6 @@ static char *add_device_nodup(struct virt_device *dev,
                                "DiskResourceAllocationSettingData in a single "
                                "guest";
 
-                if (dev->type == CIM_RES_TYPE_GRAPHICS)
-                        continue;
-
                 if (STREQC(ptr->id, dev->id)) {
                         CU_DEBUG("Overriding device %s from refconf", ptr->id);
                         cleanup_virt_device(ptr);
@@ -1425,7 +1431,7 @@ static const char *classify_resources(CMPIArray *resources,
                                                        &domain->dev_net_ct);
                 } else if (type == CIM_RES_TYPE_GRAPHICS) {
                         struct virt_device dev;
-                        int ncount = count + domain->dev_graphics_ct;
+                        int gcount = count + domain->dev_graphics_ct;
 
                         memset(&dev, 0, sizeof(dev));
                         msg = rasd_to_vdev(inst,
@@ -1435,7 +1441,7 @@ static const char *classify_resources(CMPIArray *resources,
                         if (msg == NULL)
                                 msg = add_device_nodup(&dev,
                                                 domain->dev_graphics,
-                                                ncount,
+                                                gcount,
                                                 &domain->dev_graphics_ct);
                 } else if (type == CIM_RES_TYPE_INPUT) {
                         domain->dev_input_ct = 1;
