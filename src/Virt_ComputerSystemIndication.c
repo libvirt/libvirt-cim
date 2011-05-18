@@ -422,7 +422,6 @@ static bool create_deleted_guest_inst(char *xml,
 }
 
 static bool async_ind(CMPIContext *context,
-                      virConnectPtr conn,
                       int ind_type,
                       struct dom_xml prev_dom,
                       char *prefix,
@@ -557,7 +556,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
                 for (i = 0; i < cur_count; i++) {
                         res = dom_in_list(cur_xml[i].uuid, prev_count, prev_xml);
                         if (!res)
-                                async_ind(context, conn, CS_CREATED,
+                                async_ind(context, CS_CREATED,
                                           cur_xml[i], prefix, args);
 
                 }
@@ -565,14 +564,14 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
                 for (i = 0; i < prev_count; i++) {
                         res = dom_in_list(prev_xml[i].uuid, cur_count, cur_xml);
                         if (!res)
-                                async_ind(context, conn, CS_DELETED, 
+                                async_ind(context, CS_DELETED, 
                                           prev_xml[i], prefix, args);
                 }
 
                 for (i = 0; i < prev_count; i++) {
                         res = dom_changed(prev_xml[i], cur_xml, cur_count);
                         if (res) {
-                                async_ind(context, conn, CS_MODIFIED, 
+                                async_ind(context, CS_MODIFIED, 
                                           prev_xml[i], prefix, args);
 
                         }

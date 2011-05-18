@@ -453,6 +453,7 @@ int delete_resource(virConnectPtr conn,
                                         CU_DEBUG("Unable to refresh storage "
                                                  "pool");
                         }
+                        virStoragePoolFree(pool_ptr);
                         ret = 1;
                 }
 

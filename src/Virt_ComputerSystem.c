@@ -907,6 +907,7 @@ static CMPIStatus domain_reset(virDomainPtr dom)
 {
         int ret;
         virConnectPtr conn = NULL;
+        virDomainPtr _dom = NULL;
         char *xml = NULL;
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
@@ -938,12 +939,12 @@ static CMPIStatus domain_reset(virDomainPtr dom)
                 goto out;
         }
 
-        dom = virDomainLookupByName(conn,
+        _dom = virDomainLookupByName(conn,
                                     virDomainGetName(dom));
 
-        if (dom == NULL) {
-            dom = virDomainDefineXML(conn, xml);
-            if (dom == NULL) {
+        if (_dom == NULL) {
+            _dom = virDomainDefineXML(conn, xml);
+            if (_dom == NULL) {
                     CU_DEBUG("Failed to define domain from XML");
                     virt_set_status(_BROKER, &s,
                                     CMPI_RC_ERR_FAILED,
@@ -953,10 +954,10 @@ static CMPIStatus domain_reset(virDomainPtr dom)
             }
         }
 
-        if (!domain_online(dom))
+        if (!domain_online(_dom))
             CU_DEBUG("Guest is now offline");
 
-        ret = virDomainCreate(dom);
+        ret = virDomainCreate(_dom);
         if (ret != 0)
                 virt_set_status(_BROKER, &s,
                                 CMPI_RC_ERR_FAILED,
@@ -965,6 +966,7 @@ static CMPIStatus domain_reset(virDomainPtr dom)
 
  out:
         free(xml);
+        virDomainFree(_dom);
 
         return s;
 }

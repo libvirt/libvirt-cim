@@ -79,7 +79,6 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
                                     const char *id,
                                     struct inst_list *list)
 {
-        virConnectPtr conn = NULL;
         CMPIInstance *alloc_cap_inst;
         struct inst_list device_pool_list;
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -90,15 +89,6 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
 
         if (!provider_is_responsible(broker, ref, &s))
                 goto out;
-
-        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
-        if (conn == NULL) {
-                if (id) 
-                        cu_statusf(broker, &s,
-                                   CMPI_RC_ERR_NOT_FOUND,
-                                   "Instance not found.");
-                goto out;
-        }
 
         s = enum_pools(broker, ref, CIM_RES_TYPE_ALL, &device_pool_list);
         if (s.rc != CMPI_RC_OK) {
@@ -141,7 +131,6 @@ CMPIStatus enum_alloc_cap_instances(const CMPIBroker *broker,
         }
         
  out:
-        virConnectClose(conn);
         inst_list_free(&device_pool_list);
 
         return s;

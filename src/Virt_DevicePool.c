@@ -451,8 +451,8 @@ static char *diskpool_member_of(const CMPIBroker *broker,
 
         free(host);
         free(dev);
-        virConnectClose(conn);
         virDomainFree(dom);
+        virConnectClose(conn);
 
         return pool;
 }
