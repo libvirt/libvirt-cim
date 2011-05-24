@@ -1,10 +1,35 @@
 # (C) Copyright IBM Corp. 2005
 
-AC_INIT(libvirt CMPI provider, 0.5.12, cvincent@us.ibm.com, libvirt-cim)
+m4_define([libvirtcim_maj], [0])
+m4_define([libvirtcim_min], [5])
+m4_define([libvirtcim_mic], [12])
+m4_define([libvirtcim_version], [libvirtcim_maj.libvirtcim_min.libvirtcim_mic])
+
+AC_INIT([libvirt CMPI provider], [libvirtcim_version], [cvincent us ibm com],
+        [libvirt-cim])
 
 AC_CONFIG_SRCDIR([src/Virt_ComputerSystem.c])
 
+# Autogenerate the autoconf header file to store build settings
+AC_CONFIG_HEADER([config.h])
+
+# Use silent rules if possible
+AM_INIT_AUTOMAKE
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
+m4_define([lt_cur], m4_eval(libvirtcim_maj + libvirtcim_min))
+m4_define([lt_rev], libvirtcim_mic)
+m4_define([lt_age], libvirtcim_min)
+VERSION_INFO="lt_cur:lt_rev:lt_age"
+AC_SUBST(VERSION_INFO)
+
+AC_PROG_CC
+AC_C_CONST
+AC_PROG_LIBTOOL
+AC_PROG_INSTALL
+AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
 AC_CHECK_HEADERS([stdarg.h errno.h])
+AC_HEADER_STDC
 AC_CHECK_FUNCS([popen pclose fgets asprintf vfprintf fprintf snprintf sscanf])
 
 CPPFLAGS="$CPPFLAGS -DCMPI_VERSION=100"
@@ -109,12 +134,6 @@ AC_ARG_WITH([xen_emulator],
 AC_SUBST(XEN_EMULATOR)
 AC_DEFINE_UNQUOTED(XEN_EMULATOR, "$XEN_EMULATOR", [Location of Xen FullVirt emulator])
 
-# Autogenerate the autoconf header file to store build settings
-AC_CONFIG_HEADER([config.h])
-
-topdir=`pwd`
-AC_SUBST(topdir)
-
 AC_PATH_PROG(XSLTPROC, xsltproc, /usr/bin/xsltproc)
 
 # Autogenerate the Makefile
@@ -128,15 +147,6 @@ AC_CONFIG_FILES([
     doc/Makefile
     Makefile 
     ])
-
-AM_INIT_AUTOMAKE
-
-AC_PROG_CC
-AC_C_CONST
-AC_PROG_LIBTOOL
-AC_PROG_INSTALL
-AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
-AC_HEADER_STDC
 
 # Check for the required CMPI header files (this macro is defined in acinclude.m4)
 CHECK_CMPI

@@ -71,11 +71,9 @@ AC_DEFUN([_CHECK_CMPI],
 	],
 	[
 		have_CMPI=yes
-		dnl AC_MSG_RESULT(yes)
 	],
 	[
 		have_CMPI=no
-		dnl AC_MSG_RESULT(no)
 	])
 
 ])
@@ -88,7 +86,7 @@ dnl
 
 AC_DEFUN([CHECK_CMPI],
 	[
-	AC_MSG_CHECKING(for CMPI headers)
+	AC_MSG_NOTICE([checking for CMPI headers...])
 	dnl Check just with the standard include paths
 	CMPI_CPP_FLAGS="$CPPFLAGS"
 	_CHECK_CMPI(standard)
@@ -96,6 +94,7 @@ AC_DEFUN([CHECK_CMPI],
 		dnl The standard include paths worked.
 		AC_MSG_RESULT(yes)
 	else
+		AC_MSG_RESULT(no)
 	  _DIRS_="/usr/include/cmpi \
                   /usr/local/include/cmpi \
 		  $PEGASUS_ROOT/src/Pegasus/Provider/CMPI \
@@ -115,13 +114,15 @@ AC_DEFUN([CHECK_CMPI],
 			dnl Save the new -I parameter  
 			CMPI_CPP_FLAGS="$CPPFLAGS"
 			break
+                 else
+                        AC_MSG_RESULT(no)
 		 fi
 	         CPPFLAGS=$_cppflags
 	  done
 	fi	
 	CPPFLAGS="$CMPI_CPP_FLAGS"	
 	if test "$have_CMPI" == "no"; then
-		AC_MSG_ERROR(no. Sorry cannot find CMPI headers files.)
+		AC_MSG_ERROR(Cannot find CMPI headers files.)
 	fi
 	]
 )
@@ -133,7 +134,7 @@ dnl
 
 AC_DEFUN([CHECK_PROVIDERDIR],
 	[
-	AC_MSG_CHECKING(for CMPI provider directory)
+	AC_MSG_NOTICE([checking for CMPI provider directory])
 	_DIRS="$libdir/cmpi"
 	save_exec_prefix=${exec_prefix}
 	save_prefix=${prefix}
@@ -146,7 +147,7 @@ AC_DEFUN([CHECK_PROVIDERDIR],
 	for _dir in $_DIRS
 	do
 		_xdir=`eval echo $_dir`
-		AC_MSG_CHECKING( $_dir )
+		AC_MSG_CHECKING([for $_dir])
 		if test -d $_xdir ; then
 		  dnl Found it
 		  AC_MSG_RESULT(yes)
@@ -172,7 +173,7 @@ dnl
 
 AC_DEFUN([CHECK_CIMSERVER],
 	[
-	AC_MSG_CHECKING(for CIM servers)
+	AC_MSG_NOTICE([checking for CIM servers])
 	if test x"$CIMSERVER" = x
 	then
 	_SERVERS="sfcbd cimserver owcimomd"
@@ -194,13 +195,18 @@ AC_DEFUN([CHECK_CIMSERVER],
 			esac
 		  fi
 		  break;
-		fi
+                  fi
+                done
+          if test x"$CIMSERVER" == x; then
+            AC_MSG_RESULT(no)
+          else
+            break
+          fi
         done
-           done
 	PATH=$_SAVE_PATH
 	if test x"$CIMSERVER" == x ; then
 		CIMSERVER=sfcb
-		AC_MSG_RESULT(implied: $CIMSERVER)
+		AC_MSG_WARN([CIM server implied: $CIMSERVER])
 	fi
 	fi
 	# Cross platform only needed for sfcb currently

@@ -10,7 +10,7 @@ lib_LTLIBRARIES = libxkutil.la
 
 libxkutil_la_SOURCES = cs_util_instance.c misc_util.c device_parsing.c \
                        xmlgen.c infostore.c pool_parsing.c
-
+libxkutil_la_LDFLAGS = -version-info @VERSION_INFO@
 libxkutil_la_LIBADD = @LIBVIRT_LIBS@ \
 		      @LIBUUID_LIBS@
 

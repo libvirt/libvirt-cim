@@ -29,7 +29,8 @@ XKUADD = $(top_builddir)/libxkutil/libxkutil.la
 
 CFLAGS += -I$(top_builddir)/libxkutil $(CFLAGS_STRICT)
 
-AM_LDFLAGS = $(XKUADD)
+AM_LDFLAGS = $(XKUADD) \
+	     -version-info @VERSION_INFO@
 
 providerdir = $(PROVIDERDIR)
 
