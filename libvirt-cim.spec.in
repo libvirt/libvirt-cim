@@ -10,11 +10,13 @@ Source: libvirt-cim-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 URL: http://libvirt.org/CIM/
 Requires: libxml2 >= 2.6.0
-Requires: libvirt >= 0.6.3
+Requires: libvirt >= 0.6.4
 Requires: unzip
+Requires: tog-pegasus
+BuildRequires: libcmpiutil >= 0.5.4
 BuildRequires: tog-pegasus-devel
-BuildRequires: libvirt-devel >= 0.5.4
-BuildRequires: e2fsprogs-devel
+BuildRequires: libvirt-devel >= 0.6.4
+BuildRequires: libuuid-devel
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
 BuildConflicts: sblim-cmpi-devel
@@ -27,11 +29,11 @@ platforms with a single provider.
 
 %prep
 %setup -q
-chmod -x src/* libxkutil/* schema/* README doc/* base_schema/README*
-chmod +X src/* libxkutil/* schema/*
 
 %build
 %configure --disable-werror
+sed -i 's|^hardcode_libdir_flag_spec=.*|hardcode_libdir_flag_spec=""|g' libtool
+sed -i 's|^runpath_var=LD_RUN_PATH|runpath_var=DIE_RPATH_DIE|g' libtool
 make %{?_smp_mflags}
 
 %install
@@ -43,6 +45,9 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/libxkutil.so
+mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
+echo %{_libdir}/cmpi > $RPM_BUILD_ROOT/etc/ld.so.conf.d/libvirt-cim.conf
+mkdir -p $RPM_BUILD_ROOT@INFO_STORE@
 
 %clean
 rm -fr $RPM_BUILD_ROOT
@@ -60,17 +65,19 @@ rm -fr $RPM_BUILD_ROOT
 %define CIMV2_REG %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,ElementConformsToProfile,HostedAccessPoint}.registration
 %define CIMV2_MOF %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,RegisteredProfile,ComputerSystem,ElementConformsToProfile,HostedAccessPoint}.mof
 
+# _If_ there is already a version of this installed, we must deregister
+# the classes we plan to install in post, otherwise we may corrupt
+# the pegasus repository.  This is convention in other provider packages
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
 	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 
 %post
 /sbin/ldconfig
-mkdir -p @INFO_STORE@
 
 %{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
 
-/etc/init.d/tog-pegasus restart
+/etc/init.d/tog-pegasus condrestart
 
 %{_datadir}/%{name}/provider-register.sh -t pegasus \
 	-n @CIM_VIRT_NS@ \
@@ -93,25 +100,34 @@ mkdir -p @INFO_STORE@
 	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 %{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-        -n root/PG_InterOp \
-        -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
+	-n root/interop \
+	-r %{INTEROP_REG} -m %{INTEROP_MOF} >/dev/null 2>&1 || true
+%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	-n root/PG_InterOp \
+	-r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
+%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	-n root/cimv2 \
+	-r %{CIMV2_REG} -m %{CIMV2_MOF} >/dev/null 2>&1 || true
 
 %postun -p /sbin/ldconfig
 
-%files 
+%files
 %defattr(-, root, root)
+%{_sysconfdir}/libvirt/cim
 
 %doc README COPYING doc/CodingStyle doc/SubmittingPatches
 %doc base_schema/README.DMTF
 %doc doc/*.html
 %{_libdir}/lib*.so*
 %{_libdir}/cmpi/lib*.so*
+%{_datadir}/libvirt-cim
 %{_datadir}/libvirt-cim/*.sh
 %{_datadir}/libvirt-cim/*.mof
 %{_datadir}/libvirt-cim/cimv*-interop_mof
 %{_datadir}/libvirt-cim/cimv*-cimv2_mof
 %{_datadir}/libvirt-cim/*.registration
 %{_datadir}/libvirt-cim/cim_schema_*-MOFs.zip
+%{_sysconfdir}/ld.so.conf.d/libvirt-cim.conf
 
 %changelog
 * Wed Oct 28 2009 Richard Maciel <rmaciel@linux.vnet.ibm.com> - 0.1-1
