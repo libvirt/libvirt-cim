@@ -1294,6 +1294,7 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
                                       "Completed");
 
         raise_deleted_ind(job);
+        virConnectClose(job->conn);
         free(job->domain);
         free(job->ref_cn);
         free(job->ref_ns);
@@ -1510,7 +1511,6 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
 
  out:
         CMReturnData(results, (CMPIValue *)&retcode, CMPI_uint32);
-        virConnectClose(job->conn);
 
         return s;
 }
