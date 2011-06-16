@@ -370,8 +370,7 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                       (CMPIValue *)dev->dev.net.mac,
                       CMPI_chars);
 
-        if ((dev->dev.net.source != NULL) &&
-            (STREQ(dev->dev.net.type, "bridge")))
+        if (dev->dev.net.source != NULL)
                 CMSetProperty(inst,
                               "NetworkName",
                               (CMPIValue *)dev->dev.net.source,
