@@ -26,6 +26,7 @@ BuildRequires: libuuid-devel
 
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
+BuildRequires: libconfig-devel
 BuildConflicts: sblim-cmpi-devel
 
 %description
@@ -135,6 +136,7 @@ rm -fr $RPM_BUILD_ROOT
 %{_datadir}/libvirt-cim/*.registration
 %{_datadir}/libvirt-cim/cim_schema_*-MOFs.zip
 %{_sysconfdir}/ld.so.conf.d/libvirt-cim.conf
+%{_sysconfdir}/libvirt-cim.conf
 
 %changelog
 * Wed Oct 28 2009 Richard Maciel <rmaciel@linux.vnet.ibm.com> - 0.1-1

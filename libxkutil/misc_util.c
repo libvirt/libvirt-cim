@@ -35,11 +35,12 @@
 
 #include <libcmpiutil/libcmpiutil.h>
 #include <libcmpiutil/std_association.h>
+#include <libconfig.h>
 
 #include "misc_util.h"
 #include "cs_util.h"
 
-#include <config.h>
+#include "config.h"
 
 #define URI_ENV "HYPURI"
 
@@ -55,6 +56,37 @@ static const char *cn_to_uri(const char *classname)
                 return NULL;
 }
 
+static int is_read_only(void)
+{
+        config_t conf;
+        int ret, readonly = 0;
+        const char *readonly_str = "readonly";
+
+        config_init(&conf);
+
+        ret = config_read_file(&conf, LIBVIRTCIM_CONF);
+        if (ret == CONFIG_FALSE) {
+                CU_DEBUG("Error reading config file(%d): '%s'\n",
+                         conf.error_type, conf.error_text);
+                goto out;
+        }
+
+        ret = config_lookup_bool(&conf, readonly_str, &readonly);
+        if (ret == CONFIG_FALSE) {
+                CU_DEBUG("Error: '%s' not found in config file\n",
+                         readonly_str);
+                goto out;
+        }
+
+        CU_DEBUG("'%s' value in '%s' config file: %d\n", readonly_str,
+                 LIBVIRTCIM_CONF, readonly);
+out:
+        config_destroy(&conf);
+
+        /* Default value is 0 (false) */
+        return readonly;
+}
+
 virConnectPtr connect_by_classname(const CMPIBroker *broker,
                                    const char *classname,
                                    CMPIStatus *s)
@@ -66,7 +98,7 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
 
         uri = cn_to_uri(classname);
         if (!uri) {
-                cu_statusf(broker, s, 
+                cu_statusf(broker, s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to generate URI from classname");
                 return NULL;
@@ -74,7 +106,11 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
 
         CU_DEBUG("Connecting to libvirt with uri `%s'", uri);
 
-        conn = virConnectOpen(uri);
+        if (is_read_only())
+                conn = virConnectOpenReadOnly(uri);
+        else
+                conn = virConnectOpen(uri);
+
         if (!conn) {
                 CU_DEBUG("Unable to connect to `%s'", uri);
                 return NULL;
@@ -258,7 +294,7 @@ CMPIInstance *get_typed_instance(const CMPIBroker *broker,
         inst = CMNewInstance(broker, op, &s);
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(inst))
                 goto out;
-        
+
         CMSetProperty(inst, "CreationClassName",
                       (CMPIValue *)new_cn, CMPI_chars);
 
@@ -310,7 +346,7 @@ bool provider_is_responsible(const CMPIBroker *broker,
         if (STREQC(pfx, "CIM")) {
                 cu_statusf(broker, status,
                            CMPI_RC_ERR_FAILED,
-                           "Please exactly specify the class (check CIMOM behavior!): %s", 
+                           "Please exactly specify the class (check CIMOM behavior!): %s",
                            CLASSNAME(reference));
                 rc = false;
         }
@@ -347,7 +383,7 @@ bool match_hypervisor_prefix(const CMPIObjectPath *reference,
 
                 free(pfx);
         }
-        
+
         free(ref_pfx);
         return rc;
 }
@@ -367,13 +403,13 @@ CMPIInstance *make_reference(const CMPIBroker *broker,
                                       CLASSNAME(source_ref),
                                       assoc_classname,
                                       NAMESPACE(source_ref));
-        
+
         if (ref_inst != NULL) {
                 CMPIObjectPath *target_ref;
-                
+
                 target_ref = CMGetObjectPath(target_inst, NULL);
 
-                set_reference(assoc, ref_inst, 
+                set_reference(assoc, ref_inst,
                               source_ref, target_ref);
         }
 

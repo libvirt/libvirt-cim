@@ -1,7 +1,8 @@
 # Copyright IBM Corp. 2007
 SUBDIRS = tests
 
-CFLAGS += $(CFLAGS_STRICT)
+AM_CFLAGS = $(CFLAGS_STRICT) \
+            -DLIBVIRTCIM_CONF=\"@sysconfdir@/@PACKAGE@.conf\"
 
 noinst_HEADERS = cs_util.h misc_util.h device_parsing.h xmlgen.h infostore.h \
                  pool_parsing.h acl_parsing.h

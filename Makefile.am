@@ -172,6 +172,9 @@ CIMV2_REGS = \
 
 pkgdata_SCRIPTS = provider-register.sh
 
+libvirtcim_confdir = @sysconfdir@
+dist_libvirtcim_conf_DATA = @PACKAGE@.conf
+
 EXTRA_DIST = schema $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS) \
              $(pkgdata_SCRIPTS)	libvirt-cim.spec.in libvirt-cim.spec \
 	     doc/CodingStyle doc/SubmittingPatches      \
