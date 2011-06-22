@@ -16,7 +16,14 @@ Requires: tog-pegasus
 BuildRequires: libcmpiutil >= 0.5.4
 BuildRequires: tog-pegasus-devel
 BuildRequires: libvirt-devel >= 0.6.4
+
+# In RHEL5 uuid-devel is provided by e2fsprogs
+%if 0%{?el5}
+BuildRequires: e2fsprogs-devel
+%else
 BuildRequires: libuuid-devel
+%endif
+
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
 BuildConflicts: sblim-cmpi-devel
