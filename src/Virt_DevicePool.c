@@ -676,16 +676,46 @@ static bool mempool_set_total(CMPIInstance *inst, virConnectPtr conn)
         return memory != 0;
 }
 
-static bool mempool_set_reserved(CMPIInstance *inst, virConnectPtr conn)
+static bool mempool_set_consumed(CMPIInstance *inst, virConnectPtr conn)
 {
-        uint64_t memory;
+        uint64_t memory = 0;
+        int *domain_ids = NULL;
+        int count, i = 0;
 
-        /* NB: This doesn't account for memory to be claimed
-         * by ballooning dom0
-         */
-        memory = allocated_memory(conn);
+        count = virConnectNumOfDomains(conn);
+        if (count <= 0)
+                goto out;
+
+        domain_ids = calloc(count, sizeof(domain_ids[0]));
+        if (domain_ids == NULL)
+                goto out;
+
+        if (virConnectListDomains(conn, domain_ids, count) == -1)
+                goto out;
+
+        for (i = 0; i < count; i++) {
+                virDomainPtr dom = NULL;
+                virDomainInfo dom_info;
+
+                dom = virDomainLookupByID(conn, domain_ids[i]);
+                if (dom == NULL) {
+                        CU_DEBUG("Cannot connect to domain %n: excluding",
+                                domain_ids[i]);
+                        continue;
+                }
+
+                if (virDomainGetInfo(dom, &dom_info) == 0)
+                        memory += dom_info.memory;
+
+                virDomainFree(dom);
+        }
+
+ out:
+        free(domain_ids);
 
         CMSetProperty(inst, "Reserved",
+                      (CMPIValue *)&memory, CMPI_uint64);
+        CMSetProperty(inst, "CurrentlyConsumedResource",
                       (CMPIValue *)&memory, CMPI_uint64);
 
         return memory != 0;
@@ -726,9 +756,13 @@ static void set_params(CMPIInstance *inst,
         CMSetProperty(inst, "ResourceType",
                       (CMPIValue *)&type, CMPI_uint16);
 
-        if (units != NULL)
+        if (units != NULL) {
                 CMSetProperty(inst, "AllocationUnits",
                               (CMPIValue *)units, CMPI_chars);
+
+                CMSetProperty(inst, "ConsumedResourceUnits",
+                              (CMPIValue *)units, CMPI_chars);
+        }
 
         if (caption != NULL)
                 CMSetProperty(inst, "Caption",
@@ -761,9 +795,9 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
                                   ns);
 
         mempool_set_total(inst, conn);
-        mempool_set_reserved(inst, conn);
+        mempool_set_consumed(inst, conn);
 
-        set_params(inst, CIM_RES_TYPE_MEM, id, "KiloBytes", NULL, true);
+        set_params(inst, CIM_RES_TYPE_MEM, id, "byte*210", NULL, true);
 
         inst_list_add(list, inst);
 
