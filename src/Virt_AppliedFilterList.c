@@ -105,6 +105,7 @@ static CMPIrc cu_get_ref_path(const CMPIObjectPath *reference,
 static int update_device(virDomainPtr dom,
                          struct virt_device *dev)
 {
+#if LIBVIR_VERSION_NUMBER > 8000
         char *xml = NULL;
         int flags = VIR_DOMAIN_DEVICE_MODIFY_CURRENT |
                     VIR_DOMAIN_DEVICE_MODIFY_CONFIG;
@@ -132,6 +133,9 @@ static int update_device(virDomainPtr dom,
         free(xml);
 
         return ret;
+#else
+        return 0;
+#endif
 }
 
 /* TODO: Port to libxkutil/device_parsing.c */

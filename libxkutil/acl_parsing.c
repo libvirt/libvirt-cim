@@ -456,6 +456,7 @@ int get_filter_by_name(
         const char *name,
         struct acl_filter **filter)
 {
+#if LIBVIR_VERSION_NUMBER > 8000
         virNWFilterPtr vfilter = NULL;
         char *xml = NULL;
 
@@ -474,6 +475,9 @@ int get_filter_by_name(
         get_filter_from_xml(xml, filter);
 
         return 1;
+#else
+        return 0;
+#endif
 }
 
 int get_filter_by_uuid(
@@ -481,6 +485,7 @@ int get_filter_by_uuid(
         const char *uuid,
         struct acl_filter **filter)
 {
+#if LIBVIR_VERSION_NUMBER > 8000
         virNWFilterPtr vfilter = NULL;
         char *xml = NULL;
 
@@ -499,12 +504,16 @@ int get_filter_by_uuid(
         get_filter_from_xml(xml, filter);
 
         return 1;
+#else
+        return 0;
+#endif
 }
 
 int get_filters(
         virConnectPtr conn,
         struct acl_filter **list)
 {
+#if LIBVIR_VERSION_NUMBER > 8000
         int count = 0;
         char **names = NULL;
         struct acl_filter *filters = NULL;
@@ -537,6 +546,9 @@ int get_filters(
         free(names);
 
         return i;
+#else
+        return 0;
+#endif
 }
 
 
