@@ -235,10 +235,10 @@ static CMPIStatus list_to_net(
                                                         CIM_RES_TYPE_NET,
                                                         &instance);
 
-                                if (instance != NULL) {
-                                        CU_DEBUG("adding instance to list");
+                                free(device_id);
+
+                                if (instance != NULL)
                                         inst_list_add(list, instance);
-                                }
                         }
                 }
 
@@ -317,7 +317,7 @@ static CMPIStatus net_to_list(
                 CU_DEBUG("Checking net device '%s' for filterref",
                         devices[i].id);
 
-                if (STREQC(device_name, devices[i].id)) {
+                if (STREQC(net_name, devices[i].id)) {
                         CMPIInstance *instance = NULL;
 
                         CU_DEBUG("Processing %s", ndev->filter_ref);
@@ -332,18 +332,18 @@ static CMPIStatus net_to_list(
                                                 filter,
                                                 &instance);
 
+                        cleanup_filter(filter);
+
                         if (instance != NULL)
                                 inst_list_add(list, instance);
-
                 }
 
         }
 
         cleanup_virt_devices(&devices, count);
- out:
 
+ out:
         free(domain_name);
-        free((char *)device_name);
         free(net_name);
 
         virDomainFree(dom);
