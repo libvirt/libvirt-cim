@@ -81,6 +81,32 @@ static CMPIInstance *convert_filter_to_instance(
         return inst;
 }
 
+static struct acl_filter *convert_instance_to_filter(
+        const CMPIInstance *instance,
+        const CMPIContext *context,
+        CMPIStatus *s)
+{
+        struct acl_filter *filter = NULL;
+        const char *name = NULL;
+
+        if (cu_get_str_prop(instance, "Name", &name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get Name property");
+                goto out;
+        }
+
+        filter = malloc(sizeof(*filter));
+        if (filter == NULL)
+                goto out;
+
+        memset(filter, 0, sizeof(*filter));
+        filter->name = strdup(name);
+
+ out:
+        return filter;
+}
+
 CMPIStatus enum_filter_lists(const CMPIBroker *broker,
                         const CMPIContext *context,
                         const CMPIObjectPath *reference,
@@ -230,9 +256,114 @@ static CMPIStatus EnumInstances(
         return s;
 }
 
-DEFAULT_CI();
+static CMPIStatus CreateInstance(
+        CMPIInstanceMI *self,
+        const CMPIContext *context,
+        const CMPIResult *results,
+        const CMPIObjectPath *reference,
+        const CMPIInstance *instance)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *name = NULL;
+        struct acl_filter *filter = NULL;
+        CMPIInstance *_instance = NULL;
+        virConnectPtr conn = NULL;
+
+        /**Get Name from instance rather than reference since keys
+         * are set by this provider, not the client.
+         */
+        if (cu_get_str_prop(instance, "Name", &name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get Name property");
+                goto out;
+        }
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
+        get_filter_by_name(conn, name, &filter);
+        if (filter != NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_ALREADY_EXISTS,
+                        "Instance already exists");
+                goto out;
+        }
+
+        filter = convert_instance_to_filter(instance, context, &s);
+        if (filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Failed to convert instance to filter");
+                goto out;
+        }
+
+        if (create_filter(conn, filter) == 0) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Failed to create filter");
+                goto out;
+        }
+
+        _instance = convert_filter_to_instance(filter,
+                                        _BROKER,
+                                        context,
+                                        reference,
+                                        &s);
+
+        if(_instance != NULL)
+                cu_return_instance_name(results, _instance);
+
+        CU_DEBUG("CreateInstance complete");
+
+ out:
+        cleanup_filter(filter);
+        virConnectClose(conn);
+
+        return s;
+}
+
+static CMPIStatus DeleteInstance(
+        CMPIInstanceMI *self,
+        const CMPIContext *context,
+        const CMPIResult *results,
+        const CMPIObjectPath *reference)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *name = NULL;
+        struct acl_filter *filter = NULL;
+        virConnectPtr conn = NULL;
+
+        if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_NOT_FOUND,
+                        "Unable to get Name from reference");
+                goto out;
+        }
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
+        get_filter_by_name(conn, name, &filter);
+        if (filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_NOT_FOUND,
+                        "Instance does not exist");
+                goto out;
+        }
+
+        delete_filter(conn, filter);
+
+ out:
+        cleanup_filter(filter);
+        virConnectClose(conn);
+
+        return s;
+}
+
 DEFAULT_MI();
-DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 

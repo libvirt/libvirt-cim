@@ -38,6 +38,71 @@
 
 static const CMPIBroker *_BROKER;
 
+/* TODO: Port to libcmpiutil/args_util.c */
+/**
+ * Get a reference property of an instance
+ *
+ * @param inst The instance
+ * @param prop The property name
+ * @param reference A pointer to a CMPIObjectPath* that will be set
+ *                  if successful
+ * @returns
+ *      - CMPI_RC_OK on success
+ *      - CMPI_RC_ERR_NO_SUCH_PROPERTY if prop is not present
+ *      - CMPI_RC_ERR_TYPE_MISMATCH if prop is not a reference
+ *      - CMPI_RC_OK otherwise
+ */
+static CMPIrc cu_get_ref_prop(const CMPIInstance *instance,
+                              const char *prop,
+                              CMPIObjectPath **reference)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIData value;
+
+        /* REQUIRE_PROPERY_DEFINED(instance, prop, value, &s); */
+        value = CMGetProperty(instance, prop, &s);
+        if ((s.rc != CMPI_RC_OK) || CMIsNullValue(value))
+                return CMPI_RC_ERR_NO_SUCH_PROPERTY;
+
+        if ((value.type != CMPI_ref) ||  CMIsNullObject(value.value.ref))
+                return CMPI_RC_ERR_TYPE_MISMATCH;
+
+        *reference = value.value.ref;
+
+        return CMPI_RC_OK;
+}
+
+/* TODO: Port to libcmpiutil/args_util.c */
+/**
+ * Get a reference component of an object path
+ *
+ * @param _reference The reference
+ * @param key The key name
+ * @param reference A pointer to a CMPIObjectPath* that will be set
+ *                  if successful
+ * @returns
+ *      - CMPI_RC_OK on success
+ *      - CMPI_RC_ERR_NO_SUCH_PROPERTY if prop is not present
+ *      - CMPI_RC_ERR_TYPE_MISMATCH if prop is not a reference
+ *      - CMPI_RC_OK otherwise
+ */
+static CMPIrc cu_get_ref_path(const CMPIObjectPath *reference,
+                              const char *key,
+                              CMPIObjectPath **_reference)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIData value;
+
+        /* REQUIRE_PROPERY_DEFINED(instance, prop, value, &s); */
+        value = CMGetKey(reference, key, &s);
+        if ((s.rc != CMPI_RC_OK) || CMIsNullValue(value))
+                return CMPI_RC_ERR_NO_SUCH_PROPERTY;
+
+        /* how to parse and object path? */
+
+        return CMPI_RC_OK;
+}
+
 /**
  *  given a filter, find all *direct* filter_refs
  */
@@ -223,6 +288,202 @@ STDA_AssocMIStub(,
         _BROKER,
         libvirt_cim_init(),
         handlers);
+
+DEFAULT_GI();
+DEFAULT_EIN();
+DEFAULT_EI();
+
+static CMPIStatus CreateInstance(
+        CMPIInstanceMI *self,
+        const CMPIContext *context,
+        const CMPIResult *results,
+        const CMPIObjectPath *reference,
+        const CMPIInstance *instance)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIObjectPath *antecedent = NULL;
+        const char *parent_name = NULL;
+        struct acl_filter *parent_filter = NULL;
+        CMPIObjectPath *dependent = NULL;
+        const char *child_name = NULL;
+        struct acl_filter *child_filter = NULL;
+        virConnectPtr conn = NULL;
+
+        CU_DEBUG("Reference = %s", REF2STR(reference));
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
+        if (cu_get_ref_prop(instance, "Antecedent",
+                &antecedent) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Antecedent property");
+                goto out;
+        }
+
+        if (cu_get_str_path(reference, "Name", &parent_name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Antecedent.Name property");
+                goto out;
+        }
+
+        get_filter_by_name(conn, parent_name, &parent_filter);
+        if (parent_filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Antecedent.Name object does not exist");
+                goto out;
+        }
+
+        if (cu_get_ref_prop(instance, "Dependent",
+                &dependent) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Dependent property");
+                goto out;
+        }
+
+        if (cu_get_str_path(reference, "Name", &child_name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Dependent.Name property");
+                goto out;
+        }
+
+        get_filter_by_name(conn, child_name, &child_filter);
+        if (child_filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Dependent.Name object does not exist");
+                goto out;
+        }
+
+        if (append_filter_ref(parent_filter, strdup(child_name)) == 0) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Failed to append filter reference");
+                goto out;
+        }
+
+        if (update_filter(conn, parent_filter) == 0) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Failed to update filter");
+                goto out;
+        }
+
+        CU_DEBUG("CreateInstance completed");
+
+ out:
+        cleanup_filter(parent_filter);
+        cleanup_filter(child_filter);
+        virConnectClose(conn);
+
+        return s;
+}
+
+static CMPIStatus DeleteInstance(
+        CMPIInstanceMI *self,
+        const CMPIContext *context,
+        const CMPIResult *results,
+        const CMPIObjectPath *reference)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIObjectPath *antecedent = NULL;
+        const char *parent_name = NULL;
+        struct acl_filter *parent_filter = NULL;
+        CMPIObjectPath *dependent = NULL;
+        const char *child_name = NULL;
+        struct acl_filter *child_filter = NULL;
+        virConnectPtr conn = NULL;
+
+        CU_DEBUG("Reference = %s", REF2STR(reference));
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
+        if (cu_get_ref_path(reference, "Antecedent",
+                &antecedent) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Antecedent property");
+                goto out;
+        }
+
+        if (cu_get_str_path(reference, "Name", &parent_name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Antecedent.Name property");
+                goto out;
+        }
+
+        get_filter_by_name(conn, parent_name, &parent_filter);
+        if (parent_filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Antecedent.Name object does not exist");
+                goto out;
+        }
+
+        if (cu_get_ref_path(reference, "Dependent",
+                &dependent) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Dependent property");
+                goto out;
+        }
+
+        if (cu_get_str_path(reference, "Name", &child_name) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Unable to get Dependent.Name property");
+                goto out;
+        }
+
+        get_filter_by_name(conn, child_name, &child_filter);
+        if (child_filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Dependent.Name object does not exist");
+                goto out;
+        }
+
+        if (remove_filter_ref(parent_filter, child_name) == 0) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Failed to remove filter reference");
+                goto out;
+        }
+
+        if (update_filter(conn, parent_filter) == 0) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Failed to update filter");
+                goto out;
+        }
+
+        CU_DEBUG("CreateInstance completed");
+
+ out:
+        cleanup_filter(parent_filter);
+        cleanup_filter(child_filter);
+        virConnectClose(conn);
+
+        return s;
+}
+
+DEFAULT_MI();
+DEFAULT_EQ();
+DEFAULT_INST_CLEANUP();
+
+STD_InstanceMIStub(,
+        Virt_NestedFilterList,
+        _BROKER,
+        libvirt_cim_init());
 
 /*
  * Local Variables:

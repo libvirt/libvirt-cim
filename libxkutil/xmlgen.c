@@ -1360,6 +1360,59 @@ char *res_to_xml(struct virt_pool_res *res) {
         return xml;
 }
 
+char *filter_to_xml(struct acl_filter *filter)
+{
+        char *msg = XML_ERROR;
+        char *xml = NULL;
+        xmlNodePtr root = NULL;
+        xmlNodePtr tmp = NULL;
+        int i;
+
+        root = xmlNewNode(NULL, BAD_CAST "filter");
+        if (root == NULL)
+                goto out;
+
+        if (xmlNewProp(root, BAD_CAST "name", BAD_CAST filter->name) == NULL)
+                goto out;
+
+        if (filter->chain != NULL)
+                if (xmlNewProp(root, BAD_CAST "chain",
+                        BAD_CAST filter->chain) == NULL)
+                        goto out;
+
+        if (filter->uuid != NULL) {
+                tmp = xmlNewChild(root, NULL, BAD_CAST "uuid", NULL);
+                if (xmlNewProp(tmp, NULL, BAD_CAST filter->uuid) == NULL)
+                        goto out;
+        }
+
+        for (i = 0; i < filter->ref_ct; i++) {
+                tmp = xmlNewChild(root, NULL, BAD_CAST "filterref", NULL);
+                if (xmlNewProp(tmp, BAD_CAST "filter",
+                        BAD_CAST filter->refs[i]) == NULL)
+                        goto out;
+        }
+
+        /* TODO: Not yet supported
+        for (i = 0; i < filter->rule_ct; i++) {
+                msg = rule_to_xml(root, filter->rules[i]);
+                if (msg != NULL)
+                        goto out;
+        }
+        */
+
+        xml = tree_to_xml(root);
+        if (xml != NULL)
+                msg = NULL; /* no errors */
+
+ out:
+        CU_DEBUG("Filter XML: %s", msg);
+
+        xmlFreeNode(root);
+
+        return xml;
+}
+
 /*
  * Local Variables:
  * mode: C

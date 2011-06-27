@@ -194,11 +194,17 @@ int get_filter_by_name(virConnectPtr conn, const char *name,
 char *make_rule_id(const char *filter, int index);
 int parse_rule_id(const char *rule_id, char **filter, int *index);
 
+int create_filter(virConnectPtr conn, struct acl_filter *filter);
+int update_filter(virConnectPtr conn, struct acl_filter *filter);
+int delete_filter(virConnectPtr conn, struct acl_filter *filter);
+
 /** NOTE: Both append functions take parameters allocated by caller and
  *  freed by cleanup_filter(s)
  */
 int append_filter_rule(struct acl_filter *filter, struct acl_rule *rule);
 int append_filter_ref(struct acl_filter *filter, char *name);
+int remove_filter_ref(struct acl_filter *filter, const char *name);
+
 #endif
 
 /*

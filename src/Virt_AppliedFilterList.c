@@ -411,10 +411,6 @@ STDA_AssocMIStub(,
         libvirt_cim_init(),
         handlers);
 
-DEFAULT_GI();
-DEFAULT_EIN();
-DEFAULT_EI();
-
 static CMPIStatus CreateInstance(
         CMPIInstanceMI *self,
         const CMPIContext *context,
@@ -433,6 +429,8 @@ static CMPIStatus CreateInstance(
         struct virt_device *device = NULL;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
+
+        CU_DEBUG("Reference = %s", REF2STR(reference));
 
         if (cu_get_ref_prop(instance, "Antecedent",
                 &antecedent) != CMPI_RC_OK) {
@@ -473,6 +471,8 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
+        CU_DEBUG("DeviceID = %s", device_name);
+
         if (parse_fq_devid(device_name, &domain_name, &net_name) == 0) {
                 CU_DEBUG("Failed to parse devid");
                 goto out;
@@ -492,7 +492,11 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
-        free(device->dev.net.filter_ref);
+        if (device->dev.net.filter_ref != NULL) {
+                free(device->dev.net.filter_ref);
+                device->dev.net.filter_ref = NULL;
+        }
+
         device->dev.net.filter_ref = strdup(filter_name);
 
         if (update_device(dom, device) == 0) {
@@ -502,10 +506,10 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
+        CU_DEBUG("CreateInstance complete");
+
  out:
-        free((char *)filter_name);
         free(domain_name);
-        free((char *)device_name);
         free(net_name);
 
         cleanup_filter(filter);
@@ -534,6 +538,8 @@ static CMPIStatus DeleteInstance(
         struct virt_device *device = NULL;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
+
+        CU_DEBUG("Reference = %s", REF2STR(reference));
 
         if (cu_get_ref_path(reference, "Antecedent",
                 &antecedent) != CMPI_RC_OK) {
@@ -574,6 +580,8 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
+        CU_DEBUG("DeviceID = %s", device_name);
+
         if (parse_fq_devid(device_name, &domain_name, &net_name) == 0) {
                 CU_DEBUG("Failed to parse devid");
                 goto out;
@@ -593,8 +601,10 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        free(device->dev.net.filter_ref);
-        device->dev.net.filter_ref = NULL;
+        if (device->dev.net.filter_ref != NULL) {
+                free(device->dev.net.filter_ref);
+                device->dev.net.filter_ref = NULL;
+        }
 
         if (update_device(dom, device) == 0) {
                 cu_statusf(_BROKER, &s,
@@ -603,10 +613,10 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
+        CU_DEBUG("CreateInstance complete");
+
  out:
-        free((char *)filter_name);
         free(domain_name);
-        free((char *)device_name);
         free(net_name);
 
         cleanup_filter(filter);
@@ -618,12 +628,15 @@ static CMPIStatus DeleteInstance(
         return s;
 }
 
+DEFAULT_GI();
+DEFAULT_EIN();
+DEFAULT_EI();
 DEFAULT_MI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
 STD_InstanceMIStub(,
-        Virt_AppliedFilterEntry,
+        Virt_AppliedFilterList,
         _BROKER,
         libvirt_cim_init());
 

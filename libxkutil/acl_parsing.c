@@ -551,6 +551,57 @@ int get_filters(
 #endif
 }
 
+int create_filter(virConnectPtr conn, struct acl_filter *filter)
+{
+        virNWFilterPtr vfilter = NULL;
+        char *xml = NULL;
+
+        if (filter == NULL)
+                return 0;
+
+        xml = filter_to_xml(filter);
+        if (xml == NULL)
+                return 0;
+
+        vfilter = virNWFilterDefineXML(conn, xml);
+
+        free(xml);
+
+        if (vfilter == NULL)
+                return 0;
+
+        virNWFilterFree(vfilter);
+
+        return 1;
+}
+
+int update_filter(virConnectPtr conn, struct acl_filter *filter)
+{
+        if (delete_filter(conn, filter) == 0 || 
+                create_filter(conn, filter) == 0)
+                return 0;
+
+        return 1;
+}
+
+int delete_filter(virConnectPtr conn, struct acl_filter *filter)
+{
+        virNWFilterPtr vfilter = NULL;
+
+        if (filter == NULL)
+                return 0;
+
+        vfilter = virNWFilterLookupByUUIDString(conn, filter->uuid);
+        if (vfilter == NULL)
+                return 0;
+
+        if (virNWFilterUndefine(vfilter) != 0) {
+                virNWFilterFree(vfilter);
+                return 0;
+        }
+
+        return 1;
+}
 
 int append_filter_rule(struct acl_filter *filter, struct acl_rule *rule)
 {
@@ -601,6 +652,28 @@ int append_filter_ref(struct acl_filter *filter, char *name)
         filter->ref_ct++;
 
         free(old_refs);
+
+        return 1;
+}
+
+int remove_filter_ref(struct acl_filter *filter, const char *name)
+{
+        int i;
+        char **old_refs = NULL;
+
+        if ((filter == NULL) || (name == NULL))
+                return 0;
+
+        /* TODO: called infrequently, but needs optimization */
+        old_refs = filter->refs;
+
+        for (i = 0; i < filter->ref_ct; i++) {
+                if (STREQC(old_refs[i], name)) {
+                        free(old_refs[i]);
+                }
+                else
+                        append_filter_ref(filter, old_refs[i]);
+        }
 
         return 1;
 }
