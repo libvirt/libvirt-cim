@@ -2,7 +2,7 @@
 
 m4_define([libvirtcim_maj], [0])
 m4_define([libvirtcim_min], [5])
-m4_define([libvirtcim_mic], [12])
+m4_define([libvirtcim_mic], [13])
 m4_define([libvirtcim_version], [libvirtcim_maj.libvirtcim_min.libvirtcim_mic])
 
 AC_INIT([libvirt CMPI provider], [libvirtcim_version], [cvincent us ibm com],
