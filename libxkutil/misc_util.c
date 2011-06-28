@@ -66,8 +66,8 @@ static int is_read_only(void)
 
         ret = config_read_file(&conf, LIBVIRTCIM_CONF);
         if (ret == CONFIG_FALSE) {
-                CU_DEBUG("Error reading config file(%d): '%s'\n",
-                         conf.error_type, conf.error_text);
+                CU_DEBUG("Error reading config file at liine %d: '%s'\n",
+                         conf.error_line, conf.error_text);
                 goto out;
         }
 
