@@ -797,7 +797,7 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
         mempool_set_total(inst, conn);
         mempool_set_consumed(inst, conn);
 
-        set_params(inst, CIM_RES_TYPE_MEM, id, "byte*210", NULL, true);
+        set_params(inst, CIM_RES_TYPE_MEM, id, "byte*2^10", NULL, true);
 
         inst_list_add(list, inst);
 
