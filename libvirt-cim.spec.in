@@ -22,11 +22,11 @@ BuildRequires: libvirt-devel >= 0.6.3
 BuildRequires: e2fsprogs-devel
 %else
 BuildRequires: libuuid-devel
+BuildRequires: libconfig-devel
 %endif
 
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
-BuildRequires: libconfig-devel
 BuildConflicts: sblim-cmpi-devel
 
 %description

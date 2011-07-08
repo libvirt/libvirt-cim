@@ -20,6 +20,8 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  */
+#include "config.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -35,12 +37,14 @@
 
 #include <libcmpiutil/libcmpiutil.h>
 #include <libcmpiutil/std_association.h>
+
+#ifdef HAVE_LIBCONFIG
 #include <libconfig.h>
+#endif
 
 #include "misc_util.h"
 #include "cs_util.h"
 
-#include "config.h"
 
 #define URI_ENV "HYPURI"
 
@@ -58,8 +62,11 @@ static const char *cn_to_uri(const char *classname)
 
 static int is_read_only(void)
 {
+        int readonly = 0;
+
+#ifdef HAVE_LIBCONFIG
         config_t conf;
-        int ret, readonly = 0;
+        int ret;
         const char *readonly_str = "readonly";
 
         config_init(&conf);
@@ -82,6 +89,7 @@ static int is_read_only(void)
                  LIBVIRTCIM_CONF, readonly);
 out:
         config_destroy(&conf);
+#endif
 
         /* Default value is 0 (false) */
         return readonly;
