@@ -5,6 +5,7 @@ class Xen_SwitchService : CIM_SwitchService
 {
     [Description("Flag to determine if VSI is supported on the switch")]
     boolean IsVSISupported;
+    string VSIInterface;
 
 };
 
@@ -13,6 +14,7 @@ class KVM_SwitchService : CIM_SwitchService
 {
     [Description("Flag to determine if VSI is supported on the switch")]
     boolean IsVSISupported;
+    string VSIInterface;
 
 };
 
@@ -21,6 +23,7 @@ class LXC_SwitchService : CIM_SwitchService
 {
     [Description("Flag to determine if VSI is supported on the switch")]
     boolean IsVSISupported;
+    string VSIInterface;
 
 };
 

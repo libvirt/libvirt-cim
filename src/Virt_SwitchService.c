@@ -250,6 +250,8 @@ static CMPIStatus get_switchservice(const CMPIObjectPath *reference,
                 s = check_vsi_support(cmd); 
                 if (s.rc == CMPI_RC_OK) {
                         vsi = true;
+                        CMSetProperty(inst, "VSIInterface", 
+                                      (CMPIValue *)if_list[i], CMPI_chars);
                         break;
                 }
                 else
