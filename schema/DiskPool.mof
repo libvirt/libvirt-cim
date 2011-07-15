@@ -5,6 +5,9 @@ class Xen_DiskPool : CIM_ResourcePool
 {
   [Description("Path this storage pool represents")]
   string Path;
+  uint16 Autostart;
+  string Host;
+  string SourceDirectory;
 
 };
 
@@ -13,6 +16,9 @@ class KVM_DiskPool : CIM_ResourcePool
 {
   [Description("Path this storage pool represents")]
   string Path;
+  uint16 Autostart;
+  string Host;
+  string SourceDirectory;
 
 };
 
@@ -21,6 +27,9 @@ class LXC_DiskPool : CIM_ResourcePool
 {
   [Description("Path this storage pool represents")]
   string Path;
+  uint16 Autostart;
+  string Host;
+  string SourceDirectory;
 
 };
 

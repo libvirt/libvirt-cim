@@ -213,6 +213,19 @@ static bool diskpool_set_capacity(virConnectPtr conn,
                         CMSetProperty(inst, "Path",
                                       (CMPIValue *)pool_str, CMPI_chars);
                 }
+                if (pool_vals->pool_info.disk.host != NULL) {
+                        pool_str = strdup(pool_vals->pool_info.disk.host);
+
+                        CMSetProperty(inst, "Host",
+                                      (CMPIValue *)pool_str, CMPI_chars);
+                }
+                if (pool_vals->pool_info.disk.src_dir != NULL) {
+                        pool_str = strdup(pool_vals->pool_info.disk.src_dir);
+
+                        CMSetProperty(inst, "SourceDirectory",
+                                      (CMPIValue *)pool_str, CMPI_chars);
+                }
+
                 type = pool_vals->pool_info.disk.pool_type;
                 CMSetProperty(inst, "OtherResourceType", 
                               (CMPIValue *)get_disk_pool_type(type), 
