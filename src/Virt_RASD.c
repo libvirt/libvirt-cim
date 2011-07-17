@@ -401,6 +401,12 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.net.model,
                               CMPI_chars);
 
+        if (dev->dev.net.poolid != NULL)
+                CMSetProperty(inst,
+                              "PoolID",
+                              (CMPIValue *)dev->dev.net.poolid,
+                              CMPI_chars);
+
         return s;
 }
 

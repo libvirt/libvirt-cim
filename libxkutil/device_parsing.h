@@ -61,6 +61,7 @@ struct net_device {
         char *type;
         char *mac;
         char *source;
+        char *poolid;
         char *model;
         char *device;
         char *net_mode;

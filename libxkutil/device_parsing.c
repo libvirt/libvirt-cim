@@ -372,8 +372,16 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         if (ndev->source != NULL)
                                 continue;
                         ndev->source = get_attr_value(child, "network");
-                        if (ndev->source != NULL)
+                        if (ndev->source != NULL) {
+                                int ret = asprintf(&ndev->poolid, 
+                                                   "NetworkPool/%s",
+                                                   ndev->source);
+                                if (ret == -1) {
+                                        CU_DEBUG("Failed to get network"
+                                                 " poolid");
+                                }
                                 continue;
+                        }
                         ndev->source = get_attr_value(child, "dev");
                         ndev->net_mode = get_attr_value(child, "mode");
                         if ((ndev->source != NULL) && (ndev->net_mode != NULL))
