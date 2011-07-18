@@ -525,6 +525,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
                 gdev->port = get_attr_value(node, "port");
                 gdev->host = get_attr_value(node, "listen");
                 gdev->keymap = get_attr_value(node, "keymap");
+                gdev->passwd = get_attr_value(node, "passwd");
         
                 if (gdev->port == NULL || gdev->host == NULL)
                         goto err;
@@ -1127,7 +1128,7 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
         char *xml;
         int ret;
         int start;
-        xml = virDomainGetXMLDesc(dom, 0);
+        xml = virDomainGetXMLDesc(dom, VIR_DOMAIN_XML_SECURE);
 
         if (xml == NULL)
                 return 0;
