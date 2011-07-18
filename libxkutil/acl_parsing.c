@@ -553,6 +553,7 @@ int get_filters(
 
 int create_filter(virConnectPtr conn, struct acl_filter *filter)
 {
+#if LIBVIR_VERSION_NUMBER > 8000
         virNWFilterPtr vfilter = NULL;
         char *xml = NULL;
 
@@ -573,6 +574,9 @@ int create_filter(virConnectPtr conn, struct acl_filter *filter)
         virNWFilterFree(vfilter);
 
         return 1;
+#else
+        return 0;
+#endif
 }
 
 int update_filter(virConnectPtr conn, struct acl_filter *filter)
@@ -586,6 +590,7 @@ int update_filter(virConnectPtr conn, struct acl_filter *filter)
 
 int delete_filter(virConnectPtr conn, struct acl_filter *filter)
 {
+#if LIBVIR_VERSION_NUMBER > 8000
         virNWFilterPtr vfilter = NULL;
 
         if (filter == NULL)
@@ -601,6 +606,9 @@ int delete_filter(virConnectPtr conn, struct acl_filter *filter)
         }
 
         return 1;
+#else
+        return 0;
+#endif
 }
 
 int append_filter_rule(struct acl_filter *filter, struct acl_rule *rule)
