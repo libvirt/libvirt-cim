@@ -73,14 +73,14 @@ static int is_read_only(void)
 
         ret = config_read_file(&conf, LIBVIRTCIM_CONF);
         if (ret == CONFIG_FALSE) {
-                CU_DEBUG("Error reading config file at liine %d: '%s'\n",
+                CU_DEBUG("Error reading config file at line %d: '%s'\n",
                          conf.error_line, conf.error_text);
                 goto out;
         }
 
         ret = config_lookup_bool(&conf, readonly_str, &readonly);
         if (ret == CONFIG_FALSE) {
-                CU_DEBUG("Error: '%s' not found in config file\n",
+                CU_DEBUG("'%s' not found in config file, assuming false\n",
                          readonly_str);
                 goto out;
         }
