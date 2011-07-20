@@ -470,8 +470,6 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
-        struct infostore_ctx *infostore = NULL;
-        bool has_passwd = false;
 
         CMSetProperty(inst, "ResourceSubType", 
                        (CMPIValue *)dev->dev.graphics.type, CMPI_chars);
@@ -510,18 +508,11 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
                         goto out;
                 }
 
-                infostore = infostore_open(dom);
-                if (infostore != NULL)
-                        has_passwd = infostore_get_bool(infostore, 
-                                "has_vnc_passwd");
-
-                if (has_passwd) {
+                if (dev->dev.graphics.passwd && strlen(dev->dev.graphics.passwd)) {
                         CU_DEBUG("has password");
                         CMSetProperty(inst, "Password",
                                       (CMPIValue *)"********", CMPI_chars);
                 }
-
-                infostore_close(infostore);
 
                 /* FIXME: Populate the IsIPv6Only */
         }

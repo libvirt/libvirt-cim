@@ -373,6 +373,7 @@ static bool default_graphics_device(struct domain *domain)
         domain->dev_graphics->dev.graphics.port = strdup("-1");
         domain->dev_graphics->dev.graphics.host = strdup("127.0.0.1");
         domain->dev_graphics->dev.graphics.keymap = strdup("en-us");
+        domain->dev_graphics->dev.graphics.passwd = NULL;
         domain->dev_graphics_ct = 1;
 
         return true;
@@ -1542,14 +1543,6 @@ static CMPIStatus update_dominfo(const struct domain *dominfo,
 
         infostore_set_u64(ctx, "weight", dev->dev.vcpu.weight);
         infostore_set_u64(ctx, "limit", dev->dev.vcpu.limit);
-
-        dev = dominfo->dev_graphics;
-        if(dev != NULL){
-                if (dev->dev.graphics.passwd != NULL)
-                        infostore_set_bool(ctx, "has_vnc_passwd", true);
-                else
-                        infostore_set_bool(ctx, "has_vnc_passwd", false);
-        }
 
  out:
         infostore_close(ctx);

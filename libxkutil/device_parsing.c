@@ -809,6 +809,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.graphics.port);
                 DUP_FIELD(dev, _dev, dev.graphics.host);
                 DUP_FIELD(dev, _dev, dev.graphics.keymap);
+                DUP_FIELD(dev, _dev, dev.graphics.passwd);
         } else if (dev->type == CIM_RES_TYPE_INPUT) {
                 DUP_FIELD(dev, _dev, dev.input.type);
                 DUP_FIELD(dev, _dev, dev.input.bus);
@@ -889,7 +890,7 @@ int get_devices(virDomainPtr dom, struct virt_device **list, int type)
         char *xml;
         int ret;
 
-        xml = virDomainGetXMLDesc(dom, 0);
+        xml = virDomainGetXMLDesc(dom, VIR_DOMAIN_XML_SECURE);
         if (xml == NULL)
                 return 0;
 

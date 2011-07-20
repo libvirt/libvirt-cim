@@ -151,7 +151,7 @@ static CMPIStatus doms_to_xml(struct dom_xml **dom_xml_list,
                 }
 
                 (*dom_xml_list)[i].xml = virDomainGetXMLDesc(dom_ptr_list[i], 
-                                                             0);
+                                                             VIR_DOMAIN_XML_SECURE);
                 if ((*dom_xml_list)[i].xml == NULL) {
                         cu_statusf(_BROKER, &s, 
                                    CMPI_RC_ERR_FAILED,
