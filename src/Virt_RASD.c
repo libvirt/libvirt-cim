@@ -234,6 +234,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
         uint64_t cap = 0;
         uint16_t type;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        char *poolid = NULL;
 
         get_vol_size(broker, ref, dev->dev.disk.source, &cap);
 
@@ -253,6 +254,55 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                       (CMPIValue *)dev->dev.disk.source,
                       CMPI_chars);
 
+        virConnectPtr conn = connect_by_classname(broker, CLASSNAME(ref), &s);
+        if (conn == NULL) {
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Could not get connection to hypervisor");
+                goto cont;
+        }
+
+        virStorageVolPtr vol = virStorageVolLookupByPath(conn, 
+                                                         dev->dev.disk.source);
+        if (vol == NULL) {
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Failed to get StorageVolPtr");
+                goto cont;
+        }
+
+        virStoragePoolPtr pool = virStoragePoolLookupByVolume(vol);
+        if (pool == NULL) {
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Failed to get StoragePoolPtr");
+                goto cont;
+        }
+
+        const char *pool_name = virStoragePoolGetName(pool);
+        if (pool_name == NULL) {
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_NOT_FOUND,
+                                conn,
+                                "Failed to get Pool name for volume");
+                goto cont;
+        }
+
+        int ret = asprintf(&poolid, "DiskPool/%s", pool_name);
+
+        if (ret == -1) {
+               CU_DEBUG("Failed to get disk poolid");
+               goto cont;
+        }
+
+        CMSetProperty(inst,
+                      "PoolID",
+                      (CMPIValue *)poolid,
+                      CMPI_chars);
+ cont:
         CMSetProperty(inst,
                       "BusType",
                       (CMPIValue *)dev->dev.disk.bus_type,
