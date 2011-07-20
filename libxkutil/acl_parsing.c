@@ -429,6 +429,7 @@ static void swallow_err_msg(void *ctx, const char *msg, ...)
 int get_filter_from_xml(const char *xml, struct acl_filter **filter)
 {
         xmlDoc *xmldoc = NULL;
+        int ret = 0;
 
         if (xml == NULL || filter == NULL)
                 return 0;
@@ -440,15 +441,19 @@ int get_filter_from_xml(const char *xml, struct acl_filter **filter)
                 goto err;
 
         *filter = malloc(sizeof(**filter));
+        if (*filter == NULL)
+                goto err;
 
         memset(*filter, 0, sizeof(**filter));
         parse_acl_filter(xmldoc->children, *filter);
+
+        ret = 1;
 
  err:
         xmlSetGenericErrorFunc(NULL, NULL);
         xmlFreeDoc(xmldoc);
 
-        return 1;
+        return ret;
 }
 
 int get_filter_by_name(
@@ -464,6 +469,8 @@ int get_filter_by_name(
                 return 0;
 
         vfilter = virNWFilterLookupByName(conn, name);
+        if (vfilter == NULL)
+                return 0;
 
         xml = virNWFilterGetXMLDesc(vfilter, 0);
 
@@ -472,9 +479,7 @@ int get_filter_by_name(
         if (xml == NULL)
                 return 0;
 
-        get_filter_from_xml(xml, filter);
-
-        return 1;
+        return get_filter_from_xml(xml, filter);
 #else
         return 0;
 #endif
@@ -493,6 +498,8 @@ int get_filter_by_uuid(
                 return 0;
 
         vfilter = virNWFilterLookupByUUIDString(conn, uuid);
+        if (vfilter == NULL)
+                return 0;
 
         xml = virNWFilterGetXMLDesc(vfilter, 0);
 
@@ -581,31 +588,27 @@ int create_filter(virConnectPtr conn, struct acl_filter *filter)
 
 int update_filter(virConnectPtr conn, struct acl_filter *filter)
 {
-        if (delete_filter(conn, filter) == 0 || 
-                create_filter(conn, filter) == 0)
-                return 0;
-
-        return 1;
+        return create_filter(conn, filter);
 }
 
 int delete_filter(virConnectPtr conn, struct acl_filter *filter)
 {
 #if LIBVIR_VERSION_NUMBER > 8000
+        int ret = 0;
         virNWFilterPtr vfilter = NULL;
 
         if (filter == NULL)
                 return 0;
 
-        vfilter = virNWFilterLookupByUUIDString(conn, filter->uuid);
+        vfilter = virNWFilterLookupByName(conn, filter->name);
         if (vfilter == NULL)
                 return 0;
 
-        if (virNWFilterUndefine(vfilter) != 0) {
-                virNWFilterFree(vfilter);
-                return 0;
-        }
+        ret = virNWFilterUndefine(vfilter);
 
-        return 1;
+        virNWFilterFree(vfilter);
+
+        return ret == 0 ? 1 : 0;
 #else
         return 0;
 #endif

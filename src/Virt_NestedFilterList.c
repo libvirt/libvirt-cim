@@ -323,12 +323,16 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "Name", &parent_name) != CMPI_RC_OK) {
+        CU_DEBUG("Antecedent = %s", REF2STR(antecedent));
+
+        if (cu_get_str_path(antecedent, "Name", &parent_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
                         "Unable to get Antecedent.Name property");
                 goto out;
         }
+
+        CU_DEBUG("Antecedent.Name = %s", parent_name);
 
         get_filter_by_name(conn, parent_name, &parent_filter);
         if (parent_filter == NULL) {
@@ -346,12 +350,16 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "Name", &child_name) != CMPI_RC_OK) {
+        CU_DEBUG("Dependent = %s", REF2STR(dependent));
+
+        if (cu_get_str_path(dependent, "Name", &child_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
                         "Unable to get Dependent.Name property");
                 goto out;
         }
+
+        CU_DEBUG("Dependent.Name = %s", child_name);
 
         get_filter_by_name(conn, child_name, &child_filter);
         if (child_filter == NULL) {
@@ -367,6 +375,9 @@ static CMPIStatus CreateInstance(
                         "Failed to append filter reference");
                 goto out;
         }
+
+        CU_DEBUG("filter appended, parent_filter->name = %s",
+                parent_filter->name);
 
         if (update_filter(conn, parent_filter) == 0) {
                 cu_statusf(_BROKER, &s,

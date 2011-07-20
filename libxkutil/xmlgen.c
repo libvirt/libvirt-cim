@@ -1375,14 +1375,16 @@ char *filter_to_xml(struct acl_filter *filter)
         if (xmlNewProp(root, BAD_CAST "name", BAD_CAST filter->name) == NULL)
                 goto out;
 
-        if (filter->chain != NULL)
+        if (filter->chain != NULL) {
                 if (xmlNewProp(root, BAD_CAST "chain",
                         BAD_CAST filter->chain) == NULL)
                         goto out;
+        }
 
         if (filter->uuid != NULL) {
-                tmp = xmlNewChild(root, NULL, BAD_CAST "uuid", NULL);
-                if (xmlNewProp(tmp, NULL, BAD_CAST filter->uuid) == NULL)
+                tmp = xmlNewChild(root, NULL, BAD_CAST "uuid",
+                        BAD_CAST filter->uuid);
+                if (tmp == NULL)
                         goto out;
         }
 
@@ -1406,7 +1408,7 @@ char *filter_to_xml(struct acl_filter *filter)
                 msg = NULL; /* no errors */
 
  out:
-        CU_DEBUG("Filter XML: %s", msg);
+        CU_DEBUG("Filter XML: %s", xml);
 
         xmlFreeNode(root);
 

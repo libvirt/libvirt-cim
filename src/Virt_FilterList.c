@@ -269,6 +269,8 @@ static CMPIStatus CreateInstance(
         CMPIInstance *_instance = NULL;
         virConnectPtr conn = NULL;
 
+        CU_DEBUG("Reference = %s", REF2STR(reference));
+
         /**Get Name from instance rather than reference since keys
          * are set by this provider, not the client.
          */
@@ -334,6 +336,8 @@ static CMPIStatus DeleteInstance(
         const char *name = NULL;
         struct acl_filter *filter = NULL;
         virConnectPtr conn = NULL;
+
+        CU_DEBUG("Reference = %s", REF2STR(reference));
 
         if (cu_get_str_path(reference, "Name", &name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,

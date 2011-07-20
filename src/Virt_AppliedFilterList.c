@@ -30,6 +30,7 @@
 #include "acl_parsing.h"
 #include "misc_util.h"
 #include "cs_util.h"
+#include "xmlgen.h"
 
 #include "Virt_Device.h"
 #include "Virt_FilterList.h"
@@ -111,20 +112,14 @@ static int update_device(virDomainPtr dom,
                     VIR_DOMAIN_DEVICE_MODIFY_CONFIG;
         int ret = 0;
 
-        /** device_to_xml() is not exported, so this function needs
-         * to be moved
-         */
-
-        /* xml = device_to_xml(dev); */
-
+        xml = device_to_xml(dev);
         if (xml == NULL) {
                 CU_DEBUG("Failed to get XML for device '%s'", dev->id);
                 goto out;
         }
 
         if (virDomainUpdateDeviceFlags(dom, xml, flags) != 0) {
-                CU_DEBUG("Failed to dynamically update device:");
-                CU_DEBUG("%s", xml);
+                CU_DEBUG("Failed to dynamically update device");
                 goto out;
         }
 
@@ -430,6 +425,10 @@ static CMPIStatus CreateInstance(
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
 
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
         CU_DEBUG("Reference = %s", REF2STR(reference));
 
         if (cu_get_ref_prop(instance, "Antecedent",
@@ -440,18 +439,13 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "Name", &filter_name) != CMPI_RC_OK) {
-                cu_statusf(_BROKER, &s,
-                        CMPI_RC_ERR_FAILED,
-                        "Unable to get Antecedent.Name property");
-                goto out;
-        }
+        CU_DEBUG("Antecedent = %s", REF2STR(antecedent));
 
-        get_filter_by_name(conn, filter_name, &filter);
-        if (filter == NULL) {
+        if (cu_get_str_path(antecedent, "DeviceID",
+                &device_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Antecedent.Name object does not exist");
+                        "Unable to get Antecedent.DeviceID property");
                 goto out;
         }
 
@@ -463,15 +457,23 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "DeviceID",
-                &device_name) != CMPI_RC_OK) {
+        CU_DEBUG("Dependent = %s", REF2STR(dependent));
+
+        if (cu_get_str_path(dependent, "Name",
+                &filter_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Unable to get Dependent.DeviceID property");
+                        "Unable to get Dependent.Name property");
                 goto out;
         }
 
-        CU_DEBUG("DeviceID = %s", device_name);
+        get_filter_by_name(conn, filter_name, &filter);
+        if (filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Antecedent.Name object does not exist");
+                goto out;
+        }
 
         if (parse_fq_devid(device_name, &domain_name, &net_name) == 0) {
                 CU_DEBUG("Failed to parse devid");
@@ -539,6 +541,10 @@ static CMPIStatus DeleteInstance(
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
 
+        conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
+        if (conn == NULL)
+                goto out;
+
         CU_DEBUG("Reference = %s", REF2STR(reference));
 
         if (cu_get_ref_path(reference, "Antecedent",
@@ -549,18 +555,11 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "Name", &filter_name) != CMPI_RC_OK) {
+        if (cu_get_str_path(reference, "DeviceID",
+                &device_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Unable to get Antecedent.Name property");
-                goto out;
-        }
-
-        get_filter_by_name(conn, filter_name, &filter);
-        if (filter == NULL) {
-                cu_statusf(_BROKER, &s,
-                        CMPI_RC_ERR_FAILED,
-                        "Antecedent.Name object does not exist");
+                        "Unable to get Antecedent.DeviceID property");
                 goto out;
         }
 
@@ -572,15 +571,21 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "DeviceID",
-                &device_name) != CMPI_RC_OK) {
+        if (cu_get_str_path(reference, "Name",
+                &filter_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Unable to get Dependent.DeviceID property");
+                        "Unable to get Dependent.Name property");
                 goto out;
         }
 
-        CU_DEBUG("DeviceID = %s", device_name);
+        get_filter_by_name(conn, filter_name, &filter);
+        if (filter == NULL) {
+                cu_statusf(_BROKER, &s,
+                        CMPI_RC_ERR_FAILED,
+                        "Antecedent.Name object does not exist");
+                goto out;
+        }
 
         if (parse_fq_devid(device_name, &domain_name, &net_name) == 0) {
                 CU_DEBUG("Failed to parse devid");
