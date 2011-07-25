@@ -370,10 +370,10 @@ static bool default_graphics_device(struct domain *domain)
         }
 
         domain->dev_graphics->dev.graphics.type = strdup("vnc");
-        domain->dev_graphics->dev.graphics.port = strdup("-1");
-        domain->dev_graphics->dev.graphics.host = strdup("127.0.0.1");
-        domain->dev_graphics->dev.graphics.keymap = strdup("en-us");
-        domain->dev_graphics->dev.graphics.passwd = NULL;
+        domain->dev_graphics->dev.graphics.dev.vnc.port = strdup("-1");
+        domain->dev_graphics->dev.graphics.dev.vnc.host = strdup("127.0.0.1");
+        domain->dev_graphics->dev.graphics.dev.vnc.keymap = strdup("en-us");
+        domain->dev_graphics->dev.graphics.dev.vnc.passwd = NULL;
         domain->dev_graphics_ct = 1;
 
         return true;
@@ -1129,24 +1129,24 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                 }
 
                 ret = parse_vnc_address(val,
-                                &dev->dev.graphics.host, 
-                                &dev->dev.graphics.port); 
+                                &dev->dev.graphics.dev.vnc.host,
+                                &dev->dev.graphics.dev.vnc.port);
                 if (ret != 1) {
                         msg = "GraphicsRASD field Address not valid";
                         goto out;
                 }
                 
                 if (cu_get_str_prop(inst, "KeyMap", &val) != CMPI_RC_OK)
-                        dev->dev.graphics.keymap = strdup("en-us");
+                        dev->dev.graphics.dev.vnc.keymap = strdup("en-us");
                 else
-                        dev->dev.graphics.keymap = strdup(val);
+                        dev->dev.graphics.dev.vnc.keymap = strdup(val);
         
                 if (cu_get_str_prop(inst, "Password", &val) != CMPI_RC_OK) {
                         CU_DEBUG("vnc password is not set");
-                        dev->dev.graphics.passwd = NULL;
+                        dev->dev.graphics.dev.vnc.passwd = NULL;
                 } else {
                         CU_DEBUG("vnc password is set");
-                        dev->dev.graphics.passwd = strdup(val);
+                        dev->dev.graphics.dev.vnc.passwd = strdup(val);
                 }
         }
         else if (STREQC(dev->dev.graphics.type, "console") ||
@@ -1157,8 +1157,8 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                 }
 
                 ret = parse_console_address(val,
-                                &dev->dev.graphics.host, 
-                                &dev->dev.graphics.port); 
+                                &dev->dev.graphics.dev.vnc.host,
+                                &dev->dev.graphics.dev.vnc.port);
                 if (ret != 1) {
                          msg = "GraphicsRASD field Address not valid";
                          goto out;
@@ -1175,7 +1175,7 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                 ret = asprintf(&dev->id, "%s", dev->dev.graphics.type);
         else
                 ret = asprintf(&dev->id, "%s:%s",
-                               dev->dev.graphics.type, dev->dev.graphics.port);
+                       dev->dev.graphics.type, dev->dev.graphics.dev.vnc.port);
 
         if (ret == -1) {
                 msg = "Failed to create graphics is string";

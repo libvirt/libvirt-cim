@@ -84,12 +84,25 @@ struct emu_device {
         char *path;
 };
 
-struct graphics_device {
-        char *type;
+struct vnc_device {
         char *port;
         char *host;
         char *keymap;
         char *passwd;
+};
+
+struct sdl_device {
+        char *display;
+        char *xauth;
+        char *fullscreen;
+};
+
+struct graphics_device {
+        char *type;
+        union {
+            struct vnc_device vnc;
+            struct sdl_device sdl;
+        } dev;
 };
 
 struct input_device {

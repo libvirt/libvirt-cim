@@ -481,9 +481,9 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
                 rc = asprintf(&addr_str, "%s", dev->dev.graphics.type);
         else {
                 rc = asprintf(&addr_str, 
-                              "%s:%s", 
-                              dev->dev.graphics.host, 
-                              dev->dev.graphics.port);
+                              "%s:%s",
+                              dev->dev.graphics.dev.vnc.host,
+                              dev->dev.graphics.dev.vnc.port);
         }
        
         CU_DEBUG("graphics Address = %s", addr_str);
@@ -496,7 +496,7 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
 
         if (STREQC(dev->dev.graphics.type, "vnc")) {
                 CMSetProperty(inst, "KeyMap",
-                             (CMPIValue *)dev->dev.graphics.keymap, CMPI_chars);        
+                             (CMPIValue *)dev->dev.graphics.dev.vnc.keymap, CMPI_chars);
                 
                 conn = connect_by_classname(_BROKER, classname, &s);
                 if (conn == NULL)
@@ -511,7 +511,8 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
                         goto out;
                 }
 
-                if (dev->dev.graphics.passwd && strlen(dev->dev.graphics.passwd)) {
+                if (dev->dev.graphics.dev.vnc.passwd &&
+                                strlen(dev->dev.graphics.dev.vnc.passwd)) {
                         CU_DEBUG("has password");
                         CMSetProperty(inst, "Password",
                                       (CMPIValue *)"********", CMPI_chars);

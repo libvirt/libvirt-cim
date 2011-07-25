@@ -88,13 +88,30 @@ static void cleanup_emu_device(struct emu_device *dev)
         free(dev->path);
 }
 
+static void cleanup_vnc_device(struct graphics_device *dev)
+{
+        free(dev->dev.vnc.port);
+        free(dev->dev.vnc.host);
+        free(dev->dev.vnc.keymap);
+        free(dev->dev.vnc.passwd);
+}
+
+static void cleanup_sdl_device(struct graphics_device *dev)
+{
+        free(dev->dev.sdl.display);
+        free(dev->dev.sdl.xauth);
+        free(dev->dev.sdl.fullscreen);
+}
+
 static void cleanup_graphics_device(struct graphics_device *dev)
 {
+        if (STREQC(dev->type, "sdl")) {
+            cleanup_sdl_device(dev);
+        }
+        else {
+            cleanup_vnc_device(dev);
+        }
         free(dev->type);
-        free(dev->port);
-        free(dev->host);
-        free(dev->keymap);
-        free(dev->passwd);
 }
 
 static void cleanup_input_device(struct input_device *dev)
@@ -530,12 +547,12 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         CU_DEBUG("graphics device type = %s", gdev->type);
 
         if (STREQC(gdev->type, "vnc")) {
-                gdev->port = get_attr_value(node, "port");
-                gdev->host = get_attr_value(node, "listen");
-                gdev->keymap = get_attr_value(node, "keymap");
-                gdev->passwd = get_attr_value(node, "passwd");
+                gdev->dev.vnc.port = get_attr_value(node, "port");
+                gdev->dev.vnc.host = get_attr_value(node, "listen");
+                gdev->dev.vnc.keymap = get_attr_value(node, "keymap");
+                gdev->dev.vnc.passwd = get_attr_value(node, "passwd");
         
-                if (gdev->port == NULL || gdev->host == NULL)
+                if (gdev->dev.vnc.port == NULL || gdev->dev.vnc.host == NULL)
                         goto err;
         }
         else if (STREQC(gdev->type, "pty")) {
@@ -550,9 +567,9 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
                 for (child = node->children; child != NULL; 
                         child = child->next) {
                         if (XSTREQ(child->name, "source")) 
-                                gdev->host = get_attr_value(child, "path");
+                                gdev->dev.vnc.host = get_attr_value(child, "path");
                         else if (XSTREQ(child->name, "target"))
-                                gdev->port = get_attr_value(child, "port");
+                                gdev->dev.vnc.port = get_attr_value(child, "port");
                 }
         }
         else {
@@ -565,7 +582,7 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         if (STREQC(gdev->type, "vnc")) 
                 ret = asprintf(&vdev->id, "%s", gdev->type);
         else
-                ret = asprintf(&vdev->id, "%s:%s", gdev->type, gdev->port);
+                ret = asprintf(&vdev->id, "%s:%s", gdev->type, gdev->dev.vnc.port);
 
         if (ret == -1) {
                 CU_DEBUG("Failed to create graphics is string");
@@ -807,10 +824,10 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.emu.path);
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
                 DUP_FIELD(dev, _dev, dev.graphics.type);
-                DUP_FIELD(dev, _dev, dev.graphics.port);
-                DUP_FIELD(dev, _dev, dev.graphics.host);
-                DUP_FIELD(dev, _dev, dev.graphics.keymap);
-                DUP_FIELD(dev, _dev, dev.graphics.passwd);
+                DUP_FIELD(dev, _dev, dev.graphics.dev.vnc.host);
+                DUP_FIELD(dev, _dev, dev.graphics.dev.vnc.port);
+                DUP_FIELD(dev, _dev, dev.graphics.dev.vnc.keymap);
+                DUP_FIELD(dev, _dev, dev.graphics.dev.vnc.passwd);
         } else if (dev->type == CIM_RES_TYPE_INPUT) {
                 DUP_FIELD(dev, _dev, dev.input.type);
                 DUP_FIELD(dev, _dev, dev.input.bus);

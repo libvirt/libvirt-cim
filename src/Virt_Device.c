@@ -194,8 +194,8 @@ static int graphics_set_attr(CMPIInstance *instance,
         else 
                 rc = asprintf(&vp_str, "%s/%s:%s", 
                               dev->type, 
-                              dev->host, 
-                              dev->port);
+                              dev->dev.vnc.host,
+                              dev->dev.vnc.port);
         if (rc == -1)
                 return 0;
 

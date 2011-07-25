@@ -366,7 +366,7 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
                         continue;
                 }
 
-                ret = sscanf(dominfo->dev_graphics->dev.graphics.port, 
+                ret = sscanf(dominfo->dev_graphics->dev.graphics.dev.vnc.port,
                              "%d",
                              &lport);
                 if (ret != 1) {

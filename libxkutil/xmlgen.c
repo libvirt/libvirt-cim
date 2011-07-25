@@ -424,22 +424,22 @@ static const char *graphics_vnc_xml(xmlNodePtr root,
         if (STREQC(dev->type, "sdl"))
                return NULL;
 
-        if (dev->port) {
-                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
-                if (STREQC(dev->port, "-1"))
+        if (dev->dev.vnc.port) {
+                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->dev.vnc.port);
+                if (STREQC(dev->dev.vnc.port, "-1"))
                         xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "yes");
                 else
                         xmlNewProp(tmp, BAD_CAST "autoport", BAD_CAST "no");
         }
 
-        if (dev->host)        
-                xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->host);
+        if (dev->dev.vnc.host)
+                xmlNewProp(tmp, BAD_CAST "listen", BAD_CAST dev->dev.vnc.host);
 
-        if (dev->passwd)
-                xmlNewProp(tmp, BAD_CAST "passwd", BAD_CAST dev->passwd);
+        if (dev->dev.vnc.passwd)
+                xmlNewProp(tmp, BAD_CAST "passwd", BAD_CAST dev->dev.vnc.passwd);
 
-        if (dev->keymap)
-                xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->keymap);
+        if (dev->dev.vnc.keymap)
+                xmlNewProp(tmp, BAD_CAST "keymap", BAD_CAST dev->dev.vnc.keymap);
 
         return NULL;
 }
@@ -459,16 +459,16 @@ static const char *graphics_pty_xml(xmlNodePtr root,
         tmp = xmlNewChild(pty, NULL, BAD_CAST "source", NULL);
         if (tmp == NULL)
                 return XML_ERROR;
-       
-        if(dev->host)
-                xmlNewProp(tmp, BAD_CAST "path", BAD_CAST dev->host);
+
+        if(dev->dev.vnc.host)
+                xmlNewProp(tmp, BAD_CAST "path", BAD_CAST dev->dev.vnc.host);
        
         tmp = xmlNewChild(pty, NULL, BAD_CAST "target", NULL);
         if (tmp == NULL)
                 return XML_ERROR;
-       
-        if(dev->port)
-                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->port);
+
+        if(dev->dev.vnc.port)
+                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->dev.vnc.port);
 
         return NULL;
 }

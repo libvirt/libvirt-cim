@@ -116,7 +116,7 @@ static void print_dev_graphics(struct virt_device *dev,
                                FILE *d)
 {
         print_value(d, "Graphics Type", dev->dev.graphics.type);
-        print_value(d, "Graphics Port", dev->dev.graphics.port);
+        print_value(d, "Graphics Port", dev->dev.graphics.dev.vnc.port);
 }
 
 static void print_devices(struct domain *dominfo,

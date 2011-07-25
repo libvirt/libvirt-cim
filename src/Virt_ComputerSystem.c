@@ -104,7 +104,7 @@ static int set_capdesc_from_dominfo(const CMPIBroker *broker,
                                "Virtual System (Console on %s://%s:%s)",
                                domain->dev_graphics[0].dev.graphics.type,
                                host,
-                               domain->dev_graphics[0].dev.graphics.port);
+                               domain->dev_graphics[0].dev.graphics.dev.vnc.port);
         else
                 ret = asprintf(&cap,
                                "Virtual System (No console)");
