@@ -421,8 +421,21 @@ static const char *graphics_vnc_xml(xmlNodePtr root,
 
         xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->type);
 
-        if (STREQC(dev->type, "sdl"))
-               return NULL;
+        if (STREQC(dev->type, "sdl")) {
+                if (dev->dev.sdl.display) {
+                        xmlNewProp(tmp, BAD_CAST "display",
+                                        BAD_CAST dev->dev.sdl.display);
+                }
+                if (dev->dev.sdl.xauth) {
+                        xmlNewProp(tmp, BAD_CAST "xauth",
+                                        BAD_CAST dev->dev.sdl.xauth);
+                }
+                if (dev->dev.sdl.fullscreen) {
+                        xmlNewProp(tmp, BAD_CAST "fullscreen",
+                                        BAD_CAST dev->dev.sdl.fullscreen);
+                }
+                return NULL;
+        }
 
         if (dev->dev.vnc.port) {
                 xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->dev.vnc.port);

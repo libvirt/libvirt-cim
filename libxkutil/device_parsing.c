@@ -555,6 +555,11 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
                 if (gdev->dev.vnc.port == NULL || gdev->dev.vnc.host == NULL)
                         goto err;
         }
+        else if (STREQC(gdev->type, "sdl")) {
+                gdev->dev.sdl.display = get_attr_value(node, "display");
+                gdev->dev.sdl.xauth = get_attr_value(node, "xauth");
+                gdev->dev.sdl.fullscreen = get_attr_value(node, "fullscreen");
+        }
         else if (STREQC(gdev->type, "pty")) {
                 if (node->name == NULL)
                         goto err;

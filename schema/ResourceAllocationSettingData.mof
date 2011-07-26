@@ -219,7 +219,9 @@ class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingD
       [Description ("If ResourceSubType is 'vnc', this is a VNC Address. "
        "IPv4 in a.b.c.d:port or IPv6 in [ip]:port format. If ResourceSubType "
        "is 'console', this is a character device path in "
-       "path:port format (e.g., '/dev/pts/3:0'\)")]
+       "path:port format (e.g., '/dev/pts/3:0'\) "
+       "if ResourceSubType is 'sdl', this is a combination of its params as "
+       "xauth:display (e.g., '/root/.Xauthority::0'\)")]
       string Address;
 
       [Description ("Keyboard keymapping")]
@@ -228,7 +230,8 @@ class Xen_GraphicsResourceAllocationSettingData : Xen_ResourceAllocationSettingD
       [Description ("VNC password")]
       string Password;
 
-      [Description ("Is IPv6 only addressing is to be used")]
+      [Description ("Is IPv6 only addressing is to be used."
+      "if ResourceSubType is 'sdl', this means whether sdl is fullscreen")]
       boolean IsIPv6Only;
 };
 

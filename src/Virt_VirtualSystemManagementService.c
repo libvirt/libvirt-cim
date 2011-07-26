@@ -1057,6 +1057,58 @@ static int parse_console_address(const char *id,
         CU_DEBUG("Exiting parse_console_address, ip is %s, port is %s", 
                *path, *port);
 
+        free(tmp_path);
+        free(tmp_port);
+
+        return ret;
+}
+
+static int parse_sdl_address(const char *id,
+                        char **display,
+                        char **xauth)
+{
+        int ret;
+        char *tmp_display = NULL;
+        char *tmp_xauth = NULL;
+
+        CU_DEBUG("Entering parse_sdl_address, address is %s", id);
+
+        ret = sscanf(id, "%a[^:]:%as", &tmp_xauth, &tmp_display);
+
+        if (ret <= 0) {
+                ret = sscanf(id, ":%as", &tmp_display);
+                if (ret <= 0) {
+                        if (STREQC(id, ":")) {
+                                /* do nothing, it is empty */
+                        }
+                        else {
+                                ret = 0;
+                                goto out;
+                        }
+                }
+        }
+
+        if (display) {
+                if (tmp_display == NULL)
+                    *display = NULL;
+                else
+                    *display = strdup(tmp_display);
+        }
+        if (xauth) {
+                if (tmp_xauth == NULL)
+                    *xauth = NULL;
+                else
+                    *xauth = strdup(tmp_xauth);
+        }
+        ret = 1;
+
+ out:
+        CU_DEBUG("Exiting parse_sdl_address, display is %s, xauth is %s",
+               *display, *xauth);
+
+        free(tmp_display);
+        free(tmp_xauth);
+
         return ret;
 }
 
@@ -1093,6 +1145,9 @@ static int parse_vnc_address(const char *id,
  out:
         CU_DEBUG("Exiting parse_vnc_address, ip is %s, port is %s", 
                 *ip, *port);
+
+        free(tmp_ip);
+        free(tmp_port);
 
         return ret;
 }
@@ -1163,6 +1218,30 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                          msg = "GraphicsRASD field Address not valid";
                          goto out;
                 }
+        }
+        else if (STREQC(dev->dev.graphics.type, "sdl")) {
+                if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
+                         CU_DEBUG("sdl graphics Address empty, using default");
+                         dev->dev.graphics.dev.sdl.display = NULL;
+                         dev->dev.graphics.dev.sdl.xauth = NULL;
+                }
+                else {
+                         ret = parse_sdl_address(val,
+                                         &dev->dev.graphics.dev.sdl.display,
+                                         &dev->dev.graphics.dev.sdl.xauth);
+                         if (ret != 1) {
+                                  msg = "GraphicsRASD sdl Address not valid";
+                                  goto out;
+                         }
+                }
+                dev->dev.graphics.dev.sdl.fullscreen = NULL;
+                if (cu_get_bool_prop(inst, "IsIPV6Only", &ipv6) ==
+                                CMPI_RC_OK) {
+                                if (ipv6)
+                                        dev->dev.graphics.dev.sdl.fullscreen = strdup("yes");
+                                else
+                                        dev->dev.graphics.dev.sdl.fullscreen = strdup("no");
+                }
         } else { 
                 CU_DEBUG("Unsupported graphics type %s", 
                         dev->dev.graphics.type);
@@ -1171,7 +1250,8 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
         }
 
         free(dev->id);
-        if (STREQC(dev->dev.graphics.type, "vnc"))
+        if ((STREQC(dev->dev.graphics.type, "vnc"))||
+                (STREQC(dev->dev.graphics.type, "sdl")))
                 ret = asprintf(&dev->id, "%s", dev->dev.graphics.type);
         else
                 ret = asprintf(&dev->id, "%s:%s",
