@@ -775,6 +775,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.type);
                 DUP_FIELD(dev, _dev, dev.net.source);
                 DUP_FIELD(dev, _dev, dev.net.model);
+                DUP_FIELD(dev, _dev, dev.net.poolid);
                 DUP_FIELD(dev, _dev, dev.net.device);
                 DUP_FIELD(dev, _dev, dev.net.net_mode);
                 DUP_FIELD(dev, _dev, dev.net.filter_ref);
