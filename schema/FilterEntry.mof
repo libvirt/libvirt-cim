@@ -2,6 +2,14 @@
 [Provider("cmpi::Virt_FilterEntry")]
 class KVM_Hdr8021Filter : CIM_Hdr8021Filter
 {
+        [Description (
+            "This defines whether the action should be to forward or "
+            "deny traffic meeting the match condition specified in "
+            "this filter." ),
+        ValueMap { "1", "2" },
+        Values { "Permit", "Deny" }]
+        uint16 Action;
+
         [Description("This defines whether the Filter is used for input, "
 	        "output, or both input and output filtering.  All values are "
                 "used with respect to the interface for which the Filter "
@@ -32,6 +40,14 @@ class KVM_Hdr8021Filter : CIM_Hdr8021Filter
 [Provider("cmpi::Virt_FilterEntry")]
 class KVM_IPHeadersFilter : CIM_IPHeadersFilter
 {
+        [Description (
+            "This defines whether the action should be to forward or "
+            "deny traffic meeting the match condition specified in "
+            "this filter." ),
+        ValueMap { "1", "2" },
+        Values { "Permit", "Deny" }]
+        uint16 Action;
+
         [Description("This defines whether the Filter is used for input, "
 	        "output, or both input and output filtering.  All values are "
                 "used with respect to the interface for which the Filter "

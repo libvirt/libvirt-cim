@@ -159,6 +159,19 @@ static int convert_priority(const char *s)
         return priority;
 }
 
+static int convert_action(const char *s)
+{
+        enum {NONE=0, ACCEPT, DENY} action = NONE;
+
+        if (s != NULL) {
+                if (STREQC(s, "accept"))
+                        action = ACCEPT;
+                else if (STREQC(s, "drop") || STREQC(s, "reject"))
+                        action = DENY;
+        }
+        return action;
+}
+
 static CMPIInstance *convert_mac_rule_to_instance(
         struct acl_rule *rule,
         const CMPIBroker *broker,
@@ -169,7 +182,7 @@ static CMPIInstance *convert_mac_rule_to_instance(
         CMPIInstance *inst = NULL;
         const char *sys_name = NULL;
         const char *sys_ccname = NULL;
-        int direction, priority = 0;
+        int action, direction, priority = 0;
         unsigned int bytes[48];
         unsigned int size = 0;
         CMPIArray *array = NULL;
@@ -202,6 +215,9 @@ static CMPIInstance *convert_mac_rule_to_instance(
         CMSetProperty(inst, "SystemName", sys_name, CMPI_chars);
         CMSetProperty(inst, "SystemCreationClassName", sys_ccname, CMPI_chars);
         CMSetProperty(inst, "Name", (CMPIValue *)rule->name, CMPI_chars);
+
+        action = convert_action(rule->action);
+        CMSetProperty(inst, "Action", (CMPIValue *)&action, CMPI_uint16);
 
         direction = convert_direction(rule->direction);
         CMSetProperty(inst, "Direction", (CMPIValue *)&direction, CMPI_uint16);
@@ -259,7 +275,7 @@ static CMPIInstance *convert_ip_rule_to_instance(
         CMPIInstance *inst = NULL;
         const char *sys_name = NULL;
         const char *sys_ccname = NULL;
-        int direction, priority = 0;
+        int action, direction, priority = 0;
         unsigned int bytes[48];
         unsigned int size = 0;
         unsigned int n = 0;
@@ -292,6 +308,9 @@ static CMPIInstance *convert_ip_rule_to_instance(
         CMSetProperty(inst, "SystemName", sys_name, CMPI_chars);
         CMSetProperty(inst, "SystemCreationClassName", sys_ccname, CMPI_chars);
         CMSetProperty(inst, "Name", (CMPIValue *)rule->name, CMPI_chars);
+
+        action = convert_action(rule->action);
+        CMSetProperty(inst, "Action", (CMPIValue *)&action, CMPI_uint16);
 
         direction = convert_direction(rule->direction);
         CMSetProperty(inst, "Direction", (CMPIValue *)&direction, CMPI_uint16);
