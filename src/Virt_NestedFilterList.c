@@ -386,6 +386,7 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
+        CMReturnObjectPath(results, reference);
         CU_DEBUG("CreateInstance completed");
 
  out:
