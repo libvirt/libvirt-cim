@@ -91,7 +91,8 @@ static CMPIStatus check_vsi_support(char *command)
                    "No VSI Support found");
 
  out:       
-        pclose(stream);
+        if (stream != NULL)
+                pclose(stream);
         return s;
 }
 
