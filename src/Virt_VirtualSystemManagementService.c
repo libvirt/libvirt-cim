@@ -1047,9 +1047,10 @@ static int parse_console_address(const char *id,
 
         ret = 1;
 
- out:        
-        CU_DEBUG("Exiting parse_console_address, ip is %s, port is %s", 
-               *path, *port);
+ out:
+        if (path && port)
+                CU_DEBUG("Exiting parse_console_address, ip is %s, port is %s",
+                       *path, *port);
 
         free(tmp_path);
         free(tmp_port);
@@ -1097,8 +1098,9 @@ static int parse_sdl_address(const char *id,
         ret = 1;
 
  out:
-        CU_DEBUG("Exiting parse_sdl_address, display is %s, xauth is %s",
-               *display, *xauth);
+        if (display && xauth)
+                CU_DEBUG("Exiting parse_sdl_address, display is %s, xauth is %s",
+                       *display, *xauth);
 
         free(tmp_display);
         free(tmp_xauth);
@@ -1137,8 +1139,9 @@ static int parse_vnc_address(const char *id,
         ret = 1;
 
  out:
-        CU_DEBUG("Exiting parse_vnc_address, ip is %s, port is %s", 
-                *ip, *port);
+        if (ip && port)
+                CU_DEBUG("Exiting parse_vnc_address, ip is %s, port is %s",
+                        *ip, *port);
 
         free(tmp_ip);
         free(tmp_port);
