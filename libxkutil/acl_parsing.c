@@ -139,6 +139,7 @@ void cleanup_rule(struct acl_rule *rule)
         };
 
         rule->type = UNKNOWN_RULE;
+        free(rule);
 }
 
 void cleanup_filter(struct acl_filter *filter)
@@ -152,10 +153,8 @@ void cleanup_filter(struct acl_filter *filter)
         free(filter->name);
         free(filter->chain);
 
-        for (i = 0; i < filter->rule_ct; i++) {
+        for (i = 0; i < filter->rule_ct; i++)
                 cleanup_rule(filter->rules[i]);
-                free(filter->rules[i]);
-        }
 
         free(filter->rules);
         filter->rule_ct = 0;
@@ -401,14 +400,16 @@ static int parse_acl_filter(xmlNode *fnode, struct acl_filter *filter)
                         if (parse_acl_rule(child, rule) == 0)
                                 goto err;
 
-                        append_filter_rule(filter, rule);
+                        if (append_filter_rule(filter, rule) == 0)
+                                goto err;
                 }
                 else if (XSTREQ(child->name, "filterref")) {
                         filter_ref = get_attr_value(child, "filter");
                         if (filter_ref == NULL)
                                 goto err;
 
-                        append_filter_ref(filter, filter_ref);
+                        if (append_filter_ref(filter, filter_ref) == 0)
+                                goto err;
                 }
         }
 
@@ -440,14 +441,15 @@ int get_filter_from_xml(const char *xml, struct acl_filter **filter)
         if (xmldoc == NULL)
                 goto err;
 
-        *filter = malloc(sizeof(**filter));
+        *filter = calloc(1, sizeof(**filter));
         if (*filter == NULL)
                 goto err;
 
-        memset(*filter, 0, sizeof(**filter));
-        parse_acl_filter(xmldoc->children, *filter);
-
-        ret = 1;
+        ret = parse_acl_filter(xmldoc->children, *filter);
+        if (ret == 0) {
+                free(*filter);
+                *filter = NULL;
+        }
 
  err:
         xmlSetGenericErrorFunc(NULL, NULL);
@@ -508,9 +510,7 @@ int get_filter_by_uuid(
         if (xml == NULL)
                 return 0;
 
-        get_filter_from_xml(xml, filter);
-
-        return 1;
+        return get_filter_from_xml(xml, filter);
 #else
         return 0;
 #endif
@@ -534,7 +534,8 @@ int get_filters(
 
         virConnectListNWFilters(conn, names, count);
 
-        filters = malloc(count * sizeof(struct acl_filter));
+        filters = calloc(count, sizeof(*filters));
+
         if (filters == NULL)
                 goto err;
 
@@ -542,7 +543,8 @@ int get_filters(
         {
                 struct acl_filter *filter = NULL;
 
-                get_filter_by_name(conn, names[i], &filter);
+                if (get_filter_by_name(conn, names[i], &filter) == 0)
+                        break;
 
                 memcpy(&filters[i], filter, sizeof(*filter));
         }
@@ -630,6 +632,12 @@ int append_filter_rule(struct acl_filter *filter, struct acl_rule *rule)
         filter->rules =
                 malloc((filter->rule_ct + 1) * sizeof(struct acl_rule *));
 
+        if (filter->rules == NULL) {
+                CU_DEBUG("Failed to allocate memory for new rule");
+                filter->rules = old_rules;
+                return 0;
+        }
+
         memcpy(filter->rules,
                 old_rules,
                 filter->rule_ct * sizeof(struct acl_rule *));
@@ -657,6 +665,13 @@ int append_filter_ref(struct acl_filter *filter, char *name)
         old_refs = filter->refs;
 
         filter->refs = malloc((filter->ref_ct + 1) * sizeof(char *));
+
+        if (filter->refs == NULL) {
+                CU_DEBUG("Failed to allocate memory for new ref");
+                filter->refs = old_refs;
+                return 0;
+        }
+
         memcpy(filter->refs, old_refs, filter->ref_ct * sizeof(char *));
 
         filter->refs[filter->ref_ct] = name;
@@ -682,8 +697,9 @@ int remove_filter_ref(struct acl_filter *filter, const char *name)
                 if (STREQC(old_refs[i], name)) {
                         free(old_refs[i]);
                 }
-                else
-                        append_filter_ref(filter, old_refs[i]);
+                else if(append_filter_ref(filter, old_refs[i]) == 0) {
+                        return 0;
+                }
         }
 
         return 1;
