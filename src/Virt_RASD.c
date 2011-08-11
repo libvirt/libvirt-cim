@@ -665,7 +665,7 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
         char *host = NULL;
         char *devid = NULL;
         virConnectPtr conn = NULL;
-        struct virt_device *dev;
+        struct virt_device *dev = NULL;
 
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL) {
@@ -701,8 +701,8 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
                            "Failed to set instance properties");
         else
                 *_inst = inst;
-        
-        cleanup_virt_device(dev);
+
+        cleanup_virt_devices(&dev, 1);
 
  out:
         virConnectClose(conn);
@@ -864,10 +864,7 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
 
                 tmp_dev->id = strdup("proc");
 
-                for (i = 0; i < count; i++)
-                        cleanup_virt_device(&devs[i]);
-
-                free(devs);
+                cleanup_virt_devices(&devs, count);
                 devs = tmp_dev;
                 count = 1;
         }
@@ -877,9 +874,6 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed to get domain name");
-
-                for (i = 0; i < count; i++)
-                        cleanup_virt_device(&devs[i]);
 
                 goto out;
         }
@@ -894,12 +888,10 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
                                      properties);
                 if (dev)
                         inst_list_add(list, dev);
-
-                cleanup_virt_device(&devs[i]);
         }
 
  out:
-        free(devs);
+        cleanup_virt_devices(&devs, count);
         return s;
 }
 

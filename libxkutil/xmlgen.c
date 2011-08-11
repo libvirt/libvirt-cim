@@ -845,7 +845,7 @@ char *device_to_xml(struct virt_device *_dev)
                 dominfo->dev_input = dev;
                 break;
         default:
-                cleanup_virt_device(dev);
+                cleanup_virt_devices(&dev, 1);
                 goto out;
         }
 

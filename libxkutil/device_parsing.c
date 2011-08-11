@@ -851,11 +851,9 @@ static int _get_mem_device(const char *xml, struct virt_device **list)
         if (ret <= 0)
                 return ret;
 
-        mdev = malloc(sizeof(*mdev));
+        mdev = calloc(1, sizeof(*mdev));
         if (mdev == NULL)
                 return 0;
-
-        memset(mdev, 0, sizeof(*mdev));
 
         /* We could get one or two memory devices back, depending on
          * if there is a currentMemory tag or not.  Coalesce these
@@ -892,11 +890,9 @@ static int _get_proc_device(const char *xml, struct virt_device **list)
         if (ret <= 0)
                 return ret;
 
-        proc_dev = malloc(sizeof(*proc_dev));
+        proc_dev = calloc(1, sizeof(*proc_dev));
         if (proc_dev == NULL)
                 return 0;
-
-        memset(proc_dev, 0, sizeof(*proc_dev));
 
         proc_dev->type = CIM_RES_TYPE_PROC;
         proc_dev->id = strdup("proc");
@@ -1053,8 +1049,6 @@ static int parse_domain(xmlNodeSet *nsv, struct domain *dominfo)
         xmlNode **nodes = nsv->nodeTab;
         xmlNode *child;
 
-        memset(dominfo, 0, sizeof(*dominfo));
-
         dominfo->typestr = get_attr_value(nodes[0], "type");
 
         for (child = nodes[0]->children; child != NULL; child = child->next) {
@@ -1120,7 +1114,7 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
         int ret;
 
         CU_DEBUG("In get_dominfo_from_xml");
-        *dominfo = malloc(sizeof(**dominfo));
+        *dominfo = calloc(1, sizeof(**dominfo));
         if (*dominfo == NULL)
                 return 0;
 

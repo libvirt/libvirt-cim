@@ -700,14 +700,15 @@ static struct virt_device *find_dom_dev(virDomainPtr dom,
         }
 
         for (i = 0; i < count; i++) {
-                if (STREQC(device, list[i].id))
+                if (STREQC(device, list[i].id)) {
                         dev = virt_device_dup(&list[i]);
+                        break;
+                }
 
-                cleanup_virt_device(&list[i]);
         }
 
+        cleanup_virt_devices(&list, count);
  out:
-        free(list);
 
         return dev;
 }
@@ -785,7 +786,7 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
                                       &tmp_list);
         }
 
-        cleanup_virt_device(dev);
+        cleanup_virt_devices(&dev, 1);
 
         *_inst = tmp_list.list[0];
 

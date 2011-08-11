@@ -516,7 +516,7 @@ static CMPIStatus CreateInstance(
         free(net_name);
 
         cleanup_filter(filter);
-        cleanup_virt_device(device);
+        cleanup_virt_devices(&device, 1);
 
         virDomainFree(dom);
         virConnectClose(conn);
@@ -626,7 +626,7 @@ static CMPIStatus DeleteInstance(
         free(net_name);
 
         cleanup_filter(filter);
-        cleanup_virt_device(device);
+        cleanup_virt_devices(&device, 1);
 
         virDomainFree(dom);
         virConnectClose(conn);

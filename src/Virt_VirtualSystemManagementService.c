@@ -200,12 +200,6 @@ static bool fv_set_emulator(struct domain *domain,
 
         cleanup_virt_device(domain->dev_emu);
 
-        domain->dev_emu = calloc(1, sizeof(*domain->dev_emu));
-        if (domain->dev_emu == NULL) {
-                CU_DEBUG("Failed to allocate default emulator device");
-                return false;
-        }
-
         domain->dev_emu->type = CIM_RES_TYPE_EMU;
         domain->dev_emu->dev.emu.path = strdup(emu);
         domain->dev_emu->id = strdup("emulator");
