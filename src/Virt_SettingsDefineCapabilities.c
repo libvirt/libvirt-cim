@@ -2054,19 +2054,22 @@ static CMPIInstance *make_ref_valuerole(const CMPIObjectPath *source_ref,
                 goto out;
         }
 
-        if (strstr("Default", iid) != NULL)
+        if (strstr(iid, "Default") != NULL) {
                 valuerange = SDC_RANGE_POINT;
-        else if (strstr("Increment", iid) != NULL)
-                valuerange = SDC_RANGE_INC;
-        else if (strstr("Maximum", iid) != NULL)
-                valuerange = SDC_RANGE_MAX;
-        else if (strstr("Minimum", iid) != NULL)
-                valuerange = SDC_RANGE_MIN;
-        else
-                CU_DEBUG("Unknown default RASD type: `%s'", iid);
-
-        if (valuerange == SDC_RANGE_POINT)
                 valuerole = SDC_ROLE_DEFAULT;
+        }
+        else if (strstr(iid, "Point") != NULL)
+                valuerange = SDC_RANGE_POINT;
+        else if (strstr(iid, "Increment") != NULL)
+                valuerange = SDC_RANGE_INC;
+        else if (strstr(iid, "Maximum") != NULL)
+                valuerange = SDC_RANGE_MAX;
+        else if (strstr(iid, "Minimum") != NULL)
+                valuerange = SDC_RANGE_MIN;
+        else {
+                CU_DEBUG("Unknown RASD type: `%s'", iid);
+                goto out;
+        }
 
         CMSetProperty(ref_inst, "ValueRole",
                       (CMPIValue *)&valuerole, CMPI_uint16);
