@@ -1377,7 +1377,11 @@ static bool make_space(struct virt_device **list, int cur, int new)
         if (tmp == NULL)
                 return false;
 
-        memcpy(tmp, *list, sizeof(*tmp) * cur);
+        if (*list) {
+                memcpy(tmp, *list, sizeof(*tmp) * cur);
+                free(*list);
+        }
+
         *list = tmp;
 
         return true;
