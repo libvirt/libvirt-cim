@@ -28,6 +28,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <pthread.h>
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
@@ -45,6 +46,9 @@
 #include "misc_util.h"
 #include "cs_util.h"
 
+static pthread_mutex_t libvirt_mutex = PTHREAD_MUTEX_INITIALIZER;
+/* libvirt library not initialized */
+static int libvirt_initialized = 0;
 
 #define URI_ENV "HYPURI"
 
@@ -114,10 +118,14 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
 
         CU_DEBUG("Connecting to libvirt with uri `%s'", uri);
 
+        pthread_mutex_lock(&libvirt_mutex);
+
         if (is_read_only())
                 conn = virConnectOpenReadOnly(uri);
         else
                 conn = virConnectOpen(uri);
+
+        pthread_mutex_unlock(&libvirt_mutex);
 
         if (!conn) {
                 CU_DEBUG("Unable to connect to `%s'", uri);
@@ -530,7 +538,19 @@ bool parse_instanceid(const CMPIObjectPath *ref,
 
 bool libvirt_cim_init(void)
 {
-        return virInitialize() == 0;
+        int ret = 0;
+
+        /* double-check lock pattern used for performance reasons */
+        if (libvirt_initialized == 0) {
+                pthread_mutex_lock(&libvirt_mutex);
+                if (libvirt_initialized == 0) {
+                        ret = virInitialize();
+                        if (ret == 0)
+                                libvirt_initialized = 1;
+                }
+                pthread_mutex_unlock(&libvirt_mutex);
+        }
+        return (ret == 0);
 }
 
 bool check_refs_pfx_match(const CMPIObjectPath *refa,

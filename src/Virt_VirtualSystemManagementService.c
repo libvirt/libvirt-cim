@@ -188,6 +188,24 @@ static int xenpv_vssd_to_domain(CMPIInstance *inst,
         return 1;
 }
 
+static bool make_space(struct virt_device **list, int cur, int new)
+{
+        struct virt_device *tmp;
+
+        tmp = calloc(cur + new, sizeof(*tmp));
+        if (tmp == NULL)
+                return false;
+
+        if (*list) {
+                memcpy(tmp, *list, sizeof(*tmp) * cur);
+                free(*list);
+        }
+
+        *list = tmp;
+
+        return true;
+}
+
 static bool fv_set_emulator(struct domain *domain,
                             const char *emu)
 {
@@ -197,6 +215,11 @@ static bool fv_set_emulator(struct domain *domain,
         /* No emulator value to set */
         if (emu == NULL)
                 return true;
+
+        if (!make_space(&domain->dev_emu, 0, 1)) {
+                CU_DEBUG("Failed to alloc disk list");
+                return false;
+        }
 
         cleanup_virt_device(domain->dev_emu);
 
@@ -1367,24 +1390,6 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
                 CU_DEBUG("rasd_to_vdev(%s): %s", CLASSNAME(op), msg);
 
         return msg;
-}
-
-static bool make_space(struct virt_device **list, int cur, int new)
-{
-        struct virt_device *tmp;
-
-        tmp = calloc(cur + new, sizeof(*tmp));
-        if (tmp == NULL)
-                return false;
-
-        if (*list) {
-                memcpy(tmp, *list, sizeof(*tmp) * cur);
-                free(*list);
-        }
-
-        *list = tmp;
-
-        return true;
 }
 
 static char *add_device_nodup(struct virt_device *dev,
