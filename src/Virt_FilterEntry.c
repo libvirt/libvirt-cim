@@ -36,23 +36,6 @@
 
 const static CMPIBroker *_BROKER;
 
-static bool is_mac_rule(int type)
-{
-        if (type == MAC_RULE || type == ARP_RULE)
-                return 1;
-
-        return 0;
-}
-
-static bool is_ip_rule(int type)
-{
-        if (type == IP_RULE || type == TCP_RULE || type == ICMP_RULE ||
-                type == IGMP_RULE)
-                return 1;
-
-        return 0;
-}
-
 static int octets_from_mac(const char * s, unsigned int *buffer,
                                 unsigned int size)
 {
@@ -172,58 +155,14 @@ static int convert_action(const char *s)
         return action;
 }
 
-static CMPIInstance *convert_mac_rule_to_instance(
+static void convert_mac_rule_to_instance(
         struct acl_rule *rule,
-        const CMPIBroker *broker,
-        const CMPIContext *context,
-        const CMPIObjectPath *reference,
-        CMPIStatus *s)
+        CMPIInstance *inst,
+        const CMPIBroker *broker)
 {
-        CMPIInstance *inst = NULL;
-        const char *sys_name = NULL;
-        const char *sys_ccname = NULL;
-        int action, direction, priority = 0;
         unsigned int bytes[48];
         unsigned int size = 0;
         CMPIArray *array = NULL;
-
-        inst = get_typed_instance(broker,
-                                  CLASSNAME(reference),
-                                  "Hdr8021Filter",
-                                  NAMESPACE(reference));
-        if (inst == NULL) {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get 8021 filter instance");
-
-                goto out;
-        }
-
-        *s = get_host_system_properties(&sys_name,
-                                       &sys_ccname,
-                                       reference,
-                                       broker,
-                                       context);
-
-        if (s->rc != CMPI_RC_OK) {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get host attributes");
-                goto out;
-        }
-
-        CMSetProperty(inst, "SystemName", sys_name, CMPI_chars);
-        CMSetProperty(inst, "SystemCreationClassName", sys_ccname, CMPI_chars);
-        CMSetProperty(inst, "Name", (CMPIValue *)rule->name, CMPI_chars);
-
-        action = convert_action(rule->action);
-        CMSetProperty(inst, "Action", (CMPIValue *)&action, CMPI_uint16);
-
-        direction = convert_direction(rule->direction);
-        CMSetProperty(inst, "Direction", (CMPIValue *)&direction, CMPI_uint16);
-
-        priority = convert_priority(rule->priority);
-        CMSetProperty(inst, "Priority", (CMPIValue *)&priority, CMPI_uint16);
 
         memset(bytes, 0, sizeof(bytes));
         size = octets_from_mac(rule->var.mac.srcmacaddr,
@@ -260,63 +199,17 @@ static CMPIInstance *convert_mac_rule_to_instance(
         if (array != NULL)
                 CMSetProperty(inst, "HdrDestMACMask8021", (CMPIValue *)
                         (CMPIValue *)&array, CMPI_uint8A);
-
- out:
-        return inst;
 }
 
-static CMPIInstance *convert_ip_rule_to_instance(
+static void convert_ip_rule_to_instance(
         struct acl_rule *rule,
-        const CMPIBroker *broker,
-        const CMPIContext *context,
-        const CMPIObjectPath *reference,
-        CMPIStatus *s)
+        CMPIInstance *inst,
+        const CMPIBroker *broker)
 {
-        CMPIInstance *inst = NULL;
-        const char *sys_name = NULL;
-        const char *sys_ccname = NULL;
-        int action, direction, priority = 0;
         unsigned int bytes[48];
         unsigned int size = 0;
         unsigned int n = 0;
         CMPIArray *array = NULL;
-
-        inst = get_typed_instance(broker,
-                                  CLASSNAME(reference),
-                                  "IPHeadersFilter",
-                                  NAMESPACE(reference));
-        if (inst == NULL) {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get ip headers filter instance");
-                goto out;
-        }
-
-        *s = get_host_system_properties(&sys_name,
-                                       &sys_ccname,
-                                       reference,
-                                       broker,
-                                       context);
-
-        if (s->rc != CMPI_RC_OK) {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get host attributes");
-                goto out;
-        }
-
-        CMSetProperty(inst, "SystemName", sys_name, CMPI_chars);
-        CMSetProperty(inst, "SystemCreationClassName", sys_ccname, CMPI_chars);
-        CMSetProperty(inst, "Name", (CMPIValue *)rule->name, CMPI_chars);
-
-        action = convert_action(rule->action);
-        CMSetProperty(inst, "Action", (CMPIValue *)&action, CMPI_uint16);
-
-        direction = convert_direction(rule->direction);
-        CMSetProperty(inst, "Direction", (CMPIValue *)&direction, CMPI_uint16);
-
-        priority = convert_priority(rule->priority);
-        CMSetProperty(inst, "Priority", (CMPIValue *)&priority, CMPI_uint16);
 
         if (strstr(rule->protocol_id, "v6"))
                 n = 6;
@@ -427,8 +320,6 @@ static CMPIInstance *convert_ip_rule_to_instance(
                 }
         }
 
- out:
-        return inst;
 }
 
 static CMPIInstance *convert_rule_to_instance(
@@ -438,27 +329,79 @@ static CMPIInstance *convert_rule_to_instance(
         const CMPIObjectPath *reference,
         CMPIStatus *s)
 {
-        CMPIInstance *instance = NULL;
+        CMPIInstance *inst = NULL;
+        const char *sys_name = NULL;
+        const char *sys_ccname = NULL;
+        const char *basename = NULL;
+        int action, direction, priority = 0;
+
+        void (*convert_f)(struct acl_rule*, CMPIInstance*, const CMPIBroker*);
 
         if (rule == NULL)
                 return NULL;
 
-        if(is_mac_rule(rule->type)) {
-                instance = convert_mac_rule_to_instance(rule,
-                                                broker,
-                                                context,
-                                                reference,
-                                                s);
-        }
-        else if(is_ip_rule(rule->type)) {
-                instance = convert_ip_rule_to_instance(rule,
-                                                broker,
-                                                context,
-                                                reference,
-                                                s);
+        switch (rule->type) {
+        case MAC_RULE:
+        case ARP_RULE:
+                basename = "Hdr8021Filter";
+                convert_f = convert_mac_rule_to_instance;
+                break;
+        case IP_RULE:
+        case TCP_RULE:
+        case ICMP_RULE:
+        case IGMP_RULE:
+                basename = "IPHeadersFilter";
+                convert_f = convert_ip_rule_to_instance;
+                break;
+        default:
+                basename = "FilterEntry";
+                convert_f = NULL;
+                break;
         }
 
-        return instance;
+        inst = get_typed_instance(broker,
+                                  CLASSNAME(reference),
+                                  basename,
+                                  NAMESPACE(reference));
+
+        if (inst == NULL) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get filter entry instance");
+                goto out;
+        }
+
+        *s = get_host_system_properties(&sys_name,
+                                       &sys_ccname,
+                                       reference,
+                                       broker,
+                                       context);
+
+        if (s->rc != CMPI_RC_OK) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get host attributes");
+                goto out;
+        }
+
+        CMSetProperty(inst, "SystemName", sys_name, CMPI_chars);
+        CMSetProperty(inst, "SystemCreationClassName", sys_ccname, CMPI_chars);
+        CMSetProperty(inst, "Name", (CMPIValue *)rule->name, CMPI_chars);
+
+        action = convert_action(rule->action);
+        CMSetProperty(inst, "Action", (CMPIValue *)&action, CMPI_uint16);
+
+        direction = convert_direction(rule->direction);
+        CMSetProperty(inst, "Direction", (CMPIValue *)&direction, CMPI_uint16);
+
+        priority = convert_priority(rule->priority);
+        CMSetProperty(inst, "Priority", (CMPIValue *)&priority, CMPI_uint16);
+
+        if (convert_f)
+                convert_f(rule, inst, broker);
+
+ out:
+        return inst;
 }
 
 CMPIStatus enum_filter_rules(
@@ -475,10 +418,19 @@ CMPIStatus enum_filter_rules(
 
         CU_DEBUG("Reference = %s", REF2STR(reference));
 
-        if (STREQC(CLASSNAME(reference), "KVM_Hdr8021Filter"))
+        if (STREQC(CLASSNAME(reference), "KVM_Hdr8021Filter")) {
                 class_type = MAC;
-        else if (STREQC(CLASSNAME(reference), "KVM_IPHeadersFilter"))
+        } else if (STREQC(CLASSNAME(reference), "KVM_IPHeadersFilter")) {
                 class_type = IP;
+        } else if (STREQC(CLASSNAME(reference), "KVM_FilterEntry")) {
+                class_type = NONE;
+        } else {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unrecognized class type");
+                goto out;
+        }
+
 
         conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL)
@@ -490,29 +442,12 @@ CMPIStatus enum_filter_rules(
                 for (j = 0; j < filters[i].rule_ct; j++) {
                         CMPIInstance *instance = NULL;
 
-                        if (((class_type == NONE) ||
-                                (class_type == MAC)) &&
-                                is_mac_rule(filters[i].rules[j]->type)) {
-                                instance = convert_mac_rule_to_instance(
-                                                filters[i].rules[j],
-                                                broker,
-                                                context,
-                                                reference,
-                                                &s);
-                        }
-                        else if (((class_type == NONE) ||
-                                (class_type == IP)) &&
-                                is_ip_rule(filters[i].rules[j]->type)) {
-                                instance = convert_ip_rule_to_instance(
-                                                filters[i].rules[j],
-                                                broker,
-                                                context,
-                                                reference,
-                                                &s);
-                        }
-                        else
-                                CU_DEBUG("Unrecognized rule type %u",
-                                        filters[i].rules[j]->type);
+                        instance = convert_rule_to_instance(
+                                        filters[i].rules[j],
+                                        broker,
+                                        context,
+                                        reference,
+                                        &s);
 
                         if (instance != NULL)
                                 inst_list_add(list, instance);

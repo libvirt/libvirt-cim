@@ -160,6 +160,7 @@ static char *group_component[] = {
 };
 
 static char *part_component[] = {
+        "KVM_FilterEntry",
         "KVM_Hdr8021Filter",
         "KVM_IPHeadersFilter",
         NULL

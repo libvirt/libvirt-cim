@@ -74,3 +74,33 @@ class KVM_IPHeadersFilter : CIM_IPHeadersFilter
         MaxValue(1000)]
         uint16 Priority = 500;
 };
+
+[Provider("cmpi::Virt_FilterEntry")]
+class KVM_FilterEntry : CIM_FilterEntry
+{
+        [Description("This defines whether the Filter is used for input, "
+	        "output, or both input and output filtering.  All values are "
+                "used with respect to the interface for which the Filter "
+                "applies. \"Not Applicable\" (0) is used when there is no "
+                "direction applicable to the Filter. \"Input\" (1) is "
+                "used when the Filter applies to packets that are inbound "
+                "on the related interface. \"Output\" (2) is used when the "
+                "Filter applies to packets that are outbound on the "
+                "related interface. \"Both\" (3) is used to indicate that "
+                "the direction is immaterial, e.g., to filter on a source "
+                "subnet regardless of whether the flow is inbound or "
+                "outbound."),
+        ValueMap { "0", "1", "2", "3", "4" },
+        Values { "Not Applicable", "Input, Output", "Both", "Mirrored" }]
+        uint16 Direction;
+
+        [Description("The priority of the rule controls the order in which "
+                "the rule will be, instantiated relative to other rules. "
+                "Rules with lower value will be instantiated and therefore "
+                "evaluated before rules with higher value. Valid values are "
+                "in the range of 0 to 1000. If this attribute is not "
+                "provided, the value 500 will automatically be assigned."),
+        MinValue(0),
+        MaxValue(1000)]
+        uint16 Priority = 500;
+};
