@@ -879,6 +879,17 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.disk.device = strdup("disk");
         else if (type == VIRT_DISK_TYPE_CDROM) {
                 dev->dev.disk.device = strdup("cdrom");
+                /* following code is for the case that user defined cdrom device
+                   without disk in it, or a empty disk "" */
+                if (XSTREQ(dev->dev.disk.source, "")) {
+                        dev->dev.disk.disk_type = DISK_FILE;
+                }
+                if (XSTREQ(dev->dev.disk.source, "/dev/null")) {
+                        dev->dev.disk.disk_type = DISK_FILE;
+                        free(dev->dev.disk.source);
+                        dev->dev.disk.source = strdup("");
+                }
+
                 if (dev->dev.disk.disk_type == DISK_UNKNOWN)
                         dev->dev.disk.disk_type = DISK_PHY;
         }

@@ -110,10 +110,18 @@ static const char *disk_file_xml(xmlNodePtr root, struct disk_device *dev)
                         xmlNewProp(tmp, BAD_CAST "cache", BAD_CAST dev->cache);
         }
 
-        tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-        xmlNewProp(tmp, BAD_CAST "file", BAD_CAST dev->source);
+        if ((XSTREQ(dev->device, "cdrom")) &&
+                        (XSTREQ(dev->source, ""))) {
+                /* This is the situation that user defined a cdrom device without
+                 disk in it, so skip generating a line saying "source", for that
+                 xml defination for libvirt should not have this defined in this
+                 situation. */
+        } else {
+                tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST "file", BAD_CAST dev->source);
+        }
 
         tmp = xmlNewChild(disk, NULL, BAD_CAST "target", NULL);
         if (tmp == NULL)

@@ -290,6 +290,13 @@ static int parse_block_device(xmlNode *dnode, struct virt_device **vdevs)
                         ddev->shareable = true;
                 }
         }
+
+        /* handle the situation that a cdrom device have no disk in it, no ISO file */
+        if ((XSTREQ(ddev->device, "cdrom")) && (ddev->source == NULL)) {
+                ddev->source = strdup("");
+                ddev->disk_type = DISK_FILE;
+        }
+
         if ((ddev->source == NULL) || (ddev->virtual_dev == NULL))
                 goto err;
 
