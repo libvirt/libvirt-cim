@@ -29,6 +29,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <errno.h>
 #include <libvirt/libvirt.h>
 #include <libvirt/virterror.h>
 
@@ -539,6 +540,17 @@ bool parse_instanceid(const CMPIObjectPath *ref,
 bool libvirt_cim_init(void)
 {
         int ret = 0;
+
+        /* The tog-pegasus out-of-process provider feature does not
+        * redirect stdout and stderr, so it's done here to prevent
+        * any messages from taking over the console. One example is
+        * verbose connection failures sent to stdout by libvirt. */
+        if (strstr(program_invocation_short_name, "cimprovagt") != NULL) {
+                CU_DEBUG("Redirecting stdout and stderr");
+
+                stdout = freopen("/dev/null", "a", stdout);
+                stderr = freopen("/dev/null", "a", stderr);
+        }
 
         /* double-check lock pattern used for performance reasons */
         if (libvirt_initialized == 0) {
