@@ -930,6 +930,7 @@ static void raise_deleted_ind(struct migration_job *job)
 
 static void migrate_job_set_state(struct migration_job *job,
                                   uint16_t state,
+                                  int error_code,
                                   const char *status)
 {
         CMPIInstance *inst;
@@ -953,10 +954,13 @@ static void migrate_job_set_state(struct migration_job *job,
 
         CMSetProperty(inst, "JobState",
                       (CMPIValue *)&state, CMPI_uint16);
+        CMSetProperty(inst, "ErrorCode",
+                      (CMPIValue *)&error_code, CMPI_uint16);
         CMSetProperty(inst, "Status",
                       (CMPIValue *)status, CMPI_chars);
 
-        CU_DEBUG("Modifying job %s (%i:%s)", job->uuid, state, status);
+        CU_DEBUG("Modifying job %s (%i:%s) Error Code is  %i", 
+                  job->uuid, state, status, error_code);
 
         s = CBModifyInstance(_BROKER, job->context, op, inst, NULL);
         if (s.rc != CMPI_RC_OK)
@@ -1279,7 +1283,7 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
         CBAttachThread(_BROKER, job->context);
 
         CU_DEBUG("Migration Job %s started", job->uuid);
-        migrate_job_set_state(job, CIM_JOBSTATE_RUNNING, "Running");
+        migrate_job_set_state(job, CIM_JOBSTATE_RUNNING, 0, "Running");
 
         s = migrate_vs(job);
 
@@ -1287,10 +1291,12 @@ static CMPI_THREAD_RETURN migration_thread(struct migration_job *job)
         if (s.rc != CMPI_RC_OK)
                 migrate_job_set_state(job,
                                       CIM_JOBSTATE_COMPLETE,
+                                      s.rc,
                                       CMGetCharPtr(s.msg));
         else
                 migrate_job_set_state(job,
                                       CIM_JOBSTATE_COMPLETE,
+                                      0,
                                       "Completed");
 
         raise_deleted_ind(job);
