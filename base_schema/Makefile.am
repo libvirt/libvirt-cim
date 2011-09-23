@@ -8,6 +8,6 @@ dist_pkgdata_DATA = $(CIM_SCHEMA_ZIP) cimv2.21.0-interop_mof \
 dist_pkgdata_SCRIPTS = install_base_schema.sh
 
 $(CIM_SCHEMA_ZIP):
-	wget http://www.dmtf.org/standards/cim/cim_schema_v$(CIM_SCHEMA_DIR)/$(CIM_SCHEMA_ZIP)
+	wget http://www.dmtf.org/sites/default/files/cim/cim_schema_v$(CIM_SCHEMA_DIR)/$(CIM_SCHEMA_ZIP)
 
 EXTRA_DIST = README.DMTF
