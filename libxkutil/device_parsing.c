@@ -527,6 +527,17 @@ static int parse_mem_device(xmlNode *node, struct virt_device **vdevs)
         return 0;
 }
 
+static char *get_attr_value_default(xmlNode *node, char *attrname,
+                                    const char *default_value)
+{
+        char *ret = get_attr_value(node, attrname);
+
+        if (ret == NULL && default_value != NULL)
+                ret = strdup(default_value);
+
+        return ret;
+}
+
 static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
@@ -547,13 +558,18 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
         CU_DEBUG("graphics device type = %s", gdev->type);
 
         if (STREQC(gdev->type, "vnc")) {
-                gdev->dev.vnc.port = get_attr_value(node, "port");
-                gdev->dev.vnc.host = get_attr_value(node, "listen");
+                gdev->dev.vnc.port = get_attr_value_default(node, "port",
+                                                            "-1");
+                gdev->dev.vnc.host = get_attr_value_default(node, "listen",
+                                                            "127.0.0.1");
                 gdev->dev.vnc.keymap = get_attr_value(node, "keymap");
                 gdev->dev.vnc.passwd = get_attr_value(node, "passwd");
-        
-                if (gdev->dev.vnc.port == NULL || gdev->dev.vnc.host == NULL)
+
+                if (gdev->dev.vnc.port == NULL || gdev->dev.vnc.host == NULL) {
+                        CU_DEBUG("Error vnc port '%p' host '%p'",
+                                 gdev->dev.vnc.port, gdev->dev.vnc.host);
                         goto err;
+                }
         }
         else if (STREQC(gdev->type, "sdl")) {
                 gdev->dev.sdl.display = get_attr_value(node, "display");
