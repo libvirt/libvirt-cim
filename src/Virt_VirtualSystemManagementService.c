@@ -2342,6 +2342,8 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
                 return s;
         }
 
+        update_dominfo(dominfo, refcn);
+
         conn = connect_by_classname(_BROKER, refcn, &s);
         if (conn == NULL) {
                 CU_DEBUG("Failed to connect");
@@ -2357,8 +2359,6 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
                                 "Virtual System `%s' not found", dominfo->name);
                 goto out;
         }
-
-        update_dominfo(dominfo, refcn);
 
         if (!domain_online(dom)) {
                 CU_DEBUG("VS `%s' not online; skipping dynamic update",
