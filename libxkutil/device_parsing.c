@@ -49,6 +49,9 @@
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+/* Device parse function */
+typedef int (*dev_parse_func_t)(xmlNode *, struct virt_device **);
+
 static void cleanup_disk_device(struct disk_device *dev)
 {
         free(dev->type);
@@ -669,32 +672,15 @@ static bool resize_devlist(struct virt_device **list, int newsize)
         return true;
 }
 
-static int do_parse(xmlNodeSet *nsv, int type, struct virt_device **l)
+
+static int do_parse(xmlNodeSet *nsv, dev_parse_func_t do_real_parse,
+                    struct virt_device **l)
 {
         int devidx;
         int lstidx = 0;
         int count = 0;
         struct virt_device *list = NULL;
         xmlNode **dev_nodes = NULL;
-        int (*do_real_parse)(xmlNode *, struct virt_device **) = NULL;
-
-        /* point to correct parser function according to type */
-        if (type == CIM_RES_TYPE_NET)
-                do_real_parse = &parse_net_device;
-        else if (type == CIM_RES_TYPE_DISK)
-                do_real_parse = &parse_disk_device;
-        else if (type == CIM_RES_TYPE_PROC)
-                do_real_parse = parse_vcpu_device;
-        else if (type == CIM_RES_TYPE_EMU)
-                do_real_parse = parse_emu_device;
-        else if (type == CIM_RES_TYPE_MEM)
-                do_real_parse = parse_mem_device;
-        else if (type == CIM_RES_TYPE_GRAPHICS)
-                do_real_parse = parse_graphics_device;
-        else if (type == CIM_RES_TYPE_INPUT)
-                do_real_parse = parse_input_device;
-        else
-                goto out;
 
         if (nsv == NULL)
                 goto out;
@@ -743,29 +729,55 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
 {
         int len = 0;
         int count = 0;
+        dev_parse_func_t func = NULL;
 
-        CU_DEBUG("In parse_deviceso - type is %d", type);
         xmlDoc *xmldoc;
         xmlXPathContext *xpathCtx;
         xmlXPathObject *xpathObj;
         xmlChar *xpathstr;
 
-        if (type == CIM_RES_TYPE_NET)
+        CU_DEBUG("In parse_devices - type is %d", type);
+
+        switch (type) {
+        case CIM_RES_TYPE_NET:
                 xpathstr = NET_XPATH;
-        else if (type == CIM_RES_TYPE_DISK)
+                func = &parse_net_device;
+                break;
+
+        case CIM_RES_TYPE_DISK:
                 xpathstr = DISK_XPATH;
-        else if (type == CIM_RES_TYPE_PROC)
+                func = &parse_disk_device;
+                break;
+
+        case CIM_RES_TYPE_PROC:
                 xpathstr = VCPU_XPATH;
-        else if (type == CIM_RES_TYPE_EMU)
+                func = &parse_vcpu_device;
+                break;
+
+        case CIM_RES_TYPE_EMU:
                 xpathstr = EMU_XPATH;
-        else if (type == CIM_RES_TYPE_MEM)
+                func = &parse_emu_device;
+                break;
+
+        case CIM_RES_TYPE_MEM:
                 xpathstr = MEM_XPATH;
-        else if (type == CIM_RES_TYPE_GRAPHICS)
+                func = &parse_mem_device;
+                break;
+
+        case CIM_RES_TYPE_GRAPHICS:
                 xpathstr = GRAPHICS_XPATH;
-        else if (type == CIM_RES_TYPE_INPUT)
+                func = &parse_graphics_device;
+                break;
+
+        case CIM_RES_TYPE_INPUT:
                 xpathstr = INPUT_XPATH;
-        else
+                func = &parse_input_device;
+                break;
+
+        default:
+                CU_DEBUG("Unrecognized device type. Returning.");
                 goto err1;
+        };
 
         len = strlen(xml) + 1;
 
@@ -780,7 +792,7 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
                         == NULL)
                 goto err3;
 
-        count = do_parse(xpathObj->nodesetval, type, _list);
+        count = do_parse(xpathObj->nodesetval, func, _list);
 
         xmlSetGenericErrorFunc(NULL, NULL);
         xmlXPathFreeObject(xpathObj);
