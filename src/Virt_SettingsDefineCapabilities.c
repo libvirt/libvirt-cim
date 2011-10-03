@@ -410,7 +410,10 @@ static CMPIStatus proc_template(const CMPIObjectPath *ref,
         case SDC_RASD_MIN:
                 num_procs = 0;
                 limit = 1;
-                weight = MIN_XEN_WEIGHT;
+                if (STARTS_WITH(CLASSNAME(ref), "Xen"))
+                        weight = MIN_XEN_WEIGHT;
+                else if (STARTS_WITH(CLASSNAME(ref), "KVM"))
+                        weight = MIN_KVM_WEIGHT;
                 id = "Minimum";
                 break;
         case SDC_RASD_MAX:
@@ -418,19 +421,28 @@ static CMPIStatus proc_template(const CMPIObjectPath *ref,
                 if (!ret)
                     goto out;
                 limit = 0;
-                weight = MAX_XEN_WEIGHT;
+                if (STARTS_WITH(CLASSNAME(ref), "Xen"))
+                        weight = MAX_XEN_WEIGHT;
+                else if (STARTS_WITH(CLASSNAME(ref), "KVM"))
+                        weight = MAX_KVM_WEIGHT;
                 id = "Maximum";
                 break;
         case SDC_RASD_INC:
                 num_procs = 1;
                 limit = 50;
-                weight = INC_XEN_WEIGHT;
+                if (STARTS_WITH(CLASSNAME(ref), "Xen"))
+                        weight = INC_XEN_WEIGHT;
+                else if (STARTS_WITH(CLASSNAME(ref), "KVM"))
+                        weight = INC_KVM_WEIGHT;
                 id = "Increment";
                 break;
         case SDC_RASD_DEF:
                 num_procs = 1;
                 limit = 0;
-                weight = DEFAULT_XEN_WEIGHT;
+                if (STARTS_WITH(CLASSNAME(ref), "Xen"))
+                        weight = DEFAULT_XEN_WEIGHT;
+                else if (STARTS_WITH(CLASSNAME(ref), "KVM"))
+                        weight = DEFAULT_KVM_WEIGHT;
                 id = "Default";
                 break;
         default:
@@ -454,6 +466,10 @@ static CMPIStatus proc_template(const CMPIObjectPath *ref,
                 CMSetProperty(inst, "Limit", (CMPIValue *)&limit, CMPI_uint64); 
                 CMSetProperty(inst, "Weight", 
                               (CMPIValue *)&weight, CMPI_uint32); 
+        }
+        else if (STARTS_WITH(CLASSNAME(ref), "KVM")) {
+                CMSetProperty(inst, "Weight",
+                              (CMPIValue *)&weight, CMPI_uint32);
         }
 
         inst_list_add(list, inst);

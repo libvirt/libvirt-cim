@@ -1332,6 +1332,24 @@ static int change_vcpus(virDomainPtr dom, struct virt_device *dev)
 {
         int ret;
 
+        /* Change vcpu cgroup cpu_shares */
+        if (dev->dev.vcpu.weight > 0) {
+                virSchedParameter param;
+
+                strncpy(param.field, "cpu_shares", VIR_DOMAIN_SCHED_FIELD_LENGTH);
+                param.type = VIR_DOMAIN_SCHED_FIELD_ULLONG;
+                param.value.ul = dev->dev.vcpu.weight;
+                
+                if (virDomainSetSchedulerParameters(dom, &param, 1) != 0) {
+                        CU_DEBUG("Failed to set scheduler params for domain");
+                        return 0;
+                }
+
+                CU_DEBUG("Changed %s vcpu cgroup cpu_shares to %i",
+                         virDomainGetName(dom),
+                         dev->dev.vcpu.weight);
+        }
+
         if (dev->dev.vcpu.quantity <= 0) {
                 CU_DEBUG("Unable to set VCPU count to %i",
                          dev->dev.vcpu.quantity);

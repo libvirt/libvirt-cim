@@ -24,6 +24,11 @@
 #define INC_XEN_WEIGHT MAX_XEN_WEIGHT / 2 
 #define DEFAULT_XEN_WEIGHT 1024
 
+#define MIN_KVM_WEIGHT 2
+#define MAX_KVM_WEIGHT 262144
+#define INC_KVM_WEIGHT 1
+#define DEFAULT_KVM_WEIGHT 1024
+
 CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     CMPIInstance **_inst,
                     const CMPIBroker *broker,

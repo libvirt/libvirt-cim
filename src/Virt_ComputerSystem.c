@@ -858,6 +858,30 @@ static int lxc_scheduler_params(struct infostore_ctx *ctx,
         return 0;
 }
 
+static int kvm_scheduler_params(struct infostore_ctx *ctx,
+                                virSchedParameter **params)
+{
+        unsigned long long value;
+
+        *params = calloc(1, sizeof(virSchedParameter));
+        if (*params == NULL)
+                return -1;
+
+        value = infostore_get_u64(ctx, "weight");
+
+        if (value != 0) {
+                strncpy((*params)[0].field,
+                        "cpu_shares",
+                        VIR_DOMAIN_SCHED_FIELD_LENGTH);
+                (*params)[0].type = VIR_DOMAIN_SCHED_FIELD_ULLONG;
+                (*params)[0].value.ul = value;
+
+                return 1;
+        }
+
+        return 0;
+}
+
 static void set_scheduler_params(virDomainPtr dom)
 {
         struct infostore_ctx *ctx;
@@ -881,6 +905,8 @@ static void set_scheduler_params(virDomainPtr dom)
                 count = xen_scheduler_params(ctx, &params);
         else if (STREQC(virConnectGetType(conn), "lxc"))
                 count = lxc_scheduler_params(ctx, &params);
+        else if (STREQC(virConnectGetType(conn), "QEMU"))
+                count = kvm_scheduler_params(ctx, &params);
         else {
                 CU_DEBUG("Not setting sched params for type %s",
                          virConnectGetType(conn));

@@ -110,7 +110,7 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
         struct infostore_ctx *info = NULL;
-        uint32_t weight;
+        uint32_t weight = 0;
         uint64_t limit;
         uint64_t count;
 
@@ -147,7 +147,45 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
                 goto out;
         }
 
-        weight = (uint32_t)infostore_get_u64(info, "weight");
+        /* Currently only support CPU cgroups for running KVM guests */
+        if (domain_online(dom) && STREQC(virConnectGetType(conn), "QEMU")) {
+                char *sched;
+                int nparams;
+                unsigned int i;
+                virSchedParameter *params;
+
+                /* First find the number of scheduler params, in order malloc space for them all */
+                sched = virDomainGetSchedulerType(dom, &nparams);
+                if (sched == NULL) {
+                        CU_DEBUG("Failed to get scheduler type");
+                        goto out;
+                }
+                CU_DEBUG("domain has %d scheduler params", nparams);
+                free(sched);
+
+                /* Now retrieve all the scheduler params for this domain */
+                params = calloc(nparams, sizeof(virSchedParameter));
+                if (virDomainGetSchedulerParameters(dom, params, &nparams) != 0) {
+                        CU_DEBUG("Failed to get scheduler params for domain");
+                        goto out;
+                }
+
+                /* Look for the CPU cgroup scheduler parameter, called 'cpu_shares' */
+                for (i = 0 ; i < nparams ; i++) {
+                        CU_DEBUG("scheduler param #%d name is %s (type %d)", 
+                                 i, params[i].field, params[i].type);
+                        if (STREQ(params[i].field, "cpu_shares") && 
+                            (params[i].type == VIR_DOMAIN_SCHED_FIELD_ULLONG)) {
+                                CU_DEBUG("scheduler param %s = %d",
+                                         params[i].field, params[i].value.ul);
+                                weight = (uint32_t)params[i].value.ul;
+                                break; /* Found it! */
+                        }
+                }
+                free(params);
+        }
+        else 
+                weight = (uint32_t)infostore_get_u64(info, "weight");
         limit = infostore_get_u64(info, "limit");
 
         CMSetProperty(inst, "Weight",

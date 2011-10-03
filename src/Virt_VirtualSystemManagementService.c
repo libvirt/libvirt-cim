@@ -1023,6 +1023,8 @@ static const char *proc_rasd_to_vdev(CMPIInstance *inst,
 
         if (STARTS_WITH(CLASSNAME(op), "Xen")) 
                 def_weight = DEFAULT_XEN_WEIGHT;
+        else if (STARTS_WITH(CLASSNAME(op), "QEMU"))
+                def_weight = DEFAULT_KVM_WEIGHT;
 
         rc = cu_get_u64_prop(inst, "Limit", &dev->dev.vcpu.limit);
         if (rc != CMPI_RC_OK)
