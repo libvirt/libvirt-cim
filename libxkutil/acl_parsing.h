@@ -95,7 +95,7 @@ struct acl_tcp_rule {
         char *state;
 };
 
-struct acl_igmp_rule {
+struct acl_icmp_igmp_rule {
         char *srcmacaddr;
         char *srcmacmask;
         char *dstmacaddr;
@@ -117,27 +117,6 @@ struct acl_igmp_rule {
         char *state;
 };
 
-struct acl_icmp_rule {
-        char *srcmacaddr;
-        char *srcmacmask;
-        char *dstmacaddr;
-        char *dstmacmask;
-
-        char *srcipaddr;
-        char *srcipmask;
-        char *dstipaddr;
-        char *dstipmask;
-
-        char *srcipfrom;
-        char *srcipto;
-        char *dstipfrom;
-        char *dstipto;
-
-        char *type;
-        char *code;
-        char *comment;
-        char *state;
-};
 
 struct acl_rule {
         char *name;
@@ -153,8 +132,7 @@ struct acl_rule {
                 ARP_RULE,
                 IP_RULE,
                 TCP_RULE,
-                ICMP_RULE,
-                IGMP_RULE
+                ICMP_IGMP_RULE,
         } type;
 
         union {
@@ -162,8 +140,7 @@ struct acl_rule {
                 struct acl_arp_rule arp;
                 struct acl_ip_rule ip;
                 struct acl_tcp_rule tcp;
-                struct acl_icmp_rule icmp;
-                struct acl_igmp_rule igmp;
+                struct acl_icmp_igmp_rule icmp_igmp;
         } var;
 };
 

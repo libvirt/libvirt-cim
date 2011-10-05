@@ -97,41 +97,23 @@ void cleanup_rule(struct acl_rule *rule)
                 free(rule->var.tcp.comment);
                 free(rule->var.tcp.state);
                 break;
-        case IGMP_RULE:
-                free(rule->var.igmp.srcmacaddr);
-                free(rule->var.igmp.srcmacmask);
-                free(rule->var.igmp.dstmacaddr);
-                free(rule->var.igmp.dstmacmask);
-                free(rule->var.igmp.srcipaddr);
-                free(rule->var.igmp.srcipmask);
-                free(rule->var.igmp.dstipaddr);
-                free(rule->var.igmp.dstipmask);
-                free(rule->var.igmp.srcipfrom);
-                free(rule->var.igmp.srcipto);
-                free(rule->var.igmp.dstipfrom);
-                free(rule->var.igmp.dstipto);
-                free(rule->var.igmp.type);
-                free(rule->var.igmp.code);
-                free(rule->var.igmp.comment);
-                free(rule->var.igmp.state);
-                break;
-        case ICMP_RULE:
-                free(rule->var.icmp.srcmacaddr);
-                free(rule->var.icmp.srcmacmask);
-                free(rule->var.icmp.dstmacaddr);
-                free(rule->var.icmp.dstmacmask);
-                free(rule->var.icmp.srcipaddr);
-                free(rule->var.icmp.srcipmask);
-                free(rule->var.icmp.dstipaddr);
-                free(rule->var.icmp.dstipmask);
-                free(rule->var.icmp.srcipfrom);
-                free(rule->var.icmp.srcipto);
-                free(rule->var.icmp.dstipfrom);
-                free(rule->var.icmp.dstipto);
-                free(rule->var.icmp.type);
-                free(rule->var.icmp.code);
-                free(rule->var.icmp.comment);
-                free(rule->var.icmp.state);
+        case ICMP_IGMP_RULE:
+                free(rule->var.icmp_igmp.srcmacaddr);
+                free(rule->var.icmp_igmp.srcmacmask);
+                free(rule->var.icmp_igmp.dstmacaddr);
+                free(rule->var.icmp_igmp.dstmacmask);
+                free(rule->var.icmp_igmp.srcipaddr);
+                free(rule->var.icmp_igmp.srcipmask);
+                free(rule->var.icmp_igmp.dstipaddr);
+                free(rule->var.icmp_igmp.dstipmask);
+                free(rule->var.icmp_igmp.srcipfrom);
+                free(rule->var.icmp_igmp.srcipto);
+                free(rule->var.icmp_igmp.dstipfrom);
+                free(rule->var.icmp_igmp.dstipto);
+                free(rule->var.icmp_igmp.type);
+                free(rule->var.icmp_igmp.code);
+                free(rule->var.icmp_igmp.comment);
+                free(rule->var.icmp_igmp.state);
                 break;
         case UNKNOWN_RULE:
         default:
@@ -265,50 +247,25 @@ static int parse_acl_tcp_rule(xmlNode *rnode, struct acl_rule *rule)
         return 1;
 }
 
-static int parse_acl_icmp_rule(xmlNode *rnode, struct acl_rule *rule)
+static int parse_acl_icmp_igmp_rule(xmlNode *rnode, struct acl_rule *rule)
 {
-        CU_DEBUG("ACL icmp rule %s", rnode->name);
+        CU_DEBUG("ACL %s rule %s", rule->protocol_id, rnode->name);
 
-        rule->type = ICMP_RULE;
-        rule->var.icmp.srcmacaddr = get_attr_value(rnode, "srcmacaddr");
-        rule->var.icmp.srcmacmask = get_attr_value(rnode, "srcmacmask");
-        rule->var.icmp.dstmacaddr = get_attr_value(rnode, "dstmacaddr");
-        rule->var.icmp.dstmacmask = get_attr_value(rnode, "dstmacmask");
-        rule->var.icmp.srcipaddr = get_attr_value(rnode, "srcipaddr");
-        rule->var.icmp.srcipmask = get_attr_value(rnode, "srcipmask");
-        rule->var.icmp.dstipaddr = get_attr_value(rnode, "dstipaddr");
-        rule->var.icmp.dstipmask = get_attr_value(rnode, "dstipmask");
-        rule->var.icmp.srcipfrom = get_attr_value(rnode, "srcipfrom");
-        rule->var.icmp.srcipto = get_attr_value(rnode, "srcipto");
-        rule->var.icmp.dstipfrom = get_attr_value(rnode, "dstipfrom");
-        rule->var.icmp.dstipto = get_attr_value(rnode, "dstipto");
-        rule->var.icmp.comment = get_attr_value(rnode, "comment");
-        rule->var.icmp.state = get_attr_value(rnode, "state");
-
-        return 1;
-}
-
-static int parse_acl_igmp_rule(xmlNode *rnode, struct acl_rule *rule)
-{
-        CU_DEBUG("ACL igmp rule %s", rnode->name);
-
-        rule->type = IGMP_RULE;
-        rule->var.igmp.srcmacaddr = get_attr_value(rnode, "srcmacaddr");
-        rule->var.igmp.srcmacmask = get_attr_value(rnode, "srcmacmask");
-        rule->var.igmp.dstmacaddr = get_attr_value(rnode, "dstmacaddr");
-        rule->var.igmp.dstmacmask = get_attr_value(rnode, "dstmacmask");
-        rule->var.igmp.srcipaddr = get_attr_value(rnode, "srcipaddr");
-        rule->var.igmp.srcipmask = get_attr_value(rnode, "srcipmask");
-        rule->var.igmp.dstipaddr = get_attr_value(rnode, "dstipaddr");
-        rule->var.igmp.dstipmask = get_attr_value(rnode, "dstipmask");
-        rule->var.igmp.srcipfrom = get_attr_value(rnode, "srcipfrom");
-        rule->var.igmp.srcipto = get_attr_value(rnode, "srcipto");
-        rule->var.igmp.dstipfrom = get_attr_value(rnode, "dstipfrom");
-        rule->var.igmp.dstipto = get_attr_value(rnode, "dstipto");
-        rule->var.igmp.type = get_attr_value(rnode, "type");
-        rule->var.igmp.code = get_attr_value(rnode, "code");
-        rule->var.igmp.comment = get_attr_value(rnode, "comment");
-        rule->var.igmp.state = get_attr_value(rnode, "state");
+        rule->type = ICMP_IGMP_RULE;
+        rule->var.icmp_igmp.srcmacaddr = get_attr_value(rnode, "srcmacaddr");
+        rule->var.icmp_igmp.srcmacmask = get_attr_value(rnode, "srcmacmask");
+        rule->var.icmp_igmp.dstmacaddr = get_attr_value(rnode, "dstmacaddr");
+        rule->var.icmp_igmp.dstmacmask = get_attr_value(rnode, "dstmacmask");
+        rule->var.icmp_igmp.srcipaddr = get_attr_value(rnode, "srcipaddr");
+        rule->var.icmp_igmp.srcipmask = get_attr_value(rnode, "srcipmask");
+        rule->var.icmp_igmp.dstipaddr = get_attr_value(rnode, "dstipaddr");
+        rule->var.icmp_igmp.dstipmask = get_attr_value(rnode, "dstipmask");
+        rule->var.icmp_igmp.srcipfrom = get_attr_value(rnode, "srcipfrom");
+        rule->var.icmp_igmp.srcipto = get_attr_value(rnode, "srcipto");
+        rule->var.icmp_igmp.dstipfrom = get_attr_value(rnode, "dstipfrom");
+        rule->var.icmp_igmp.dstipto = get_attr_value(rnode, "dstipto");
+        rule->var.icmp_igmp.comment = get_attr_value(rnode, "comment");
+        rule->var.icmp_igmp.state = get_attr_value(rnode, "state");
 
         return 1;
 }
@@ -351,10 +308,8 @@ static int parse_acl_rule(xmlNode *rnode, struct acl_rule *rule)
                         rule->protocol_id = strdup((char *)child->name);
                         parse_acl_tcp_rule(child, rule);
                 } else if (XSTREQ(child->name, "icmp") ||
-                        XSTREQ(child->name, "icmpv6")) {
-                        rule->protocol_id = strdup((char *)child->name);
-                        parse_acl_icmp_rule(child, rule);
-                } else if (XSTREQ(child->name, "igmp") ||
+                        XSTREQ(child->name, "icmpv6") ||
+                        XSTREQ(child->name, "igmp") ||
                         XSTREQ(child->name, "igmp-ipv6") ||
                         XSTREQ(child->name, "esp") ||
                         XSTREQ(child->name, "esp-ipv6") ||
@@ -365,7 +320,7 @@ static int parse_acl_rule(xmlNode *rnode, struct acl_rule *rule)
                         XSTREQ(child->name, "all") ||
                         XSTREQ(child->name, "all-ipv6")) {
                         rule->protocol_id = strdup((char *)child->name);
-                        parse_acl_igmp_rule(child, rule);
+                        parse_acl_icmp_igmp_rule(child, rule);
                 }
         }
 

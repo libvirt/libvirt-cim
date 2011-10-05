@@ -348,8 +348,7 @@ static CMPIInstance *convert_rule_to_instance(
                 break;
         case IP_RULE:
         case TCP_RULE:
-        case ICMP_RULE:
-        case IGMP_RULE:
+        case ICMP_IGMP_RULE:
                 basename = "IPHeadersFilter";
                 convert_f = convert_ip_rule_to_instance;
                 break;
