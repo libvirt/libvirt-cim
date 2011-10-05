@@ -1281,7 +1281,7 @@ CMPIStatus get_pool_by_name(const CMPIBroker *broker,
                 goto out;
         }
 
-        ret = sscanf(id, "%*[^/]/%as", &poolid);
+        ret = sscanf(id, "%*[^/]/%a[^\n]", &poolid);
         if (ret != 1) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
