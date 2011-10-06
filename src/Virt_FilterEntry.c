@@ -115,6 +115,44 @@ static CMPIArray *octets_to_cmpi(const CMPIBroker *broker, unsigned int *bytes, 
         return array;
 }
 
+static char *cidr_to_str(const char *cidr)
+{
+        char *ret = NULL;
+        int val;
+        unsigned int o1, o2, o3, o4;
+
+        if (cidr == NULL || strlen(cidr) == 0)
+                return NULL;
+
+        CU_DEBUG("Enter %s(%s)", __FUNCTION__, cidr);
+
+        /* String value to integer */
+        val = atoi(cidr);
+        if (val < 0 || val > 32)
+                return NULL;
+
+        if (val == 0)
+                return strdup("0.0.0.0");
+        else if (val == 32)
+                return strdup("255.255.255.255");
+
+        /* CIDR to bits */
+        val = (0xffffffff >> (32 - val)) << (32 - val);
+
+        /* bits to octets */
+        o1 = (val & 0xff000000) >> 24;
+        o2 = (val & 0x00ff0000) >> 16;
+        o3 = (val & 0x0000ff00) >> 8;
+        o4 = val & 0x000000ff;
+
+        /* octets to address string */
+        ret = calloc(1, sizeof(*ret) * 16);
+        snprintf(ret, 16, "%u.%u.%u.%u", o1, o2, o3, o4);
+
+        CU_DEBUG("%s: returning '%s'", __FUNCTION__, ret);
+        return ret;
+}
+
 static int convert_direction(const char *s)
 {
         enum {NOT_APPLICABLE, INPUT, OUTPUT, BOTH} direction = NOT_APPLICABLE;
@@ -246,14 +284,25 @@ static void convert_ip_rule_to_instance(
                         CMSetProperty(inst, "HdrSrcAddress",
                                 (CMPIValue *)&array, CMPI_uint8A);
 
-                memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.srcipmask,
-                        bytes, sizeof(bytes));
+                /* CIDR notation? */
+                if (rule->var.tcp.srcipmask) {
+                        char *netmask = strdup(rule->var.tcp.srcipmask);
+                        if (strstr(netmask, ".") == NULL) {
+                                char *tmp = cidr_to_str(netmask);
+                                free(netmask);
+                                netmask = tmp;
+                        }
 
-                array = octets_to_cmpi(broker, bytes, size);
-                if (array != NULL)
-                        CMSetProperty(inst, "HdrSrcMask",
-                                (CMPIValue *)&array, CMPI_uint8A);
+                        memset(bytes, 0, sizeof(bytes));
+                        size = octets_from_ip(netmask, bytes, sizeof(bytes));
+
+                        array = octets_to_cmpi(broker, bytes, size);
+                        if (array != NULL)
+                                CMSetProperty(inst, "HdrSrcMask",
+                                        (CMPIValue *)&array, CMPI_uint8A);
+
+                        free(netmask);
+                }
         }
 
         if (rule->var.tcp.dstipfrom && rule->var.tcp.dstipto) {
@@ -284,14 +333,25 @@ static void convert_ip_rule_to_instance(
                         CMSetProperty(inst, "HdrDestAddress",
                                 (CMPIValue *)&array, CMPI_uint8A);
 
-                memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.dstipmask,
-                        bytes, sizeof(bytes));
+                /* CIDR notation? */
+                if (rule->var.tcp.dstipmask) {
+                        char *netmask = strdup(rule->var.tcp.dstipmask);
+                        if (strstr(netmask, ".") == NULL) {
+                                char *tmp = cidr_to_str(netmask);
+                                free(netmask);
+                                netmask = tmp;
+                        }
 
-                array = octets_to_cmpi(broker, bytes, size);
-                if (array != NULL)
-                        CMSetProperty(inst, "HdrDestMask",
-                                (CMPIValue *)&array, CMPI_uint8A);
+                        memset(bytes, 0, sizeof(bytes));
+                        size = octets_from_ip(netmask, bytes, sizeof(bytes));
+
+                        array = octets_to_cmpi(broker, bytes, size);
+                        if (array != NULL)
+                                CMSetProperty(inst, "HdrDestMask",
+                                        (CMPIValue *)&array, CMPI_uint8A);
+
+                        free(netmask);
+                }
         }
 
         if ((rule->type == IP_RULE) || (rule->type == TCP_RULE)) {
