@@ -27,6 +27,8 @@
 
 #include <arpa/inet.h>
 
+#include <stdlib.h>
+
 #include "acl_parsing.h"
 #include "misc_util.h"
 #include "xmlgen.h"
@@ -247,7 +249,7 @@ static void convert_mac_rule_to_instance(
 
         array = octets_to_cmpi(broker, bytes, size);
         if (array != NULL)
-                CMSetProperty(inst, "HdrDestMACAddr8021", (CMPIValue *)
+                CMSetProperty(inst, "HdrDestMACAddr8021",
                         (CMPIValue *)&array, CMPI_uint8A);
 
         memset(bytes, 0, sizeof(bytes));
@@ -256,8 +258,16 @@ static void convert_mac_rule_to_instance(
 
         array = octets_to_cmpi(broker, bytes, size);
         if (array != NULL)
-                CMSetProperty(inst, "HdrDestMACMask8021", (CMPIValue *)
+                CMSetProperty(inst, "HdrDestMACMask8021",
                         (CMPIValue *)&array, CMPI_uint8A);
+
+        if (rule->var.mac.protocol_id != NULL) {
+                unsigned long n = strtoul(rule->var.mac.protocol_id,
+                                          NULL, 16);
+                CMSetProperty(inst, "HdrProtocolID8021",
+                              (CMPIValue *)&n, CMPI_uint16);
+        }
+
 }
 
 static void fill_rule_data(struct acl_rule *rule,
