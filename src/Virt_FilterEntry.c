@@ -35,6 +35,27 @@
 #include "Virt_HostSystem.h"
 
 const static CMPIBroker *_BROKER;
+struct rule_data_t {
+        const char *srcmacaddr;
+        const char *srcmacmask;
+        const char *dstmacaddr;
+        const char *dstmacmask;
+
+        const char *srcipaddr;
+        const char *srcipmask;
+        const char *dstipaddr;
+        const char *dstipmask;
+
+        const char *srcipfrom;
+        const char *srcipto;
+        const char *dstipfrom;
+        const char *dstipto;
+
+        const char *srcportstart;
+        const char *srcportend;
+        const char *dstportstart;
+        const char *dstportend;
+};
 
 static int octets_from_mac(const char * s, unsigned int *buffer,
                                 unsigned int size)
@@ -239,6 +260,75 @@ static void convert_mac_rule_to_instance(
                         (CMPIValue *)&array, CMPI_uint8A);
 }
 
+static void fill_rule_data(struct acl_rule *rule,
+                           struct rule_data_t *data)
+{
+        if (rule == NULL || data == NULL)
+                return;
+
+        memset(data, 0, sizeof(*data));
+
+        switch (rule->type) {
+        case IP_RULE:
+                data->srcmacaddr = rule->var.ip.srcmacaddr;
+                data->srcmacmask = rule->var.ip.srcmacmask;
+                data->dstmacaddr = rule->var.ip.srcmacaddr;
+                data->dstmacmask = rule->var.ip.dstmacmask;
+
+                data->srcipaddr = rule->var.ip.srcipaddr;
+                data->srcipmask = rule->var.ip.srcipmask;
+                data->dstipaddr = rule->var.ip.dstipaddr;
+                data->dstipmask = rule->var.ip.dstipmask;
+
+                data->srcportstart = rule->var.ip.srcportstart;
+                data->srcportend   = rule->var.ip.srcportend;
+                data->dstportstart = rule->var.ip.dstportstart;
+                data->dstportend   = rule->var.ip.dstportend;
+                break;
+
+        case TCP_RULE:
+                data->srcmacaddr = rule->var.tcp.srcmacaddr;
+
+                data->srcipaddr = rule->var.tcp.srcipaddr;
+                data->srcipmask = rule->var.tcp.srcipmask;
+                data->dstipaddr = rule->var.tcp.dstipaddr;
+                data->dstipmask = rule->var.tcp.dstipmask;
+
+                data->srcipfrom = rule->var.tcp.srcipfrom;
+                data->srcipto   = rule->var.tcp.srcipto;
+                data->dstipfrom = rule->var.tcp.dstipfrom;
+                data->dstipto   = rule->var.tcp.dstipto;
+
+                data->srcportstart = rule->var.tcp.srcportstart;
+                data->srcportend   = rule->var.tcp.srcportend;
+                data->dstportstart = rule->var.tcp.dstportstart;
+                data->dstportend   = rule->var.tcp.dstportend;
+                break;
+
+        case ICMP_IGMP_RULE:
+                data->srcmacaddr = rule->var.icmp_igmp.srcmacaddr;
+                data->srcmacmask = rule->var.icmp_igmp.srcmacmask;
+                data->dstmacaddr = rule->var.icmp_igmp.srcmacaddr;
+                data->dstmacmask = rule->var.icmp_igmp.dstmacmask;
+
+                data->srcipaddr = rule->var.icmp_igmp.srcipaddr;
+                data->srcipmask = rule->var.icmp_igmp.srcipmask;
+                data->dstipaddr = rule->var.icmp_igmp.dstipaddr;
+                data->dstipmask = rule->var.icmp_igmp.dstipmask;
+
+                data->srcipfrom = rule->var.icmp_igmp.srcipfrom;
+                data->srcipto   = rule->var.icmp_igmp.srcipto;
+                data->dstipfrom = rule->var.icmp_igmp.dstipfrom;
+                data->dstipto   = rule->var.icmp_igmp.dstipto;
+                break;
+
+        default:
+                CU_DEBUG("%s(): unhandled rule type '%d'",
+                         __FUNCTION__, rule->type);
+                break;
+        }
+}
+
 static void convert_ip_rule_to_instance(
         struct acl_rule *rule,
         CMPIInstance *inst,
@@ -248,6 +338,7 @@ static void convert_ip_rule_to_instance(
         unsigned int size = 0;
         unsigned int n = 0;
         CMPIArray *array = NULL;
+        struct rule_data_t rule_data;
 
         if (strstr(rule->protocol_id, "v6"))
                 n = 6;
@@ -256,9 +347,11 @@ static void convert_ip_rule_to_instance(
 
         CMSetProperty(inst, "HdrIPVersion",(CMPIValue *)&n, CMPI_uint8);
 
-        if (rule->var.tcp.srcipfrom && rule->var.tcp.srcipto) {
+        fill_rule_data(rule, &rule_data);
+
+        if (rule_data.srcipfrom && rule_data.srcipto) {
                 memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.srcipfrom,
+                size = octets_from_ip(rule_data.srcipfrom,
                         bytes, sizeof(bytes));
 
                 array = octets_to_cmpi(broker, bytes, size);
@@ -267,7 +360,7 @@ static void convert_ip_rule_to_instance(
                                 (CMPIValue *)&array, CMPI_uint8A);
 
                 memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.srcipto,
+                size = octets_from_ip(rule_data.srcipto,
                         bytes, sizeof(bytes));
 
                 array = octets_to_cmpi(broker, bytes, size);
@@ -276,7 +369,7 @@ static void convert_ip_rule_to_instance(
                                 (CMPIValue *)&array, CMPI_uint8A);
         } else {
                 memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.srcipaddr,
+                size = octets_from_ip(rule_data.srcipaddr,
                         bytes, sizeof(bytes));
 
                 array = octets_to_cmpi(broker, bytes, size);
@@ -285,8 +378,8 @@ static void convert_ip_rule_to_instance(
                                 (CMPIValue *)&array, CMPI_uint8A);
 
                 /* CIDR notation? */
-                if (rule->var.tcp.srcipmask) {
-                        char *netmask = strdup(rule->var.tcp.srcipmask);
+                if (rule_data.srcipmask) {
+                        char *netmask = strdup(rule_data.srcipmask);
                         if (strstr(netmask, ".") == NULL) {
                                 char *tmp = cidr_to_str(netmask);
                                 free(netmask);
@@ -305,9 +398,9 @@ static void convert_ip_rule_to_instance(
                 }
         }
 
-        if (rule->var.tcp.dstipfrom && rule->var.tcp.dstipto) {
+        if (rule_data.dstipfrom && rule_data.dstipto) {
                 memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.dstipfrom,
+                size = octets_from_ip(rule_data.dstipfrom,
                         bytes, sizeof(bytes));
 
                 array = octets_to_cmpi(broker, bytes, size);
@@ -316,7 +409,7 @@ static void convert_ip_rule_to_instance(
                                 (CMPIValue *)&array, CMPI_uint8A);
 
                 memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.dstipto,
+                size = octets_from_ip(rule_data.dstipto,
                         bytes, sizeof(bytes));
 
                 array = octets_to_cmpi(broker, bytes, size);
@@ -325,7 +418,7 @@ static void convert_ip_rule_to_instance(
                                 (CMPIValue *)&array, CMPI_uint8A);
         } else {
                 memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.dstipaddr,
+                size = octets_from_ip(rule_data.dstipaddr,
                         bytes, sizeof(bytes));
 
                 array = octets_to_cmpi(broker, bytes, size);
@@ -334,8 +427,8 @@ static void convert_ip_rule_to_instance(
                                 (CMPIValue *)&array, CMPI_uint8A);
 
                 /* CIDR notation? */
-                if (rule->var.tcp.dstipmask) {
-                        char *netmask = strdup(rule->var.tcp.dstipmask);
+                if (rule_data.dstipmask) {
+                        char *netmask = strdup(rule_data.dstipmask);
                         if (strstr(netmask, ".") == NULL) {
                                 char *tmp = cidr_to_str(netmask);
                                 free(netmask);
@@ -354,32 +447,29 @@ static void convert_ip_rule_to_instance(
                 }
         }
 
-        if ((rule->type == IP_RULE) || (rule->type == TCP_RULE)) {
-                if (rule->var.tcp.srcportstart) {
-                        n = atoi(rule->var.tcp.srcportstart);
-                        CMSetProperty(inst, "HdrSrcPortStart",
-                                (CMPIValue *)&n, CMPI_uint16);
-                }
-
-                if (rule->var.tcp.srcportend) {
-                        n = atoi(rule->var.tcp.srcportend);
-                        CMSetProperty(inst, "HdrSrcPortEnd",
-                                (CMPIValue *)&n, CMPI_uint16);
-                }
-
-                if (rule->var.tcp.dstportstart) {
-                        n = atoi(rule->var.tcp.dstportstart);
-                        CMSetProperty(inst, "HdrDestPortStart",
-                                (CMPIValue *)&n, CMPI_uint16);
-                }
-
-                if (rule->var.tcp.dstportend) {
-                        n = atoi(rule->var.tcp.dstportend);
-                        CMSetProperty(inst, "HdrDestPortEnd",
-                                (CMPIValue *)&n, CMPI_uint16);
-                }
+        if (rule_data.srcportstart) {
+                n = atoi(rule_data.srcportstart);
+                CMSetProperty(inst, "HdrSrcPortStart",
+                        (CMPIValue *)&n, CMPI_uint16);
         }
 
+        if (rule_data.srcportend) {
+                n = atoi(rule_data.srcportend);
+                CMSetProperty(inst, "HdrSrcPortEnd",
+                        (CMPIValue *)&n, CMPI_uint16);
+        }
+
+        if (rule_data.dstportstart) {
+                n = atoi(rule_data.dstportstart);
+                CMSetProperty(inst, "HdrDestPortStart",
+                        (CMPIValue *)&n, CMPI_uint16);
+        }
+
+        if (rule_data.dstportend) {
+                n = atoi(rule_data.dstportend);
+                CMSetProperty(inst, "HdrDestPortEnd",
+                        (CMPIValue *)&n, CMPI_uint16);
+        }
 }
 
 static CMPIInstance *convert_rule_to_instance(
