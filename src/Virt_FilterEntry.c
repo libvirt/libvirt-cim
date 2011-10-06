@@ -238,7 +238,7 @@ static void convert_ip_rule_to_instance(
                                 (CMPIValue *)&array, CMPI_uint8A);
         } else {
                 memset(bytes, 0, sizeof(bytes));
-                size = octets_from_ip(rule->var.tcp.srcmacaddr,
+                size = octets_from_ip(rule->var.tcp.srcipaddr,
                         bytes, sizeof(bytes));
 
                 array = octets_to_cmpi(broker, bytes, size);
