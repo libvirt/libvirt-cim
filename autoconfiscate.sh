@@ -17,9 +17,9 @@ automake -i --add-missing --copy --foreign &&
 echo "Running autoconf ..." &&
 autoconf --force &&
 
-if test -x $(which hg); then
-    hg id -i > .changeset
-    hg id -n > .revision
+if test -x $(which git); then
+    git rev-parse --short HEAD > .changeset
+    git log | grep "^commit" | wc -l > .revision
 else
     echo "Unknown" > .changeset
     echo "0" > .revision
