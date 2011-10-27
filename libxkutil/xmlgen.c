@@ -65,10 +65,12 @@ static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
                         xmlNewProp(tmp, BAD_CAST "cache", BAD_CAST dev->cache);
         }
 
-        tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-        xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->source);
+        if ((dev->source != NULL) && (!XSTREQ(dev->source, "/dev/null"))) {
+                tmp = xmlNewChild(disk, NULL, BAD_CAST "source", NULL);
+                if (tmp == NULL)
+                       return XML_ERROR;
+                xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->source);
+        }
 
         tmp = xmlNewChild(disk, NULL, BAD_CAST "target", NULL);
         if (tmp == NULL)
