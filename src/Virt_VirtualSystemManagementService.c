@@ -68,6 +68,35 @@
 #define RASD_IND_DELETED "ResourceAllocationSettingDataDeletedIndication"
 #define RASD_IND_MODIFIED "ResourceAllocationSettingDataModifiedIndication"
 
+/* Network QoS support */
+#define QOSCMD_BANDWIDTH2ID "_ROOT=$(tc class show dev %s | awk '($4==\"root\")\
+{print $3}')\n tc class show dev %s | awk -v rr=$_ROOT -v bw=%uKbit \
+'($4==\"parent\" && $5==rr && $13==bw){print $3}'\n"
+
+#define QOSCMD_RMVM "MAC=%s; ME1=$(echo $MAC | awk -F ':' '{ print $1$2$3$4 }'); \
+ME2=$(echo $MAC | awk -F ':' '{ print $5$6 }'); MI1=$(echo $MAC | awk -F ':' \
+'{ print $1$2 }'); MI2=$(echo $MAC | awk -F ':' '{ print $3$4$5$6 }'); \
+HDL=$(tc filter show dev %s | awk 'BEGIN {RS=\"\\nfilter\"} (NR>2)\
+{m1=substr($24,1,2);m2=substr($24,3,2);m3=substr($24,5,2);m4=substr($24,7,2);\
+m5=substr($20,1,2);m6=substr($20,3,2);printf(\"%%s:%%s:%%s:%%s:%%s:%%s %%s\\n\",\
+m1,m2,m3,m4,m5,m6,$9)}' | awk -v mm=%s '($1==mm){print $2}'); \
+U32=\"tc filter del dev %s protocol ip parent 1:0 prio 1 handle $HDL u32\"; \
+$U32 match u16 0x0800 0xFFFF at -2 match u16 0x$ME2 0xFFFF at -4 match u32 \
+0x$ME1 0xFFFFFFFF at -8 flowid %s; U32=\"tc filter del dev %s protocol ip parent \
+ffff: prio 50 u32\"; $U32 match u16 0x0800 0xFFFF at -2 match u32 0x$MI2 \
+0xFFFFFFFF at -12 match u16 0x$MI1 0xFFFF at -14 police rate %uKbit burst 15k \
+drop\n"
+
+#define QOSCMD_ADDVM "MAC=%s; ME1=$(echo $MAC | awk -F ':' '{ print $1$2$3$4 }'); \
+ME2=$(echo $MAC | awk -F ':' '{ print $5$6 }'); MI1=$(echo $MAC | awk -F ':' \
+'{ print $1$2 }'); MI2=$(echo $MAC | awk -F ':' '{ print $3$4$5$6 }'); \
+U32=\"tc filter add dev %s protocol ip parent 1:0 prio 1 u32\"; \
+$U32 match u16 0x0800 0xFFFF at -2 match u16 0x$ME2 0xFFFF at -4 match u32 \
+0x$ME1 0xFFFFFFFF at -8 flowid %s; U32=\"tc filter add dev %s protocol ip parent \
+ffff: prio 50 u32\"; $U32 match u16 0x0800 0xFFFF at -2 match u32 0x$MI2 \
+0xFFFFFFFF at -12 match u16 0x$MI1 0xFFFF at -14 police rate %uKbit burst 15k \
+drop\n"
+
 const static CMPIBroker *_BROKER;
 
 enum ResourceAction {
@@ -75,6 +104,104 @@ enum ResourceAction {
         RESOURCE_DEL,
         RESOURCE_MOD,
 };
+
+/* Network QoS support */
+static CMPIStatus add_qos_for_mac(const uint64_t qos,
+                                  const char *mac,
+                                  const char *bridge)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        char *cmd = NULL;
+        int j;
+        FILE *pipe = NULL;
+        char id[16] = ""; /* should be adequate to hold short tc class ids... */
+
+        /* Find tc performance class id which matches requested qos bandwidth */
+        j = asprintf(&cmd, QOSCMD_BANDWIDTH2ID, bridge, 
+                                                bridge, 
+                                                (unsigned int)qos);
+        if (j == -1) 
+                goto out;
+        CU_DEBUG("add_qos_for_mac(): cmd = %s", cmd);
+
+        if ((pipe = popen(cmd, "r")) != NULL) {
+                if (fgets(id, sizeof(id), pipe) != NULL) {
+                        /* Strip off trailing newline */
+                        char *p = index(id, '\n');
+                        if (p) *p = '\0';
+                 }
+                 pclose(pipe);
+        }
+        free(cmd);
+        CU_DEBUG("qos id = '%s'", id);
+
+        /* Add tc performance class id for this MAC addr */
+        j = asprintf(&cmd, QOSCMD_ADDVM, mac, 
+                                         bridge, 
+                                         id, 
+                                         bridge, 
+                                         (unsigned int)qos);
+        if (j == -1) 
+                goto out;
+        CU_DEBUG("add_qos_for_mac(): cmd = %s", cmd);
+
+        if (WEXITSTATUS(system(cmd)) != 0)
+                CU_DEBUG("add_qos_for_mac(): qos add failed.");
+
+ out:
+        free(cmd);
+        return s;
+}
+
+/* Network QoS support */
+static CMPIStatus remove_qos_for_mac(const uint64_t qos,
+                                     const char *mac,
+                                     const char *bridge)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        char *cmd = NULL;
+        int j;
+        FILE *pipe = NULL;
+        char id[16] = ""; /* should be adequate to hold short tc class ids... */ 
+
+        /* Find tc performance class id which matches requested qos bandwidth */
+        j = asprintf(&cmd, QOSCMD_BANDWIDTH2ID, bridge, 
+                                                bridge, 
+                                                (unsigned int)qos);
+        if (j == -1) 
+                goto out;
+        CU_DEBUG("remove_qos_for_mac(): cmd = %s", cmd);
+
+        if ((pipe = popen(cmd, "r")) != NULL) {
+                if (fgets(id, sizeof(id), pipe) != NULL) {
+                        /* Strip off trailing newline */
+                        char *p = index(id, '\n');
+                        if (p) *p = '\0';
+                 }
+                 pclose(pipe);
+        }
+        free(cmd);
+        CU_DEBUG("qos id = '%s'", id);
+
+        /* Remove tc perf class id for this MAC; ignore errors when none exists */
+        j = asprintf(&cmd, QOSCMD_RMVM, mac, 
+                                        bridge, 
+                                        mac, 
+                                        bridge, 
+                                        id, 
+                                        bridge, 
+                                        (unsigned int)qos);
+        if (j == -1) 
+                goto out;
+        CU_DEBUG("remove_qos_for_mac(): cmd = %s", cmd);
+
+        if (WEXITSTATUS(system(cmd)) != 0)
+                CU_DEBUG("remove_qos_for_mac(): qos remove failed; ignoring...");
+
+ out:
+        free(cmd);
+        return s;
+}
 
 static CMPIStatus check_uuid_in_use(const CMPIObjectPath *ref,
                                     struct domain *domain)
@@ -1518,6 +1645,8 @@ static const char *classify_resources(CMPIArray *resources,
                 } else if (type == CIM_RES_TYPE_NET) {
                         struct virt_device dev;
                         int ncount = count + domain->dev_net_ct;
+                        uint64_t qos_val = 0;
+                        const char *qos_unitstr;
 
                         memset(&dev, 0, sizeof(dev));
                         msg = rasd_to_vdev(inst,
@@ -1529,6 +1658,20 @@ static const char *classify_resources(CMPIArray *resources,
                                                        domain->dev_net,
                                                        ncount,
                                                        &domain->dev_net_ct);
+
+			/* Network QoS support */
+                        if (((&dev)->dev.net.mac != NULL) && 
+                            ((&dev)->dev.net.source != NULL) &&
+                            (cu_get_u64_prop(inst, "Reservation", &qos_val) == CMPI_RC_OK) &&
+                            (cu_get_str_prop(inst, "AllocationUnits", &qos_unitstr) == CMPI_RC_OK) &&
+                            STREQ(qos_unitstr,"KiloBits per Second")) {
+                                remove_qos_for_mac(qos_val, 
+                                                   (&dev)->dev.net.mac, 
+                                                   (&dev)->dev.net.source);
+                                add_qos_for_mac(qos_val, 
+                                                (&dev)->dev.net.mac, 
+                                                (&dev)->dev.net.source);
+                        }
                 } else if (type == CIM_RES_TYPE_GRAPHICS) {
                         struct virt_device dev;
                         int gcount = count + domain->dev_graphics_ct;
@@ -2590,10 +2733,28 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                             (type == CIM_RES_TYPE_INPUT))
                                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                         else {
+                                uint64_t qos_val = 0;
+                                const char *qos_unitstr;
+
                                 s = _resource_dynamic(dominfo,
                                                       dev,
                                                       RESOURCE_MOD,
                                                       CLASSNAME(op));
+
+                                /* Network QoS support */
+                                if ((type == CIM_RES_TYPE_NET) &&
+                                    (dev->dev.net.mac != NULL) &&
+                                    (dev->dev.net.source != NULL) &&
+                                    (cu_get_u64_prop(rasd, "Reservation", &qos_val) == CMPI_RC_OK) &&
+                                    (cu_get_str_prop(rasd, "AllocationUnits", &qos_unitstr) == CMPI_RC_OK) &&
+                                    STREQ(qos_unitstr,"KiloBits per Second")) {
+                                        remove_qos_for_mac(qos_val, 
+                                                           dev->dev.net.mac, 
+                                                           dev->dev.net.source);
+                                        s = add_qos_for_mac(qos_val, 
+                                                            dev->dev.net.mac, 
+                                                            dev->dev.net.source);
+                                }
                         }
                         break;
                 }

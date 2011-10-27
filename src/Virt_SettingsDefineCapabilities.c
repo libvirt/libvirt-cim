@@ -73,6 +73,11 @@ const static CMPIBroker *_BROKER;
 #define POOL_RASD   1 
 #define NEW_VOL_RASD   2
 
+/* QoS Network support */
+#define QOSCMD_LISTCLASSES "_ROOT=$(tc class show dev %s | awk '($4==\"root\")\
+{print $3}')\n tc class show dev %s | awk -v rr=$_ROOT \
+'($4==\"parent\" && $5==rr){print $3\" \"$13}'\n"
+
 static bool system_has_vt(virConnectPtr conn)
 {
         char *caps = NULL;
@@ -726,7 +731,7 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
 }
 
 static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
-                                     const char *id,
+                                     char *id,
                                      uint16_t pool_type,
                                      struct inst_list *list)
 {
@@ -738,6 +743,7 @@ static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
         const char *ip_stop = "192.168.122.254";
         int dev_count;
         int i;
+        char *tmp_str = NULL;
 
         /* Isolated network pools don't have a forward device */
         if (pool_type == NETPOOL_FORWARD_NONE)
@@ -750,7 +756,33 @@ static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
                 if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                         goto out;
 
-                CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+
+                tmp_str = strtok(id, " ");
+                if (tmp_str == NULL) {
+                        CU_DEBUG("Cannot set InstanceID");
+                        goto out;
+                }
+
+                CU_DEBUG("InstanceID = %s", tmp_str);
+
+                CMSetProperty(inst, "InstanceID", (CMPIValue *)tmp_str, 
+                              CMPI_chars);
+                tmp_str = strtok('\0', " ");
+                if (tmp_str == NULL) {
+                        CU_DEBUG("Cannot set Reservation");
+                        goto out;
+                }
+
+                CU_DEBUG("Reservation = %s", tmp_str);
+
+                uint64_t val = atoi(tmp_str);
+
+                CMSetProperty(inst, "Reservation",
+                              (CMPIValue *)&val, CMPI_uint64);
+
+                CMSetProperty(inst, "AllocationUnits",
+                              (CMPIValue *)"Kilobits per Second", 
+                              CMPI_chars);
 
                 CMSetProperty(inst, "Address",
                               (CMPIValue *)addr, CMPI_chars);
@@ -779,11 +811,112 @@ static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
         return s;
 }
 
+static char * get_bridge_name(virConnectPtr conn, const char *name)
+{
+        char *bridge = NULL;
+        virNetworkPtr network = NULL;
+
+        if (++name == NULL)
+                goto out;
+
+        CU_DEBUG("looking for network  `%s'", name);
+        network = virNetworkLookupByName(conn, name);
+        if (network == NULL) {
+                CU_DEBUG("Could not find network");
+                goto out;
+        }
+
+        bridge = virNetworkGetBridgeName(network);
+        if (bridge == NULL) {
+                CU_DEBUG("Could not find bridge");
+        }
+
+        virNetworkFree(network);
+
+ out:
+        return bridge;
+}
+
+/* QoS Network support */
+static CMPIStatus qos_hack(
+                        const CMPIObjectPath *ref,
+                        struct inst_list *list)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        virConnectPtr conn = NULL;
+        FILE *pipe = NULL;
+        char buffer[1024];
+        char *bridge = NULL;
+        char *cmd = NULL;
+        const char *val = NULL;
+        int i;
+
+        conn = connect_by_classname(_BROKER, CLASSNAME(ref), &s);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get connection");
+                goto out;
+        }
+
+        if (cu_get_str_path(ref, "InstanceID", &val) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Could not get InstanceID");
+                goto out;
+        }
+
+        CU_DEBUG("InstanceID is %s", val);
+
+        bridge = get_bridge_name(conn, strstr(val, "/"));
+        if (bridge == NULL)
+                goto out;
+
+        i = asprintf(&cmd, QOSCMD_LISTCLASSES, bridge, bridge);
+        if (i == -1)
+                goto out;
+
+        CU_DEBUG("qos_hack() cmd = %s", cmd);
+
+        if ((pipe = popen(cmd, "r")) != NULL) {
+                CU_DEBUG("pipe open");
+                while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
+                        char *name = NULL;
+                        char *p = strstr(buffer, "Kbit");
+
+                        /* trim string */
+                        if (p)
+                                *p = '\0';
+
+                        CU_DEBUG("qos hack buffer = %s", buffer);
+
+                        i = asprintf(&name, "Point/%s", buffer);
+                        if (i != -1) {
+                                s = set_net_pool_props(ref, name,
+                                        NETPOOL_FORWARD_NONE, list);
+
+                                free(name);
+                        }
+                }
+
+                pclose(pipe);
+                CU_DEBUG("pipe close");
+        }
+
+ out:
+        free(cmd);
+        free(bridge);
+        virConnectClose(conn);
+
+        return s;
+}
+
+
 static CMPIStatus net_pool_template(const CMPIObjectPath *ref,
                                     int template_type,
                                     struct inst_list *list)
 {
-        const char *id;
+        char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int type[3] = {NETPOOL_FORWARD_NONE, 
                        NETPOOL_FORWARD_NAT, 
@@ -1949,7 +2082,10 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                         goto out;
                 }
         }
-                
+
+        if (type == CIM_RES_TYPE_NET)
+                s = qos_hack(ref, list);
+
  out:
         return s;
 }
@@ -2055,7 +2191,7 @@ static CMPIInstance *make_ref_valuerole(const CMPIObjectPath *source_ref,
 {
         CMPIInstance *ref_inst = NULL;
         uint16_t valuerole = SDC_ROLE_SUPPORTED;
-        uint16_t valuerange;
+        uint16_t valuerange = SDC_RANGE_POINT;
         uint16_t ppolicy = SDC_POLICY_INDEPENDENT;
         const char *iid = NULL;
 

@@ -39,6 +39,16 @@
 #include "svpc_types.h"
 #include "Virt_Device.h"
 
+/* Network QoS support */
+#define QOSCMD_MAC2BANDWIDTH "_ROOT=$(tc class show dev %s | awk '($4==\"root\")\
+{print $3}')\n _ID=$(tc filter show dev %s | awk 'BEGIN {RS=\"\\nfilter\"} (NR>2)\
+{m1=substr($24,1,2);m2=substr($24,3,2);m3=substr($24,5,2);m4=substr($24,7,2);\
+m5=substr($20,1,2);m6=substr($20,3,2);printf(\"%%s:%%s:%%s:%%s:%%s:%%s %%s\\n\",\
+m1,m2,m3,m4,m5,m6,$18)}' | awk -v mm=%s '($1==mm){print $2}')\n \
+if [[ -n \"$_ID\" ]]; then\n tc class show dev %s | awk -v rr=$_ROOT -v id=$_ID \
+'($4==\"parent\" && $5==rr && $3==id){print \
+substr($13,1,(index($13,\"Kbit\")-1))}'\n fi\n"
+
 const static CMPIBroker *_BROKER;
 
 static struct virt_device *_find_dev(struct virt_device *list,
@@ -449,7 +459,11 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                                        const struct virt_device *dev,
                                        CMPIInstance *inst)
 {
+        FILE *pipe = NULL;
+        char *cmd = NULL;
+        uint64_t val = 0;
         CMPIStatus s = {CMPI_RC_OK, NULL};
+        int i;
 
         CMSetProperty(inst,
                       "NetworkType",
@@ -466,6 +480,33 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                               "NetworkName",
                               (CMPIValue *)dev->dev.net.source,
                               CMPI_chars);
+
+        /* Network QoS support */
+        if ((dev->dev.net.mac != NULL) && (dev->dev.net.source != NULL)) {
+                /* Get tc performance class bandwidth for this MAC addr */
+                i = asprintf(&cmd, QOSCMD_MAC2BANDWIDTH, dev->dev.net.source, 
+                                                         dev->dev.net.source, 
+                                                         dev->dev.net.mac, 
+                                                         dev->dev.net.source);
+                if (i == -1)
+                        goto out;
+
+                if ((pipe = popen(cmd, "r")) != NULL) {
+                        if (fscanf(pipe, "%u", (unsigned int *)&val) == 1) {
+                                CU_DEBUG("pipe read. val = %d", val);
+
+                                CMSetProperty(inst,
+                                        "Reservation",
+                                        (CMPIValue *)&val, CMPI_uint64);
+                                CMSetProperty(inst,
+                                        "AllocationUnits",
+                                        (CMPIValue *)"KiloBits per Second",
+                                        CMPI_chars);
+                        }
+                        pclose(pipe);
+                }
+                free(cmd);
+        }
 
         if ((dev->dev.net.source != NULL) &&
             (STREQ(dev->dev.net.type, "direct")))
@@ -498,6 +539,7 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.net.poolid,
                               CMPI_chars);
 
+out:
         return s;
 }
 
