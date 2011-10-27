@@ -40,4 +40,5 @@ config\.sub$
 .*\.loT$
 ^acinclude.m4.orig$
 ^config.h.in$
-libcmpiutil/doc/html/.*%   
+libcmpiutil/doc/html/.*%
+
