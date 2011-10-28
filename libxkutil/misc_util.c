@@ -24,6 +24,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -52,6 +53,46 @@ static pthread_mutex_t libvirt_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int libvirt_initialized = 0;
 
 #define URI_ENV "HYPURI"
+
+struct _hypervisor_status_t {
+        const char *name;
+        bool enabled;
+};
+
+typedef struct _hypervisor_status_t hypervisor_status_t;
+
+static hypervisor_status_t hypervisor_list[] = {
+        { "xen", true },
+        { "kvm", true },
+        { "lxc", true },
+        { NULL },
+};
+
+static bool get_hypervisor_enabled(const char *hypervisor)
+{
+        hypervisor_status_t *h;
+
+        for (h = &hypervisor_list[0]; h != NULL; h++) {
+                if (strncasecmp(hypervisor, h->name, strlen(h->name)) == 0) {
+                        return h->enabled;
+                }
+        }
+
+        return false;
+}
+
+static void set_hypervisor_disabled(const char *hypervisor)
+{
+        hypervisor_status_t *h;
+
+        for (h = &hypervisor_list[0]; h != NULL; h++) {
+                if (strncasecmp(hypervisor, h->name, strlen(h->name)) == 0) {
+                        CU_DEBUG("Setting '%s' hypervisor as DISABLED", h->name);
+                        h->enabled = false;
+                        return;
+                }
+        }
+}
 
 static const char *cn_to_uri(const char *classname)
 {
@@ -117,6 +158,9 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
                 return NULL;
         }
 
+        if (!get_hypervisor_enabled(classname))
+                return NULL;
+
         CU_DEBUG("Connecting to libvirt with uri `%s'", uri);
 
         pthread_mutex_lock(&libvirt_mutex);
@@ -129,6 +173,10 @@ virConnectPtr connect_by_classname(const CMPIBroker *broker,
         pthread_mutex_unlock(&libvirt_mutex);
 
         if (!conn) {
+                virErrorPtr error = virGetLastError();
+                if (error->code == VIR_ERR_NO_CONNECT)
+                        set_hypervisor_disabled(classname);
+
                 CU_DEBUG("Unable to connect to `%s'", uri);
                 return NULL;
         }
