@@ -756,33 +756,36 @@ static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
                 if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                         goto out;
 
+                if (strncmp("Point", id, 5) != 0)
+                        CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
+                else {
+                        tmp_str = strtok(id, " ");
+                        if (tmp_str == NULL) {
+                                CU_DEBUG("Cannot set InstanceID");
+                                goto out;
+                        }
 
-                tmp_str = strtok(id, " ");
-                if (tmp_str == NULL) {
-                        CU_DEBUG("Cannot set InstanceID");
-                        goto out;
+                        CU_DEBUG("InstanceID = %s", tmp_str);
+
+                        CMSetProperty(inst, "InstanceID", (CMPIValue *)tmp_str, 
+                                      CMPI_chars);
+                        tmp_str = strtok('\0', " ");
+                        if (tmp_str == NULL) {
+                                CU_DEBUG("Cannot set Reservation");
+                                goto out;
+                        }
+
+                        CU_DEBUG("Reservation = %s", tmp_str);
+
+                        uint64_t val = atoi(tmp_str);
+
+                        CMSetProperty(inst, "Reservation",
+                                      (CMPIValue *)&val, CMPI_uint64);
+
+                        CMSetProperty(inst, "AllocationUnits",
+                                      (CMPIValue *)"Kilobits per Second", 
+                                      CMPI_chars);
                 }
-
-                CU_DEBUG("InstanceID = %s", tmp_str);
-
-                CMSetProperty(inst, "InstanceID", (CMPIValue *)tmp_str, 
-                              CMPI_chars);
-                tmp_str = strtok('\0', " ");
-                if (tmp_str == NULL) {
-                        CU_DEBUG("Cannot set Reservation");
-                        goto out;
-                }
-
-                CU_DEBUG("Reservation = %s", tmp_str);
-
-                uint64_t val = atoi(tmp_str);
-
-                CMSetProperty(inst, "Reservation",
-                              (CMPIValue *)&val, CMPI_uint64);
-
-                CMSetProperty(inst, "AllocationUnits",
-                              (CMPIValue *)"Kilobits per Second", 
-                              CMPI_chars);
 
                 CMSetProperty(inst, "Address",
                               (CMPIValue *)addr, CMPI_chars);
