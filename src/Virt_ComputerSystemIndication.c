@@ -518,11 +518,14 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         char *prefix = class_prefix_name(args->classname);
         int platform = platform_from_class(args->classname);
 
+        if (prefix == NULL || platform == -1)
+                goto init_out;
+
         conn = connect_by_classname(_BROKER, args->classname, &s);
         if (conn == NULL) {
                 CU_DEBUG("Unable to start lifecycle thread: "
                          "Failed to connect (cn: %s)", args->classname);
-                goto out;
+                goto conn_out;
         }
 
         pthread_mutex_lock(&lifecycle_mutex);
@@ -591,15 +594,18 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
                 }
         }
 
- out:
         CU_DEBUG("Exiting CSI event loop (%s)", prefix);
 
         thread_id[platform] = 0;
 
         pthread_mutex_unlock(&lifecycle_mutex);
         stdi_free_ind_args(&args);
-        free(prefix);
+
+ conn_out:
         virConnectClose(conn);
+
+ init_out:
+        free(prefix);
 
         return NULL;
 }

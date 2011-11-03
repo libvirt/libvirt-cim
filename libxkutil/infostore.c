@@ -50,7 +50,9 @@ static void infostore_cleanup_ctx(struct infostore_ctx *ctx)
 {
         xmlXPathFreeContext(ctx->xpathctx);
         xmlFreeDoc(ctx->doc);
-        close(ctx->fd);
+
+        if (ctx->fd >= 0)
+                close(ctx->fd);
 
         free(ctx);
 }

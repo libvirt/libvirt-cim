@@ -544,7 +544,8 @@ static char *write_params(CMPIArray *array)
         if (file != NULL)
                 fclose(file);
 
-        close(fd);
+        if (fd >= 0)
+                close(fd);
 
         return filename;
 }
