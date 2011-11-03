@@ -1292,6 +1292,7 @@ static const char *storage_vol_xml(xmlNodePtr root,
                 goto out;
 
         free(string);
+        string = NULL;
 
         if (vol->cap_units != NULL) {
                 xmlAttrPtr tmp = NULL;
@@ -1309,6 +1310,7 @@ static const char *storage_vol_xml(xmlNodePtr root,
                 goto out;
 
         free(string);
+        string = NULL;
 
         if (vol->cap_units != NULL) {
                 xmlAttrPtr tmp = NULL;
