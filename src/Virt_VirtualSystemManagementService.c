@@ -1526,7 +1526,7 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
         else
                 msg = _sysvirt_rasd_to_vdev(inst, dev, type, ns);
  out:
-        if (msg)
+        if (msg && op)
                 CU_DEBUG("rasd_to_vdev(%s): %s", CLASSNAME(op), msg);
 
         return msg;

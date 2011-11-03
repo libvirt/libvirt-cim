@@ -171,7 +171,7 @@ static char *get_dev_paths(CMPIInstance *inst,
                 return "Unable to get DevicePaths array count";
 
         *path_list = calloc(ct, sizeof(char *));
-        if (path_list == NULL)
+        if (*path_list == NULL)
                 return "Failed to alloc space for device paths";
 
         *count = ct;
@@ -775,7 +775,7 @@ static const char *rasd_to_res(CMPIInstance *inst,
                 msg = "This function does not support this resource type";
 
  out:
-        if (msg)
+        if (msg && op)
                 CU_DEBUG("rasd_to_res(%s): %s", CLASSNAME(op), msg);
 
         return msg;
@@ -1025,7 +1025,7 @@ static CMPIStatus delete_resource_in_pool(CMPIMethodMI *self,
                 goto out;
 
         res = CMGetObjectPath(resource, &s);
-        if ((res == NULL) && (s.rc != CMPI_RC_OK)) {
+        if ((res == NULL) || (s.rc != CMPI_RC_OK)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get ObjectPath of Resource instance");

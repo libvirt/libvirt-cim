@@ -1015,9 +1015,11 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
         }
 
  out:
-        for (i = 0; i < nets; i++)
-                free(netnames[i]);
-        free(netnames);
+        if (netnames != NULL) {
+                for (i = 0; i < nets; i++)
+                        free(netnames[i]);
+                free(netnames);
+        }
 
         return s;
 }

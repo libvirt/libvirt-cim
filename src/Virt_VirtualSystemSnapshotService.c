@@ -63,6 +63,9 @@ struct snap_context {
 
 static void snap_job_free(struct snap_context *ctx)
 {
+        if (ctx == NULL)
+                return;
+
         free(ctx->domain);
         free(ctx->save_path);
         free(ctx->ref_ns);

@@ -761,10 +761,15 @@ static bool raise_indication(const CMPIContext *context,
 
         /* This is a workaround for Pegasus, it loses its objectpath by
            CMGetObjectPath. So set it back. */
-        inst->ft->setObjectPath((CMPIInstance *)inst, ref);
+        if (ref != NULL)
+                inst->ft->setObjectPath((CMPIInstance *)inst, ref);
 
         if ((ref == NULL) || (s.rc != CMPI_RC_OK)) {
                 CU_DEBUG("Failed to get job reference");
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get job reference");
+                goto out;
         } else {
                 s = get_host_system_properties(&host,
                                                &ccname,
@@ -798,7 +803,7 @@ static bool raise_indication(const CMPIContext *context,
         s = stdi_raise_indication(_BROKER, context, type, ns, ind);
 
         free(type);
-
+ out:
         return s.rc == CMPI_RC_OK;
 }
 

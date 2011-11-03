@@ -262,6 +262,7 @@ static bool _do_indication(const CMPIBroker *broker,
                          prefix,
                          ind_type_name);
                 ret = false;
+                goto out;
         }
 
         ind_op = CMGetObjectPath(ind, &s);
