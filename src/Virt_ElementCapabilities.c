@@ -83,7 +83,7 @@ static CMPIStatus validate_caps_get_service_or_rp(const CMPIContext *context,
                                                   CMPIInstance **inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *_inst;
+        CMPIInstance *_inst = NULL;
         char* classname;
 
         classname = class_base_name(CLASSNAME(ref));
@@ -129,7 +129,7 @@ static CMPIStatus validate_service_get_caps(const CMPIContext *context,
                                             CMPIInstance **inst)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *_inst;
+                CMPIInstance *_inst = NULL;
         char* classname;
 
         classname = class_base_name(CLASSNAME(ref));

@@ -387,7 +387,7 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
         CMPICount i;
         CMPICount bl_size;
         CMPIArray *bootlist;
-        CMPIStatus s;
+        CMPIStatus s = { CMPI_RC_OK, NULL };
         CMPIData boot_elem;
         char **tmp_str_arr;
 
@@ -2467,7 +2467,7 @@ static CMPIStatus _resource_dynamic(struct domain *dominfo,
                                     enum ResourceAction action,
                                     const char *refcn)
 {
-        CMPIStatus s;
+        CMPIStatus s = { CMPI_RC_OK, NULL };
         virConnectPtr conn;
         virDomainPtr dom;
         int (*func)(virDomainPtr, struct virt_device *);

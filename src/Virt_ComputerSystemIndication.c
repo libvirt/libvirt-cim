@@ -471,6 +471,9 @@ static bool async_ind(CMPIContext *context,
                         CU_DEBUG("Could not recreate guest instance");
                         goto out;
                 }
+        } else {
+                CU_DEBUG("Unrecognized indication type");
+                goto out;
         }
 
         /* FIXME: We are unable to get the previous CS instance after it has 
