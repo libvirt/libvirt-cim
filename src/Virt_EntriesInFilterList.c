@@ -83,7 +83,7 @@ static CMPIStatus list_to_rule(
                 }
         }
 
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
 
  out:
         virConnectClose(conn);

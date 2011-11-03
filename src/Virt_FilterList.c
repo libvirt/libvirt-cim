@@ -177,7 +177,7 @@ CMPIStatus get_filter_by_ref(const CMPIBroker *broker,
         s = instance_from_filter(broker, context, reference, filter, instance);
 
  out:
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
         virConnectClose(conn);
 
         return s;
@@ -320,7 +320,7 @@ static CMPIStatus CreateInstance(
         CU_DEBUG("CreateInstance complete");
 
  out:
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
         virConnectClose(conn);
 
         return s;
@@ -361,7 +361,7 @@ static CMPIStatus DeleteInstance(
         delete_filter(conn, filter);
 
  out:
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
         virConnectClose(conn);
 
         return s;

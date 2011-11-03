@@ -357,8 +357,10 @@ static int parse_acl_filter(xmlNode *fnode, struct acl_filter *filter)
                         if (parse_acl_rule(child, rule) == 0)
                                 goto err;
 
-                        if (append_filter_rule(filter, rule) == 0)
+                        if (append_filter_rule(filter, rule) == 0) {
+                                cleanup_rule(rule);
                                 goto err;
+                        }
                 }
                 else if (XSTREQ(child->name, "filterref")) {
                         filter_ref = get_attr_value(child, "filter");
@@ -504,6 +506,7 @@ int get_filters(
                         break;
 
                 memcpy(&filters[i], filter, sizeof(*filter));
+                free(filter);
         }
 
         *list = filters;

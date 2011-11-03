@@ -155,13 +155,11 @@ static CMPIStatus parent_to_child(
                         inst_list_add(list, instance);
                 }
 
-                cleanup_filter(child_filter);
-
-                child_filter = NULL;
+                cleanup_filters(&child_filter, 1);
                 instance = NULL;
         }
 
-        cleanup_filter(parent_filter);
+        cleanup_filters(&parent_filter, 1);
 
  out:
         virConnectClose(conn);
@@ -223,10 +221,9 @@ static CMPIStatus child_to_parent(
 
                 }
 
-                cleanup_filter(&_list[i]);
         }
 
-        free(_list);
+        cleanup_filters(&_list, count);
 
  out:
         virConnectClose(conn);
@@ -390,8 +387,8 @@ static CMPIStatus CreateInstance(
         CU_DEBUG("CreateInstance completed");
 
  out:
-        cleanup_filter(parent_filter);
-        cleanup_filter(child_filter);
+        cleanup_filters(&parent_filter, 1);
+        cleanup_filters(&child_filter, 1);
         virConnectClose(conn);
 
         return s;
@@ -481,8 +478,8 @@ static CMPIStatus DeleteInstance(
         CU_DEBUG("CreateInstance completed");
 
  out:
-        cleanup_filter(parent_filter);
-        cleanup_filter(child_filter);
+        cleanup_filters(&parent_filter, 1);
+        cleanup_filters(&child_filter, 1);
         virConnectClose(conn);
 
         return s;

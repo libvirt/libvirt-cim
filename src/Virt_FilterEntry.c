@@ -687,7 +687,7 @@ CMPIStatus get_rule_by_ref(
                                         &s);
  out:
         free(filter_name);
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
         virConnectClose(conn);
 
         return s;

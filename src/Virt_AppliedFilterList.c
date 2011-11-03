@@ -193,7 +193,7 @@ static CMPIStatus list_to_net(
         if (filter == NULL)
                 goto out;
 
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
 
         /* get domains */
         dcount = get_domain_list(conn, &doms);
@@ -331,7 +331,7 @@ static CMPIStatus net_to_list(
                                                 filter,
                                                 &instance);
 
-                        cleanup_filter(filter);
+                        cleanup_filters(&filter, 1);
 
                         if (instance != NULL)
                                 inst_list_add(list, instance);
@@ -515,7 +515,7 @@ static CMPIStatus CreateInstance(
         free(domain_name);
         free(net_name);
 
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
         cleanup_virt_devices(&device, 1);
 
         virDomainFree(dom);
@@ -625,7 +625,7 @@ static CMPIStatus DeleteInstance(
         free(domain_name);
         free(net_name);
 
-        cleanup_filter(filter);
+        cleanup_filters(&filter, 1);
         cleanup_virt_devices(&device, 1);
 
         virDomainFree(dom);
