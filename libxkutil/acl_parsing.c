@@ -151,10 +151,12 @@ void cleanup_filter(struct acl_filter *filter)
 void cleanup_filters(struct acl_filter **filters, int count)
 {
         int i;
-        struct acl_filter *_filters = *filters;
+        struct acl_filter *_filters;
 
         if((filters == NULL) || (*filters == NULL) || (count == 0))
                 return;
+
+        _filters = *filters;
 
         for (i = 0; i < count; i++)
                 cleanup_filter(&_filters[i]);
