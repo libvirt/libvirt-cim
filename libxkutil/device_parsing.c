@@ -54,6 +54,9 @@ typedef int (*dev_parse_func_t)(xmlNode *, struct virt_device **);
 
 static void cleanup_disk_device(struct disk_device *dev)
 {
+        if (dev == NULL)
+                return;
+
         free(dev->type);
         free(dev->device);
         free(dev->driver);
@@ -66,6 +69,9 @@ static void cleanup_disk_device(struct disk_device *dev)
 
 static void cleanup_vsi_device(struct vsi_device *dev)
 {
+        if (dev == NULL)
+                return;
+
         free(dev->vsi_type);
         free(dev->manager_id);
         free(dev->type_id);
@@ -77,6 +83,9 @@ static void cleanup_vsi_device(struct vsi_device *dev)
 
 static void cleanup_net_device(struct net_device *dev)
 {
+        if (dev == NULL)
+                return;
+
         free(dev->type);
         free(dev->mac);
         free(dev->source);
@@ -88,6 +97,9 @@ static void cleanup_net_device(struct net_device *dev)
 
 static void cleanup_emu_device(struct emu_device *dev)
 {
+        if (dev == NULL)
+                return;
+
         free(dev->path);
 }
 
@@ -108,6 +120,9 @@ static void cleanup_sdl_device(struct graphics_device *dev)
 
 static void cleanup_graphics_device(struct graphics_device *dev)
 {
+        if (dev == NULL)
+                return;
+
         if (STREQC(dev->type, "sdl")) {
             cleanup_sdl_device(dev);
         }
@@ -119,6 +134,9 @@ static void cleanup_graphics_device(struct graphics_device *dev)
 
 static void cleanup_input_device(struct input_device *dev)
 {
+        if (dev == NULL)
+                return;
+
         free(dev->type);
         free(dev->bus);
 }
@@ -1207,11 +1225,12 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
 
 void cleanup_dominfo(struct domain **dominfo)
 {
-        struct domain *dom = *dominfo;
+        struct domain *dom;
 
         if ((dominfo == NULL) || (*dominfo == NULL))
                 return;
 
+        dom = *dominfo;
         free(dom->name);
         free(dom->uuid);
         free(dom->bootloader);
