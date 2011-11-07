@@ -29,7 +29,7 @@ noinst_HEADERS = profiles.h svpc_types.h	\
 
 XKUADD = $(top_builddir)/libxkutil/libxkutil.la
 
-CFLAGS += -I$(top_builddir)/libxkutil $(CFLAGS_STRICT)
+CFLAGS += -I$(top_srcdir)/libxkutil $(CFLAGS_STRICT)
 
 AM_LDFLAGS = $(XKUADD) \
 	     -version-info @VERSION_INFO@

@@ -48,7 +48,7 @@
 #include "Virt_ComputerSystem.h"
 #include "Virt_VSMigrationSettingData.h"
 #include "svpc_types.h"
-#include "libxkutil/infostore.h"
+#include "infostore.h"
 
 #include "config.h"
 
