@@ -20,4 +20,8 @@ install-data-local:
 	$(mkinstalldirs) $(DESTDIR)$(HTML_DIR)
 	@INSTALL@ -m 0644 $(srcdir)/*.html $(DESTDIR)$(HTML_DIR)
 
+uninstall-local:
+	rm -f $(DESTDIR)$(HTML_DIR)/*.html
+	rmdir $(DESTDIR)$(HTML_DIR)
+
 all: $(WEB_PAGES)
