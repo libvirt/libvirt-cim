@@ -141,9 +141,7 @@ AC_CONFIG_FILES([
     base_schema/install_base_schema.sh
     base_schema/Makefile
     libxkutil/Makefile
-    libxkutil/tests/Makefile
     src/Makefile
-    src/tests/Makefile
     doc/Makefile
     Makefile 
     ])

@@ -1,5 +1,4 @@
 # Copyright IBM Corp. 2007
-SUBDIRS = tests
 
 noinst_HEADERS = profiles.h svpc_types.h	\
     Virt_ComputerSystem.h			\

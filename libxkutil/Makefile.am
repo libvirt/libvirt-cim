@@ -1,5 +1,4 @@
 # Copyright IBM Corp. 2007
-SUBDIRS = tests
 
 AM_CFLAGS = $(CFLAGS_STRICT) \
             -DLIBVIRTCIM_CONF=\"@sysconfdir@/@PACKAGE@.conf\"
