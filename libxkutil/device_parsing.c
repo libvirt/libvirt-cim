@@ -65,6 +65,7 @@ static void cleanup_disk_device(struct disk_device *dev)
         free(dev->source);
         free(dev->virtual_dev);
         free(dev->bus_type);
+        free(dev->access_mode);
 }
 
 static void cleanup_vsi_device(struct vsi_device *dev)
@@ -219,6 +220,8 @@ static int parse_fs_device(xmlNode *dnode, struct virt_device **vdevs)
                 goto err;
         }
 
+        ddev->access_mode = get_attr_value(dnode, "accessmode");
+
         for (child = dnode->children; child != NULL; child = child->next) {
                 if (XSTREQ(child->name, "source")) {
                         ddev->source = get_attr_value(child, "dir");
@@ -232,6 +235,8 @@ static int parse_fs_device(xmlNode *dnode, struct virt_device **vdevs)
                                 CU_DEBUG("No target dir");
                                 goto err;
                         }
+                } else if (XSTREQ(child->name, "driver")) {
+                       ddev->driver_type = get_attr_value(child, "type");
                 }
         }
 
@@ -904,6 +909,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.disk.source);
                 DUP_FIELD(dev, _dev, dev.disk.virtual_dev);
                 DUP_FIELD(dev, _dev, dev.disk.bus_type);
+                DUP_FIELD(dev, _dev, dev.disk.access_mode);
                 dev->dev.disk.disk_type = _dev->dev.disk.disk_type;
                 dev->dev.disk.readonly = _dev->dev.disk.readonly;
                 dev->dev.disk.shareable = _dev->dev.disk.shareable;
@@ -1472,6 +1478,8 @@ int disk_type_from_file(const char *path)
                 return DISK_PHY;
         else if (S_ISREG(s.st_mode))
                 return DISK_FILE;
+        else if (S_ISDIR(s.st_mode))
+                return DISK_FS;
         else
                 return DISK_UNKNOWN;
 }

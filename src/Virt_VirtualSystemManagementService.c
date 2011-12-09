@@ -973,6 +973,8 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         }
         else if (type == VIRT_DISK_TYPE_FLOPPY)
                 dev->dev.disk.device = strdup("floppy");
+        else if (type == VIRT_DISK_TYPE_FS) 
+                dev->dev.disk.device = strdup("filesystem");
         else
                 return "Invalid value for EmulatedType";
 
@@ -1006,6 +1008,12 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.disk.cache = NULL;
         else
                 dev->dev.disk.cache = strdup(val);
+
+        free(dev->dev.disk.access_mode);
+        if (cu_get_str_prop(inst, "AccessMode", &val) != CMPI_RC_OK)
+                dev->dev.disk.access_mode = NULL;
+        else 
+                dev->dev.disk.access_mode = strdup(val);
 
         free(dev->id);
         dev->id = strdup(dev->dev.disk.virtual_dev);

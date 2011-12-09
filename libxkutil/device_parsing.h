@@ -55,6 +55,7 @@ struct disk_device {
         bool shareable;
         char *bus_type;
         char *cache;
+        char *access_mode; /* access modes for DISK_FS (filesystem) type */
 };
 
 struct net_device {

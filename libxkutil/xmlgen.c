@@ -153,6 +153,21 @@ static const char *disk_fs_xml(xmlNodePtr root, struct disk_device *dev)
         if (fs == NULL)
                 return XML_ERROR;
 
+        /* filesystem prop 'type' not needed to be generated, as it defaults
+         to 'mount' in libvirt, the only supported value for now. */
+
+        /* filesystem prop 'accessmode' defaults to 'passthrough' in libvirt.
+         So generate here if specified by user, else leave it to libvirt. */
+
+        if (dev->access_mode) {
+                xmlNewProp(fs, BAD_CAST "accessmode", BAD_CAST dev->access_mode);
+        }
+
+        if(dev->driver_type) {
+                tmp = xmlNewChild(fs, NULL, BAD_CAST "driver", NULL);
+                xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->driver_type);
+        }
+
         tmp = xmlNewChild(fs, NULL, BAD_CAST "source", NULL);
         if (tmp == NULL)
                 return XML_ERROR;

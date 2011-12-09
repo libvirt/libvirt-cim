@@ -40,8 +40,8 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       string VirtualDevice;
 
       [Description ("Device emulation type"),
-        ValueMap {"0", "1", "2"},
-        Values {"Disk", "CDROM", "floppy"}]
+        ValueMap {"0", "1", "2", "3"},
+        Values {"Disk", "CDROM", "floppy", "filesystem"}]
       uint16 EmulatedType;
 
       [Description ("Bus type of the device")]
@@ -58,6 +58,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("cache setting for device")]
       string DriverCache;
+      
+      [Description ("filesystem access mode")]
+      string AccessMode;
 };
 
 [Description ("LXC virtual disk configuration"),

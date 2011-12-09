@@ -406,6 +406,12 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.disk.cache,
                               CMPI_chars);
 
+        if(dev->dev.disk.access_mode)
+                CMSetProperty(inst,
+                              "AccessMode",
+                              (CMPIValue *)dev->dev.disk.access_mode,
+                              CMPI_chars);
+
         virStoragePoolFree(pool);
         virStorageVolFree(vol);
         virConnectClose(conn);
