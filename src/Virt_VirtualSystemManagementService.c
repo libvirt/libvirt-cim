@@ -117,10 +117,10 @@ static CMPIStatus add_qos_for_mac(const uint64_t qos,
         char id[16] = ""; /* should be adequate to hold short tc class ids... */
 
         /* Find tc performance class id which matches requested qos bandwidth */
-        j = asprintf(&cmd, QOSCMD_BANDWIDTH2ID, bridge, 
-                                                bridge, 
+        j = asprintf(&cmd, QOSCMD_BANDWIDTH2ID, bridge,
+                                                bridge,
                                                 (unsigned int)qos);
-        if (j == -1) 
+        if (j == -1)
                 goto out;
         CU_DEBUG("add_qos_for_mac(): cmd = %s", cmd);
 
@@ -136,12 +136,12 @@ static CMPIStatus add_qos_for_mac(const uint64_t qos,
         CU_DEBUG("qos id = '%s'", id);
 
         /* Add tc performance class id for this MAC addr */
-        j = asprintf(&cmd, QOSCMD_ADDVM, mac, 
-                                         bridge, 
-                                         id, 
-                                         bridge, 
+        j = asprintf(&cmd, QOSCMD_ADDVM, mac,
+                                         bridge,
+                                         id,
+                                         bridge,
                                          (unsigned int)qos);
-        if (j == -1) 
+        if (j == -1)
                 goto out;
         CU_DEBUG("add_qos_for_mac(): cmd = %s", cmd);
 
@@ -162,13 +162,13 @@ static CMPIStatus remove_qos_for_mac(const uint64_t qos,
         char *cmd = NULL;
         int j;
         FILE *pipe = NULL;
-        char id[16] = ""; /* should be adequate to hold short tc class ids... */ 
+        char id[16] = ""; /* should be adequate to hold short tc class ids... */
 
         /* Find tc performance class id which matches requested qos bandwidth */
-        j = asprintf(&cmd, QOSCMD_BANDWIDTH2ID, bridge, 
-                                                bridge, 
+        j = asprintf(&cmd, QOSCMD_BANDWIDTH2ID, bridge,
+                                                bridge,
                                                 (unsigned int)qos);
-        if (j == -1) 
+        if (j == -1)
                 goto out;
         CU_DEBUG("remove_qos_for_mac(): cmd = %s", cmd);
 
@@ -184,14 +184,14 @@ static CMPIStatus remove_qos_for_mac(const uint64_t qos,
         CU_DEBUG("qos id = '%s'", id);
 
         /* Remove tc perf class id for this MAC; ignore errors when none exists */
-        j = asprintf(&cmd, QOSCMD_RMVM, mac, 
-                                        bridge, 
-                                        mac, 
-                                        bridge, 
-                                        id, 
-                                        bridge, 
+        j = asprintf(&cmd, QOSCMD_RMVM, mac,
+                                        bridge,
+                                        mac,
+                                        bridge,
+                                        id,
+                                        bridge,
                                         (unsigned int)qos);
-        if (j == -1) 
+        if (j == -1)
                 goto out;
         CU_DEBUG("remove_qos_for_mac(): cmd = %s", cmd);
 
@@ -395,13 +395,13 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
                 free(domain->os_info.fv.bootlist[i]);
 
         ret = cu_get_array_prop(inst, "BootDevices", &bootlist);
-      
+
         if (ret != CMPI_RC_OK) {
-                CU_DEBUG("Failed to get BootDevices property"); 
+                CU_DEBUG("Failed to get BootDevices property");
                 domain->os_info.fv.bootlist_ct = 0;
                 goto out;
         }
-       
+
         bl_size = CMGetArrayCount(bootlist, &s);
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("Invalid BootDevice array size");
@@ -419,9 +419,9 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
         for (i = 0; i < bl_size; i++) {
                 const char *str;
 
-                boot_elem = CMGetArrayElementAt(bootlist, 
-                                                i, 
-                                                NULL); 
+                boot_elem = CMGetArrayElementAt(bootlist,
+                                                i,
+                                                NULL);
 
                 if (CMIsNullValue(boot_elem)) {
                         CU_DEBUG("Null BootDevice");
@@ -537,9 +537,9 @@ static bool default_input_device(struct domain *domain)
 
         domain->dev_input->dev.input.type = strdup("mouse");
 
-        if (domain->type == DOMAIN_XENPV) { 
+        if (domain->type == DOMAIN_XENPV) {
                 domain->dev_input->dev.input.bus = strdup("xen");
-        } else { 
+        } else {
                 domain->dev_input->dev.input.bus = strdup("ps2");
         }
 
@@ -551,12 +551,12 @@ static bool default_input_device(struct domain *domain)
 static bool add_default_devs(struct domain *domain)
 {
         if (domain->dev_graphics_ct < 1) {
-                if (!default_graphics_device(domain))        
+                if (!default_graphics_device(domain))
                         return false;
         }
 
         if (domain->dev_input_ct < 1) {
-                if (!default_input_device(domain))        
+                if (!default_input_device(domain))
                         return false;
         }
 
@@ -575,7 +575,7 @@ static int vssd_to_domain(CMPIInstance *inst,
         bool fullvirt;
         CMPIObjectPath *opathp = NULL;
 
-        
+
         opathp = CMGetObjectPath(inst, NULL);
         if (opathp == NULL) {
                 CU_DEBUG("Got a null object path");
@@ -592,7 +592,7 @@ static int vssd_to_domain(CMPIInstance *inst,
         ret = cu_get_str_prop(inst, "VirtualSystemIdentifier", &val);
         if (ret != CMPI_RC_OK)
                 goto out;
-        
+
         free(domain->name);
         domain->name = strdup(val);
 
@@ -734,7 +734,7 @@ static const char *_net_rand_mac(const CMPIObjectPath *ref)
 
         cn_prefix = class_prefix_name(CLASSNAME(ref));
 
-        if (STREQ(cn_prefix, "KVM")) 
+        if (STREQ(cn_prefix, "KVM"))
             mac_prefix = KVM_MAC_PREFIX;
         else
             mac_prefix = XEN_MAC_PREFIX;
@@ -781,8 +781,8 @@ static const char *filter_by_address(struct inst_list *src,
         for (i = 0; i < src->cur; i++) {
                 inst = src->list[i];
                 ret = cu_get_str_prop(inst, "Address", &addr);
-       
-                if (ret != CMPI_RC_OK) 
+
+                if (ret != CMPI_RC_OK)
                         continue;
 
                 if (STREQ(addr, address)) {
@@ -812,7 +812,7 @@ static const char *check_duplicate_mac(CMPIInstance *inst,
         }
 
          FIXME:  This is a Pegasus work around. Pegsus loses the namespace
-                   when an ObjectPath is pulled from an instance 
+                   when an ObjectPath is pulled from an instance
 
         if (STREQ(NAMESPACE(op), ""))
                 CMSetNameSpace(op, ns);
@@ -857,7 +857,7 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
 
 /*
         msg = check_duplicate_mac(inst, val, ns);
-        if (msg != NULL) { 
+        if (msg != NULL) {
                 goto out;
         }
 */
@@ -869,18 +869,18 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         dev->id = strdup(dev->dev.net.mac);
 
         free(dev->dev.net.type);
-        if (cu_get_str_prop(inst, "NetworkType", &val) != CMPI_RC_OK) 
+        if (cu_get_str_prop(inst, "NetworkType", &val) != CMPI_RC_OK)
                 return "No Network Type specified";
 
         free(dev->dev.net.source);
         if (STREQC(val, BRIDGE_TYPE)) {
                 dev->dev.net.type = strdup(BRIDGE_TYPE);
-                if (cu_get_str_prop(inst, "NetworkName", &val) == CMPI_RC_OK) 
+                if (cu_get_str_prop(inst, "NetworkName", &val) == CMPI_RC_OK)
                         if (strlen(val) > 0)
                                 dev->dev.net.source = strdup(val);
                         else
                                 return "Bridge name is empty";
-                else 
+                else
                         return "No Network bridge name specified";
          } else if (STREQC(val, NETWORK_TYPE)) {
                 dev->dev.net.type = strdup(NETWORK_TYPE);
@@ -901,55 +901,55 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.net.type = strdup(USER_TYPE);
         } else if (STREQC(val, DIRECT_TYPE)) {
                 dev->dev.net.type = strdup(DIRECT_TYPE);
-                if (cu_get_str_prop(inst, "SourceDevice", &val) == CMPI_RC_OK) 
+                if (cu_get_str_prop(inst, "SourceDevice", &val) == CMPI_RC_OK)
                         if (strlen(val) > 0)
                                 dev->dev.net.source = strdup(val);
                         else
                                 return "Source Device is empty";
-                else 
+                else
                         return "No Source Device specified";
 
                 free(dev->dev.net.vsi.vsi_type);
                 if (cu_get_str_prop(inst, "VSIType", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.vsi_type = NULL;
-                else 
+                else
                         dev->dev.net.vsi.vsi_type = strdup(val);
 
                 free(dev->dev.net.vsi.manager_id);
                 if (cu_get_str_prop(inst, "VSIManagerID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.manager_id = NULL;
-                else 
+                else
                         dev->dev.net.vsi.manager_id = strdup(val);
 
                 free(dev->dev.net.vsi.type_id);
                 if (cu_get_str_prop(inst, "VSITypeID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.type_id = NULL;
-                else 
+                else
                         dev->dev.net.vsi.type_id = strdup(val);
 
                 free(dev->dev.net.vsi.type_id_version);
-                if (cu_get_str_prop(inst, "VSITypeIDVersion", &val) != 
+                if (cu_get_str_prop(inst, "VSITypeIDVersion", &val) !=
                     CMPI_RC_OK)
                         dev->dev.net.vsi.type_id_version = NULL;
-                else 
+                else
                         dev->dev.net.vsi.type_id_version = strdup(val);
 
                 free(dev->dev.net.vsi.instance_id);
                 if (cu_get_str_prop(inst, "VSIInstanceID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.instance_id = NULL;
-                else 
+                else
                         dev->dev.net.vsi.instance_id = strdup(val);
 
                 free(dev->dev.net.vsi.filter_ref);
                 if (cu_get_str_prop(inst, "FilterRef", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.filter_ref = NULL;
-                else 
+                else
                         dev->dev.net.vsi.filter_ref = strdup(val);
 
                 free(dev->dev.net.vsi.profile_id);
                 if (cu_get_str_prop(inst, "ProfileID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.profile_id = NULL;
-                else 
+                else
                         dev->dev.net.vsi.profile_id = strdup(val);
 
         } else
@@ -957,21 +957,21 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
 
         free(dev->dev.net.device);
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
-                dev->dev.net.device = NULL; 
-        else 
+                dev->dev.net.device = NULL;
+        else
                 dev->dev.net.device = strdup(val);
 
         free(dev->dev.net.net_mode);
         if (cu_get_str_prop(inst, "NetworkMode", &val) != CMPI_RC_OK)
-                dev->dev.net.net_mode = NULL; 
-        else 
+                dev->dev.net.net_mode = NULL;
+        else
                 dev->dev.net.net_mode = strdup(val);
 
         free(dev->dev.net.model);
 
         if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK)
-                dev->dev.net.model = NULL; 
-        else 
+                dev->dev.net.model = NULL;
+        else
                 dev->dev.net.model = strdup(val);
  out:
         free(network);
@@ -1024,36 +1024,36 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.disk.device = strdup("floppy");
         else
                 return "Invalid value for EmulatedType";
-        
+
         CU_DEBUG("device type is %s", dev->dev.disk.device);
 
         if (cu_get_bool_prop(inst, "readonly", &read) != CMPI_RC_OK)
                 dev->dev.disk.readonly = false;
         else
                 dev->dev.disk.readonly = read;
-              
+
         free(dev->dev.disk.bus_type);
-        if (cu_get_str_prop(inst, "BusType", &val) != CMPI_RC_OK) 
+        if (cu_get_str_prop(inst, "BusType", &val) != CMPI_RC_OK)
                 dev->dev.disk.bus_type = NULL;
-        else 
+        else
                 dev->dev.disk.bus_type = strdup(val);
-              
+
         free(dev->dev.disk.driver);
-        if (cu_get_str_prop(inst, "DriverName", &val) != CMPI_RC_OK) 
+        if (cu_get_str_prop(inst, "DriverName", &val) != CMPI_RC_OK)
                 dev->dev.disk.driver = NULL;
-        else 
+        else
                 dev->dev.disk.driver = strdup(val);
 
         free(dev->dev.disk.driver_type);
-        if (cu_get_str_prop(inst, "DriverType", &val) != CMPI_RC_OK) 
+        if (cu_get_str_prop(inst, "DriverType", &val) != CMPI_RC_OK)
                 dev->dev.disk.driver_type = NULL;
-        else 
+        else
                 dev->dev.disk.driver_type = strdup(val);
 
         free(dev->dev.disk.cache);
-        if (cu_get_str_prop(inst, "DriverCache", &val) != CMPI_RC_OK) 
+        if (cu_get_str_prop(inst, "DriverCache", &val) != CMPI_RC_OK)
                 dev->dev.disk.cache = NULL;
-        else 
+        else
                 dev->dev.disk.cache = strdup(val);
 
         free(dev->id);
@@ -1095,7 +1095,7 @@ static const char *mem_rasd_to_vdev(CMPIInstance *inst,
 
         ret = cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
         if (ret != CMPI_RC_OK)
-                ret = cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size); 
+                ret = cu_get_u64_prop(inst, "Reservation", &dev->dev.mem.size);
 
         if (ret != CMPI_RC_OK)
                 return "Missing `VirtualQuantity' field in Memory RASD";
@@ -1148,7 +1148,7 @@ static const char *proc_rasd_to_vdev(CMPIInstance *inst,
                 return NULL;
         }
 
-        if (STARTS_WITH(CLASSNAME(op), "Xen")) 
+        if (STARTS_WITH(CLASSNAME(op), "Xen"))
                 def_weight = DEFAULT_XEN_WEIGHT;
         else if (STARTS_WITH(CLASSNAME(op), "QEMU"))
                 def_weight = DEFAULT_KVM_WEIGHT;
@@ -1333,7 +1333,7 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                 if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK) {
                         CU_DEBUG("graphics Address empty, using default");
 
-                        if (cu_get_bool_prop(inst, "IsIPV6Only", &ipv6) != 
+                        if (cu_get_bool_prop(inst, "IsIPV6Only", &ipv6) !=
                                 CMPI_RC_OK)
                                 ipv6 = false;
 
@@ -1350,12 +1350,12 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                         msg = "GraphicsRASD field Address not valid";
                         goto out;
                 }
-                
+
                 if (cu_get_str_prop(inst, "KeyMap", &val) != CMPI_RC_OK)
                         dev->dev.graphics.dev.vnc.keymap = strdup("en-us");
                 else
                         dev->dev.graphics.dev.vnc.keymap = strdup(val);
-        
+
                 if (cu_get_str_prop(inst, "Password", &val) != CMPI_RC_OK) {
                         CU_DEBUG("vnc password is not set");
                         dev->dev.graphics.dev.vnc.passwd = NULL;
@@ -1402,8 +1402,8 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                                 else
                                         dev->dev.graphics.dev.sdl.fullscreen = strdup("no");
                 }
-        } else { 
-                CU_DEBUG("Unsupported graphics type %s", 
+        } else {
+                CU_DEBUG("Unsupported graphics type %s",
                         dev->dev.graphics.type);
                 msg = "Unsupported graphics type";
                 goto out;
@@ -1522,7 +1522,7 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
         dev->type = (int)type;
 
         if (domain->type == DOMAIN_LXC)
-                msg = _container_rasd_to_vdev(inst, dev, type, ns); 
+                msg = _container_rasd_to_vdev(inst, dev, type, ns);
         else
                 msg = _sysvirt_rasd_to_vdev(inst, dev, type, ns);
  out:
@@ -1541,10 +1541,10 @@ static char *add_device_nodup(struct virt_device *dev,
 
         for (i = 0; i < *index; i++) {
                 struct virt_device *ptr = &list[i];
-                
-                if (dev->type == CIM_RES_TYPE_DISK && 
+
+                if (dev->type == CIM_RES_TYPE_DISK &&
                     STREQC(ptr->dev.disk.virtual_dev,
-                           dev->dev.disk.virtual_dev)) 
+                           dev->dev.disk.virtual_dev))
                         return "VirtualDevice property must be unique for each "
                                "DiskResourceAllocationSettingData in a single "
                                "guest";
@@ -1612,7 +1612,7 @@ static const char *classify_resources(CMPIArray *resources,
                 if (op == NULL)
                         return "Unknown resource instance type";
 
-                if (res_type_from_rasd_classname(CLASSNAME(op), &type) != 
+                if (res_type_from_rasd_classname(CLASSNAME(op), &type) !=
                     CMPI_RC_OK)
                         return "Unable to determine resource type";
 
@@ -1660,16 +1660,16 @@ static const char *classify_resources(CMPIArray *resources,
                                                        &domain->dev_net_ct);
 
 			/* Network QoS support */
-                        if (((&dev)->dev.net.mac != NULL) && 
+                        if (((&dev)->dev.net.mac != NULL) &&
                             ((&dev)->dev.net.source != NULL) &&
                             (cu_get_u64_prop(inst, "Reservation", &qos_val) == CMPI_RC_OK) &&
                             (cu_get_str_prop(inst, "AllocationUnits", &qos_unitstr) == CMPI_RC_OK) &&
                             STREQ(qos_unitstr,"KiloBits per Second")) {
-                                remove_qos_for_mac(qos_val, 
-                                                   (&dev)->dev.net.mac, 
+                                remove_qos_for_mac(qos_val,
+                                                   (&dev)->dev.net.mac,
                                                    (&dev)->dev.net.source);
-                                add_qos_for_mac(qos_val, 
-                                                (&dev)->dev.net.mac, 
+                                add_qos_for_mac(qos_val,
+                                                (&dev)->dev.net.mac,
                                                 (&dev)->dev.net.source);
                         }
                 } else if (type == CIM_RES_TYPE_GRAPHICS) {
@@ -1783,7 +1783,37 @@ static CMPIStatus update_dominfo(const struct domain *dominfo,
                 goto out;
         }
 
+#if LIBVIR_VERSION_NUMBER < 9000
+        /* Old libvirt versions dont save cpu cgroup setting for inactive */
+        /* guests, so save in infostore instead */
         infostore_set_u64(ctx, "weight", dev->dev.vcpu.weight);
+#else
+        /* New libvirt versions save cpu cgroup setting in KVM guest config */
+        if (STREQC(virConnectGetType(conn), "QEMU")) {
+                int ret;
+                virSchedParameter params;
+                strncpy(params.field,
+                        "cpu_shares",
+                        VIR_DOMAIN_SCHED_FIELD_LENGTH);
+                params.type = VIR_DOMAIN_SCHED_FIELD_ULLONG;
+                params.value.ul = dev->dev.vcpu.weight;
+
+                CU_DEBUG("setting %s scheduler param cpu_shares=%d",
+                         dominfo->name,
+                         dev->dev.vcpu.weight);
+                ret = virDomainSetSchedulerParametersFlags(dom, &params, 1,
+                            VIR_DOMAIN_AFFECT_CONFIG);
+                if (ret != 0) {
+                        CU_DEBUG("Failed to set config scheduler param");
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to set config scheduler param");
+                        goto out;
+                }
+        }
+        else
+                infostore_set_u64(ctx, "weight", dev->dev.vcpu.weight);
+#endif
         infostore_set_u64(ctx, "limit", dev->dev.vcpu.limit);
 
  out:
@@ -1933,21 +1963,21 @@ static CMPIStatus raise_rasd_indication(const CMPIContext *context,
         type = get_typed_class(CLASSNAME(ref), base_type);
 
         for (i = 0; i < list->cur; i++) {
-                ind = get_typed_instance(_BROKER, 
-                                         CLASSNAME(ref), 
-                                         base_type, 
+                ind = get_typed_instance(_BROKER,
+                                         CLASSNAME(ref),
+                                         base_type,
                                          NAMESPACE(ref));
                 if (ind == NULL)  {
                         CU_DEBUG("Failed to get indication instance");
                         s.rc = CMPI_RC_ERR_FAILED;
                         goto out;
                 }
-        
+
                 /* PreviousInstance is set only for modify case. */
                 if (prev_inst != NULL)
-                        CMSetProperty(ind, 
-                                      "PreviousInstance", 
-                                      (CMPIValue *)&prev_inst, 
+                        CMSetProperty(ind,
+                                      "PreviousInstance",
+                                      (CMPIValue *)&prev_inst,
                                       CMPI_instance);
 
                 instc = list->list[i];
@@ -1956,16 +1986,16 @@ static CMPIStatus raise_rasd_indication(const CMPIContext *context,
 
                 CU_DEBUG("class name is %s\n", CMGetCharsPtr(str, NULL));
 
-                CMSetProperty(ind, 
-                              "SourceInstance", 
-                              (CMPIValue *)&instc, 
+                CMSetProperty(ind,
+                              "SourceInstance",
+                              (CMPIValue *)&instc,
                               CMPI_instance);
                 set_source_inst_props(_BROKER, context, ref, ind);
 
-                s = stdi_raise_indication(_BROKER, 
-                                          context, 
-                                          type, 
-                                          NAMESPACE(ref), 
+                s = stdi_raise_indication(_BROKER,
+                                          context,
+                                          type,
+                                          NAMESPACE(ref),
                                           ind);
         }
 
@@ -2019,15 +2049,15 @@ static CMPIStatus set_autostart(CMPIInstance *vssd,
         if (cu_get_u16_prop(vssd, "AutoStart", &val) != CMPI_RC_OK) {
                 if (dom != NULL) {
                         /* Read the current domain's autostart setting.
-                           Since the user did not specify any new 
-                           autostart, the updated VM will use the same 
-                           autostart setting as used before this 
+                           Since the user did not specify any new
+                           autostart, the updated VM will use the same
+                           autostart setting as used before this
                            update. */
-                           if (virDomainGetAutostart(dom, &i) != 0) 
+                           if (virDomainGetAutostart(dom, &i) != 0)
                                    i = 0;
-                } 
-        } 
-        else 
+                }
+        }
+        else
                 i = val;
         CU_DEBUG("setting  VM's autostart to %d", i);
         if (virDomainSetAutostart(inst_dom, i) == -1) {
@@ -2085,7 +2115,7 @@ static CMPIInstance *create_system(const CMPIContext *context,
         *s = check_uuid_in_use(ref, domain);
         if (s->rc != CMPI_RC_OK)
                 goto out;
- 
+
         msg = classify_resources(resources, NAMESPACE(ref), domain);
         if (msg != NULL) {
                 CU_DEBUG("Failed to classify resources: %s", msg);
@@ -2111,11 +2141,11 @@ static CMPIInstance *create_system(const CMPIContext *context,
                 update_dominfo(domain, CLASSNAME(ref));
                 set_autostart(vssd, ref, NULL);
 
-                *s = enum_rasds(_BROKER, 
-                                ref, 
-                                domain->name, 
-                                CIM_RES_TYPE_ALL, 
-                                props, 
+                *s = enum_rasds(_BROKER,
+                                ref,
+                                domain->name,
+                                CIM_RES_TYPE_ALL,
+                                props,
                                 &list);
 
                 if (s->rc != CMPI_RC_OK) {
@@ -2125,8 +2155,8 @@ static CMPIInstance *create_system(const CMPIContext *context,
 
                 raise_rasd_indication(context,
                                       RASD_IND_CREATED,
-                                      NULL, 
-                                      ref, 
+                                      NULL,
+                                      ref,
                                       &list);
         }
 
@@ -2233,11 +2263,11 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
         if (dom_name == NULL)
                 goto error;
 
-        status = enum_rasds(_BROKER, 
-                            reference, 
-                            dom_name, 
-                            CIM_RES_TYPE_ALL, 
-                            props, 
+        status = enum_rasds(_BROKER,
+                            reference,
+                            dom_name,
+                            CIM_RES_TYPE_ALL,
+                            props,
                             &list);
 
         if (status.rc != CMPI_RC_OK) {
@@ -2272,11 +2302,11 @@ static CMPIStatus destroy_system(CMPIMethodMI *self,
 
 error:
         if (rc == IM_RC_SYS_NOT_FOUND)
-                virt_set_status(_BROKER, 
+                virt_set_status(_BROKER,
                                 &status,
                                 CMPI_RC_ERR_NOT_FOUND,
                                 conn,
-                                "Referenced domain `%s' does not exist", 
+                                "Referenced domain `%s' does not exist",
                                 dom_name);
         else if (rc == IM_RC_NOT_SUPPORTED)
                 virt_set_status(_BROKER, &status,
@@ -2290,10 +2320,10 @@ error:
                                 "Unable to retrieve domain name");
         else if (rc == IM_RC_OK) {
                 status = (CMPIStatus){CMPI_RC_OK, NULL};
-                raise_rasd_indication(context, 
-                                      RASD_IND_DELETED, 
-                                      NULL, 
-                                      reference, 
+                raise_rasd_indication(context,
+                                      RASD_IND_DELETED,
+                                      NULL,
+                                      reference,
                                       &list);
                 trigger_indication(context,
                                    "ComputerSystemDeletedIndication",
@@ -2366,12 +2396,12 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "%s is already defined with UUID %s - cannot change "
-                           "UUID to the UUID specified %s", 
-                           name, 
-                           uuid, 
+                           "UUID to the UUID specified %s",
+                           name,
+                           uuid,
                            dominfo->uuid);
                 goto out;
-        } 
+        }
 
         xml = system_to_xml(dominfo);
         if (xml != NULL) {
@@ -2748,11 +2778,11 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                                     (cu_get_u64_prop(rasd, "Reservation", &qos_val) == CMPI_RC_OK) &&
                                     (cu_get_str_prop(rasd, "AllocationUnits", &qos_unitstr) == CMPI_RC_OK) &&
                                     STREQ(qos_unitstr,"KiloBits per Second")) {
-                                        remove_qos_for_mac(qos_val, 
-                                                           dev->dev.net.mac, 
+                                        remove_qos_for_mac(qos_val,
+                                                           dev->dev.net.mac,
                                                            dev->dev.net.source);
-                                        s = add_qos_for_mac(qos_val, 
-                                                            dev->dev.net.mac, 
+                                        s = add_qos_for_mac(qos_val,
+                                                            dev->dev.net.mac,
                                                             dev->dev.net.source);
                                 }
                         }
@@ -2840,8 +2870,8 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
                         goto out;
                 }
                 rasd = orig_inst;
-        
-        } 
+
+        }
 
         s = func(dominfo, rasd, type, devid, NAMESPACE(ref));
         if (s.rc != CMPI_RC_OK) {
@@ -2858,10 +2888,10 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
                         CU_DEBUG("Unable to add RASD instance to the list\n");
                         goto out;
                 }
-                raise_rasd_indication(context, 
-                                      indication, 
-                                      prev_inst, 
-                                      ref, 
+                raise_rasd_indication(context,
+                                      indication,
+                                      prev_inst,
+                                      ref,
                                       &list);
         } else {
                 cu_statusf(_BROKER, &s,
@@ -2959,11 +2989,11 @@ static CMPIStatus _update_resource_settings(const CMPIContext *context,
                         goto end;
                 }
 
-                s = _update_resources_for(context, 
-                                          ref, 
-                                          dom, 
-                                          devid, 
-                                          inst, 
+                s = _update_resources_for(context,
+                                          ref,
+                                          dom,
+                                          devid,
+                                          inst,
                                           func);
 
  end:
@@ -3004,7 +3034,7 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
         tmp_arr = CMNewArray(_BROKER,
                              c,
                              CMPI_instance,
-                             &s); 
+                             &s);
 
         for (i = 0; i < c; i++) {
                 CMPIData d;
@@ -3040,11 +3070,11 @@ static CMPIStatus rasd_refs_to_insts(const CMPIContext *ctx,
                 CMSetArrayElementAt(tmp_arr, i,
                                     &inst,
                                     CMPI_instance);
-                
+
         }
 
         *ret_arr = tmp_arr;
-        
+
         return s;
 }
 
@@ -3113,8 +3143,8 @@ static CMPIStatus add_resource_settings(CMPIMethodMI *self,
                 return s;
         }
 
-        if (cu_get_ref_arg(argsin, 
-                           "AffectedConfiguration", 
+        if (cu_get_ref_arg(argsin,
+                           "AffectedConfiguration",
                            &sys) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_INVALID_PARAMETER,
@@ -3298,7 +3328,7 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                     const CMPIBroker *broker,
                     const CMPIContext *context,
                     bool is_get_inst)
-{ 
+{
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst = NULL;
         const char *name = NULL;
@@ -3336,8 +3366,8 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
                 goto out;
         }
 
-        s = get_host_system_properties(&name, 
-                                       &ccname, 
+        s = get_host_system_properties(&name,
+                                       &ccname,
                                        reference,
                                        broker,
                                        context);
@@ -3494,8 +3524,8 @@ DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
 
-STD_InstanceMIStub(, 
-                   Virt_VirtualSystemManagementService, 
+STD_InstanceMIStub(,
+                   Virt_VirtualSystemManagementService,
                    _BROKER,
                    libvirt_cim_init());
 

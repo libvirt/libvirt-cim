@@ -861,6 +861,11 @@ static int lxc_scheduler_params(struct infostore_ctx *ctx,
 static int kvm_scheduler_params(struct infostore_ctx *ctx,
                                 virSchedParameter **params)
 {
+#if LIBVIR_VERSION_NUMBER < 9000
+        /* Old versions of libvirt only support CPU cgroups for running guests */
+        /* so instead read cpu cgroup setting for inactive guest from infostore. */
+        /* New versions there is nothing to do because libvirt takes care of it. */
+
         unsigned long long value;
 
         *params = calloc(1, sizeof(virSchedParameter));
@@ -878,6 +883,7 @@ static int kvm_scheduler_params(struct infostore_ctx *ctx,
 
                 return 1;
         }
+#endif
 
         return 0;
 }

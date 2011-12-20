@@ -157,8 +157,12 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
                 goto out;
         }
 
-        /* Currently only support CPU cgroups for running KVM guests */
+        /* Early versions of libvirt only support CPU cgroups for *running* KVM guests */
+#if LIBVIR_VERSION_NUMBER < 9000
         if (domain_online(dom) && STREQC(virConnectGetType(conn), "QEMU")) {
+#else
+        if (STREQC(virConnectGetType(conn), "QEMU")) {
+#endif
                 char *sched;
                 int nparams;
                 unsigned int i;
@@ -182,9 +186,9 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
 
                 /* Look for the CPU cgroup scheduler parameter, called 'cpu_shares' */
                 for (i = 0 ; i < nparams ; i++) {
-                        CU_DEBUG("scheduler param #%d name is %s (type %d)", 
+                        CU_DEBUG("scheduler param #%d name is %s (type %d)",
                                  i, params[i].field, params[i].type);
-                        if (STREQ(params[i].field, "cpu_shares") && 
+                        if (STREQ(params[i].field, "cpu_shares") &&
                             (params[i].type == VIR_DOMAIN_SCHED_FIELD_ULLONG)) {
                                 CU_DEBUG("scheduler param %s = %d",
                                          params[i].field, params[i].value.ul);
@@ -194,7 +198,7 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
                 }
                 free(params);
         }
-        else 
+        else
                 weight = (uint32_t)infostore_get_u64(info, "weight");
         limit = infostore_get_u64(info, "limit");
 
@@ -311,7 +315,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                 goto cont;
         }
 
-        virStorageVolPtr vol = virStorageVolLookupByPath(conn, 
+        virStorageVolPtr vol = virStorageVolLookupByPath(conn,
                                                          dev->dev.disk.source);
         if (vol == NULL) {
                 virt_set_status(broker, &s,
@@ -484,9 +488,9 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
         /* Network QoS support */
         if ((dev->dev.net.mac != NULL) && (dev->dev.net.source != NULL)) {
                 /* Get tc performance class bandwidth for this MAC addr */
-                i = asprintf(&cmd, QOSCMD_MAC2BANDWIDTH, dev->dev.net.source, 
-                                                         dev->dev.net.source, 
-                                                         dev->dev.net.mac, 
+                i = asprintf(&cmd, QOSCMD_MAC2BANDWIDTH, dev->dev.net.source,
+                                                         dev->dev.net.source,
+                                                         dev->dev.net.mac,
                                                          dev->dev.net.source);
                 if (i == -1)
                         goto out;
@@ -554,30 +558,30 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
 
-        CMSetProperty(inst, "ResourceSubType", 
+        CMSetProperty(inst, "ResourceSubType",
                        (CMPIValue *)dev->dev.graphics.type, CMPI_chars);
-         
+
         if (STREQC(dev->dev.graphics.type, "sdl"))
                 rc = asprintf(&addr_str, "%s", dev->dev.graphics.type);
         else {
-                rc = asprintf(&addr_str, 
+                rc = asprintf(&addr_str,
                               "%s:%s",
                               dev->dev.graphics.dev.vnc.host,
                               dev->dev.graphics.dev.vnc.port);
         }
-       
+
         CU_DEBUG("graphics Address = %s", addr_str);
-         
+
         if (rc == -1)
                 goto out;
 
-        CMSetProperty(inst, "Address", 
+        CMSetProperty(inst, "Address",
                 (CMPIValue *)addr_str, CMPI_chars);
 
         if (STREQC(dev->dev.graphics.type, "vnc")) {
                 CMSetProperty(inst, "KeyMap",
                              (CMPIValue *)dev->dev.graphics.dev.vnc.keymap, CMPI_chars);
-                
+
                 conn = connect_by_classname(_BROKER, classname, &s);
                 if (conn == NULL)
                         goto out;
@@ -616,8 +620,8 @@ static CMPIStatus set_input_rasd_params(const struct virt_device *dev,
         char *cap;
         int ret;
 
-        ret = get_input_dev_caption(dev->dev.input.type, 
-                                    dev->dev.input.bus, 
+        ret = get_input_dev_caption(dev->dev.input.type,
+                                    dev->dev.input.bus,
                                     &cap);
         if (ret != 1) {
                 free(cap);
@@ -627,10 +631,10 @@ static CMPIStatus set_input_rasd_params(const struct virt_device *dev,
                 return s;
         }
 
-        CMSetProperty(inst, "ResourceSubType", 
+        CMSetProperty(inst, "ResourceSubType",
                       (CMPIValue *)dev->dev.input.type, CMPI_chars);
 
-        CMSetProperty(inst, "BusType", 
+        CMSetProperty(inst, "BusType",
                       (CMPIValue *)dev->dev.input.bus, CMPI_chars);
 
         CMSetProperty(inst, "Caption", (CMPIValue *)cap, CMPI_chars);
@@ -699,11 +703,11 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 s = set_disk_rasd_params(broker, ref, dev, inst);
         } else if (dev->type == CIM_RES_TYPE_NET) {
                 s = set_net_rasd_params(broker, ref, dev, inst);
-                if ((s.rc == CMPI_RC_OK) && 
+                if ((s.rc == CMPI_RC_OK) &&
                      (dev->dev.net.vsi.vsi_type != NULL))
-                        s = set_net_vsi_rasd_params(broker, 
-                                                    ref, 
-                                                    dev->dev.net.vsi, 
+                        s = set_net_vsi_rasd_params(broker,
+                                                    ref,
+                                                    dev->dev.net.vsi,
                                                     inst);
 
         } else if (dev->type == CIM_RES_TYPE_MEM) {
@@ -754,12 +758,12 @@ CMPIStatus get_rasd_by_name(const CMPIBroker *broker,
                            "No such instance");
                 goto out;
         }
-        
+
         ret = parse_fq_devid((char *)name, &host, &devid);
         if (ret != 1) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
-                           "No such instance (%s)", 
+                           "No such instance (%s)",
                            name);
                 goto out;
         }
@@ -819,13 +823,13 @@ CMPIStatus get_rasd_by_ref(const CMPIBroker *broker,
         s = get_rasd_by_name(broker, reference, name, type, properties, &inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
-        
+
         s = cu_validate_ref(broker, reference, inst);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
         *_inst = inst;
-        
+
  out:
         return s;
 }
@@ -869,7 +873,7 @@ CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
 CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
 {
         CMPIrc rc = CMPI_RC_OK;
-        
+
         switch(type) {
         case CIM_RES_TYPE_MEM:
                 *classname = "MemResourceAllocationSettingData";
@@ -880,19 +884,19 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
         case CIM_RES_TYPE_NET:
                 *classname = "NetResourceAllocationSettingData";
                 break;
-        case CIM_RES_TYPE_DISK: 
+        case CIM_RES_TYPE_DISK:
                 *classname = "DiskResourceAllocationSettingData";
                 break;
-        case CIM_RES_TYPE_GRAPHICS: 
+        case CIM_RES_TYPE_GRAPHICS:
                 *classname = "GraphicsResourceAllocationSettingData";
                 break;
-        case CIM_RES_TYPE_INPUT: 
+        case CIM_RES_TYPE_INPUT:
                 *classname = "InputResourceAllocationSettingData";
                 break;
         default:
                 rc = CMPI_RC_ERR_FAILED;
         }
-        
+
         return rc;
 }
 
@@ -963,7 +967,7 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
 
                 dev = rasd_from_vdev(broker,
                                      &devs[i],
-                                     host, 
+                                     host,
                                      reference,
                                      properties);
                 if (dev)
@@ -989,7 +993,7 @@ static CMPIStatus _enum_rasds(const CMPIBroker *broker,
                 for (i=0; i<CIM_RES_TYPE_COUNT; i++)
                         s = _get_rasds(broker,
                                        reference,
-                                       dom, 
+                                       dom,
                                        cim_res_types[i],
                                        properties,
                                        list);
@@ -997,7 +1001,7 @@ static CMPIStatus _enum_rasds(const CMPIBroker *broker,
         else
                 s = _get_rasds(broker,
                                reference,
-                               dom, 
+                               dom,
                                type,
                                properties,
                                list);
@@ -1032,7 +1036,7 @@ CMPIStatus enum_rasds(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 _enum_rasds(broker,
                             ref,
-                            domains[i], 
+                            domains[i],
                             type,
                             properties,
                             list);
@@ -1059,7 +1063,7 @@ static CMPIStatus return_enum_rasds(const CMPIObjectPath *ref,
 
         res_type_from_rasd_classname(CLASSNAME(ref), &type);
 
-        s = enum_rasds(_BROKER, ref, NULL, 
+        s = enum_rasds(_BROKER, ref, NULL,
                        type, properties, &list);
         if (s.rc != CMPI_RC_OK)
                 goto out;
@@ -1118,9 +1122,9 @@ DEFAULT_DI();
 DEFAULT_INST_CLEANUP();
 DEFAULT_EQ();
 
-STD_InstanceMIStub(, 
+STD_InstanceMIStub(,
                    Virt_RASD,
-                   _BROKER, 
+                   _BROKER,
                    libvirt_cim_init());
 
 /*

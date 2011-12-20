@@ -59,7 +59,7 @@ static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
                         return XML_ERROR;
                 xmlNewProp(tmp, BAD_CAST "name", BAD_CAST dev->driver);
                 if (dev->driver_type)
-                        xmlNewProp(tmp, BAD_CAST "type", 
+                        xmlNewProp(tmp, BAD_CAST "type",
                                    BAD_CAST dev->driver_type);
                 if (dev->cache)
                         xmlNewProp(tmp, BAD_CAST "cache", BAD_CAST dev->cache);
@@ -106,7 +106,7 @@ static const char *disk_file_xml(xmlNodePtr root, struct disk_device *dev)
                         return XML_ERROR;
                 xmlNewProp(tmp, BAD_CAST "name", BAD_CAST dev->driver);
                 if (dev->driver_type)
-                        xmlNewProp(tmp, BAD_CAST "type", 
+                        xmlNewProp(tmp, BAD_CAST "type",
                                    BAD_CAST dev->driver_type);
                 if (dev->cache)
                         xmlNewProp(tmp, BAD_CAST "cache", BAD_CAST dev->cache);
@@ -200,36 +200,36 @@ static const char *set_net_vsi(xmlNodePtr nic, struct vsi_device *dev)
         xmlNodePtr tmp;
 
         tmp = xmlNewChild(nic, NULL, BAD_CAST "virtualport", NULL);
-        if (tmp == NULL) 
+        if (tmp == NULL)
                 return XML_ERROR;
         xmlNewProp(tmp, BAD_CAST "type", BAD_CAST dev->vsi_type);
 
         tmp = xmlNewChild(tmp, NULL, BAD_CAST "parameters", NULL);
-        if (tmp == NULL) 
+        if (tmp == NULL)
                 return XML_ERROR;
         if (STREQ(dev->vsi_type, "802.1Qbh")) {
                 if (dev->profile_id != NULL)
-                        xmlNewProp(tmp, BAD_CAST "profileid", 
+                        xmlNewProp(tmp, BAD_CAST "profileid",
                                    BAD_CAST dev->profile_id);
         } else {
                 if (dev->manager_id != NULL)
-                        xmlNewProp(tmp, BAD_CAST "managerid", 
+                        xmlNewProp(tmp, BAD_CAST "managerid",
                                    BAD_CAST dev->manager_id);
                 if (dev->type_id != NULL)
-                        xmlNewProp(tmp, BAD_CAST "typeid", 
+                        xmlNewProp(tmp, BAD_CAST "typeid",
                                    BAD_CAST dev->type_id);
                 if (dev->type_id_version != NULL)
-                        xmlNewProp(tmp, BAD_CAST "typeidversion", 
+                        xmlNewProp(tmp, BAD_CAST "typeidversion",
                                    BAD_CAST dev->type_id_version);
                 if (dev->instance_id != NULL)
-                        xmlNewProp(tmp, BAD_CAST "instanceid", 
+                        xmlNewProp(tmp, BAD_CAST "instanceid",
                                    BAD_CAST dev->instance_id);
         }
-               
+
         return NULL;
 }
 
-static const char *set_net_source(xmlNodePtr nic, 
+static const char *set_net_source(xmlNodePtr nic,
                                   struct net_device *dev,
                                   const char *src_type)
 {
@@ -237,15 +237,15 @@ static const char *set_net_source(xmlNodePtr nic,
 
         if (dev->source != NULL) {
                 tmp = xmlNewChild(nic, NULL, BAD_CAST "source", NULL);
-                if (tmp == NULL) 
+                if (tmp == NULL)
                         return XML_ERROR;
                 if (STREQ(src_type, "direct")) {
                         xmlNewProp(tmp, BAD_CAST "dev", BAD_CAST dev->source);
                         if (dev->net_mode != NULL)
-                                xmlNewProp(tmp, BAD_CAST "mode", 
+                                xmlNewProp(tmp, BAD_CAST "mode",
                                            BAD_CAST dev->net_mode);
-                } else  
-                        xmlNewProp(tmp, BAD_CAST src_type, 
+                } else
+                        xmlNewProp(tmp, BAD_CAST src_type,
                                    BAD_CAST dev->source);
         } else
                 return XML_ERROR;
@@ -312,11 +312,11 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                 }
 
                 if (net->filter_ref != NULL) {
-                        tmp = xmlNewChild(nic, NULL, 
+                        tmp = xmlNewChild(nic, NULL,
                                 BAD_CAST "filterref", NULL);
                         if (tmp == NULL)
                                 return XML_ERROR;
-                        xmlNewProp(tmp, BAD_CAST "filter", 
+                        xmlNewProp(tmp, BAD_CAST "filter",
                                 BAD_CAST net->filter_ref);
                 }
 
@@ -364,6 +364,44 @@ static const char *vcpu_xml(xmlNodePtr root, struct domain *dominfo)
         else
                 return NULL;
 }
+
+#if LIBVIR_VERSION_NUMBER >= 9000
+static const char *cputune_xml(xmlNodePtr root, struct domain *dominfo)
+{
+        struct vcpu_device *vcpu;
+        xmlNodePtr cputune, tmp;
+        int ret;
+        char *string = NULL;
+
+        if (dominfo->dev_vcpu == NULL)
+                return NULL;
+
+        vcpu = &dominfo->dev_vcpu[0].dev.vcpu;
+
+        /* CPU cgroup setting saved by libvirt under <cputune> XML section */
+        cputune = xmlNewChild(root, NULL, BAD_CAST "cputune", NULL);
+        if (cputune == NULL)
+                return XML_ERROR;
+
+        /* Get the CPU cgroup setting from the VCPU RASD.Weight property */
+        ret = asprintf(&string,
+                       "%d",
+                       vcpu->weight);
+        if (ret == -1)
+                return XML_ERROR;
+
+        tmp = xmlNewChild(cputune,
+                          NULL,
+                          BAD_CAST "shares",
+                          BAD_CAST string);
+        free(string);
+
+        if (tmp == NULL)
+                return XML_ERROR;
+        else
+                return NULL;
+}
+#endif
 
 static const char *mem_xml(xmlNodePtr root, struct domain *dominfo)
 {
@@ -420,11 +458,11 @@ static const char *emu_xml(xmlNodePtr root, struct domain *dominfo)
         return NULL;
 }
 
-static const char *graphics_vnc_xml(xmlNodePtr root, 
+static const char *graphics_vnc_xml(xmlNodePtr root,
                        struct graphics_device *dev)
 {
         xmlNodePtr tmp = NULL;
-       
+
         tmp = xmlNewChild(root, NULL, BAD_CAST "graphics", NULL);
         if (tmp == NULL)
                 return XML_ERROR;
@@ -467,25 +505,25 @@ static const char *graphics_vnc_xml(xmlNodePtr root,
         return NULL;
 }
 
-static const char *graphics_pty_xml(xmlNodePtr root, 
+static const char *graphics_pty_xml(xmlNodePtr root,
                        struct graphics_device *dev)
 {
         xmlNodePtr pty = NULL;
         xmlNodePtr tmp = NULL;
-       
+
         pty = xmlNewChild(root, NULL, BAD_CAST dev->type, NULL);
         if (pty == NULL)
                 return XML_ERROR;
 
         xmlNewProp(pty, BAD_CAST "type", BAD_CAST "pty");
-        
+
         tmp = xmlNewChild(pty, NULL, BAD_CAST "source", NULL);
         if (tmp == NULL)
                 return XML_ERROR;
 
         if(dev->dev.vnc.host)
                 xmlNewProp(tmp, BAD_CAST "path", BAD_CAST dev->dev.vnc.host);
-       
+
         tmp = xmlNewChild(pty, NULL, BAD_CAST "target", NULL);
         if (tmp == NULL)
                 return XML_ERROR;
@@ -510,12 +548,12 @@ static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
 
                 if (STREQC(dev->type, "vnc") || STREQC(dev->type, "sdl"))
                         msg = graphics_vnc_xml(root, dev);
-                else if (STREQC(dev->type, "console") || 
-                        STREQC(dev->type, "serial")) 
+                else if (STREQC(dev->type, "console") ||
+                        STREQC(dev->type, "serial"))
                         msg = graphics_pty_xml(root, dev);
                 else
                         continue;
-                
+
                 if(msg != NULL)
                         return msg;
         }
@@ -690,7 +728,7 @@ static char *_kvm_os_xml(xmlNodePtr root, struct domain *domain)
         tmp = xmlNewChild(root, NULL, BAD_CAST "type", BAD_CAST os->type);
         if (tmp == NULL)
                 return XML_ERROR;
-        
+
         ret = _fv_bootlist_xml(root, os);
         if (ret == 0)
                 return XML_ERROR;
@@ -941,6 +979,13 @@ char *system_to_xml(struct domain *dominfo)
         if (msg != NULL)
                 goto out;
 
+#if LIBVIR_VERSION_NUMBER >= 9000
+        /* Recent libvirt versions add new <cputune> section to XML */
+        msg = cputune_xml(root, dominfo);
+        if (msg != NULL)
+                goto out;
+#endif
+
         devices = xmlNewChild(root, NULL, BAD_CAST "devices", NULL);
         if (devices == NULL) {
                 msg = XML_ERROR;
@@ -1059,19 +1104,19 @@ static const char *disk_pool_type_to_str(uint16_t type)
 {
         switch (type) {
         case DISK_POOL_DIR:
-                return "dir";      
+                return "dir";
         case DISK_POOL_FS:
-                return "fs";      
+                return "fs";
         case DISK_POOL_NETFS:
-                return "netfs";      
+                return "netfs";
         case DISK_POOL_DISK:
-                return "disk";      
+                return "disk";
         case DISK_POOL_ISCSI:
-                return "iscsi";      
+                return "iscsi";
         case DISK_POOL_LOGICAL:
-                return "logical";      
+                return "logical";
         case DISK_POOL_SCSI:
-                return "scsi";      
+                return "scsi";
         default:
                 CU_DEBUG("Unsupported disk pool type");
         }
@@ -1287,7 +1332,7 @@ static const char *storage_vol_xml(xmlNodePtr root,
         if (ret == -1)
                 return XML_ERROR;
 
-        alloc = xmlNewChild(v, NULL, BAD_CAST "allocation", BAD_CAST string); 
+        alloc = xmlNewChild(v, NULL, BAD_CAST "allocation", BAD_CAST string);
         if (alloc == NULL)
                 goto out;
 
