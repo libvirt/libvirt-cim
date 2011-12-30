@@ -66,6 +66,8 @@ struct net_device {
         char *device;
         char *net_mode;
         char *filter_ref;
+        uint64_t reservation;
+        uint64_t limit;
         struct vsi_device vsi;
 };
 

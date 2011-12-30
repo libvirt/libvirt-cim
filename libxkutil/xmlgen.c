@@ -320,6 +320,45 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                                 BAD_CAST net->filter_ref);
                 }
 
+#if LIBVIR_VERSION_NUMBER >= 9000
+                /* Network QoS settings saved under <bandwidth> XML section */
+                if (net->reservation || net->limit) {
+                        int ret;
+                        char *string = NULL;
+
+                        tmp = xmlNewChild(nic, NULL,
+                                          BAD_CAST "bandwidth", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+
+                        /* Set inbound bandwidth from Reservation & Limit */
+                        tmp = xmlNewChild(tmp, NULL,
+                                          BAD_CAST "inbound", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+
+                        if (net->reservation) {
+                                ret = asprintf(&string, "%" PRIu64,
+                                               net->reservation);
+                                if (ret == -1)
+                                        return XML_ERROR;
+                                xmlNewProp(tmp, BAD_CAST "average",
+                                           BAD_CAST string);
+                                free(string);
+                        }
+
+                        if (net->limit) {
+                                ret = asprintf(&string, "%" PRIu64,
+                                               net->limit);
+                                if (ret == -1)
+                                        return XML_ERROR;
+                                xmlNewProp(tmp, BAD_CAST "peak",
+                                           BAD_CAST string);
+                                free(string);
+                        }
+                }
+#endif
+
                 if (STREQ(dev->dev.net.type, "network"))
                         msg = set_net_source(nic, net, "network");
                 else if (STREQ(dev->dev.net.type, "bridge"))

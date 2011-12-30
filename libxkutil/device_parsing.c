@@ -444,7 +444,39 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         ndev->filter_ref = get_attr_value(child, "filter");
                 } else if (XSTREQ(child->name, "virtualport")) {
                         parse_vsi_device(child, ndev);
+#if LIBVIR_VERSION_NUMBER >= 9000
+                } else if (XSTREQ(child->name, "bandwidth")) {
+                        /* Network QoS bandwidth support */
+                        xmlNode *grandchild = NULL;
+                        for (grandchild = child->children;
+                             grandchild != NULL;
+                             grandchild = grandchild->next) {
+                                if (XSTREQ(grandchild->name, "inbound")) {
+                                          /* Only expose inbound bandwidth */
+                                          char *val;
+
+                                          val = get_attr_value(grandchild,
+                                                               "average");
+                                          if (val != NULL) {
+                                                  sscanf(val, "%" PRIu64,
+                                                     &ndev->reservation);
+                                                  free(val);
+                                          } else
+                                                  ndev->reservation = 0;
+
+                                          val = get_attr_value(grandchild,
+                                                               "peak");
+                                          if (val != NULL) {
+                                                  sscanf(val, "%" PRIu64,
+                                                     &ndev->limit);
+                                                  free(val);
+                                          } else
+                                                  ndev->limit = 0;
+                                          break;
+                                }
+                        }
                 }
+#endif
 
         }
 
@@ -861,6 +893,8 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.vsi.instance_id);
                 DUP_FIELD(dev, _dev, dev.net.vsi.filter_ref);
                 DUP_FIELD(dev, _dev, dev.net.vsi.profile_id);
+                dev->dev.net.reservation = _dev->dev.net.reservation;
+                dev->dev.net.limit = _dev->dev.net.limit;
         } else if (dev->type == CIM_RES_TYPE_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);

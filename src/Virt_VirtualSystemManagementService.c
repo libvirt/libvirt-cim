@@ -68,6 +68,7 @@
 #define RASD_IND_DELETED "ResourceAllocationSettingDataDeletedIndication"
 #define RASD_IND_MODIFIED "ResourceAllocationSettingDataModifiedIndication"
 
+#if LIBVIR_VERSION_NUMBER < 9000
 /* Network QoS support */
 #define QOSCMD_BANDWIDTH2ID "_ROOT=$(tc class show dev %s | awk '($4==\"root\")\
 {print $3}')\n tc class show dev %s | awk -v rr=$_ROOT -v bw=%uKbit \
@@ -96,6 +97,7 @@ $U32 match u16 0x0800 0xFFFF at -2 match u16 0x$ME2 0xFFFF at -4 match u32 \
 ffff: prio 50 u32\"; $U32 match u16 0x0800 0xFFFF at -2 match u32 0x$MI2 \
 0xFFFFFFFF at -12 match u16 0x$MI1 0xFFFF at -14 police rate %uKbit burst 15k \
 drop\n"
+#endif
 
 const static CMPIBroker *_BROKER;
 
@@ -105,6 +107,7 @@ enum ResourceAction {
         RESOURCE_MOD,
 };
 
+#if LIBVIR_VERSION_NUMBER < 9000
 /* Network QoS support */
 static CMPIStatus add_qos_for_mac(const uint64_t qos,
                                   const char *mac,
@@ -202,6 +205,7 @@ static CMPIStatus remove_qos_for_mac(const uint64_t qos,
         free(cmd);
         return s;
 }
+#endif
 
 static CMPIStatus check_uuid_in_use(const CMPIObjectPath *ref,
                                     struct domain *domain)
@@ -973,6 +977,15 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.net.model = NULL;
         else
                 dev->dev.net.model = strdup(val);
+
+        if (cu_get_u64_prop(inst, "Reservation",
+                            &dev->dev.net.reservation) != CMPI_RC_OK)
+                dev->dev.net.reservation = 0;
+
+        if (cu_get_u64_prop(inst, "Limit",
+                            &dev->dev.net.limit) != CMPI_RC_OK)
+                dev->dev.net.limit = 0;
+
  out:
         free(network);
         return msg;
@@ -1645,8 +1658,10 @@ static const char *classify_resources(CMPIArray *resources,
                 } else if (type == CIM_RES_TYPE_NET) {
                         struct virt_device dev;
                         int ncount = count + domain->dev_net_ct;
+#if LIBVIR_VERSION_NUMBER < 9000
                         uint64_t qos_val = 0;
                         const char *qos_unitstr;
+#endif
 
                         memset(&dev, 0, sizeof(dev));
                         msg = rasd_to_vdev(inst,
@@ -1659,6 +1674,7 @@ static const char *classify_resources(CMPIArray *resources,
                                                        ncount,
                                                        &domain->dev_net_ct);
 
+#if LIBVIR_VERSION_NUMBER < 9000
 			/* Network QoS support */
                         if (((&dev)->dev.net.mac != NULL) &&
                             ((&dev)->dev.net.source != NULL) &&
@@ -1672,6 +1688,7 @@ static const char *classify_resources(CMPIArray *resources,
                                                 (&dev)->dev.net.mac,
                                                 (&dev)->dev.net.source);
                         }
+#endif
                 } else if (type == CIM_RES_TYPE_GRAPHICS) {
                         struct virt_device dev;
                         int gcount = count + domain->dev_graphics_ct;
@@ -2763,14 +2780,16 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                             (type == CIM_RES_TYPE_INPUT))
                                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                         else {
+#if LIBVIR_VERSION_NUMBER < 9000
                                 uint64_t qos_val = 0;
                                 const char *qos_unitstr;
-
+#endif
                                 s = _resource_dynamic(dominfo,
                                                       dev,
                                                       RESOURCE_MOD,
                                                       CLASSNAME(op));
 
+#if LIBVIR_VERSION_NUMBER < 9000
                                 /* Network QoS support */
                                 if ((type == CIM_RES_TYPE_NET) &&
                                     (dev->dev.net.mac != NULL) &&
@@ -2785,6 +2804,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                                                             dev->dev.net.mac,
                                                             dev->dev.net.source);
                                 }
+#endif
                         }
                         break;
                 }

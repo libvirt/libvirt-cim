@@ -39,6 +39,7 @@
 #include "svpc_types.h"
 #include "Virt_Device.h"
 
+#if LIBVIR_VERSION_NUMBER < 9000
 /* Network QoS support */
 #define QOSCMD_MAC2BANDWIDTH "_ROOT=$(tc class show dev %s | awk '($4==\"root\")\
 {print $3}')\n _ID=$(tc filter show dev %s | awk 'BEGIN {RS=\"\\nfilter\"} (NR>2)\
@@ -48,6 +49,7 @@ m1,m2,m3,m4,m5,m6,$18)}' | awk -v mm=%s '($1==mm){print $2}')\n \
 if [[ -n \"$_ID\" ]]; then\n tc class show dev %s | awk -v rr=$_ROOT -v id=$_ID \
 '($4==\"parent\" && $5==rr && $3==id){print \
 substr($13,1,(index($13,\"Kbit\")-1))}'\n fi\n"
+#endif
 
 const static CMPIBroker *_BROKER;
 
@@ -463,11 +465,7 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                                        const struct virt_device *dev,
                                        CMPIInstance *inst)
 {
-        FILE *pipe = NULL;
-        char *cmd = NULL;
-        uint64_t val = 0;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int i;
 
         CMSetProperty(inst,
                       "NetworkType",
@@ -485,8 +483,14 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.net.source,
                               CMPI_chars);
 
+#if LIBVIR_VERSION_NUMBER < 9000
         /* Network QoS support */
         if ((dev->dev.net.mac != NULL) && (dev->dev.net.source != NULL)) {
+                FILE *pipe = NULL;
+                char *cmd = NULL;
+                uint64_t val = 0;
+                int i;
+
                 /* Get tc performance class bandwidth for this MAC addr */
                 i = asprintf(&cmd, QOSCMD_MAC2BANDWIDTH, dev->dev.net.source,
                                                          dev->dev.net.source,
@@ -511,6 +515,25 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                 }
                 free(cmd);
         }
+#else
+        if (dev->dev.net.reservation) {
+                CMSetProperty(inst,
+                              "Reservation",
+                              (CMPIValue *)&(dev->dev.net.reservation),
+                              CMPI_uint64);
+
+                if (dev->dev.net.limit)
+                        CMSetProperty(inst,
+                                      "Limit",
+                                      (CMPIValue *)&(dev->dev.net.limit),
+                                      CMPI_uint64);
+
+                CMSetProperty(inst,
+                              "AllocationUnits",
+                              (CMPIValue *)"KiloBytes per Second",
+                              CMPI_chars);
+        }
+#endif
 
         if ((dev->dev.net.source != NULL) &&
             (STREQ(dev->dev.net.type, "direct")))
@@ -543,7 +566,9 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.net.poolid,
                               CMPI_chars);
 
+#if LIBVIR_VERSION_NUMBER < 9000
 out:
+#endif
         return s;
 }
 

@@ -69,14 +69,16 @@ const static CMPIBroker *_BROKER;
 #define SDC_DISK_DEF 5000
 #define SDC_DISK_INC 250
 
-#define DEVICE_RASD 0 
-#define POOL_RASD   1 
+#define DEVICE_RASD 0
+#define POOL_RASD   1
 #define NEW_VOL_RASD   2
 
 /* QoS Network support */
+#if LIBVIR_VERSION_NUMBER < 9000
 #define QOSCMD_LISTCLASSES "_ROOT=$(tc class show dev %s | awk '($4==\"root\")\
 {print $3}')\n tc class show dev %s | awk -v rr=$_ROOT \
 '($4==\"parent\" && $5==rr){print $3\" \"$13}'\n"
+#endif
 
 static bool system_has_vt(virConnectPtr conn)
 {
@@ -350,16 +352,16 @@ static CMPIStatus mem_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_MEM, DEVICE_RASD); 
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_MEM, DEVICE_RASD);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-        CMSetProperty(inst, "AllocationUnits", 
+        CMSetProperty(inst, "AllocationUnits",
                       (CMPIValue *)"KiloBytes", CMPI_chars);
-        CMSetProperty(inst, "VirtualQuantity", 
+        CMSetProperty(inst, "VirtualQuantity",
                       (CMPIValue *)&mem_size, CMPI_uint64);
-        CMSetProperty(inst, "Limit", 
+        CMSetProperty(inst, "Limit",
                       (CMPIValue *)&mem_size, CMPI_uint64);
 
         inst_list_add(list, inst);
@@ -457,20 +459,20 @@ static CMPIStatus proc_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_PROC, DEVICE_RASD); 
+        inst = sdc_rasd_inst(&s, ref, CIM_RES_TYPE_PROC, DEVICE_RASD);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
-        CMSetProperty(inst, "AllocationUnits", 
+        CMSetProperty(inst, "AllocationUnits",
                       (CMPIValue *)"Processors", CMPI_chars);
-        CMSetProperty(inst, "VirtualQuantity", 
+        CMSetProperty(inst, "VirtualQuantity",
                       (CMPIValue *)&num_procs, CMPI_uint64);
 
         if (STARTS_WITH(CLASSNAME(ref), "Xen")) {
-                CMSetProperty(inst, "Limit", (CMPIValue *)&limit, CMPI_uint64); 
-                CMSetProperty(inst, "Weight", 
-                              (CMPIValue *)&weight, CMPI_uint32); 
+                CMSetProperty(inst, "Limit", (CMPIValue *)&limit, CMPI_uint64);
+                CMSetProperty(inst, "Weight",
+                              (CMPIValue *)&weight, CMPI_uint32);
         }
         else if (STARTS_WITH(CLASSNAME(ref), "KVM")) {
                 CMSetProperty(inst, "Weight",
@@ -493,7 +495,7 @@ static uint64_t net_max_xen(const CMPIObjectPath *ref,
 
         conn = connect_by_classname(_BROKER, CLASSNAME(ref), s);
         if (s->rc != CMPI_RC_OK) {
-                cu_statusf(_BROKER, s, 
+                cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
                            "Could not get connection");
                 goto out;
@@ -513,7 +515,7 @@ static uint64_t net_max_xen(const CMPIObjectPath *ref,
                 num_nics = XEN_MAX_NICS;
         else
                 num_nics = 4;
-        
+
  out:
         virConnectClose(conn);
         return num_nics;
@@ -567,6 +569,8 @@ static CMPIStatus set_net_props(int type,
                                 const char *net_type,
                                 const char *net_name,
                                 uint64_t num_nics,
+                                uint64_t reservation,
+                                uint64_t limit,
                                 const char *device,
                                 const char *src_dev,
                                 const char *net_mode,
@@ -594,12 +598,27 @@ static CMPIStatus set_net_props(int type,
         CMSetProperty(inst, "VirtualQuantity",
                       (CMPIValue *)&num_nics, CMPI_uint64);
 
+#if LIBVIR_VERSION_NUMBER >= 9000
+        /* Network QoS support for later libvirt versions */
+        if (reservation)
+                CMSetProperty(inst, "Reservation",
+                      (CMPIValue *)&reservation, CMPI_uint64);
+
+        if (limit)
+                CMSetProperty(inst, "Limit",
+                      (CMPIValue *)&reservation, CMPI_uint64);
+
+        if (reservation || limit)
+                CMSetProperty(inst, "AllocationUnits",
+                      (CMPIValue *)"KiloBytes per Second", CMPI_chars);
+#endif
+
         if (device != NULL)
-                CMSetProperty(inst, "VirtualDevice", 
+                CMSetProperty(inst, "VirtualDevice",
                              (CMPIValue *)device, CMPI_chars);
 
         if (net_mode != NULL)
-                CMSetProperty(inst, "NetworkMode", 
+                CMSetProperty(inst, "NetworkMode",
                              (CMPIValue *)net_mode, CMPI_chars);
 
         if (src_dev != NULL)
@@ -607,32 +626,32 @@ static CMPIStatus set_net_props(int type,
                              (CMPIValue *)src_dev, CMPI_chars);
 
         if (model != NULL)
-                CMSetProperty(inst, "ResourceSubType", 
+                CMSetProperty(inst, "ResourceSubType",
                              (CMPIValue *)model, CMPI_chars);
 
         if (vsi != NULL)
-                s = CMSetProperty(inst, "VSIType", 
+                s = CMSetProperty(inst, "VSIType",
                              (CMPIValue *)vsi, CMPI_chars);
 
 
         if (manager != NULL)
-                CMSetProperty(inst, "VSIManagerID", 
+                CMSetProperty(inst, "VSIManagerID",
                              (CMPIValue *)manager, CMPI_chars);
 
         if (typeid != NULL)
-                CMSetProperty(inst, "VSITypeID", 
+                CMSetProperty(inst, "VSITypeID",
                              (CMPIValue *)typeid, CMPI_chars);
 
         if (version != NULL)
-                CMSetProperty(inst, "VSITypeIDVersion", 
+                CMSetProperty(inst, "VSITypeIDVersion",
                              (CMPIValue *)version, CMPI_chars);
 
         if (instance != NULL)
-                CMSetProperty(inst, "VSIInstanceID", 
+                CMSetProperty(inst, "VSIInstanceID",
                              (CMPIValue *)instance, CMPI_chars);
 
         if (profile != NULL)
-                CMSetProperty(inst, "ProfileID", 
+                CMSetProperty(inst, "ProfileID",
                              (CMPIValue *)profile, CMPI_chars);
 
         inst_list_add(list, inst);
@@ -647,6 +666,8 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
 {
         bool ret;
         uint64_t num_nics;
+        uint64_t reservation = 0;
+        uint64_t limit = 0;
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int i,j;
@@ -658,16 +679,21 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
         switch (template_type) {
         case SDC_RASD_MIN:
                 num_nics = 0;
+                reservation = 1;
+                limit = 1;
                 id = "Minimum";
                 break;
         case SDC_RASD_MAX:
                 ret = get_max_nics(ref, &num_nics, &s);
                 if (!ret)
                     goto out;
+                /* No apparant maximum reservation or limit QoS setting in libvirt! */
                 id = "Maximum";
                 break;
         case SDC_RASD_INC:
                 num_nics = 1;
+                reservation = 1;
+                limit = 1;
                 id = "Increment";
                 break;
         case SDC_RASD_DEF:
@@ -681,19 +707,20 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        
         for (i = 0; i < 3; i++) {
                 for (j = 0; j < 2; j++) {
-                        s = set_net_props(template_type, 
-                                          ref, 
-                                          id, 
-                                          type[i], 
-                                          name[i], 
-                                          num_nics, 
-                                          device[j], 
+                        s = set_net_props(template_type,
+                                          ref,
+                                          id,
+                                          type[i],
+                                          name[i],
+                                          num_nics,
+                                          reservation,
+                                          limit,
+                                          device[j],
                                           NULL,
                                           NULL,
-                                          model[j], 
+                                          model[j],
                                           NULL,
                                           NULL,
                                           NULL,
@@ -705,24 +732,28 @@ static CMPIStatus net_template(const CMPIObjectPath *ref,
                                 goto out;
                 }
         }
-        
+
         s = set_net_props(template_type, ref, id, "direct", NULL,
-                          num_nics, NULL, "eth1", "vepa", NULL,
+                          num_nics, reservation, limit,
+                          NULL, "eth1", "vepa", NULL,
                           NULL, NULL, NULL, NULL, NULL, NULL, list);
        /* profile id*/
         s = set_net_props(template_type, ref, id, "direct", NULL,
-                              num_nics, NULL, "eth1", "vepa", NULL,
+                              num_nics, reservation, limit,
+                              NULL, "eth1", "vepa", NULL,
                               "802.1Qbh", NULL, NULL, NULL,
                               NULL, "my_profile", list);
        /* no profile id but with instance id*/
         s = set_net_props(template_type, ref, id, "direct", NULL,
-                              num_nics, NULL, "eth1", "vepa", NULL,
+                              num_nics, reservation, limit,
+                              NULL, "eth1", "vepa", NULL,
                               "802.1Qbg", "managerid", "typeid",
                               "typeidversion", "instanceid", NULL,
                               list);
        /* no profile id and no instance id*/
         s = set_net_props(template_type, ref, id, "direct", NULL,
-                              num_nics, NULL, "eth1", "vepa", NULL,
+                              num_nics, reservation, limit,
+                              NULL, "eth1", "vepa", NULL,
                               "802.1Qbg", "managerid", "typeid",
                               "typeidversion", "NULL", "NULL", list);
 
@@ -767,7 +798,7 @@ static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
 
                         CU_DEBUG("InstanceID = %s", tmp_str);
 
-                        CMSetProperty(inst, "InstanceID", (CMPIValue *)tmp_str, 
+                        CMSetProperty(inst, "InstanceID", (CMPIValue *)tmp_str,
                                       CMPI_chars);
                         tmp_str = strtok('\0', " ");
                         if (tmp_str == NULL) {
@@ -783,7 +814,7 @@ static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
                                       (CMPIValue *)&val, CMPI_uint64);
 
                         CMSetProperty(inst, "AllocationUnits",
-                                      (CMPIValue *)"Kilobits per Second", 
+                                      (CMPIValue *)"Kilobits per Second",
                                       CMPI_chars);
                 }
 
@@ -808,12 +839,13 @@ static CMPIStatus set_net_pool_props(const CMPIObjectPath *ref,
                 }
 
                 inst_list_add(list, inst);
-        }       
+        }
 
  out:
         return s;
 }
 
+#if LIBVIR_VERSION_NUMBER < 9000
 static char * get_bridge_name(virConnectPtr conn, const char *name)
 {
         char *bridge = NULL;
@@ -913,7 +945,7 @@ static CMPIStatus qos_hack(
 
         return s;
 }
-
+#endif
 
 static CMPIStatus net_pool_template(const CMPIObjectPath *ref,
                                     int template_type,
@@ -921,8 +953,8 @@ static CMPIStatus net_pool_template(const CMPIObjectPath *ref,
 {
         char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        int type[3] = {NETPOOL_FORWARD_NONE, 
-                       NETPOOL_FORWARD_NAT, 
+        int type[3] = {NETPOOL_FORWARD_NONE,
+                       NETPOOL_FORWARD_NAT,
                        NETPOOL_FORWARD_ROUTED};
         int pool_types = 3;
         int i;
@@ -1035,7 +1067,7 @@ static CMPIStatus set_disk_props(int type,
                         CMSetProperty(inst, "Caption",
                                       (CMPIValue *)"FV disk", CMPI_chars);
                 }
-                
+
                 if (emu_type == VIRT_DISK_TYPE_DISK) {
                         CMSetProperty(inst, "VirtualQuantity",
                                       (CMPIValue *)&disk_size, CMPI_uint64);
@@ -1115,31 +1147,31 @@ static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
         if (STREQ(pfx, "Xen")) {
                 int xen_type[2] = {DOMAIN_XENFV, DOMAIN_XENPV};
                 int i = 0;
- 
+
                 for (; i < 2; i++) {
                         s = set_disk_props(xen_type[i],
-                                           ref, 
+                                           ref,
                                            id_str,
-                                           vol_path, 
-                                           vol_size, 
-                                           emu_type, 
+                                           vol_path,
+                                           vol_size,
+                                           emu_type,
                                            readonly,
                                            cache,
-                                           list); 
+                                           list);
                 }
         } else if (STREQ(pfx, "KVM")) {
                 s = set_disk_props(DOMAIN_KVM,
-                                   ref, 
+                                   ref,
                                    id_str,
-                                   vol_path, 
-                                   vol_size, 
-                                   emu_type, 
+                                   vol_path,
+                                   vol_size,
+                                   emu_type,
                                    readonly,
                                    cache,
-                                   list); 
+                                   list);
 
         } else if (!STREQ(pfx, "LXC")){
-                cu_statusf(_BROKER, &s, 
+                cu_statusf(_BROKER, &s,
                             CMPI_RC_ERR_FAILED,
                            "Unsupported virtualization type");
        }
@@ -1359,14 +1391,14 @@ static CMPIStatus _new_volume_template(const CMPIObjectPath *ref,
         CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
 
         alloc = 0;
-        CMSetProperty(inst, "AllocationQuantity", 
+        CMSetProperty(inst, "AllocationQuantity",
                       (CMPIValue *)&alloc, CMPI_uint16);
 
         cap = 0;
         CMSetProperty(inst, "Capacity", (CMPIValue *)&cap, CMPI_uint16);
 
         if (units != NULL)
-                CMSetProperty(inst, "AllocationUnits", 
+                CMSetProperty(inst, "AllocationUnits",
                               (CMPIValue *)units, CMPI_chars);
 
         inst_list_add(list, inst);
@@ -1527,7 +1559,7 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         }
 
         if (parse_fq_devid(instid, &host, (char **)&poolname) != 1) {
-                cu_statusf(_BROKER, &s, 
+                cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unable to get pool device id");
                 goto out;
@@ -1544,7 +1576,7 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
 
         s = new_volume_template(ref, template_type, poolptr, list);
         if (s.rc != CMPI_RC_OK)
-                goto out;            
+                goto out;
 
         if ((numvols = virStoragePoolNumOfVolumes(poolptr)) == -1) {
                 virt_set_status(_BROKER, &s,
@@ -1587,30 +1619,30 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
                                         "Storage Volume `%s' not found",
                                         volnames[i]);
                         goto out;
-                }         
-                
+                }
+
                 s = avail_volume_template(ref, template_type, volptr, list);
 
                 virStorageVolFree(volptr);
 
                 if (s.rc != CMPI_RC_OK)
-                        goto out;            
+                        goto out;
         }
 
-        s = cdrom_or_floppy_template(ref, 
-                                     template_type, 
-                                     VIRT_DISK_TYPE_CDROM, 
+        s = cdrom_or_floppy_template(ref,
+                                     template_type,
+                                     VIRT_DISK_TYPE_CDROM,
                                      list);
         if (s.rc != CMPI_RC_OK)
-                goto out;            
+                goto out;
 
-        s = cdrom_or_floppy_template(ref, 
-                                     template_type, 
-                                     VIRT_DISK_TYPE_FLOPPY, 
+        s = cdrom_or_floppy_template(ref,
+                                     template_type,
+                                     VIRT_DISK_TYPE_FLOPPY,
                                      list);
 
  out:
-        free(pfx); 
+        free(pfx);
         for (i = 0; i < numvolsret; i++)
                 free(volnames[i]);
         free(volnames);
@@ -1636,16 +1668,16 @@ static CMPIStatus disk_template(const CMPIObjectPath *ref,
         if (STREQ(pfx, "LXC"))
                 goto out;
 
-        s = odrom_or_floppy_template(ref, 
-                                     template_type, 
-                                     VIRT_DISK_TYPE_CDROM, 
+        s = odrom_or_floppy_template(ref,
+                                     template_type,
+                                     VIRT_DISK_TYPE_CDROM,
                                      list);
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        s = cdrom_or_floppy_template(ref, 
-                                     template_type, 
-                                     VIRT_DISK_TYPE_FLOPPY, 
+        s = cdrom_or_floppy_template(ref,
+                                     template_type,
+                                     VIRT_DISK_TYPE_FLOPPY,
                                      list);
 
  out:
@@ -1664,10 +1696,10 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         CMPIArray *array;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *path = "/dev/null";
-        int type[7] = {DISK_POOL_DIR, 
-                       DISK_POOL_FS, 
-                       DISK_POOL_NETFS, 
-                       DISK_POOL_DISK, 
+        int type[7] = {DISK_POOL_DIR,
+                       DISK_POOL_FS,
+                       DISK_POOL_NETFS,
+                       DISK_POOL_DISK,
                        DISK_POOL_ISCSI,
                        DISK_POOL_LOGICAL,
                        DISK_POOL_SCSI};
@@ -1769,28 +1801,28 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
                 }
 
                 if (host != NULL)
-                        CMSetProperty(inst, "Host", 
+                        CMSetProperty(inst, "Host",
                                       (CMPIValue *)host, CMPI_chars);
 
                 if (src_dir != NULL)
-                        CMSetProperty(inst, "SourceDirectory", 
+                        CMSetProperty(inst, "SourceDirectory",
                                       (CMPIValue *)src_dir, CMPI_chars);
 
                 if (adapter != NULL)
-                        CMSetProperty(inst, "AdapterName", 
+                        CMSetProperty(inst, "AdapterName",
                                       (CMPIValue *)adapter, CMPI_chars);
 
                 if (port_name != NULL)
-                        CMSetProperty(inst, "PortName", 
+                        CMSetProperty(inst, "PortName",
                                       (CMPIValue *)port_name, CMPI_chars);
 
                 if (node_name != NULL)
-                        CMSetProperty(inst, "NodeName", 
+                        CMSetProperty(inst, "NodeName",
                                       (CMPIValue *)node_name, CMPI_chars);
 
                 CMSetProperty(inst, "Type", (CMPIValue *)&type[i], CMPI_uint16);
                 CMSetProperty(inst, "Path", (CMPIValue *)path, CMPI_chars);
-                CMSetProperty(inst, "Autostart", (CMPIValue *)&autostart, 
+                CMSetProperty(inst, "Autostart", (CMPIValue *)&autostart,
                               CMPI_uint16);
 
                 inst_list_add(list, inst);
@@ -1833,12 +1865,12 @@ static CMPIStatus disk_res_template(const CMPIObjectPath *ref,
 
         if (val)
                 s = disk_pool_template(ref, template_type, list);
-        else 
+        else
                 s = disk_template(ref, template_type, list);
 
  out:
 
-        return s;                        
+        return s;
 }
 
 static CMPIStatus set_graphics_props(const CMPIObjectPath *ref,
@@ -1854,7 +1886,7 @@ static CMPIStatus set_graphics_props(const CMPIObjectPath *ref,
 
         CMSetProperty(inst, "InstanceID", (CMPIValue *)id, CMPI_chars);
         CMSetProperty(inst, "Address", (CMPIValue *)addr, CMPI_chars);
-        
+
         if (STREQC(type, "vnc")) {
                 CMSetProperty(inst, "KeyMap", (CMPIValue *)"en-us", CMPI_chars);
         }
@@ -1873,7 +1905,7 @@ static CMPIStatus graphics_template(const CMPIObjectPath *ref,
         const char *id;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *type[] = {"sdl", "vnc"};
-        const char *addr[] = {NULL, "127.0.0.1:-1", "[::1]:-1", 
+        const char *addr[] = {NULL, "127.0.0.1:-1", "[::1]:-1",
                               "True", "False"};
         int type_ct = 2;
         int i,j;
@@ -2011,33 +2043,33 @@ static CMPIStatus input_template(const CMPIObjectPath *ref,
 
         if (STREQ(pfx, "Xen")) {
                 for(i = 0; xen_inputs[i][0] != NULL; i++) {
-                        s = set_input_props(ref, 
-                                            id, 
-                                            xen_inputs[i][0], 
-                                            xen_inputs[i][1], 
-                                            xen_inputs[i][2], 
+                        s = set_input_props(ref,
+                                            id,
+                                            xen_inputs[i][0],
+                                            xen_inputs[i][1],
+                                            xen_inputs[i][2],
                                             list);
                         if (s.rc != CMPI_RC_OK)
                                 goto out;
                 }
         } else if (STREQ(pfx, "KVM")) {
                 for(i = 0; kvm_inputs[i][0] != NULL; i++) {
-                        s = set_input_props(ref, 
-                                            id, 
-                                            kvm_inputs[i][0], 
-                                            kvm_inputs[i][1], 
-                                            kvm_inputs[i][2], 
+                        s = set_input_props(ref,
+                                            id,
+                                            kvm_inputs[i][0],
+                                            kvm_inputs[i][1],
+                                            kvm_inputs[i][2],
                                             list);
                         if (s.rc != CMPI_RC_OK)
                                 goto out;
                 }
         } else if (STREQ(pfx, "LXC")) {
                 for(i = 0; lxc_inputs[i][0] != NULL; i++) {
-                        s = set_input_props(ref, 
-                                            id, 
-                                            lxc_inputs[i][0], 
-                                            lxc_inputs[i][1], 
-                                            lxc_inputs[i][2], 
+                        s = set_input_props(ref,
+                                            id,
+                                            lxc_inputs[i][0],
+                                            lxc_inputs[i][1],
+                                            lxc_inputs[i][2],
                                             list);
                         if (s.rc != CMPI_RC_OK)
                                 goto out;
@@ -2086,8 +2118,10 @@ static CMPIStatus sdc_rasds_for_type(const CMPIObjectPath *ref,
                 }
         }
 
+#if LIBVIR_VERSION_NUMBER < 9000
         if (type == CIM_RES_TYPE_NET)
                 s = qos_hack(ref, list);
+#endif
 
  out:
         return s;
@@ -2116,7 +2150,7 @@ static CMPIStatus alloc_cap_to_rasd(const CMPIObjectPath *ref,
         s = get_alloc_cap_by_id(_BROKER, ref, id, &inst);
         if ((inst == NULL) || (s.rc != CMPI_RC_OK))
                 goto out;
- 
+
         type = res_type_from_pool_id(id);
 
         if (type == CIM_RES_TYPE_UNKNOWN) {
@@ -2404,8 +2438,8 @@ static struct std_assoc *assoc_handlers[] = {
 
 STDA_AssocMIStub(,
                  Virt_SettingsDefineCapabilities,
-                 _BROKER, 
-                 libvirt_cim_init(), 
+                 _BROKER,
+                 libvirt_cim_init(),
                  assoc_handlers);
 
 /*
