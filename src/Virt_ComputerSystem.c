@@ -492,6 +492,7 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
         }
 
         if (!set_name_from_dom(dom, instance)) {
+                CU_DEBUG("Unable to get domain name");
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_FAILED,
                                 virDomainGetConnect(dom),
@@ -500,6 +501,7 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
         }
 
         if (!set_uuid_from_dom(dom, instance, &uuid)) {
+                CU_DEBUG("Unable to get domain uuid");
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_FAILED,
                                 virDomainGetConnect(dom),
@@ -514,6 +516,7 @@ static CMPIStatus set_properties(const CMPIBroker *broker,
         }
 
         if (!set_state_from_dom(broker, dom, instance)) {
+                CU_DEBUG("Unable to get domain info");
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_FAILED,
                                 virDomainGetConnect(dom),
@@ -660,6 +663,7 @@ CMPIStatus get_domain_by_name(const CMPIBroker *broker,
 
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
         if (conn == NULL) {
+                CU_DEBUG("No such instance");
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "No such instance.");
@@ -668,6 +672,7 @@ CMPIStatus get_domain_by_name(const CMPIBroker *broker,
 
         dom = virDomainLookupByName(conn, name);
         if (dom == NULL) {
+                CU_DEBUG("Domain '%s' does not exist", name);
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_NOT_FOUND,
                                 conn,
@@ -681,8 +686,10 @@ CMPIStatus get_domain_by_name(const CMPIBroker *broker,
                               conn,
                               dom,  
                               &inst);
-        if (s.rc != CMPI_RC_OK)
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("Unable to retrieve instance from domain");
                 goto out;
+        }
 
         *_inst = inst;
 
@@ -765,39 +772,6 @@ DEFAULT_MI();
 DEFAULT_DI();
 DEFAULT_EQ();
 DEFAULT_INST_CLEANUP();
-
-static bool trigger_mod_indication(const CMPIContext *context,
-                                   CMPIInstance *prev_inst,
-                                   const CMPIObjectPath *ref)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        const char *ind_name = "ComputerSystemModifiedIndication";
-        CMPIInstance *ind = NULL;
-        char *type = NULL;
-
-        CU_DEBUG("Preparing ComputerSystem indication");
-
-        ind = get_typed_instance(_BROKER,
-                                 CLASSNAME(ref),
-                                 ind_name,
-                                 NAMESPACE(ref));
-        if (ind == NULL) {
-                CU_DEBUG("Failed to create ind '%s'", ind_name);
-                goto out;
-        }
-
-        CU_DEBUG("Setting PreviousInstance");
-        CMSetProperty(ind, "PreviousInstance",
-                      (CMPIValue *)&prev_inst, CMPI_instance);
-
-        type = get_typed_class(CLASSNAME(ref), ind_name);
-
-        s = stdi_raise_indication(_BROKER, context, type, NAMESPACE(ref), ind);
-
- out:
-        free(type);
-        return s.rc == CMPI_RC_OK;
-}
 
 static int xen_scheduler_params(struct infostore_ctx *ctx,
                                 virSchedParameter **params)
@@ -1253,7 +1227,6 @@ static CMPIStatus state_change(CMPIMethodMI *self,
         int ret;
         const char *name = NULL;
         uint32_t rc = 1;
-        bool ind_rc;
 
         ret = cu_get_u16_arg(argsin, "RequestedState", &state);
         if (ret != CMPI_RC_OK) {
@@ -1282,13 +1255,9 @@ static CMPIStatus state_change(CMPIMethodMI *self,
 
         s = __state_change(name, state, reference);
 
-        if (s.rc == CMPI_RC_OK) {
-                ind_rc= trigger_mod_indication(context, prev_inst, reference);
-                if (!ind_rc)
-                        CU_DEBUG("Unable to trigger indication");
-         
+        if (s.rc == CMPI_RC_OK)
                 rc = 0;
-        }
+
  out:
         CMReturnData(results, &rc, CMPI_uint32);
 

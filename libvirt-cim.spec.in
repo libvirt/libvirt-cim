@@ -10,12 +10,12 @@ Source: libvirt-cim-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 URL: http://libvirt.org/CIM/
 Requires: libxml2 >= 2.6.0
-Requires: libvirt >= 0.6.3
+Requires: libvirt >= 0.9.0
 Requires: unzip
 Requires: tog-pegasus
 BuildRequires: libcmpiutil >= 0.5.4
 BuildRequires: tog-pegasus-devel
-BuildRequires: libvirt-devel >= 0.6.3
+BuildRequires: libvirt-devel >= 0.9.0
 
 # In RHEL5 uuid-devel is provided by e2fsprogs
 %if 0%{?el5}

@@ -24,11 +24,6 @@
 #include <cmpidt.h>
 #include <stdbool.h>
 
-bool cs_lifecycle_indication(const CMPIBroker *broker,
-                             const CMPIContext *ctx,
-                             const CMPIObjectPath *newsystem,
-                             char *type);
-
 void set_source_inst_props(const CMPIBroker *broker,
                            const CMPIContext *context,
                            const CMPIObjectPath *ref,

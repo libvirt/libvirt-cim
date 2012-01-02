@@ -1975,7 +1975,7 @@ static CMPIStatus raise_rasd_indication(const CMPIContext *context,
         CMPIObjectPath *op = NULL;
         int i;
 
-        CU_DEBUG("raise_rasd_indication");
+        CU_DEBUG("raise_rasd_indication %s", base_type);
 
         type = get_typed_class(CLASSNAME(ref), base_type);
 
@@ -2186,22 +2186,6 @@ static CMPIInstance *create_system(const CMPIContext *context,
         return inst;
 }
 
-static bool trigger_indication(const CMPIContext *context,
-                               const char *base_type,
-                               const CMPIObjectPath *ref)
-{
-        char *type;
-        CMPIStatus s;
-
-        type = get_typed_class(CLASSNAME(ref), base_type);
-
-        s = stdi_trigger_indication(_BROKER, context, type, NAMESPACE(ref));
-
-        free(type);
-
-        return s.rc == CMPI_RC_OK;
-}
-
 static CMPIStatus define_system(CMPIMethodMI *self,
                                 const CMPIContext *context,
                                 const CMPIResult *results,
@@ -2237,9 +2221,6 @@ static CMPIStatus define_system(CMPIMethodMI *self,
                 CMAddArg(argsout, "ResultingSystem", &result, CMPI_ref);
         }
 
-        trigger_indication(context,
-                           "ComputerSystemCreatedIndication",
-                           reference);
  out:
         if (s.rc == CMPI_RC_OK)
                 rc = CIM_SVPC_RETURN_COMPLETED;
@@ -2342,9 +2323,6 @@ error:
                                       NULL,
                                       reference,
                                       &list);
-                trigger_indication(context,
-                                   "ComputerSystemDeletedIndication",
-                                   reference);
         }
 
         virDomainFree(dom);
@@ -2426,12 +2404,8 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
                 connect_and_create(xml, ref, &s);
         }
 
-        if (s.rc == CMPI_RC_OK) {
+        if (s.rc == CMPI_RC_OK)
                 set_autostart(vssd, ref, dom);
-                trigger_indication(context,
-                                   "ComputerSystemModifiedIndication",
-                                   ref);
-        }
 
  out:
         free(xml);
