@@ -1,8 +1,8 @@
 # (C) Copyright IBM Corp. 2005
 
 m4_define([libvirtcim_maj], [0])
-m4_define([libvirtcim_min], [5])
-m4_define([libvirtcim_mic], [15])
+m4_define([libvirtcim_min], [6])
+m4_define([libvirtcim_mic], [0])
 m4_define([libvirtcim_version], [libvirtcim_maj.libvirtcim_min.libvirtcim_mic])
 
 AC_INIT([libvirt CMPI provider], [libvirtcim_version], [cvincent us ibm com],
