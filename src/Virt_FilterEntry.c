@@ -573,17 +573,12 @@ CMPIStatus enum_filter_rules(
         struct acl_filter *filters = NULL;
         int i, j, count = 0;
         CMPIStatus s = {CMPI_RC_OK, NULL};
-        enum {NONE, MAC, IP} class_type = NONE;
 
         CU_DEBUG("Reference = %s", REF2STR(reference));
 
-        if (STREQC(CLASSNAME(reference), "KVM_Hdr8021Filter")) {
-                class_type = MAC;
-        } else if (STREQC(CLASSNAME(reference), "KVM_IPHeadersFilter")) {
-                class_type = IP;
-        } else if (STREQC(CLASSNAME(reference), "KVM_FilterEntry")) {
-                class_type = NONE;
-        } else {
+        if (!STREQC(CLASSNAME(reference), "KVM_Hdr8021Filter") &&
+            !STREQC(CLASSNAME(reference), "KVM_IPHeadersFilter") &&
+            !STREQC(CLASSNAME(reference), "KVM_FilterEntry")) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
                            "Unrecognized class type");

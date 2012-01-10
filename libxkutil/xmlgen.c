@@ -630,21 +630,17 @@ static char *system_xml(xmlNodePtr root, struct domain *domain)
         tmp = xmlNewChild(root, NULL, BAD_CAST "name", BAD_CAST domain->name);
 
         if (domain->bootloader) {
-                xmlNodePtr bl;
-
-                bl = xmlNewChild(root,
-                                 NULL,
-                                 BAD_CAST "bootloader",
-                                 BAD_CAST domain->bootloader);
+                tmp = xmlNewChild(root,
+                                  NULL,
+                                  BAD_CAST "bootloader",
+                                  BAD_CAST domain->bootloader);
         }
 
         if (domain->bootloader_args) {
-                xmlNodePtr bl_args;
-
-                bl_args = xmlNewChild(root,
-                                      NULL,
-                                      BAD_CAST "bootloader_args",
-                                      BAD_CAST domain->bootloader_args);
+                tmp = xmlNewChild(root,
+                                  NULL,
+                                  BAD_CAST "bootloader_args",
+                                  BAD_CAST domain->bootloader_args);
         }
 
         tmp = xmlNewChild(root,
@@ -1272,7 +1268,7 @@ static const char *disk_pool_xml(xmlNodePtr root,
                 goto out;
 
         path = xmlNewChild(target, NULL, BAD_CAST "path", BAD_CAST pool->path);
-        if (target == NULL)
+        if (path == NULL)
                 goto out;
 
         return NULL;
@@ -1471,7 +1467,6 @@ char *res_to_xml(struct virt_pool_res *res) {
 
 char *filter_to_xml(struct acl_filter *filter)
 {
-        char *msg = XML_ERROR;
         char *xml = NULL;
         xmlNodePtr root = NULL;
         xmlNodePtr tmp = NULL;
@@ -1504,17 +1499,7 @@ char *filter_to_xml(struct acl_filter *filter)
                         goto out;
         }
 
-        /* TODO: Not yet supported
-        for (i = 0; i < filter->rule_ct; i++) {
-                msg = rule_to_xml(root, filter->rules[i]);
-                if (msg != NULL)
-                        goto out;
-        }
-        */
-
         xml = tree_to_xml(root);
-        if (xml != NULL)
-                msg = NULL; /* no errors */
 
  out:
         CU_DEBUG("Filter XML: %s", xml);

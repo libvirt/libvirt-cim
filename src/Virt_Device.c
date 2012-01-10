@@ -428,7 +428,6 @@ static bool device_instances(const CMPIBroker *broker,
                              struct inst_list *list)
 {
         int i;
-        bool ret;
         uint64_t proc_count = 0;
         CMPIInstance *instance = NULL;
 
@@ -475,11 +474,7 @@ static bool device_instances(const CMPIBroker *broker,
         }
 
         if (proc_count) {
-                ret = vcpu_instances(broker,
-                                     dom,
-                                     ns,
-                                     proc_count,
-                                     list);
+                vcpu_instances(broker, dom, ns, proc_count, list);
         }
 
         return true;
@@ -654,16 +649,17 @@ static int proc_dev_list(uint64_t quantity,
                          struct virt_device **list)
 {
         int i;
-        int rc;
-        
 
         *list = (struct virt_device *)calloc(quantity, 
                                              sizeof(struct virt_device));
 
         for (i = 0; i < quantity; i++) {
                 char *dev_num;
+                int ret;
 
-                rc = asprintf(&dev_num, "%d", i);
+                ret = asprintf(&dev_num, "%d", i);
+                if (ret == -1)
+                        CU_DEBUG("asprintf error %d" , ret);
 
                 (*list)[i].id = strdup(dev_num);
 
@@ -726,7 +722,6 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         virDomainPtr dom = NULL;
         struct virt_device *dev = NULL;
         struct inst_list tmp_list;
-        bool rc;
 
         inst_list_init(&tmp_list);
 
@@ -766,24 +761,14 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         }
 
         if (type == CIM_RES_TYPE_PROC) {
-                int ret;
                 int dev_id_num;
-                
-                ret = sscanf(dev->id, "%d", &dev_id_num);
+                sscanf(dev->id, "%d", &dev_id_num);
 
-                rc = vcpu_inst(broker,
-                               dom,
-                               NAMESPACE(reference),
-                               dev_id_num,
-                               &tmp_list);
+                vcpu_inst(broker, dom, NAMESPACE(reference),
+                          dev_id_num, &tmp_list);
         } else {
-                
-                rc = device_instances(broker, 
-                                      dev, 
-                                      1,
-                                      dom, 
-                                      NAMESPACE(reference),
-                                      &tmp_list);
+                device_instances(broker, dev, 1, dom,
+                                 NAMESPACE(reference), &tmp_list);
         }
 
         cleanup_virt_devices(&dev, 1);
@@ -799,8 +784,8 @@ CMPIStatus get_device_by_name(const CMPIBroker *broker,
         inst_list_free(&tmp_list);
         virConnectClose(conn);
 
-        return s;        
-}                                       
+        return s;
+}
 
 CMPIStatus get_device_by_ref(const CMPIBroker *broker,
                              const CMPIObjectPath *reference,

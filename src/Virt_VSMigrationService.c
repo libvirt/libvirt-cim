@@ -1182,7 +1182,6 @@ static CMPIStatus ensure_dom_offline(virDomainPtr dom)
 static void clear_infstore_migration_flag(virDomainPtr dom)
 {
         struct infostore_ctx *infp;
-        bool ret = false;
 
         infp = infostore_open(dom);
         if (infp == NULL) {
@@ -1191,7 +1190,7 @@ static void clear_infstore_migration_flag(virDomainPtr dom)
                 return;
         }
 
-        ret = infostore_set_bool(infp, "migrating", false);
+        infostore_set_bool(infp, "migrating", false);
         CU_DEBUG("Clearing infostore migrating flag");
 
         infostore_close(infp);
@@ -1475,7 +1474,6 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
         CMPIStatus s;
         CMPIObjectPath *job_op;
         struct migration_job *job;
-        CMPI_THREAD_TYPE thread;
         uint32_t retcode = 1;
         CMPIInstance *ind = NULL;
         CMPIInstance *inst = NULL;
@@ -1517,7 +1515,7 @@ static CMPIStatus migrate_do(const CMPIObjectPath *ref,
         if (!rc)
                 CU_DEBUG("Failed to raise indication");
 
-        thread = _BROKER->xft->newThread((void*)migration_thread, job, 0);
+        _BROKER->xft->newThread((void*)migration_thread, job, 0);
 
         retcode = CIM_SVPC_RETURN_JOB_STARTED;
 

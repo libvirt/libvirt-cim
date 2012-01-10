@@ -1381,10 +1381,9 @@ static const char *input_rasd_to_vdev(CMPIInstance *inst,
                                       struct virt_device *dev)
 {
         const char *val;
-        const char *msg;
 
         if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK) {
-                msg = "InputRASD ResourceSubType field not valid";
+                CU_DEBUG("InputRASD ResourceSubType field not valid");
                 goto out;
         }
         dev->dev.input.type = strdup(val);
@@ -1395,7 +1394,7 @@ static const char *input_rasd_to_vdev(CMPIInstance *inst,
                 else if (STREQC(dev->dev.input.type, "tablet"))
                         dev->dev.input.bus = strdup("usb");
                 else {
-                        msg = "Invalid value for ResourceSubType in InputRASD";
+                        CU_DEBUG("Invalid value for ResourceSubType in InputRASD");
                         goto out;
                 }
         } else

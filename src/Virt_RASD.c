@@ -289,6 +289,11 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
         uint16_t type;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         char *poolid = NULL;
+        virConnectPtr conn = NULL;
+        virStorageVolPtr vol = NULL;
+        virStoragePoolPtr pool = NULL;
+        const char *pool_name = NULL;
+        int ret = -1;
 
         get_vol_size(broker, ref, dev->dev.disk.source, &cap);
 
@@ -308,7 +313,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                       (CMPIValue *)dev->dev.disk.source,
                       CMPI_chars);
 
-        virConnectPtr conn = connect_by_classname(broker, CLASSNAME(ref), &s);
+        conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL) {
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_NOT_FOUND,
@@ -317,8 +322,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                 goto cont;
         }
 
-        virStorageVolPtr vol = virStorageVolLookupByPath(conn,
-                                                         dev->dev.disk.source);
+        vol = virStorageVolLookupByPath(conn, dev->dev.disk.source);
         if (vol == NULL) {
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_NOT_FOUND,
@@ -327,7 +331,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                 goto cont;
         }
 
-        virStoragePoolPtr pool = virStoragePoolLookupByVolume(vol);
+        pool = virStoragePoolLookupByVolume(vol);
         if (pool == NULL) {
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_NOT_FOUND,
@@ -336,7 +340,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                 goto cont;
         }
 
-        const char *pool_name = virStoragePoolGetName(pool);
+        pool_name = virStoragePoolGetName(pool);
         if (pool_name == NULL) {
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_NOT_FOUND,
@@ -345,8 +349,7 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                 goto cont;
         }
 
-        int ret = asprintf(&poolid, "DiskPool/%s", pool_name);
-
+        ret = asprintf(&poolid, "DiskPool/%s", pool_name);
         if (ret == -1) {
                CU_DEBUG("Failed to get disk poolid");
                goto cont;
