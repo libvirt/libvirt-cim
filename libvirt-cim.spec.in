@@ -54,7 +54,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.la
 rm -f $RPM_BUILD_ROOT%{_libdir}/cmpi/*.a
 rm -f $RPM_BUILD_ROOT%{_libdir}/libxkutil.so
 mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
-echo %{_libdir}/cmpi > $RPM_BUILD_ROOT/etc/ld.so.conf.d/libvirt-cim.conf
+echo %{_libdir}/cmpi > $RPM_BUILD_ROOT/etc/ld.so.conf.d/libvirt-cim.%{_arch}.conf
 mkdir -p $RPM_BUILD_ROOT@INFO_STORE@
 
 %clean
@@ -135,7 +135,7 @@ rm -fr $RPM_BUILD_ROOT
 %{_datadir}/libvirt-cim/cimv*-cimv2_mof
 %{_datadir}/libvirt-cim/*.registration
 %{_datadir}/libvirt-cim/cim_schema_*-MOFs.zip
-%{_sysconfdir}/ld.so.conf.d/libvirt-cim.conf
+%{_sysconfdir}/ld.so.conf.d/libvirt-cim.%{_arch}.conf
 %config(noreplace) %{_sysconfdir}/libvirt-cim.conf
 
 %changelog
