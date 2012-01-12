@@ -120,15 +120,14 @@ static void cleanup_sdl_device(struct graphics_device *dev)
 
 static void cleanup_graphics_device(struct graphics_device *dev)
 {
-        if (dev == NULL)
+        if (dev == NULL || dev->type == NULL)
                 return;
 
-        if (STREQC(dev->type, "sdl")) {
-            cleanup_sdl_device(dev);
-        }
-        else {
-            cleanup_vnc_device(dev);
-        }
+        if (STREQC(dev->type, "sdl"))
+                cleanup_sdl_device(dev);
+        else
+                cleanup_vnc_device(dev);
+
         free(dev->type);
 }
 

@@ -809,6 +809,13 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
                                   "MemoryPool",
                                   ns);
 
+        if (inst == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get instance for MemoryPool");
+                return s;
+        }
+
         mempool_set_total(inst, conn);
         mempool_set_consumed(inst, conn);
 
@@ -840,6 +847,13 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
                                   pfx_from_conn(conn),
                                   "ProcessorPool",
                                   ns);
+
+        if (inst == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get instance for ProcessorPool");
+                return s;
+        }
 
         procpool_set_total(inst, conn);
 

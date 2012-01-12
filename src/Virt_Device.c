@@ -102,6 +102,11 @@ static CMPIInstance *net_instance(const CMPIBroker *broker,
                                   "NetworkPort",
                                   ns);
 
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get instance for NetworkPort");
+                return NULL;
+        }
+
         if (!net_set_type(inst, dev))
                 return NULL;
 
@@ -134,6 +139,11 @@ static CMPIInstance *disk_instance(const CMPIBroker *broker,
                                   pfx_from_conn(conn),
                                   "LogicalDisk",
                                   ns);
+
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get instance for LogicalDisk");
+                return NULL;
+        }
 
         if (!disk_set_name(inst, dev))
                 return NULL;
@@ -176,6 +186,11 @@ static CMPIInstance *mem_instance(const CMPIBroker *broker,
                                   pfx_from_conn(conn),
                                   "Memory",
                                   ns);
+
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get instance for Memory");
+                return NULL;
+        }
 
         if (!mem_set_size(inst, dev))
                 return NULL;
@@ -220,6 +235,11 @@ static CMPIInstance *graphics_instance(const CMPIBroker *broker,
                                   pfx_from_conn(conn),
                                   "DisplayController",
                                   ns);
+
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get instance for DisplayController");
+                return NULL;
+        }
 
         if (!graphics_set_attr(inst, dev))
                 return NULL;
