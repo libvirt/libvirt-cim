@@ -390,7 +390,7 @@ static CMPIStatus start_snapshot_job(const CMPIObjectPath *ref,
                                      CMPIArgs *argsout)
 {
         struct snap_context *ctx;
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIObjectPath *job;
         CMPIObjectPath *vssd;
         CMPIInstance *inst;

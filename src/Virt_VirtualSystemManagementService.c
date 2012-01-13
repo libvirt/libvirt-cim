@@ -2732,7 +2732,7 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
                                         CMPIInstance *rasd,
                                         resmod_fn func)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         struct domain *dominfo = NULL;
         uint16_t type;
         char *xml = NULL;
