@@ -383,6 +383,7 @@ static int parse_vsi_device(xmlNode *dnode, struct net_device *vdevs)
         }
 
         memcpy(&(vdevs->vsi), vsi_dev, sizeof(*vsi_dev));
+        free(vsi_dev);
         return 1;
 
 err:

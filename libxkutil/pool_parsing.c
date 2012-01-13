@@ -163,10 +163,11 @@ static int parse_disk_source(xmlNode *node, struct disk_pool *pool)
 
         pool->device_paths_ct = ct;
         pool->device_paths = dev_paths;
+        return 1;
 
  err:
-
-        return 1;
+        free(dev_paths);
+        return 0;
 }
 
 char *get_disk_pool_type(uint16_t type)

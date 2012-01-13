@@ -889,8 +889,10 @@ char *device_to_xml(struct virt_device *_dev)
                 goto out;
 
         root = xmlNewNode(NULL, BAD_CAST "tmp");
-        if (root == NULL)
+        if (root == NULL) {
+                cleanup_virt_devices(&dev, 1);
                 goto out;
+        }
 
         switch (type) {
         case CIM_RES_TYPE_DISK:

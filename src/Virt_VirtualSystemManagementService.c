@@ -429,6 +429,7 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
 
                 if (CMIsNullValue(boot_elem)) {
                         CU_DEBUG("Null BootDevice");
+                        free(tmp_str_arr);
                         return 0;
                 }
 
@@ -437,6 +438,7 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
                 if (str == NULL) {
                         CU_DEBUG("Could not extract char pointer from "
                                  "CMPIArray");
+                        free(tmp_str_arr);
                         return 0;
                 }
 
@@ -2766,13 +2768,11 @@ static CMPIStatus _update_resources_for(const CMPIContext *context,
         }
 
         if (func == &resource_add) {
-                indication = strdup(RASD_IND_CREATED);
-        }
-        else if (func == &resource_del) {
-                indication = strdup(RASD_IND_DELETED);
-        }
-        else {
-                indication = strdup(RASD_IND_MODIFIED);
+                indication = RASD_IND_CREATED;
+        } else if (func == &resource_del) {
+                indication = RASD_IND_DELETED;
+        } else {
+                indication = RASD_IND_MODIFIED;
                 char *dummy_name = NULL;
 
                 if (asprintf(&dummy_name, "%s/%s",dominfo->name, devid) == -1) {

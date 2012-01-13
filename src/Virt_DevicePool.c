@@ -402,8 +402,10 @@ static char *_diskpool_member_of(virConnectPtr conn,
         char *pool = NULL;
 
         count = get_diskpool_config(conn, &pools);
-        if (count == 0)
+        if (count == 0) {
+                free(pools);
                 return NULL;
+        }
 
         for (i = 0; i < count; i++) {
                 if (_diskpool_is_member(conn, &pools[i], file)) {
@@ -1077,6 +1079,7 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
         count = get_diskpool_config(conn, &pools);
         if ((id == NULL) && (count == 0)) {
                 CU_DEBUG("No defined DiskPools");
+                free(pools);
                 return s;
         }
 

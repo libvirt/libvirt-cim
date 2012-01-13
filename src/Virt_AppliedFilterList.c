@@ -197,7 +197,7 @@ static CMPIStatus list_to_net(
 
         /* get domains */
         dcount = get_domain_list(conn, &doms);
-        if (dcount < 0) {
+        if (dcount <= 0) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
                         "Failed to get domain list");
@@ -246,6 +246,7 @@ static CMPIStatus list_to_net(
         }
 
  out:
+        free(doms);
         virConnectClose(conn);
 
         return s;

@@ -104,6 +104,11 @@ int get_domain_list(virConnectPtr conn, virDomainPtr **_list)
         free(names);
         free(ids);
 
+        if (idx == 0) {
+                free(list);
+                list = NULL;
+        }
+
         *_list = list;
 
         return idx;

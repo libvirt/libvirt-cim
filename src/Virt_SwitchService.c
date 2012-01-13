@@ -128,20 +128,19 @@ static char **run_command(char *func, int *len, CMPIStatus *s) {
                         cu_statusf(_BROKER, s,
                                    CMPI_RC_ERR_NOT_FOUND,
                                    "Failed to realloc");
-                        return NULL;
+                        goto err;
                 }
 
                 arr = tmp_list;
 
-                string = calloc(len, sizeof(char));
+                string = strndup(buff, len);
                 if (string == NULL) {
                         CU_DEBUG("Failed to allocate memory");
                         cu_statusf(_BROKER, s,
                                    CMPI_RC_ERR_NOT_FOUND,
                                    "Failed to calloc");
-                        return NULL;
+                        goto err;
                 }
-                strncpy(string,  buff, len);
                 arr[i] = string;
                 i++;
         }
@@ -149,6 +148,19 @@ static char **run_command(char *func, int *len, CMPIStatus *s) {
         pclose(stream);
         *len = i;
         return arr;
+
+ err:
+        /* undo everything */
+        if (i > 0) {
+                int count;
+                for (count = 0; count < i; count++)
+                        free(arr[count]);
+        }
+
+        free(arr);
+        pclose(stream);
+        return NULL;
+
 }
 
 static CMPIStatus set_inst_properties(const CMPIBroker *broker,
@@ -262,6 +274,10 @@ static CMPIStatus get_switchservice(const CMPIObjectPath *reference,
         CMSetProperty(inst, "IsVSISupported", (CMPIValue *)&vsi, CMPI_boolean);
         s.rc = CMPI_RC_OK;
 
+        for (i = 0; i < count; i++)
+                free(if_list[i]);
+
+        free(if_list);
  out:
         virConnectClose(conn);
         *_inst = inst;
