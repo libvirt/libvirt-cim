@@ -236,10 +236,9 @@ static int dominfo_from_file(const char *fname, struct domain **d)
 
         ret = get_dominfo_from_xml(xml, d);
 
+        printf("XML:\n%s", xml);
         free(xml);
         fclose(file);
-
-        printf("XML:\n%s", xml);
 
         return ret;
 }
