@@ -19,7 +19,7 @@ autoconf --force &&
 
 if test -x $(which git); then
     git rev-parse --short HEAD > .changeset
-    git log | grep "^commit" | wc -l > .revision
+    git rev-list HEAD | wc -l > .revision
 else
     echo "Unknown" > .changeset
     echo "0" > .revision
