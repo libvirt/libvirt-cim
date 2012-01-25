@@ -996,7 +996,8 @@ int get_devices(virDomainPtr dom, struct virt_device **list, int type)
         char *xml;
         int ret;
 
-        xml = virDomainGetXMLDesc(dom, VIR_DOMAIN_XML_SECURE);
+        xml = virDomainGetXMLDesc(dom,
+                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
         if (xml == NULL)
                 return 0;
 
@@ -1241,7 +1242,8 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
         char *xml;
         int ret;
         int start;
-        xml = virDomainGetXMLDesc(dom, VIR_DOMAIN_XML_SECURE);
+        xml = virDomainGetXMLDesc(dom,
+                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
 
         if (xml == NULL)
                 return 0;

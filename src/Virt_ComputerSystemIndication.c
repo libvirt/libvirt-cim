@@ -107,7 +107,8 @@ static int csi_dom_xml_set(csi_dom_xml_t *dom, virDomainPtr dom_ptr, CMPIStatus 
         dom->name = strdup(name);
 
         /* xml */
-        dom->xml = virDomainGetXMLDesc(dom_ptr, VIR_DOMAIN_XML_SECURE);
+        dom->xml = virDomainGetXMLDesc(dom_ptr,
+                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
         if (dom->xml == NULL) {
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,

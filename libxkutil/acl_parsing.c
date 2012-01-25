@@ -652,6 +652,7 @@ int remove_filter_ref(struct acl_filter *filter, const char *name)
 
         /* TODO: called infrequently, but needs optimization */
         old_refs = filter->refs;
+        filter->ref_ct = 0;
 
         for (i = 0; i < filter->ref_ct; i++) {
                 if (STREQC(old_refs[i], name)) {

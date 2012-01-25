@@ -97,67 +97,60 @@ static CMPIrc cu_get_ref_path(const CMPIObjectPath *reference,
         if ((s.rc != CMPI_RC_OK) || CMIsNullValue(value))
                 return CMPI_RC_ERR_NO_SUCH_PROPERTY;
 
-        /* how to parse and object path? */
+        if ((value.type != CMPI_ref) ||  CMIsNullObject(value.value.ref))
+                return CMPI_RC_ERR_TYPE_MISMATCH;
+
+        *_reference = value.value.ref;
 
         return CMPI_RC_OK;
 }
 
-/* TODO: Port to libxkutil/device_parsing.c */
-static int update_device(virDomainPtr dom,
-                         struct virt_device *dev)
+static int update_domain(virConnectPtr conn,
+                         struct domain *dominfo)
 {
-#if LIBVIR_VERSION_NUMBER > 8000
         char *xml = NULL;
-        int flags = VIR_DOMAIN_DEVICE_MODIFY_CURRENT |
-                    VIR_DOMAIN_DEVICE_MODIFY_CONFIG;
-        int ret = 0;
+        virDomainPtr dom = NULL;
 
-        xml = device_to_xml(dev);
+        xml = system_to_xml(dominfo);
         if (xml == NULL) {
-                CU_DEBUG("Failed to get XML for device '%s'", dev->id);
+                CU_DEBUG("Failed to get XML from domain %s", dominfo->name);
                 goto out;
         }
 
-        if (virDomainUpdateDeviceFlags(dom, xml, flags) != 0) {
-                CU_DEBUG("Failed to dynamically update device");
+        dom = virDomainDefineXML(conn, xml);
+        if (dom == NULL) {
+                CU_DEBUG("Failed to update domain %s", dominfo->name);
                 goto out;
         }
 
-        ret = 1;
  out:
         free(xml);
+        virDomainFree(dom);
 
-        return ret;
-#else
         return 0;
-#endif
 }
 
-/* TODO: Port to libxkutil/device_parsing.c */
-static int get_device_by_devid(virDomainPtr dom,
+static int get_device_by_devid(struct domain *dominfo,
                                const char *devid,
-                               int type,
                                struct virt_device **dev)
 {
-        int i, ret = 0;
-        struct virt_device *devices = NULL;
-        int count = get_devices(dom, &devices, type);
+        int i;
+        struct virt_device *devices = dominfo->dev_net;
+        int count = dominfo->dev_net_ct;
+
+        if (dev == NULL)
+                return 0;
 
         for (i = 0; i < count; i++) {
                 if (STREQC(devid, devices[i].id)) {
                         CU_DEBUG("Found '%s'", devices[i].id);
 
-                        *dev = virt_device_dup(&devices[i]);
-                        if (*dev != NULL)
-                                ret = 1;
-
-                        break;
+                        *dev = &devices[i];
+                        return 0;
                 }
         }
 
-        cleanup_virt_devices(&devices, count);
-
-        return ret;
+        return 1;
 }
 
 /**
@@ -425,6 +418,8 @@ static CMPIStatus CreateInstance(
         struct virt_device *device = NULL;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
+        struct domain *dominfo = NULL;
+        CMPIObjectPath *_reference = NULL;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL)
@@ -487,8 +482,12 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
-        get_device_by_devid(dom, net_name, CIM_RES_TYPE_NET, &device);
-        if (device == NULL) {
+        if (get_dominfo(dom, &dominfo) == 0) {
+                CU_DEBUG("Failed to get dominfo");
+                goto out;
+        }
+
+        if (get_device_by_devid(dominfo, net_name, &device) != 0) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
                         "Dependent.Name object does not exist");
@@ -502,14 +501,19 @@ static CMPIStatus CreateInstance(
 
         device->dev.net.filter_ref = strdup(filter_name);
 
-        if (update_device(dom, device) == 0) {
+        if (update_domain(conn, dominfo) != 0) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Failed to update device");
+                        "Failed to update domain");
                 goto out;
         }
 
-        CMReturnObjectPath(results, reference);
+        /* create new object path */
+        _reference = CMClone(reference, NULL);
+        CMAddKey(_reference, "Antecedent", (CMPIValue *)&antecedent, CMPI_ref);
+        CMAddKey(_reference, "Dependent", (CMPIValue *)&dependent, CMPI_ref);
+
+        CMReturnObjectPath(results, _reference);
         CU_DEBUG("CreateInstance complete");
 
  out:
@@ -542,6 +546,7 @@ static CMPIStatus DeleteInstance(
         struct virt_device *device = NULL;
         virConnectPtr conn = NULL;
         virDomainPtr dom = NULL;
+        struct domain *dominfo = NULL;
 
         conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
         if (conn == NULL)
@@ -557,7 +562,7 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "DeviceID",
+        if (cu_get_str_path(antecedent, "DeviceID",
                 &device_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
@@ -573,7 +578,7 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "Name",
+        if (cu_get_str_path(dependent, "Name",
                 &filter_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
@@ -585,7 +590,7 @@ static CMPIStatus DeleteInstance(
         if (filter == NULL) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Antecedent.Name object does not exist");
+                        "Dependent.Name object does not exist");
                 goto out;
         }
 
@@ -600,11 +605,15 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        get_device_by_devid(dom, net_name, CIM_RES_TYPE_NET, &device);
-        if (device == NULL) {
+        if (get_dominfo(dom, &dominfo) == 0) {
+                CU_DEBUG("Failed to get dominfo");
+                goto out;
+        }
+
+        if (get_device_by_devid(dominfo, net_name, &device) != 0) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Dependent.Name object does not exist");
+                        "Antecedent.Name object does not exist");
                 goto out;
         }
 
@@ -613,14 +622,14 @@ static CMPIStatus DeleteInstance(
                 device->dev.net.filter_ref = NULL;
         }
 
-        if (update_device(dom, device) == 0) {
+        if (update_domain(conn, dominfo) != 0) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
-                        "Failed to update device");
+                        "Failed to update domain");
                 goto out;
         }
 
-        CU_DEBUG("CreateInstance complete");
+        CU_DEBUG("DeleteInstance complete");
 
  out:
         free(domain_name);

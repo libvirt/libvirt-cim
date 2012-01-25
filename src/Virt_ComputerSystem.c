@@ -926,7 +926,8 @@ static CMPIStatus domain_reset(virDomainPtr dom)
                 return s;
         }
 
-        xml = virDomainGetXMLDesc(dom, VIR_DOMAIN_XML_SECURE);
+        xml = virDomainGetXMLDesc(dom,
+                VIR_DOMAIN_XML_INACTIVE |VIR_DOMAIN_XML_SECURE);
         if (xml == NULL) {
                 CU_DEBUG("Unable to retrieve domain XML");
                 virt_set_status(_BROKER, &s,

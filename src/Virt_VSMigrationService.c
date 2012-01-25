@@ -1070,7 +1070,8 @@ static CMPIStatus prepare_migrate(virDomainPtr dom,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
-        *xml = virDomainGetXMLDesc(dom, VIR_DOMAIN_XML_SECURE);
+        *xml = virDomainGetXMLDesc(dom,
+                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
         if (*xml == NULL) {
 
                 virt_set_status(_BROKER, &s,

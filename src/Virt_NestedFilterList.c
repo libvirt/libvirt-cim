@@ -98,7 +98,10 @@ static CMPIrc cu_get_ref_path(const CMPIObjectPath *reference,
         if ((s.rc != CMPI_RC_OK) || CMIsNullValue(value))
                 return CMPI_RC_ERR_NO_SUCH_PROPERTY;
 
-        /* how to parse and object path? */
+        if ((value.type != CMPI_ref) ||  CMIsNullObject(value.value.ref))
+                return CMPI_RC_ERR_TYPE_MISMATCH;
+
+        *_reference = value.value.ref;
 
         return CMPI_RC_OK;
 }
@@ -305,6 +308,7 @@ static CMPIStatus CreateInstance(
         const char *child_name = NULL;
         struct acl_filter *child_filter = NULL;
         virConnectPtr conn = NULL;
+        CMPIObjectPath *_reference = NULL;
 
         CU_DEBUG("Reference = %s", REF2STR(reference));
 
@@ -383,7 +387,12 @@ static CMPIStatus CreateInstance(
                 goto out;
         }
 
-        CMReturnObjectPath(results, reference);
+        /* create new object path */
+        _reference = CMClone(reference, NULL);
+        CMAddKey(_reference, "Antecedent", (CMPIValue *)&antecedent, CMPI_ref);
+        CMAddKey(_reference, "Dependent", (CMPIValue *)&dependent, CMPI_ref);
+
+        CMReturnObjectPath(results, _reference);
         CU_DEBUG("CreateInstance completed");
 
  out:
@@ -423,7 +432,7 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "Name", &parent_name) != CMPI_RC_OK) {
+        if (cu_get_str_path(antecedent, "Name", &parent_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
                         "Unable to get Antecedent.Name property");
@@ -446,7 +455,7 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        if (cu_get_str_path(reference, "Name", &child_name) != CMPI_RC_OK) {
+        if (cu_get_str_path(dependent, "Name", &child_name) != CMPI_RC_OK) {
                 cu_statusf(_BROKER, &s,
                         CMPI_RC_ERR_FAILED,
                         "Unable to get Dependent.Name property");
@@ -475,7 +484,7 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        CU_DEBUG("CreateInstance completed");
+        CU_DEBUG("DeleteInstance completed");
 
  out:
         cleanup_filters(&parent_filter, 1);

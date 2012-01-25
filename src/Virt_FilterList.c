@@ -358,7 +358,10 @@ static CMPIStatus DeleteInstance(
                 goto out;
         }
 
-        delete_filter(conn, filter);
+        if (delete_filter(conn, filter) != 0) {
+                CU_DEBUG("Failed to delete filter %s", filter->name);
+                goto out;
+        }
 
  out:
         cleanup_filters(&filter, 1);
