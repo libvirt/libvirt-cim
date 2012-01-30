@@ -255,9 +255,9 @@ libVirt_FilterEntry_la_DEPENDENCIES = libVirt_HostSystem.la
 libVirt_FilterEntry_la_SOURCES = Virt_FilterEntry.c
 libVirt_FilterEntry_la_LIBADD = -lVirt_HostSystem
 
-libVirt_FilterList_la_DEPENDENCIES = libVirt_HostSystem.la
+libVirt_FilterList_la_DEPENDENCIES = libVirt_HostSystem.la libVirt_FilterEntry.la
 libVirt_FilterList_la_SOURCES = Virt_FilterList.c
-libVirt_FilterList_la_LIBADD = -lVirt_HostSystem
+libVirt_FilterList_la_LIBADD = -lVirt_HostSystem -lVirt_FilterEntry
 
 libVirt_EntriesInFilterList_la_DEPENDENCIES = libVirt_FilterEntry.la libVirt_FilterList.la 
 libVirt_EntriesInFilterList_la_SOURCES = Virt_EntriesInFilterList.c

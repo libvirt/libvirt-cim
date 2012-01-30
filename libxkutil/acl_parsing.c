@@ -134,6 +134,7 @@ void cleanup_filter(struct acl_filter *filter)
         free(filter->uuid);
         free(filter->name);
         free(filter->chain);
+        free(filter->priority);
 
         for (i = 0; i < filter->rule_ct; i++)
                 cleanup_rule(filter->rules[i]);
@@ -345,6 +346,7 @@ static int parse_acl_filter(xmlNode *fnode, struct acl_filter *filter)
                 goto err;
 
         filter->chain = get_attr_value(fnode, "chain");
+        filter->priority = get_attr_value(fnode, "priority");
 
         for (child = fnode->children; child != NULL; child = child->next) {
                 if (XSTREQ(child->name, "uuid")) {

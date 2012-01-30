@@ -31,6 +31,7 @@
 
 #include "Virt_FilterList.h"
 #include "Virt_HostSystem.h"
+#include "Virt_FilterEntry.h"
 
 const static CMPIBroker *_BROKER;
 
@@ -44,7 +45,7 @@ static CMPIInstance *convert_filter_to_instance(
         CMPIInstance *inst = NULL;
         const char *sys_name = NULL;
         const char *sys_ccname = NULL;
-        int direction = 0;
+        int direction = 0, priority;
 
         inst = get_typed_instance(broker,
                                   CLASSNAME(reference),
@@ -77,6 +78,8 @@ static CMPIInstance *convert_filter_to_instance(
                         CMPI_chars);
         CMSetProperty(inst, "Direction", (CMPIValue *)&direction, CMPI_uint16);
 
+        priority = convert_priority(filter->priority);
+        CMSetProperty(inst, "Priority", (CMPIValue *)&priority, CMPI_sint16);
  out:
         return inst;
 }

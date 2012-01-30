@@ -72,6 +72,12 @@ CMPIStatus instance_from_rule(
                 struct acl_rule *rule,
                 CMPIInstance **instance);
 
+/**
+ * Convert a string representing the priority to corresponding integer value
+ *
+ * @param s A pointer to a string representing the priority
+ */
+int convert_priority(const char *s);
 #endif
 
 /*

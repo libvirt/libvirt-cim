@@ -1,4 +1,13 @@
 // Copyright IBM Corp. 2011
 class KVM_FilterList : CIM_FilterList
 {
+        [Description("The priority of the filter controls the order in which "
+                "the filter will be, instantiated relative to other filters. "
+                "Filters with lower value will be instantiated and therefore "
+                "evaluated before rules with higher value. Valid values are "
+                "in the range of -1000 to 1000. If this attribute is not "
+                "provided, the value 500 will automatically be assigned."),
+        MinValue(-1000),
+        MaxValue(1000)]
+        sint16 Priority = 500;
 };

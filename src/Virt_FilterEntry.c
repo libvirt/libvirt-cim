@@ -192,15 +192,12 @@ static int convert_direction(const char *s)
         return direction;
 }
 
-static int convert_priority(const char *s)
+int convert_priority(const char *s)
 {
-        int priority = 0;
+        if (s == NULL)
+                return 0;
 
-        if (s != NULL) {
-                priority = atoi(s);
-        }
-
-        return priority;
+        return atoi(s);
 }
 
 static int convert_action(const char *s)

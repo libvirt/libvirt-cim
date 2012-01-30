@@ -148,6 +148,7 @@ struct acl_filter {
         char *uuid;
         char *name;
         char *chain;
+        char *priority;
 
         struct acl_rule **rules;
         int rule_ct;
