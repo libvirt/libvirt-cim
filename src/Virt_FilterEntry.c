@@ -554,7 +554,7 @@ static CMPIInstance *convert_rule_to_instance(
         CMSetProperty(inst, "Direction", (CMPIValue *)&direction, CMPI_uint16);
 
         priority = convert_priority(rule->priority);
-        CMSetProperty(inst, "Priority", (CMPIValue *)&priority, CMPI_uint16);
+        CMSetProperty(inst, "Priority", (CMPIValue *)&priority, CMPI_sint16);
 
         if (convert_f)
                 convert_f(rule, inst, broker);
