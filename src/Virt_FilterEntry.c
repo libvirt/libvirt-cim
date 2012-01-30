@@ -219,6 +219,24 @@ static int convert_action(const char *s)
         return action;
 }
 
+static unsigned long convert_protocol_id(const char *s)
+{
+        enum {NONE = 0, IPV4 = 2048, ARP = 2054, RARP = 32821, IPV6 = 34525} id = NONE;
+
+        if (s != NULL) {
+                if (STREQC(s, "ipv4"))
+                        id = IPV4;
+                else if (STREQC(s, "arp"))
+                        id = ARP;
+                else if (STREQC(s, "rarp"))
+                        id = RARP;
+                else if (STREQC(s, "ipv6"))
+                        id = IPV6;
+        }
+
+        return id;
+}
+
 static void convert_mac_rule_to_instance(
         struct acl_rule *rule,
         CMPIInstance *inst,
@@ -265,8 +283,12 @@ static void convert_mac_rule_to_instance(
                         (CMPIValue *)&array, CMPI_uint8A);
 
         if (rule->var.mac.protocol_id != NULL) {
-                unsigned long n = strtoul(rule->var.mac.protocol_id,
-                                          NULL, 16);
+                unsigned long n = convert_protocol_id(rule->var.mac.protocol_id);
+
+                /* Unknown protocolid string. Try converting from hexadecimal value */
+                if (n == 0)
+                        n = strtoul(rule->var.mac.protocol_id, NULL, 16);
+
                 CMSetProperty(inst, "HdrProtocolID8021",
                               (CMPIValue *)&n, CMPI_uint16);
         }
