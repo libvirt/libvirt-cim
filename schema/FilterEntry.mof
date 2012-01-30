@@ -6,8 +6,8 @@ class KVM_Hdr8021Filter : CIM_Hdr8021Filter
             "This defines whether the action should be to forward or "
             "deny traffic meeting the match condition specified in "
             "this filter." ),
-        ValueMap { "1", "2" },
-        Values { "Permit", "Deny" }]
+        ValueMap { "1", "2", "3", "4", "5" },
+        Values { "Permit", "Deny", "Reject", "Return", "Continue" }]
         uint16 Action;
 
         [Description("This defines whether the Filter is used for input, "
@@ -44,8 +44,8 @@ class KVM_IPHeadersFilter : CIM_IPHeadersFilter
             "This defines whether the action should be to forward or "
             "deny traffic meeting the match condition specified in "
             "this filter." ),
-        ValueMap { "1", "2" },
-        Values { "Permit", "Deny" }]
+        ValueMap { "1", "2", "3", "4", "5" },
+        Values { "Permit", "Deny", "Reject", "Return", "Continue" }]
         uint16 Action;
 
         [Description("This defines whether the Filter is used for input, "

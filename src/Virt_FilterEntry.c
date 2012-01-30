@@ -202,13 +202,19 @@ int convert_priority(const char *s)
 
 static int convert_action(const char *s)
 {
-        enum {NONE=0, ACCEPT, DENY} action = NONE;
+        enum {NONE=0, ACCEPT, DENY, REJECT, RETURN, CONTINUE} action = NONE;
 
         if (s != NULL) {
                 if (STREQC(s, "accept"))
                         action = ACCEPT;
-                else if (STREQC(s, "drop") || STREQC(s, "reject"))
+                else if (STREQC(s, "drop"))
                         action = DENY;
+                else if (STREQC(s, "reject"))
+                        action = REJECT;
+                else if (STREQC(s, "return"))
+                        action = RETURN;
+                else if (STREQC(s, "continue"))
+                        action = CONTINUE;
         }
         return action;
 }
