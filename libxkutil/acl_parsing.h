@@ -26,6 +26,8 @@
 #include <libxml/parser.h>
 #include <libxml/xpath.h>
 
+#include "list_util.h"
+
 struct acl_mac_rule {
         char *srcmacaddr;
         char *srcmacmask;
@@ -153,8 +155,7 @@ struct acl_filter {
         struct acl_rule **rules;
         int rule_ct;
 
-        char **refs;
-        int ref_ct;
+        list_t *refs;
 };
 
 void cleanup_rule(struct acl_rule *rule);

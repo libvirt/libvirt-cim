@@ -28,6 +28,7 @@
 #include <libxml/xmlsave.h>
 
 #include "xmlgen.h"
+#include "list_util.h"
 
 #ifndef TEST
 #include "misc_util.h"
@@ -1467,12 +1468,31 @@ char *res_to_xml(struct virt_pool_res *res) {
         return xml;
 }
 
+static bool filter_ref_foreach(void *list_data, void *user_data)
+{
+        char *filter = (char *) list_data;
+        xmlNodePtr root = (xmlNodePtr) user_data;
+        xmlNodePtr tmp = NULL;
+
+        tmp = xmlNewChild(root, NULL, BAD_CAST "filterref", NULL);
+        if (tmp == NULL) {
+                CU_DEBUG("Error creating filterref node");
+                return false;
+        }
+
+        if (xmlNewProp(tmp, BAD_CAST "filter", BAD_CAST list_data) == NULL) {
+                CU_DEBUG("Error adding filter attribute '%s'", filter);
+                return false;
+        }
+
+        return true;
+}
+
 char *filter_to_xml(struct acl_filter *filter)
 {
         char *xml = NULL;
         xmlNodePtr root = NULL;
         xmlNodePtr tmp = NULL;
-        int i;
 
         root = xmlNewNode(NULL, BAD_CAST "filter");
         if (root == NULL)
@@ -1494,12 +1514,8 @@ char *filter_to_xml(struct acl_filter *filter)
                         goto out;
         }
 
-        for (i = 0; i < filter->ref_ct; i++) {
-                tmp = xmlNewChild(root, NULL, BAD_CAST "filterref", NULL);
-                if (xmlNewProp(tmp, BAD_CAST "filter",
-                        BAD_CAST filter->refs[i]) == NULL)
-                        goto out;
-        }
+        if (!list_foreach(filter->refs, filter_ref_foreach, (void *) root))
+                goto out;
 
         xml = tree_to_xml(root);
 

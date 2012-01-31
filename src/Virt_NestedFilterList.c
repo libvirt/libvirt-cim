@@ -34,6 +34,7 @@
 
 #include "acl_parsing.h"
 #include "misc_util.h"
+#include "list_util.h"
 #include "Virt_FilterList.h"
 
 static const CMPIBroker *_BROKER;
@@ -120,7 +121,7 @@ static CMPIStatus parent_to_child(
         CMPIInstance *instance = NULL;
         const char * name = NULL;
         virConnectPtr conn = NULL;
-        int i;
+        list_node_t *head, *node;
 
         CU_DEBUG("Reference = %s", REF2STR(reference));
 
@@ -139,29 +140,39 @@ static CMPIStatus parent_to_child(
         if (parent_filter == NULL)
                 goto out;
 
-        for (i = 0; i < parent_filter->ref_ct; i++) {
-                get_filter_by_name(conn, parent_filter->refs[i],
-                                        &child_filter);
-                if (child_filter == NULL)
-                        continue;
+        /* Walk refs list */
+        if (parent_filter->refs == NULL)
+                goto end;
 
-                CU_DEBUG("Processing %s,", child_filter->name);
+        head = node = list_first_node(parent_filter->refs);
+        if (head == NULL)
+                goto end;
 
-                s = instance_from_filter(_BROKER,
-                                        info->context,
-                                        reference,
-                                        child_filter,
-                                        &instance);
+        do {
+                name = (const char *) list_node_data_get(node);
+                get_filter_by_name(conn, name, &child_filter);
+                if (child_filter != NULL) {
+                        CU_DEBUG("Processing %s,", child_filter->name);
 
-                if (instance != NULL) {
-                        CU_DEBUG("Adding instance to inst_list");
-                        inst_list_add(list, instance);
+                        s = instance_from_filter(_BROKER,
+                                                info->context,
+                                                reference,
+                                                child_filter,
+                                                &instance);
+
+                        if (instance != NULL) {
+                                CU_DEBUG("Adding instance to inst_list");
+                                inst_list_add(list, instance);
+                        }
+
+                        cleanup_filters(&child_filter, 1);
                 }
 
-                cleanup_filters(&child_filter, 1);
                 instance = NULL;
-        }
+                node = list_node_next_node(node);
+        } while (node != head);
 
+ end:
         cleanup_filters(&parent_filter, 1);
 
  out:
@@ -183,7 +194,7 @@ static CMPIStatus child_to_parent(
         CMPIInstance *instance = NULL;
         const char *name = NULL;
         virConnectPtr conn = NULL;
-        int count, i, j;
+        int count, i;
 
         CU_DEBUG("Reference = %s", REF2STR(reference));
 
@@ -206,24 +217,20 @@ static CMPIStatus child_to_parent(
 
         /* return any filter that has name in refs */
         for (i = 0; i < count; i++) {
-                for (j = 0; j < _list[i].ref_ct; j++) {
-                        if (STREQC(name, _list[i].refs[j])) {
-                                CU_DEBUG("Processing %s,", _list[i].name);
+                if (list_find_node(_list[i].refs, (void *) name) != NULL) {
+                        CU_DEBUG("Processing %s,", _list[i].name);
 
-                                s = instance_from_filter(_BROKER,
-                                                        info->context,
-                                                        reference,
-                                                        &_list[i],
-                                                        &instance);
+                        s = instance_from_filter(_BROKER,
+                                                info->context,
+                                                reference,
+                                                &_list[i],
+                                                &instance);
 
-                                if (instance != NULL)
-                                        inst_list_add(list, instance);
-
+                        if (instance != NULL) {
+                                inst_list_add(list, instance);
                                 instance = NULL;
                         }
-
                 }
-
         }
 
         cleanup_filters(&_list, count);

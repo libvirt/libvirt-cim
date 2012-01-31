@@ -142,11 +142,7 @@ void cleanup_filter(struct acl_filter *filter)
         free(filter->rules);
         filter->rule_ct = 0;
 
-        for (i = 0; i < filter->ref_ct; i++)
-                free(filter->refs[i]);
-
-        free(filter->refs);
-        filter->ref_ct = 0;
+        list_free(filter->refs);
 }
 
 void cleanup_filters(struct acl_filter **filters, int count)
@@ -612,58 +608,36 @@ int append_filter_rule(struct acl_filter *filter, struct acl_rule *rule)
         return 1;
 }
 
+
+static int filter_ref_cmp(void *list_data, void *user_data)
+{
+        return strcmp((const char *)list_data, (const char *) user_data);
+}
+
 int append_filter_ref(struct acl_filter *filter, char *name)
 {
-        int i;
-        char **old_refs = NULL;
-
-        if ((filter == NULL) || (name == NULL))
+        if (filter == NULL || name == NULL)
                 return 0;
 
-        for (i = 0; i < filter->ref_ct; i++)
-                if (STREQC(filter->refs[i], name))
-                        return 0; /* already exists */
+        if (filter->refs == NULL)
+                filter->refs = list_new(free, filter_ref_cmp);
 
-        old_refs = filter->refs;
-
-        filter->refs = malloc((filter->ref_ct + 1) * sizeof(char *));
-
-        if (filter->refs == NULL) {
-                CU_DEBUG("Failed to allocate memory for new ref");
-                filter->refs = old_refs;
-                return 0;
+        if (list_find(filter->refs, name) != NULL) {
+                free(name);
+                return 0; /* already exists */
         }
 
-        memcpy(filter->refs, old_refs, filter->ref_ct * sizeof(char *));
-
-        filter->refs[filter->ref_ct] = name;
-        filter->ref_ct++;
-
-        free(old_refs);
+        list_append(filter->refs, name);
 
         return 1;
 }
 
 int remove_filter_ref(struct acl_filter *filter, const char *name)
 {
-        int i;
-        char **old_refs = NULL;
-
-        if ((filter == NULL) || (name == NULL))
+        if (filter == NULL || filter->refs == NULL || name == NULL)
                 return 0;
 
-        /* TODO: called infrequently, but needs optimization */
-        old_refs = filter->refs;
-        filter->ref_ct = 0;
-
-        for (i = 0; i < filter->ref_ct; i++) {
-                if (STREQC(old_refs[i], name)) {
-                        free(old_refs[i]);
-                }
-                else if(append_filter_ref(filter, old_refs[i]) == 0) {
-                        return 0;
-                }
-        }
+        list_remove(filter->refs, (void *) name);
 
         return 1;
 }
