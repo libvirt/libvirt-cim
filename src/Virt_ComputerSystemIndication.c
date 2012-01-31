@@ -19,6 +19,10 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
  */
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <unistd.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -34,11 +38,11 @@
 #include <libvirt/virterror.h>
 
 #include <libcmpiutil/libcmpiutil.h>
-#include <misc_util.h>
 #include <libcmpiutil/std_indication.h>
-#include <cs_util.h>
 
-#include "config.h"
+#include <misc_util.h>
+#include <cs_util.h>
+#include <list_util.h>
 
 #include "Virt_ComputerSystem.h"
 #include "Virt_ComputerSystemIndication.h"
@@ -64,8 +68,6 @@ struct _csi_dom_xml_t {
         char uuid[VIR_UUID_STRING_BUFLEN];
         char *name;
         char *xml;
-        csi_dom_xml_t *next;
-        csi_dom_xml_t *prev;
 };
 
 typedef struct _csi_thread_data_t csi_thread_data_t;
@@ -73,7 +75,7 @@ struct _csi_thread_data_t {
         CMPI_THREAD_TYPE id;
         int active_filters;
         int dom_count;
-        csi_dom_xml_t *dom_list;
+        list_t *dom_list;
         struct ind_args *args;
 };
 
@@ -83,13 +85,22 @@ static bool lifecycle_enabled = false;
 static csi_thread_data_t csi_thread_data[CSI_NUM_PLATFORMS] = {{0}, {0}, {0}};
 
 /*
- * Domain list manipulation
+ * Domain manipulation
  */
-static void csi_dom_xml_free(csi_dom_xml_t *dom)
+static void csi_dom_xml_free(void *data)
 {
+        csi_dom_xml_t *dom = (csi_dom_xml_t *) data;
         free(dom->xml);
         free(dom->name);
         free(dom);
+}
+
+static int csi_dom_xml_cmp(void *data, void *cmp_cb_data)
+{
+        csi_dom_xml_t *dom = (csi_dom_xml_t *) data;
+        const char *uuid = (const char *) cmp_cb_data;
+
+        return strcmp(dom->uuid, uuid);
 }
 
 static int csi_dom_xml_set(csi_dom_xml_t *dom, virDomainPtr dom_ptr, CMPIStatus *s)
@@ -150,65 +161,10 @@ static csi_dom_xml_t *csi_dom_xml_new(virDomainPtr dom_ptr, CMPIStatus *s)
 static void csi_thread_dom_list_append(csi_thread_data_t *thread,
                                        csi_dom_xml_t *dom)
 {
-        /* empty list */
-        if (thread->dom_list == NULL) {
-                dom->next = dom->prev = dom;
-                thread->dom_list = dom;
-                goto end;
-        }
-
-        dom->next = thread->dom_list;
-        dom->prev = thread->dom_list->prev;
-
-        thread->dom_list->prev->next = dom;
-        thread->dom_list->prev = dom;
-
- end:
-        thread->dom_count += 1;
-}
-
-static csi_dom_xml_t *csi_thread_dom_list_find(csi_thread_data_t *thread,
-                                               const char *uuid)
-{
-        csi_dom_xml_t *dom;
-
         if (thread->dom_list == NULL)
-                return NULL;
+                thread->dom_list = list_new(csi_dom_xml_free, csi_dom_xml_cmp);
 
-        dom = thread->dom_list;
-
-        do {
-                if (STREQ(dom->uuid, uuid))
-                        return dom;
-
-                dom = dom->next;
-        } while (dom != thread->dom_list);
-
-        return NULL;
-}
-
-static void csi_thread_dom_list_remove(csi_thread_data_t *thread,
-                                       csi_dom_xml_t *dom)
-{
-        if (dom->next == dom) { /* Only one node */
-                thread->dom_list = NULL;
-        } else {
-                if (thread->dom_list == dom) /* First node */
-                        thread->dom_list = dom->next;
-
-                dom->prev->next = dom->next;
-                dom->next->prev = dom->prev;
-        }
-
-        thread->dom_count -= 1;
-
-        csi_dom_xml_free(dom);
-}
-
-static void csi_thread_dom_list_free(csi_thread_data_t *thread)
-{
-        while(thread->dom_list != NULL)
-                csi_thread_dom_list_remove(thread, thread->dom_list);
+        list_append(thread->dom_list, dom);
 }
 
 static void csi_free_thread_data(void *data)
@@ -218,7 +174,8 @@ static void csi_free_thread_data(void *data)
         if (data == NULL)
                 return;
 
-        csi_thread_dom_list_free(thread);
+        list_free(thread->dom_list);
+        thread->dom_list = NULL;
         stdi_free_ind_args(&thread->args);
 }
 
@@ -512,7 +469,7 @@ static int update_domain_list(virConnectPtr conn, csi_thread_data_t *thread)
         CMPIStatus s = {CMPI_RC_OK, NULL};
         int i, count;
 
-        csi_thread_dom_list_free(thread);
+        list_free(thread->dom_list);
 
         count = get_domain_list(conn, &dom_ptr_list);
 
@@ -574,7 +531,7 @@ static int csi_domain_event_cb(virConnectPtr conn,
         if (cs_event != CS_CREATED) {
                 char uuid[VIR_UUID_STRING_BUFLEN] = {0};
                 virDomainGetUUIDString(dom, &uuid[0]);
-                dom_xml = csi_thread_dom_list_find(thread, uuid);
+                dom_xml = list_find(thread->dom_list, uuid);
         }
 
         if (dom_xml == NULL) {
@@ -595,7 +552,7 @@ static int csi_domain_event_cb(virConnectPtr conn,
                 }
         } else if (event == VIR_DOMAIN_EVENT_DEFINED &&
                    detail == VIR_DOMAIN_EVENT_UNDEFINED_REMOVED) {
-                csi_thread_dom_list_remove(thread, dom_xml);
+                list_remove(thread->dom_list, dom_xml);
         }
 
  end:
