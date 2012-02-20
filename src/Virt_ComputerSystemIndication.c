@@ -254,7 +254,7 @@ static bool _do_indication(const CMPIBroker *broker,
 
         ind_op = CMGetObjectPath(ind, &s);
         if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("Failed to get ind_op.  Error: '%s'", s.msg);
+                CU_DEBUG("Failed to get ind_op.  Error: '%s'", CMGetCharPtr(s.msg));
                 ret = false;
                 goto out;
         }
@@ -263,7 +263,7 @@ static bool _do_indication(const CMPIBroker *broker,
         affected_op = CMGetObjectPath(affected_inst, &s);
         if (s.rc != CMPI_RC_OK) {
                 ret = false;
-                CU_DEBUG("problem getting affected_op: '%s'", s.msg);
+                CU_DEBUG("problem getting affected_op: '%s'", CMGetCharPtr(s.msg));
                 goto out;
         }
 
@@ -368,7 +368,8 @@ static bool create_deleted_guest_inst(const char *xml,
                                   dominfo,
                                   inst);
         if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("instance from domain info error: %s", s.msg);
+                CU_DEBUG("instance from domain info error: %s",
+                         CMGetCharPtr(s.msg));
                 goto out;
         }
 
@@ -476,7 +477,7 @@ static int update_domain_list(virConnectPtr conn, csi_thread_data_t *thread)
         for (i = 0; i < count; i++) {
                 dom = csi_dom_xml_new(dom_ptr_list[i], &s);
                 if (dom == NULL) {
-                        CU_DEBUG("Failed to get domain info %s", s.msg);
+                        CU_DEBUG("Failed to get domain info %s", CMGetCharPtr(s.msg));
                         break;
                 }
 
