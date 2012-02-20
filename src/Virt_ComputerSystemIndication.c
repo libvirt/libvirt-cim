@@ -688,35 +688,34 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
         thread = &csi_thread_data[platform];
         thread->active_filters += 1;
 
-        if (thread->id == 0) {
-                args = malloc(sizeof(*args));
-                if (args == NULL) {
-                        CU_DEBUG("Failed to allocate ind_args");
-                        cu_statusf(_BROKER, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Unable to allocate ind_args");
-                        error = true;
-                        goto out;
-                }
+        /* Check if thread is already running */
+        if (thread->id > 0)
+                goto out;
 
-                args->context = CBPrepareAttachThread(_BROKER, ctx);
-                if (args->context == NULL) {
-                        CU_DEBUG("Failed to create thread context");
-                        cu_statusf(_BROKER, &s,
-                                   CMPI_RC_ERR_FAILED,
-                                   "Unable to create thread context");
-                        error = true;
-                        goto out;
-                }
-
-                args->ns = strdup(NAMESPACE(op));
-                args->classname = strdup(CLASSNAME(op));
-                args->_ctx = _ctx;
-
-                thread->args = args;
-                thread->id = _BROKER->xft->newThread(lifecycle_thread,
-                                                     thread, 0);
+        args = malloc(sizeof(*args));
+        if (args == NULL) {
+                CU_DEBUG("Failed to allocate ind_args");
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Unable to allocate ind_args");
+                error = true;
+                goto out;
         }
+
+        args->context = CBPrepareAttachThread(_BROKER, ctx);
+        if (args->context == NULL) {
+                CU_DEBUG("Failed to create thread context");
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Unable to create thread context");
+                error = true;
+                goto out;
+        }
+
+        args->ns = strdup(NAMESPACE(op));
+        args->classname = strdup(CLASSNAME(op));
+        args->_ctx = _ctx;
+
+        thread->args = args;
+        thread->id = _BROKER->xft->newThread(lifecycle_thread, thread, 0);
 
  out:
         if (error == true) {
