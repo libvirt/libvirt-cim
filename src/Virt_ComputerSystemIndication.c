@@ -490,17 +490,22 @@ static int update_domain_list(virConnectPtr conn, csi_thread_data_t *thread)
         return s.rc;
 }
 
-static int csi_domain_event_cb(virConnectPtr conn,
-                               virDomainPtr dom,
-                               int event,
-                               int detail,
-                               void *data)
+static void csi_domain_event_cb(virConnectPtr conn,
+                                virDomainPtr dom,
+                                int event,
+                                int detail,
+                                void *data)
 {
         int cs_event = CS_MODIFIED;
         csi_thread_data_t *thread = (csi_thread_data_t *) data;
         csi_dom_xml_t *dom_xml = NULL;
         char *prefix = class_prefix_name(thread->args->classname);
         CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (lifecycle_enabled == false || thread->active_filters <= 0) {
+                CU_DEBUG("%s indications deactivated, return");
+                return;
+        }
 
         CU_DEBUG("Event: Domain %s(%d) event: %d detail: %d\n",
                  virDomainGetName(dom), virDomainGetID(dom), event, detail);
@@ -558,7 +563,6 @@ static int csi_domain_event_cb(virConnectPtr conn,
 
  end:
         free(prefix);
-        return 0;
 }
 
 static CMPI_THREAD_RETURN lifecycle_thread(void *params)
