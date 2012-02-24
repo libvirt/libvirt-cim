@@ -76,6 +76,18 @@ class KVM_ResourcePoolConfigurationService : CIM_ResourcePoolConfigurationServic
       CIM_ConcreteJob REF Job
     );
 
+    [Description ( "Refresh the list of resource within a specified pool to "
+                   "reflect any external changes. If 0 is returned, the "
+                   "function completed successfully." )]
+    uint32 RefreshResourcesInPool(
+      [IN, Description ( "The pool to refresh the resource in." )]
+      CIM_ResourcePool REF Pool,
+
+      [IN ( false ), OUT, Description ( "Reference to the job (may be null "
+                                        "if job completed)." )]
+      CIM_ConcreteJob REF Job
+    );
+
 };
 
 [Provider("cmpi::Virt_ResourcePoolConfigurationService")]
