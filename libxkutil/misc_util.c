@@ -267,14 +267,14 @@ bool match_pn_to_cn(const char *pn, const char *cn)
 
 uint64_t allocated_memory(virConnectPtr conn)
 {
-        virDomainPtr *list;
+        virDomainPtr *list = NULL;
         int count;
         int i;
         uint64_t memory = 0;
 
         count = get_domain_list(conn, &list);
         if (count <= 0)
-                return 0;
+                goto end;
 
         for (i = 0; i < count; i ++) {
                 virDomainPtr dom = list[i];
@@ -286,8 +286,8 @@ uint64_t allocated_memory(virConnectPtr conn)
                 virDomainFree(dom);
         }
 
+ end:
         free(list);
-
         return memory;
 }
 
