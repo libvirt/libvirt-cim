@@ -200,7 +200,8 @@ static CMPIStatus list_to_net(
         for (i = 0; i < dcount; i++) {
                 /* get domain's network devices */
                 struct virt_device *devices = NULL;
-                ncount = get_devices(doms[i], &devices, CIM_RES_TYPE_NET);
+                ncount = get_devices(doms[i], &devices, CIM_RES_TYPE_NET,
+                                                    VIR_DOMAIN_XML_INACTIVE);
 
                 CU_DEBUG("Found %u network devices", ncount);
 
@@ -300,7 +301,8 @@ static CMPIStatus net_to_list(
 
         /* get domain's network devices */
         struct virt_device *devices = NULL;
-        int count = get_devices(dom, &devices, CIM_RES_TYPE_NET);
+        int count = get_devices(dom, &devices, CIM_RES_TYPE_NET,
+                                                   VIR_DOMAIN_XML_INACTIVE);
 
         CU_DEBUG("Found %u net devices on dom '%s'", count, domain_name);
 

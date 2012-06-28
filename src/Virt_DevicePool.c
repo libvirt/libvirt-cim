@@ -446,7 +446,7 @@ static char *diskpool_member_of(const CMPIBroker *broker,
         if (dom == NULL)
                 goto out;
 
-        count = get_devices(dom, &devs, CIM_RES_TYPE_DISK);
+        count = get_devices(dom, &devs, CIM_RES_TYPE_DISK, 0);
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].dev.disk.virtual_dev), dev)) {
@@ -578,7 +578,7 @@ static char *netpool_member_of(const CMPIBroker *broker,
         if (dom == NULL)
                 goto out;
 
-        count = get_devices(dom, &devs, CIM_RES_TYPE_NET);
+        count = get_devices(dom, &devs, CIM_RES_TYPE_NET, 0);
 
         for (i = 0; i < count; i++) {
                 if (STREQ((devs[i].id), dev)) {

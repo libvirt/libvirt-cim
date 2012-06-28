@@ -997,13 +997,13 @@ static int _get_proc_device(const char *xml, struct virt_device **list)
         return 1;
 };
 
-int get_devices(virDomainPtr dom, struct virt_device **list, int type)
+int get_devices(virDomainPtr dom, struct virt_device **list, int type,
+                                                    unsigned int flags)
 {
         char *xml;
         int ret;
 
-        xml = virDomainGetXMLDesc(dom,
-                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
+        xml = virDomainGetXMLDesc(dom, VIR_DOMAIN_XML_SECURE | flags);
         if (xml == NULL)
                 return 0;
 

@@ -203,7 +203,9 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo);
 
 void cleanup_dominfo(struct domain **dominfo);
 
-int get_devices(virDomainPtr dom, struct virt_device **list, int type);
+/* VIR_DOMAIN_XML_SECURE will always be set besides flags */
+int get_devices(virDomainPtr dom, struct virt_device **list, int type,
+                                                    unsigned int flags);
 
 void cleanup_virt_device(struct virt_device *dev);
 void cleanup_virt_devices(struct virt_device **devs, int count);

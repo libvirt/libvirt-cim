@@ -529,7 +529,7 @@ static CMPIStatus _get_devices(const CMPIBroker *broker,
         bool rc;
         struct virt_device *devs = NULL;
 
-        count = get_devices(dom, &devs, type);
+        count = get_devices(dom, &devs, type, 0);
         if (count <= 0)
                 goto out;
 
@@ -698,7 +698,7 @@ static struct virt_device *find_dom_dev(virDomainPtr dom,
         int count;
         int i;
 
-        count = get_devices(dom, &list, type);
+        count = get_devices(dom, &list, type, 0);
         if (!count) {
                 CU_DEBUG("No devices for %i", type);
                 goto out;

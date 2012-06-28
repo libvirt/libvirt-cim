@@ -81,7 +81,7 @@ int list_rasds(virConnectPtr conn,
         if (dom == NULL)
                 return 0;
 
-        count = get_devices(dom, list, type);
+        count = get_devices(dom, list, type, 0);
 
         virDomainFree(dom);
 
@@ -965,7 +965,7 @@ static CMPIStatus _get_rasds(const CMPIBroker *broker,
         struct virt_device *devs = NULL;
         const char *host = NULL;
 
-        count = get_devices(dom, &devs, type);
+        count = get_devices(dom, &devs, type, 0);
         if (count <= 0)
                 goto out;
 
