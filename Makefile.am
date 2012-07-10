@@ -189,7 +189,7 @@ install-data-local:
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_MOFS)
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_REGS)
 	if [[ @CIMSERVER@ != pegasus ]]; then \
-	sed -i '/^# --/,/^# --!/d' $(subst schema,$(DESTDIR)$(pkgdatadir), $(PGINTEROP_REGS)); \
+	sed -i '/^# --/,/^# --!/d' $(subst ./schema,$(DESTDIR)$(pkgdatadir), $(PGINTEROP_REGS)); \
 	fi
 
 uninstall-local:
