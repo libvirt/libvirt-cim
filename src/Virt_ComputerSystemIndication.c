@@ -174,9 +174,11 @@ static void csi_free_thread_data(void *data)
         if (data == NULL)
                 return;
 
+        pthread_mutex_lock(&lifecycle_mutex);
         list_free(thread->dom_list);
         thread->dom_list = NULL;
         stdi_free_ind_args(&thread->args);
+        pthread_mutex_unlock(&lifecycle_mutex);
 }
 
 void set_source_inst_props(const CMPIBroker *broker,
@@ -491,6 +493,8 @@ static int update_domain_list(virConnectPtr conn, csi_thread_data_t *thread)
         return s.rc;
 }
 
+/* following function will protect global data with lifecycle_mutex.
+   TODO: improve it with seperate lock later. */
 static void csi_domain_event_cb(virConnectPtr conn,
                                 virDomainPtr dom,
                                 int event,
@@ -503,10 +507,13 @@ static void csi_domain_event_cb(virConnectPtr conn,
         char *prefix = class_prefix_name(thread->args->classname);
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
+        pthread_mutex_lock(&lifecycle_mutex);
         if (lifecycle_enabled == false || thread->active_filters <= 0) {
                 CU_DEBUG("%s indications deactivated, return", prefix);
+                pthread_mutex_unlock(&lifecycle_mutex);
                 return;
         }
+        pthread_mutex_unlock(&lifecycle_mutex);
 
         CU_DEBUG("Event: Domain %s(%d) event: %d detail: %d\n",
                  virDomainGetName(dom), virDomainGetID(dom), event, detail);
@@ -538,7 +545,9 @@ static void csi_domain_event_cb(virConnectPtr conn,
         if (cs_event != CS_CREATED) {
                 char uuid[VIR_UUID_STRING_BUFLEN] = {0};
                 virDomainGetUUIDString(dom, &uuid[0]);
+                pthread_mutex_lock(&lifecycle_mutex);
                 dom_xml = list_find(thread->dom_list, uuid);
+                pthread_mutex_unlock(&lifecycle_mutex);
         }
 
         if (dom_xml == NULL) {
@@ -546,12 +555,16 @@ static void csi_domain_event_cb(virConnectPtr conn,
                 goto end;
         }
 
+        pthread_mutex_lock(&lifecycle_mutex);
         async_ind(thread->args, cs_event, dom_xml, prefix);
+        pthread_mutex_unlock(&lifecycle_mutex);
 
         /* Update the domain list accordingly */
         if (event == VIR_DOMAIN_EVENT_DEFINED) {
                 if (detail == VIR_DOMAIN_EVENT_DEFINED_ADDED) {
+                        pthread_mutex_lock(&lifecycle_mutex);
                         csi_thread_dom_list_append(thread, dom_xml);
+                        pthread_mutex_unlock(&lifecycle_mutex);
                 } else if (detail == VIR_DOMAIN_EVENT_DEFINED_UPDATED) {
                         free(dom_xml->name);
                         free(dom_xml->xml);
@@ -559,7 +572,9 @@ static void csi_domain_event_cb(virConnectPtr conn,
                 }
         } else if (event == VIR_DOMAIN_EVENT_DEFINED &&
                    detail == VIR_DOMAIN_EVENT_UNDEFINED_REMOVED) {
+                pthread_mutex_lock(&lifecycle_mutex);
                 list_remove(thread->dom_list, dom_xml);
+                pthread_mutex_unlock(&lifecycle_mutex);
         }
 
  end:
@@ -580,10 +595,12 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         if (prefix == NULL)
                 goto init_out;
 
+        pthread_mutex_lock(&lifecycle_mutex);
         conn = connect_by_classname(_BROKER, args->classname, &s);
         if (conn == NULL) {
                 CU_DEBUG("Unable to start lifecycle thread: "
                          "Failed to connect (cn: %s)", args->classname);
+                pthread_mutex_unlock(&lifecycle_mutex);
                 goto conn_out;
         }
 
@@ -595,39 +612,55 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
 
         if (cb_id == -1) {
                 CU_DEBUG("Failed to register domain event watch for '%s'",
-                         args->classname)
+                         args->classname);
+                pthread_mutex_unlock(&lifecycle_mutex);
                 goto cb_out;
         }
 
         CBAttachThread(_BROKER, args->context);
 
         /* Get currently defined domains */
-        if (update_domain_list(conn, thread) != CMPI_RC_OK)
+        if (update_domain_list(conn, thread) != CMPI_RC_OK) {
+                pthread_mutex_unlock(&lifecycle_mutex);
                 goto end;
+        }
 
+        pthread_mutex_unlock(&lifecycle_mutex);
 
         CU_DEBUG("Entering CSI event loop (%s)", prefix);
-        while (thread->active_filters > 0) {
+        while (1) {
+                pthread_mutex_lock(&lifecycle_mutex);
+                if (thread->active_filters <= 0) {
+                        pthread_mutex_unlock(&lifecycle_mutex);
+                        break;
+                }
+                pthread_mutex_unlock(&lifecycle_mutex);
                 if (virEventRunDefaultImpl() < 0) {
                         virErrorPtr err = virGetLastError();
                         CU_DEBUG("Failed to run event loop: %s\n",
                         err && err->message ? err->message : "Unknown error");
                 }
+                usleep(1);
         }
 
         CU_DEBUG("Exiting CSI event loop (%s)", prefix);
 
+        pthread_mutex_lock(&lifecycle_mutex);
         CBDetachThread(_BROKER, args->context);
+        pthread_mutex_unlock(&lifecycle_mutex);
  end:
         virConnectDomainEventDeregisterAny(conn, cb_id);
 
  cb_out:
+        pthread_mutex_lock(&lifecycle_mutex);
 
         thread->id = 0;
         thread->active_filters = 0;
 
         if (thread->args != NULL)
                 stdi_free_ind_args(&thread->args);
+
+        pthread_mutex_unlock(&lifecycle_mutex);
 
  conn_out:
         virConnectClose(conn);
