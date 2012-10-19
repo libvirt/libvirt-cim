@@ -504,7 +504,7 @@ static void csi_domain_event_cb(virConnectPtr conn,
         CMPIStatus s = {CMPI_RC_OK, NULL};
 
         if (lifecycle_enabled == false || thread->active_filters <= 0) {
-                CU_DEBUG("%s indications deactivated, return");
+                CU_DEBUG("%s indications deactivated, return", prefix);
                 return;
         }
 

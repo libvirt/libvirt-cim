@@ -122,7 +122,11 @@ static CMPIStatus raise_indication(const CMPIBroker *broker,
         if (s.rc == CMPI_RC_OK) {
                 CU_DEBUG("Indication delivered");
         } else {
-                CU_DEBUG("Not delivered: %s", CMGetCharPtr(s.msg));
+                if (s.msg == NULL) {
+                        CU_DEBUG("Not delivered: msg is NULL.");
+                } else {
+                        CU_DEBUG("Not delivered: %s", CMGetCharPtr(s.msg));
+                }
         }
 
  out:

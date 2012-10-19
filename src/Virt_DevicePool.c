@@ -710,7 +710,7 @@ static bool mempool_set_consumed(CMPIInstance *inst, virConnectPtr conn)
 
                 dom = virDomainLookupByID(conn, domain_ids[i]);
                 if (dom == NULL) {
-                        CU_DEBUG("Cannot connect to domain %n: excluding",
+                        CU_DEBUG("Cannot connect to domain %d: excluding",
                                 domain_ids[i]);
                         continue;
                 }
