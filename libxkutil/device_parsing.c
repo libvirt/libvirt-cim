@@ -1246,20 +1246,29 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
 int get_dominfo(virDomainPtr dom, struct domain **dominfo)
 {
         char *xml;
-        int ret;
+        int ret = 0;
         int start;
         xml = virDomainGetXMLDesc(dom,
                 VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
 
-        if (xml == NULL)
+        if (xml == NULL) {
+                CU_DEBUG("Failed to get dom xml with libvirt API.");
                 return 0;
+        }
 
-        ret = get_dominfo_from_xml(xml, dominfo);
-        if (virDomainGetAutostart(dom,  &start) !=  0)
-                return 0;
+        if (get_dominfo_from_xml(xml, dominfo) == 0) {
+                CU_DEBUG("Failed to translate xml into struct domain");
+                goto out;
+        }
+        if (virDomainGetAutostart(dom,  &start) !=  0) {
+                CU_DEBUG("Failed to get dom autostart with libvirt API.");
+                goto out;
+        }
 
         (*dominfo)->autostrt = start;
+        ret = 1;
 
+ out:
         free(xml);
 
         return ret;
