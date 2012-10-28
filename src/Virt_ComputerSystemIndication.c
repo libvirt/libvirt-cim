@@ -48,7 +48,6 @@
 #include "Virt_ComputerSystemIndication.h"
 #include "Virt_HostSystem.h"
 
-
 #define CSI_NUM_PLATFORMS 3
 enum CSI_PLATFORMS {
         CSI_XEN,
@@ -84,6 +83,8 @@ static pthread_mutex_t lifecycle_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool lifecycle_enabled = false;
 static csi_thread_data_t csi_thread_data[CSI_NUM_PLATFORMS] = {{0}, {0}, {0}};
 
+#ifndef USE_LIBVIRT_EVENT
+#else
 /*
  * Domain manipulation
  */
@@ -180,6 +181,7 @@ static void csi_free_thread_data(void *data)
         stdi_free_ind_args(&thread->args);
         pthread_mutex_unlock(&lifecycle_mutex);
 }
+#endif
 
 void set_source_inst_props(const CMPIBroker *broker,
                            const CMPIContext *context,
@@ -386,6 +388,394 @@ static bool create_deleted_guest_inst(const char *xml,
         return rc;
 }
 
+#ifndef USE_LIBVIRT_EVENT
+/* libvirt-cim's private CSI implement */
+
+#define WAIT_TIME 60
+#define FAIL_WAIT_TIME 2
+
+static pthread_cond_t lifecycle_cond = PTHREAD_COND_INITIALIZER;
+
+struct dom_xml {
+        char uuid[VIR_UUID_STRING_BUFLEN];
+        char *xml;
+        enum {DOM_OFFLINE,
+              DOM_ONLINE,
+              DOM_PAUSED,
+              DOM_CRASHED,
+              DOM_GONE,
+        } state;
+};
+
+static void free_dom_xml(struct dom_xml dom)
+{
+        free(dom.xml);
+        dom.xml = NULL;
+}
+
+static char *sys_name_from_xml(char *xml)
+{
+        char *tmp = NULL;
+        char *name = NULL;
+        int rc;
+
+        tmp = strstr(xml, "<name>");
+        if (tmp == NULL) {
+                goto out;
+        }
+
+        rc = sscanf(tmp, "<name>%a[^<]s</name>", &name);
+        if (rc != 1) {
+                name = NULL;
+        }
+
+ out:
+        return name;
+}
+
+static int dom_state(virDomainPtr dom)
+{
+        virDomainInfo info;
+        int ret;
+
+        ret = virDomainGetInfo(dom, &info);
+        if (ret != 0) {
+                return DOM_GONE;
+        }
+
+        switch (info.state) {
+        case VIR_DOMAIN_NOSTATE:
+        case VIR_DOMAIN_RUNNING:
+        case VIR_DOMAIN_BLOCKED:
+                return DOM_ONLINE;
+
+        case VIR_DOMAIN_PAUSED:
+                return DOM_PAUSED;
+
+        case VIR_DOMAIN_SHUTOFF:
+                return DOM_OFFLINE;
+
+        case VIR_DOMAIN_CRASHED:
+                return DOM_CRASHED;
+
+        default:
+                return DOM_GONE;
+        };
+}
+
+static CMPIStatus doms_to_xml(struct dom_xml **dom_xml_list,
+                              virDomainPtr *dom_ptr_list,
+                              int dom_ptr_count)
+{
+        int i;
+        int rc;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if (dom_ptr_count <= 0) {
+                *dom_xml_list = NULL;
+                return s;
+        }
+        *dom_xml_list = calloc(dom_ptr_count, sizeof(struct dom_xml));
+        if (!dom_xml_list) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed calloc %d dom_xml.", dom_ptr_count);
+                return s;
+        }
+        for (i = 0; i < dom_ptr_count; i++) {
+                rc = virDomainGetUUIDString(dom_ptr_list[i],
+                                            (*dom_xml_list)[i].uuid);
+                if (rc == -1) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to get UUID");
+                        /* If any domain fails, we fail. */
+                        break;
+                }
+
+                (*dom_xml_list)[i].xml = virDomainGetXMLDesc(dom_ptr_list[i],
+                              VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
+                if ((*dom_xml_list)[i].xml == NULL) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to get xml desc");
+                        break;
+                }
+
+                (*dom_xml_list)[i].state = dom_state(dom_ptr_list[i]);
+        }
+
+        return s;
+}
+
+static bool dom_changed(struct dom_xml prev_dom,
+                        struct dom_xml *cur_xml,
+                        int cur_count)
+{
+        int i;
+        bool ret = false;
+
+        for (i = 0; i < cur_count; i++) {
+                if (strcmp(cur_xml[i].uuid, prev_dom.uuid) != 0) {
+                        continue;
+                }
+
+                if (strcmp(cur_xml[i].xml, prev_dom.xml) != 0) {
+                        CU_DEBUG("Domain config changed");
+                        ret = true;
+                }
+
+                if (prev_dom.state != cur_xml[i].state) {
+                        CU_DEBUG("Domain state changed");
+                        ret = true;
+                }
+
+                break;
+        }
+
+        return ret;
+}
+
+static bool wait_for_event(int wait_time)
+{
+        struct timespec timeout;
+        int ret;
+
+
+        clock_gettime(CLOCK_REALTIME, &timeout);
+        timeout.tv_sec += wait_time;
+
+        ret = pthread_cond_timedwait(&lifecycle_cond,
+                                     &lifecycle_mutex,
+                                     &timeout);
+        return !ret;
+}
+
+static bool dom_in_list(char *uuid, int count, struct dom_xml *list)
+{
+        int i;
+
+        for (i = 0; i < count; i++) {
+                if (STREQ(uuid, list[i].uuid)) {
+                        return true;
+                }
+        }
+
+        return false;
+}
+
+static bool async_ind_native(CMPIContext *context,
+                      int ind_type,
+                      struct dom_xml prev_dom,
+                      char *prefix,
+                      struct ind_args *args)
+{
+        bool rc = false;
+        char *name = NULL;
+        char *cn = NULL;
+        CMPIObjectPath *op;
+        CMPIInstance *prev_inst;
+        CMPIInstance *affected_inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CU_DEBUG("Entering native indication dilivery with type %d.", ind_type)
+        if (!lifecycle_enabled) {
+                CU_DEBUG("CSI not enabled, skipping indication delivery");
+                return false;
+        }
+
+        name = sys_name_from_xml(prev_dom.xml);
+        CU_DEBUG("Name for system: '%s'", name);
+        if (name == NULL) {
+                rc = false;
+                goto out;
+        }
+
+        cn = get_typed_class(prefix, "ComputerSystem");
+
+        op = CMNewObjectPath(_BROKER, args->ns, cn, &s);
+        if ((s.rc != CMPI_RC_OK) || CMIsNullObject(op)) {
+                CU_DEBUG("op error");
+                goto out;
+        }
+
+        if (ind_type == CS_CREATED || ind_type == CS_MODIFIED) {
+                s = get_domain_by_name(_BROKER, op, name, &affected_inst);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("domain by name error");
+                        goto out;
+                }
+        } else if (ind_type == CS_DELETED) {
+                rc = create_deleted_guest_inst(prev_dom.xml,
+                                               args->ns,
+                                               prefix,
+                                               &affected_inst);
+                if (!rc) {
+                        CU_DEBUG("Could not recreate guest instance");
+                        goto out;
+                }
+        } else {
+                CU_DEBUG("Unrecognized indication type %d", ind_type);
+                goto out;
+        }
+
+        /* FIXME: We are unable to get the previous CS instance after it has
+                  been modified. Consider keeping track of the previous
+                  state in the place we keep track of the requested state */
+        prev_inst = affected_inst;
+
+        CMSetProperty(affected_inst, "Name",
+                      (CMPIValue *)name, CMPI_chars);
+        CMSetProperty(affected_inst, "UUID",
+                      (CMPIValue *)prev_dom.uuid, CMPI_chars);
+
+        rc = _do_indication(_BROKER, context, prev_inst, affected_inst,
+                            ind_type, prefix, args);
+
+ out:
+        free(cn);
+        free(name);
+        return rc;
+}
+
+static CMPI_THREAD_RETURN lifecycle_thread_native(void *params)
+{
+        CU_DEBUG("Entering libvirtc-cim native CSI thread.");
+        csi_thread_data_t *thread = (csi_thread_data_t *) params;
+        struct ind_args *args = thread->args;
+        CMPIContext *context = args->context;
+        char *prefix = class_prefix_name(args->classname);
+        virConnectPtr conn;
+        CMPIStatus s;
+        int retry_time = FAIL_WAIT_TIME;
+
+        struct dom_xml *cur_xml = NULL;
+        struct dom_xml *prev_xml = NULL;
+        int prev_count = 0;
+        int cur_count = 0;
+        virDomainPtr *tmp_list = NULL;
+        int CBAttached = 0;
+
+        if (prefix == NULL) {
+                goto init_out;
+        }
+
+        pthread_mutex_lock(&lifecycle_mutex);
+        conn = connect_by_classname(_BROKER, args->classname, &s);
+        if (conn == NULL) {
+                CU_DEBUG("Unable to start lifecycle thread: "
+                         "Failed to connect (cn: %s)", args->classname);
+                pthread_mutex_unlock(&lifecycle_mutex);
+                goto conn_out;
+        }
+
+        CBAttachThread(_BROKER, args->context);
+        CBAttached = 1;
+        prev_count = get_domain_list(conn, &tmp_list);
+        s = doms_to_xml(&prev_xml, tmp_list, prev_count);
+        free_domain_list(tmp_list, prev_count);
+        free(tmp_list);
+        if (s.rc != CMPI_RC_OK) {
+                CU_DEBUG("doms_to_xml failed.  Attempting to continue.");
+        }
+
+        CU_DEBUG("Entering libvirt-cim native CSI event loop (%s)", prefix);
+
+        int i;
+        while (1) {
+                if (thread->active_filters <= 0) {
+                        break;
+                }
+
+                bool res;
+                bool failure = false;
+
+                cur_count = get_domain_list(conn, &tmp_list);
+                s = doms_to_xml(&cur_xml, tmp_list, cur_count);
+                free_domain_list(tmp_list, cur_count);
+                free(tmp_list);
+                if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("doms_to_xml failed. retry in %d seconds",
+                                 retry_time);
+                        failure = true;
+                        goto fail;
+                }
+
+                /* CU_DEBUG("cur_count %d, prev_count %d.",
+                             cur_count, prev_count); */
+                for (i = 0; i < cur_count; i++) {
+                        res = dom_in_list(cur_xml[i].uuid,
+                                          prev_count, prev_xml);
+                        if (!res) {
+                                async_ind_native(context, CS_CREATED,
+                                                 cur_xml[i], prefix, args);
+                        }
+
+                }
+
+                for (i = 0; i < prev_count; i++) {
+                        res = dom_in_list(prev_xml[i].uuid,
+                                          cur_count, cur_xml);
+                        if (!res) {
+                                async_ind_native(context, CS_DELETED,
+                                                 prev_xml[i], prefix, args);
+                        } else if (dom_changed(prev_xml[i],
+                                               cur_xml, cur_count)) {
+                                async_ind_native(context, CS_MODIFIED,
+                                                 prev_xml[i], prefix, args);
+                        }
+                        free_dom_xml(prev_xml[i]);
+                }
+
+        fail:
+                if (failure) {
+                        wait_for_event(FAIL_WAIT_TIME);
+                } else {
+                        free(prev_xml);
+                        prev_xml = cur_xml;
+                        cur_xml = NULL;
+                        prev_count = cur_count;
+                        cur_count = 0;
+                        wait_for_event(WAIT_TIME);
+                }
+        }
+
+        CU_DEBUG("Exiting libvirt-cim native CSI event loop (%s)", prefix);
+
+        if (prev_xml != NULL) {
+                for (i = 0; i < prev_count; i++) {
+                        free_dom_xml(prev_xml[i]);
+                }
+                free(prev_xml);
+                prev_xml = NULL;
+        }
+
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        virConnectClose(conn);
+
+ conn_out:
+        free(prefix);
+
+ init_out:
+        pthread_mutex_lock(&lifecycle_mutex);
+        thread->id = 0;
+        thread->active_filters = 0;
+
+        /* it seems tog-pegasus try kill this thread after detached, use this
+        flag to delay detach as much as possible. */
+        if (CBAttached > 0) {
+                CBDetachThread(_BROKER, args->context);
+        }
+        if (thread->args != NULL) {
+                stdi_free_ind_args(&thread->args);
+        }
+
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        return (CMPI_THREAD_RETURN) 0;
+}
+#else
 static bool async_ind(struct ind_args *args,
                       int ind_type,
                       csi_dom_xml_t *dom,
@@ -669,6 +1059,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         free(prefix);
         return (CMPI_THREAD_RETURN) 0;
 }
+#endif
 
 static int platform_from_class(const char *cn)
 {
@@ -682,6 +1073,162 @@ static int platform_from_class(const char *cn)
                 return -1;
 }
 
+#ifndef USE_LIBVIRT_EVENT
+static CMPIStatus ActivateFilter(CMPIIndicationMI *mi,
+                                 const CMPIContext *ctx,
+                                 const CMPISelectExp *se,
+                                 const char *ns,
+                                 const CMPIObjectPath *op,
+                                 CMPIBoolean first)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        struct std_indication_ctx *_ctx;
+        struct ind_args *args = NULL;
+        int platform;
+        bool error = false;
+        csi_thread_data_t *thread = NULL;
+
+        CU_DEBUG("ActivateFilter for %s", CLASSNAME(op));
+
+        pthread_mutex_lock(&lifecycle_mutex);
+
+        CU_DEBUG("Using libvirt-cim's event implemention.");
+
+        _ctx = (struct std_indication_ctx *)mi->hdl;
+
+        if (CMIsNullObject(op)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No ObjectPath given");
+                goto out;
+        }
+
+        /* FIXME: op is stale the second time around, for some reason */
+        platform = platform_from_class(CLASSNAME(op));
+        if (platform < 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unknown platform");
+                goto out;
+        }
+
+        thread = &csi_thread_data[platform];
+        thread->active_filters += 1;
+
+        /* Check if thread is already running */
+        if (thread->id > 0) {
+                goto out;
+        }
+
+        args = malloc(sizeof(*args));
+        if (args == NULL) {
+                CU_DEBUG("Failed to allocate ind_args");
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Unable to allocate ind_args");
+                error = true;
+                goto out;
+        }
+
+        args->context = CBPrepareAttachThread(_BROKER, ctx);
+        if (args->context == NULL) {
+                CU_DEBUG("Failed to create thread context");
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Unable to create thread context");
+                error = true;
+                goto out;
+        }
+
+        args->ns = strdup(NAMESPACE(op));
+        args->classname = strdup(CLASSNAME(op));
+        args->_ctx = _ctx;
+
+        thread->args = args;
+
+        thread->id = _BROKER->xft->newThread(lifecycle_thread_native,
+                                             thread, 0);
+
+        if (thread->id <= 0) {
+            CU_DEBUG("Error, failed to create new thread.");
+            error = true;
+        }
+
+ out:
+        if (error == true) {
+                thread->active_filters -= 1;
+                free(args);
+        }
+
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        return s;
+}
+
+static CMPIStatus DeActivateFilter(CMPIIndicationMI *mi,
+                                   const CMPIContext *ctx,
+                                   const CMPISelectExp *se,
+                                   const  char *ns,
+                                   const CMPIObjectPath *op,
+                                   CMPIBoolean last)
+{
+        int platform;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CU_DEBUG("DeActivateFilter for %s", CLASSNAME(op));
+
+        platform = platform_from_class(CLASSNAME(op));
+        if (platform < 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unknown platform");
+                goto out;
+        }
+
+
+        pthread_mutex_lock(&lifecycle_mutex);
+        csi_thread_data[platform].active_filters -= 1;
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        pthread_cond_signal(&lifecycle_cond);
+
+ out:
+        return s;
+}
+
+static CMPIStatus trigger_indication(const CMPIContext *context)
+{
+        CU_DEBUG("triggered");
+        pthread_cond_signal(&lifecycle_cond);
+        return (CMPIStatus){CMPI_RC_OK, NULL};
+}
+
+static CMPIInstance *get_prev_inst(const CMPIBroker *broker,
+                                   const CMPIInstance *ind,
+                                   CMPIStatus *s)
+{
+        CMPIData data;
+        CMPIInstance *prev_inst = NULL;
+
+        data = CMGetProperty(ind, "PreviousInstance", s);
+        if (s->rc != CMPI_RC_OK || CMIsNullValue(data)) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_NO_SUCH_PROPERTY,
+                           "Unable to get PreviousInstance of the indication");
+                goto out;
+        }
+
+        if (data.type != CMPI_instance) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_TYPE_MISMATCH,
+                           "Indication SourceInstance is of unexpected type");
+                goto out;
+        }
+
+        prev_inst = data.value.inst;
+
+ out:
+        return prev_inst;
+}
+#else
 static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
                                  const CMPIContext* ctx,
                                  const CMPISelectExp* se,
@@ -703,6 +1250,7 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
 
         if (events_registered == 0) {
                 events_registered = 1;
+                CU_DEBUG("Registering libvirt event.");
                 virEventRegisterDefaultImpl();
         }
 
@@ -756,6 +1304,11 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
         thread->args = args;
         thread->id = _BROKER->xft->newThread(lifecycle_thread, thread, 0);
 
+        if (thread->id <= 0) {
+            CU_DEBUG("Error, failed to create new thread.");
+            error = true;
+        }
+
  out:
         if (error == true) {
                 thread->active_filters -= 1;
@@ -795,6 +1348,7 @@ static CMPIStatus DeActivateFilter(CMPIIndicationMI* mi,
  out:
         return s;
 }
+#endif
 
 static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
                                    const CMPIContext *ctx)
@@ -841,7 +1395,114 @@ static struct std_ind_filter *filters[] = {
         NULL,
 };
 
+#ifndef USE_LIBVIRT_EVENT
+static CMPIStatus raise_indication(const CMPIBroker *broker,
+                                   const CMPIContext *ctx,
+                                   const CMPIObjectPath *ref,
+                                   const CMPIInstance *ind)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *prev_inst;
+        CMPIInstance *src_inst;
+        CMPIObjectPath *_ref = NULL;
+        struct std_indication_ctx *_ctx = NULL;
+        struct ind_args *args = NULL;
+        char *prefix = NULL;
+        bool rc;
+
+        if (!lifecycle_enabled) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "CSI not enabled, skipping indication delivery");
+                goto out;
+        }
+
+        prev_inst = get_prev_inst(broker, ind, &s);
+        if (s.rc != CMPI_RC_OK || CMIsNullObject(prev_inst)) {
+                goto out;
+        }
+
+        _ref = CMGetObjectPath(prev_inst, &s);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get a reference to the guest");
+                goto out;
+        }
+
+        /* FIXME:  This is a Pegasus work around. Pegsus loses the namespace
+                   when an ObjectPath is pulled from an instance */
+        if (STREQ(NAMESPACE(_ref), "")) {
+                CMSetNameSpace(_ref, "root/virt");
+        }
+
+        s = get_domain_by_ref(broker, _ref, &src_inst);
+        if (s.rc != CMPI_RC_OK || CMIsNullObject(src_inst)) {
+                goto out;
+        }
+
+        _ctx = malloc(sizeof(struct std_indication_ctx));
+        if (_ctx == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate indication context");
+                goto out;
+        }
+
+        _ctx->brkr = broker;
+        _ctx->handler = NULL;
+        _ctx->filters = filters;
+        _ctx->enabled = lifecycle_enabled;
+
+        args = malloc(sizeof(struct ind_args));
+        if (args == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate ind_args");
+                goto out;
+       }
+
+        args->ns = strdup(NAMESPACE(_ref));
+        args->classname = strdup(CLASSNAME(_ref));
+        if (!args->classname || !args->ns) {
+                CU_DEBUG("Failed in strdup");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed in strdup in indication raising");
+                goto out;
+        }
+        args->_ctx = _ctx;
+
+        prefix = class_prefix_name(args->classname);
+
+        rc = _do_indication(broker, ctx, prev_inst, src_inst,
+                            CS_MODIFIED, prefix, args);
+
+        if (!rc) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to generate indication");
+        }
+
+ out:
+        if (args != NULL) {
+                stdi_free_ind_args(&args);
+        }
+
+        if (_ctx != NULL) {
+                free(_ctx);
+        }
+
+        free(prefix);
+        return s;
+}
+#endif
+
 static struct std_indication_handler csi = {
+#ifndef USE_LIBVIRT_EVENT
+        .raise_fn = raise_indication,
+        .trigger_fn = trigger_indication,
+#endif
         .activate_fn = ActivateFilter,
         .deactivate_fn = DeActivateFilter,
         .enable_fn = EnableIndications,

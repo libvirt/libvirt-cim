@@ -45,7 +45,57 @@
 #include "Virt_HostSystem.h"
 #include "Virt_VirtualSystemSnapshotService.h"
 
+#include "config.h"
+
 const static CMPIBroker *_BROKER;
+
+#ifndef USE_LIBVIRT_EVENT
+static bool trigger_mod_indication(const CMPIBroker *broker,
+                                   const CMPIContext *context,
+                                   CMPIInstance *prev_inst,
+                                   const CMPIObjectPath *ref)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *ind_name = "ComputerSystemModifiedIndication";
+        CMPIInstance *ind = NULL;
+        char *type = NULL;
+
+        CU_DEBUG("Preparing libvirt-cim native ComputerSystem indication");
+
+        ind = get_typed_instance(broker,
+                                 CLASSNAME(ref),
+                                 ind_name,
+                                 NAMESPACE(ref),
+                                 false);
+        if (ind == NULL) {
+                CU_DEBUG("Failed to create ind '%s'", ind_name);
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to create ind '%s'", ind_name);
+                goto out;
+        }
+
+        CU_DEBUG("Setting PreviousInstance");
+        CMSetProperty(ind, "PreviousInstance",
+                     (CMPIValue *)&prev_inst, CMPI_instance);
+
+        type = get_typed_class(CLASSNAME(ref), ind_name);
+
+        s = stdi_raise_indication(broker, context, type, NAMESPACE(ref), ind);
+
+ out:
+        free(type);
+        return s.rc == CMPI_RC_OK;
+}
+#else
+static bool trigger_mod_indication(const CMPIBroker *broker,
+                                   const CMPIContext *context,
+                                   CMPIInstance *prev_inst,
+                                   const CMPIObjectPath *ref)
+{
+        return true;
+}
+#endif
 
 /* Set the "Name" property of an instance from a domain */
 static int set_name_from_dom(virDomainPtr dom, CMPIInstance *instance)
@@ -1258,8 +1308,16 @@ static CMPIStatus state_change(CMPIMethodMI *self,
 
         s = __state_change(name, state, reference);
 
-        if (s.rc == CMPI_RC_OK)
+        if (s.rc == CMPI_RC_OK) {
                 rc = 0;
+                /* try trigger indication */
+                bool ind_rc = trigger_mod_indication(_BROKER, context,
+                                                    prev_inst, reference);
+                if (!ind_rc) {
+                        CU_DEBUG("Unable to trigger indication for "
+                                 "state change, dom is '%s'", name);
+                }
+        }
 
  out:
         CMReturnData(results, &rc, CMPI_uint32);

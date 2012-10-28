@@ -107,6 +107,33 @@ enum ResourceAction {
         RESOURCE_MOD,
 };
 
+#ifndef USE_LIBVIRT_EVENT
+static bool trigger_indication(const CMPIBroker *broker,
+                               const CMPIContext *context,
+                               const char *base_type,
+                               const CMPIObjectPath *ref)
+{
+        char *type;
+        CMPIStatus s;
+
+        type = get_typed_class(CLASSNAME(ref), base_type);
+
+        s = stdi_trigger_indication(broker, context, type, NAMESPACE(ref));
+
+        free(type);
+
+        return s.rc == CMPI_RC_OK;
+}
+#else
+static bool trigger_indication(const CMPIBroker *broker;
+                               const CMPIContext *context,
+                               const char *base_type,
+                               const CMPIObjectPath *ref)
+{
+        return true;
+}
+#endif
+
 #if LIBVIR_VERSION_NUMBER < 9000
 /* Network QoS support */
 static CMPIStatus add_qos_for_mac(const uint64_t qos,
@@ -2167,6 +2194,16 @@ static CMPIStatus define_system(CMPIMethodMI *self,
                 CMAddArg(argsout, "ResultingSystem", &result, CMPI_ref);
         }
 
+        /* try trigger indication */
+        bool ind_rc = trigger_indication(_BROKER, context,
+                                 "ComputerSystemCreatedIndication", reference);
+        if (!ind_rc) {
+                const char *dom_name = NULL;
+                cu_get_str_prop(vssd, "VirtualSystemIdentifier", &dom_name);
+                CU_DEBUG("Unable to trigger indication for "
+                         "system create, dom is '%s'", dom_name);
+        }
+
  out:
         if (s.rc == CMPI_RC_OK)
                 rc = CIM_SVPC_RETURN_COMPLETED;
@@ -2269,6 +2306,15 @@ error:
                                       NULL,
                                       reference,
                                       &list);
+
+                /* try trigger indication */
+                bool ind_rc = trigger_indication(_BROKER, context,
+                                 "ComputerSystemDeletedIndication", reference);
+                if (!ind_rc) {
+                        CU_DEBUG("Unable to trigger indication for "
+                                 "system delete, dom is '%s'", dom_name);
+                }
+
         }
 
         virDomainFree(dom);
@@ -2350,8 +2396,17 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
                 connect_and_create(xml, ref, &s);
         }
 
-        if (s.rc == CMPI_RC_OK)
+        if (s.rc == CMPI_RC_OK) {
                 set_autostart(vssd, ref, dom);
+                /* try trigger indication */
+                bool ind_rc = trigger_indication(_BROKER, context,
+                                      "ComputerSystemModifiedIndication", ref);
+                if (!ind_rc) {
+                        CU_DEBUG("Unable to trigger indication for "
+                                 "system modify, dom is '%s'", name);
+                }
+
+        }
 
  out:
         free(xml);
