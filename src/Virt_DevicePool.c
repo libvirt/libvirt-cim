@@ -51,21 +51,30 @@ struct tmp_disk_pool {
         bool primordial;
 };
 
-/*
- * Right now, detect support and use it, if available.
- * Later, this can be a configure option if needed
- */
-#if LIBVIR_VERSION_NUMBER > 4000
-# define VIR_USE_LIBVIRT_STORAGE 1
-#else
-# define VIR_USE_LIBVIRT_STORAGE 0
-#endif
+static void free_diskpool(struct tmp_disk_pool *pools, int count)
+{
+        int i;
 
+        if (pools == NULL) {
+                return;
+        }
+
+        for (i = 0; i < count; i++) {
+                free(pools[i].tag);
+                free(pools[i].path);
+        }
+
+        free(pools);
+}
+
+/*
+ * If fail, *_pools will be freed and set to NULL, and *_count will be set to
+ * zero.
+ */
 static bool get_disk_parent(struct tmp_disk_pool **_pools,
                             int *_count)
 {
         struct tmp_disk_pool *pools = NULL;
-        int ret = false;
         int count;
 
         count = *_count;
@@ -74,22 +83,30 @@ static bool get_disk_parent(struct tmp_disk_pool **_pools,
         pools = realloc(pools, (count + 1) * (sizeof(*pools)));
         if (pools == NULL) {
                 CU_DEBUG("Failed to alloc new pool");
-                goto out;
+                pools = *_pools;
+                goto fail;
         }
 
-        pools[count].tag = strdup("0");
         pools[count].path = NULL;
         pools[count].primordial = true;
+        pools[count].tag = strdup("0");
+        if (pools[count].tag == NULL) {
+                count++;
+                goto fail;
+        }
         count++;
 
         *_count = count;
         *_pools = pools;
-        ret = true;
+        return true;
 
- out:
-        return ret;
+ fail:
+        free_diskpool(pools, count);
+        /* old pool is invalid, update it */
+        *_count = 0;
+        *_pools = NULL;
+        return false;
 }
-
 
 #if VIR_USE_LIBVIRT_STORAGE
 int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
@@ -117,52 +134,80 @@ int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
         return ret;
 }
 
+/*
+ * return 0 on success, negative on fail, *pools and *_count will be set
+ * only on success .
+ */
 static int get_diskpool_config(virConnectPtr conn,
-                               struct tmp_disk_pool **_pools)
+                               struct tmp_disk_pool **_pools,
+                               int *_count)
 {
-        int count = 0;
+        int count = 0, realcount = 0;
         int i;
         char ** names = NULL;
         struct tmp_disk_pool *pools = NULL;
+        int ret = 0;
 
         count = virConnectNumOfStoragePools(conn);
-        if (count <= 0)
+        if (count < 0) {
+                ret = count;
                 goto out;
+        } else if (count == 0) {
+                goto set_parent;
+        }
 
         names = calloc(count, sizeof(char *));
         if (names == NULL) {
                 CU_DEBUG("Failed to alloc space for %i pool names", count);
-                count = 0;
+                ret = -1;
                 goto out;
         }
 
-        if (virConnectListStoragePools(conn, names, count) == -1) {
-                CU_DEBUG("Failed to get storage pools");
-                count = 0;
-                goto out;
+        realcount = virConnectListStoragePools(conn, names, count);
+        if (realcount < 0) {
+                CU_DEBUG("Failed to get storage pools, return %d.", realcount);
+                ret = realcount;
+                goto free_names;
+        }
+        if (realcount == 0) {
+                CU_DEBUG("Zero pools got, but prelist is %d.", count);
+                goto set_parent;
         }
 
-        pools = calloc(count, sizeof(*pools));
+        pools = calloc(realcount, sizeof(*pools));
         if (pools == NULL) {
-                CU_DEBUG("Failed to alloc space for %i pool structs", count);
-                goto out;
+                CU_DEBUG("Failed to alloc space for %i pool structs",
+                         realcount);
+                ret = -2;
+                goto free_names;
         }
 
-        for (i = 0; i < count; i++) {
-                pools[i].tag = strdup(names[i]);
+        for (i = 0; i < realcount; i++) {
+                pools[i].tag = names[i];
+                names[i] = NULL;
                 pools[i].primordial = false;
         }
 
- out:
-        for (i = 0; i < count; i++)
+ set_parent:
+        if (!get_disk_parent(&pools, &realcount)) {
+                CU_DEBUG("Failed in adding parentpool.");
+                ret = -4;
+                /* pools is already freed in get_disk_parent().*/
+                goto free_names;
+        }
+
+        /* succeed */
+        *_pools = pools;
+        *_count = realcount;
+
+ free_names:
+        for (i = 0; i < count; i++) {
                 free(names[i]);
+        }
         free(names);
 
-        get_disk_parent(&pools, &count);
-
-        *_pools = pools;
-
-        return count;
+ out:
+        return ret;
 }
 
 static bool diskpool_set_capacity(virConnectPtr conn,
@@ -279,8 +324,8 @@ static bool _diskpool_is_member(virConnectPtr conn,
         return result;
 }
 #else
-static int parse_diskpool_line(struct tmp_disk_pool *pool,
-                               const char *line)
+static bool parse_diskpool_line(struct tmp_disk_pool *pool,
+                                const char *line)
 {
         int ret;
 
@@ -288,48 +333,81 @@ static int parse_diskpool_line(struct tmp_disk_pool *pool,
         if (ret != 2) {
                 free(pool->tag);
                 free(pool->path);
+                pool->tag = NULL;
+                pool->path = NULL;
         }
         pool->primordial = false;
 
         return (ret == 2);
 }
 
+/*
+ * return 0 on success, negative on fail, *pools and *_count will be set
+ * only on success .
+ */
 static int get_diskpool_config(virConnectPtr conn,
-                               struct tmp_disk_pool **_pools)
+                               struct tmp_disk_pool **_pools,
+                               int *_count)
 {
         const char *path = DISK_POOL_CONFIG;
         FILE *config;
         char *line = NULL;
         size_t len = 0;
-        int count = 0;
-        struct tmp_disk_pool *pools = NULL;
+        int count = 0, ret = 0;
+        struct tmp_disk_pool *pools = NULL, *new_pools = NULL, *pool = NULL;
 
         config = fopen(path, "r");
         if (config == NULL) {
                 CU_DEBUG("Failed to open %s: %m", path);
-                return 0;
+                ret = -1;
+                goto out;
         }
 
+        pool = calloc(1, sizeof(*pool));
+        if (!pool) {
+                CU_DEBUG("Failed to calloc pool");
+                ret = -2;
+                goto close;
+        }
+
+        /* *line will be automatically freed by getline() */
         while (getline(&line, &len, config) > 0) {
-                pools = realloc(pools,
-                                (count + 1) * (sizeof(*pools)));
-                if (pools == NULL) {
-                        CU_DEBUG("Failed to alloc new pool");
-                        goto out;
-                }
-
-                if (parse_diskpool_line(&pools[count], line))
+                if (parse_diskpool_line(pool, line)) {
+                        new_pools = realloc(pools,
+                                           (count + 1) * (sizeof(*pools)));
+                        if (new_pools == NULL) {
+                                CU_DEBUG("Failed to alloc new pool");
+                                ret = -3;
+                                goto free_pools;
+                        }
+                        pools = new_pools;
+                        pools[count] = *pool;
+                        memset(pool, 0, sizeof(*pool));
                         count++;
+                }
         }
 
+        if (!get_disk_parent(&pools, &count)) {
+                CU_DEBUG("Failed in adding parentpool.");
+                ret = -4;
+                /* pools is already freed by get_disk_parent() */
+                goto clean;
+        }
 
-        get_disk_parent(&pools, &count);
- out:
-        free(line);
+        /* succeed */
         *_pools = pools;
-        fclose(config);
+        *_count = count;
+        goto clean;
 
-        return count;
+ free_pools:
+        free_diskpool(pools, count);
+ clean:
+        free(line);
+        free_diskpool(pool, 1);
+ close:
+        fclose(config);
+ out:
+        return ret;
 }
 
 static bool diskpool_set_capacity(virConnectPtr conn,
@@ -367,39 +445,23 @@ static bool diskpool_set_capacity(virConnectPtr conn,
 }
 
 static bool _diskpool_is_member(virConnectPtr conn,
-                                const struct disk_pool *pool,
+                                const struct tmp_disk_pool *pool,
                                 const char *file)
 {
         return STARTS_WITH(file, pool->path);
 }
 #endif
 
-static void free_diskpool(struct tmp_disk_pool *pools, int count)
-{
-        int i;
-
-        if (pools == NULL)
-                return;
-
-        for (i = 0; i < count; i++) {
-                free(pools[i].tag);
-                free(pools[i].path);
-        }
-
-        free(pools);
-}
-
 static char *_diskpool_member_of(virConnectPtr conn,
                                  const char *file)
 {
         struct tmp_disk_pool *pools = NULL;
         int count;
-        int i;
+        int i, ret;
         char *pool = NULL;
 
-        count = get_diskpool_config(conn, &pools);
-        if (count == 0) {
-                free(pools);
+        ret = get_diskpool_config(conn, &pools, &count);
+        if (ret < 0) {
                 return NULL;
         }
 
@@ -1088,9 +1150,17 @@ static CMPIStatus diskpool_instance(virConnectPtr conn,
         CMPIStatus s = {CMPI_RC_OK, NULL};
         struct tmp_disk_pool *pools = NULL;
         int count = 0;
-        int i;
+        int i, ret;
 
-        count = get_diskpool_config(conn, &pools);
+        ret = get_diskpool_config(conn, &pools, &count);
+        if (ret < 0) {
+                CU_DEBUG("Failed to get diskpool config, return is %d.", ret);
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get diskpool config, return is %d.",
+                           ret);
+                return s;
+        }
         if ((id == NULL) && (count == 0)) {
                 CU_DEBUG("No defined DiskPools");
                 free(pools);

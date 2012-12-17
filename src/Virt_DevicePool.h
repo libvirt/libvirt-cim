@@ -28,6 +28,10 @@
 
 #include "pool_parsing.h"
 
+/*
+ * Right now, detect support and use it, if available.
+ * Later, this can be a configure option if needed
+ */
 #if LIBVIR_VERSION_NUMBER > 4000
 # define VIR_USE_LIBVIRT_STORAGE 1
 #else
