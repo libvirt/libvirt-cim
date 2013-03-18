@@ -285,7 +285,8 @@ static CMPIInstance *_get_vssd(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "VirtualSystemSettingData",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  false);
 
         if (inst == NULL) {
                 cu_statusf(broker, s,

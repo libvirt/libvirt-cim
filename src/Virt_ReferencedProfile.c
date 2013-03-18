@@ -242,7 +242,8 @@ static CMPIInstance *make_ref(const CMPIObjectPath *source_ref,
         ref_inst = get_typed_instance(_BROKER,
                                       CLASSNAME(source_ref),
                                       assoc_classname,
-                                      NAMESPACE(source_ref));
+                                      NAMESPACE(source_ref),
+                                      false);
 
         source = get_reg_prof_by_ref(source_ref);
         if (source->scoping_profile != NULL)

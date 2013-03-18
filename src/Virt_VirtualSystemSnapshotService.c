@@ -681,7 +681,8 @@ CMPIStatus get_vsss(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "VirtualSystemSnapshotService",
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  true);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

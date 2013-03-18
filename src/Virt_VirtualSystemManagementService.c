@@ -1928,7 +1928,8 @@ static CMPIStatus raise_rasd_indication(const CMPIContext *context,
                 ind = get_typed_instance(_BROKER,
                                          CLASSNAME(ref),
                                          base_type,
-                                         NAMESPACE(ref));
+                                         NAMESPACE(ref),
+                                         false);
                 if (ind == NULL)  {
                         CU_DEBUG("Failed to get indication instance");
                         s.rc = CMPI_RC_ERR_FAILED;
@@ -3293,7 +3294,8 @@ CMPIStatus get_vsms(const CMPIObjectPath *reference,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "VirtualSystemManagementService",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Failed to get typed instance");

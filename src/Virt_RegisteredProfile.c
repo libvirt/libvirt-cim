@@ -54,7 +54,8 @@ CMPIStatus get_profile(const CMPIBroker *broker,
         instance = get_typed_instance(broker,
                                       pfx,
                                       "RegisteredProfile",
-                                      CIM_INTEROP_NS);
+                                      CIM_INTEROP_NS,
+                                      false);
 
         if (instance == NULL) {
                 cu_statusf(broker, &s, 

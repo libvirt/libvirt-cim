@@ -134,7 +134,8 @@ CMPIStatus get_migration_caps(const CMPIObjectPath *ref,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "VirtualSystemMigrationCapabilities",
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  false);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

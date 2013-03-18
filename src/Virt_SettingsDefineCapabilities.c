@@ -113,7 +113,8 @@ static CMPIInstance *default_vssd_instance(const char *prefix,
         inst = get_typed_instance(_BROKER,
                                   prefix,
                                   "VirtualSystemSettingData",
-                                  ns);
+                                  ns,
+                                  false);
         if (inst == NULL) {
                 CU_DEBUG("Failed to create default VSSD instance");
                 goto out;
@@ -303,7 +304,8 @@ static CMPIInstance *sdc_rasd_inst(CMPIStatus *s,
         inst = get_typed_instance(_BROKER,
                                   CLASSNAME(ref),
                                   base,
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  false);
 
         if (inst == NULL) {
                 cu_statusf(_BROKER, s,

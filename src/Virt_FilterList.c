@@ -50,7 +50,8 @@ static CMPIInstance *convert_filter_to_instance(
         inst = get_typed_instance(broker,
                                   CLASSNAME(reference),
                                   "FilterList",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
         if (inst == NULL) {
                 cu_statusf(broker, s,
                            CMPI_RC_ERR_FAILED,

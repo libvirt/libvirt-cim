@@ -229,7 +229,8 @@ static CMPIStatus get_switchservice(const CMPIObjectPath *reference,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "SwitchService",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Failed to get typed instance");

@@ -100,7 +100,8 @@ static CMPIInstance *net_instance(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "NetworkPort",
-                                  ns);
+                                  ns,
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Failed to get instance for NetworkPort");
@@ -138,7 +139,8 @@ static CMPIInstance *disk_instance(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "LogicalDisk",
-                                  ns);
+                                  ns,
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Failed to get instance for LogicalDisk");
@@ -185,7 +187,8 @@ static CMPIInstance *mem_instance(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "Memory",
-                                  ns);
+                                  ns,
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Failed to get instance for Memory");
@@ -234,7 +237,8 @@ static CMPIInstance *graphics_instance(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "DisplayController",
-                                  ns);
+                                  ns,
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Failed to get instance for DisplayController");
@@ -320,7 +324,8 @@ static CMPIInstance *input_instance(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "PointingDevice",
-                                  ns);
+                                  ns,
+                                  true);
         if (inst == NULL) {
                 CU_DEBUG("Failed to get instance of %s_PointingDevice",
                          pfx_from_conn(conn));
@@ -407,7 +412,8 @@ static bool vcpu_inst(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "Processor",
-                                  ns);
+                                  ns,
+                                  true);
         if (inst == NULL)
                 return false;
 

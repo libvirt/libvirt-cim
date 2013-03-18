@@ -129,7 +129,8 @@ CMPIStatus get_console_rs(const CMPIObjectPath *reference,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "ConsoleRedirectionService",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Failed to get typed instance");

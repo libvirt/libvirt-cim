@@ -117,7 +117,8 @@ CMPIStatus get_vss_cap(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "VirtualSystemSnapshotServiceCapabilities",
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  false);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

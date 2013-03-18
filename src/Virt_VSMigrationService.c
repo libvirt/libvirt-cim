@@ -831,7 +831,8 @@ static CMPIInstance *prepare_indication(const CMPIBroker *broker,
         ind = get_typed_instance(broker, 
                                  pfx, 
                                  ind_name, 
-                                 job->ref_ns);
+                                 job->ref_ns,
+                                 false);
         if (ind == NULL) {
                 CU_DEBUG("Failed to create ind, type '%s:%s_%s'", 
                          job->ref_ns, pfx, ind_name);
@@ -1686,7 +1687,8 @@ CMPIStatus get_migration_service(const CMPIObjectPath *ref,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "VirtualSystemMigrationService",
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  true);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

@@ -716,7 +716,8 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   CLASSNAME(ref),
                                   base,
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  false);
         if (inst == NULL)
                 return inst;
 

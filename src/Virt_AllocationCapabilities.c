@@ -46,7 +46,8 @@ static CMPIStatus ac_from_pool(const CMPIBroker *broker,
         *alloc_cap = get_typed_instance(broker,
                                         CLASSNAME(ref),
                                         "AllocationCapabilities",
-                                        NAMESPACE(ref));
+                                        NAMESPACE(ref),
+                                        false);
         if (*alloc_cap == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

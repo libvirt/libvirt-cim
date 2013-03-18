@@ -803,7 +803,8 @@ static CMPIStatus mempool_instance(virConnectPtr conn,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "MemoryPool",
-                                  ns);
+                                  ns,
+                                  false);
 
         if (inst == NULL) {
                 cu_statusf(broker, &s,
@@ -842,7 +843,8 @@ static CMPIStatus procpool_instance(virConnectPtr conn,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "ProcessorPool",
-                                  ns);
+                                  ns,
+                                  false);
 
         if (inst == NULL) {
                 cu_statusf(broker, &s,
@@ -872,7 +874,8 @@ static CMPIStatus _netpool_for_parent(struct inst_list *list,
         inst = get_typed_instance(broker,
                                   refcn,
                                   "NetworkPool",
-                                  ns);
+                                  ns,
+                                  false);
         if (inst == NULL) {
                 CU_DEBUG("Unable to get instance: %s:%s_NetworkPool",
                          ns, refcn);
@@ -928,7 +931,8 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
         inst = get_typed_instance(broker,
                                   refcn,
                                   "NetworkPool",
-                                  ns);
+                                  ns,
+                                  false);
         if (inst == NULL) {
                 CU_DEBUG("Unable to get instance: %s:%s_NetworkPool",
                          ns, refcn);
@@ -1046,7 +1050,7 @@ static CMPIInstance *diskpool_from_path(struct tmp_disk_pool *pool,
         CMPIInstance *inst;
         char *poolid = NULL;
 
-        inst = get_typed_instance(broker, refcn, "DiskPool", ns);
+        inst = get_typed_instance(broker, refcn, "DiskPool", ns, false);
 
         if (inst == NULL) {
                 cu_statusf(broker, &s,
@@ -1136,7 +1140,8 @@ static CMPIStatus graphicspool_instance(virConnectPtr conn,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "GraphicsPool",
-                                  ns);
+                                  ns,
+                                  false);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,
@@ -1172,7 +1177,8 @@ static CMPIStatus inputpool_instance(virConnectPtr conn,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "InputPool",
-                                  ns);
+                                  ns,
+                                  false);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

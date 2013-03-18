@@ -546,7 +546,8 @@ static CMPIInstance *convert_rule_to_instance(
         inst = get_typed_instance(broker,
                                   CLASSNAME(reference),
                                   basename,
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
 
         if (inst == NULL) {
                 cu_statusf(broker, s,

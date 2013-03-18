@@ -79,7 +79,8 @@ CMPIStatus get_migration_sd(const CMPIObjectPath *ref,
         inst = get_typed_instance(broker,
                                   CLASSNAME(ref),
                                   "VirtualSystemMigrationSettingData",
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  false);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

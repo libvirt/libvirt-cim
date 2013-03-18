@@ -440,7 +440,8 @@ CMPIStatus instance_from_dominfo(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   prefix,
                                   "ComputerSystem",
-                                  namespace);
+                                  namespace,
+                                  true);
 
         if (inst == NULL) {
                 CU_DEBUG("Could not init CS instance. "
@@ -560,7 +561,8 @@ static CMPIStatus instance_from_dom(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "ComputerSystem",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

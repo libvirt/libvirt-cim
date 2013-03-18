@@ -341,7 +341,8 @@ char *get_typed_class(const char *refcn, const char *new_base)
 CMPIInstance *get_typed_instance(const CMPIBroker *broker,
                                  const char *refcn,
                                  const char *base,
-                                 const char *namespace)
+                                 const char *namespace,
+                                 bool ccn_flag)
 {
         char *new_cn;
         CMPIObjectPath *op;
@@ -360,8 +361,10 @@ CMPIInstance *get_typed_instance(const CMPIBroker *broker,
         if ((s.rc != CMPI_RC_OK) || CMIsNullObject(inst))
                 goto out;
 
-        CMSetProperty(inst, "CreationClassName",
-                      (CMPIValue *)new_cn, CMPI_chars);
+        if (ccn_flag) {
+                CMSetProperty(inst, "CreationClassName",
+                              (CMPIValue *)new_cn, CMPI_chars);
+        }
 
  out:
         free(new_cn);
@@ -467,7 +470,8 @@ CMPIInstance *make_reference(const CMPIBroker *broker,
         ref_inst = get_typed_instance(broker,
                                       CLASSNAME(source_ref),
                                       assoc_classname,
-                                      NAMESPACE(source_ref));
+                                      NAMESPACE(source_ref),
+                                      false);
 
         if (ref_inst != NULL) {
                 CMPIObjectPath *target_ref;

@@ -125,7 +125,8 @@ static CMPIInstance *get_console_sap(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "KVMRedirectionSAP",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
 
         if (inst == NULL) {
                 cu_statusf(broker, s,

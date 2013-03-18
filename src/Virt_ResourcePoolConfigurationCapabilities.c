@@ -69,7 +69,8 @@ static CMPIStatus get_rpc_cap(const CMPIObjectPath *reference,
         inst = get_typed_instance(_BROKER,
                                   pfx_from_conn(conn),
                                   "ResourcePoolConfigurationCapabilities",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  false);
         if (inst == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,

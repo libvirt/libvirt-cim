@@ -239,7 +239,8 @@ static bool _do_indication(const CMPIBroker *broker,
         ind = get_typed_instance(broker,
                                  prefix,
                                  ind_type_name,
-                                 args->ns);
+                                 args->ns,
+                                 false);
 
         /* Generally report errors and hope to continue, since we have no one
            to actually return status to. */

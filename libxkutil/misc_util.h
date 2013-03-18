@@ -85,7 +85,8 @@ char *get_typed_class(const char *refcn, const char *new_base);
 CMPIInstance *get_typed_instance(const CMPIBroker *broker,
                                  const char *refcn,
                                  const char *base,
-                                 const char *namespace);
+                                 const char *namespace,
+                                 bool ccn_flag);
 
 /* Parse an OrgID:LocID string into its constituent parts */
 int parse_instance_id(char *iid, char **orgid, char **locid);

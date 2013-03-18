@@ -781,6 +781,8 @@ static const char *rasd_to_res(CMPIInstance *inst,
         return msg;
 }
 
+/* Warning: returned instance is not freed manually in caller, need confirm
+   if server will auto free it. */
 static CMPIInstance *get_resource_rasd(struct virt_pool_res *res,
                                        const CMPIObjectPath *ref,
                                        CMPIStatus *s)
@@ -798,7 +800,8 @@ static CMPIInstance *get_resource_rasd(struct virt_pool_res *res,
         inst = get_typed_instance(_BROKER,
                                   CLASSNAME(ref),
                                   "StorageVolumeResourceAllocationSettingData",
-                                  NAMESPACE(ref));
+                                  NAMESPACE(ref),
+                                  false);
         if (inst == NULL) {
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
@@ -1279,7 +1282,8 @@ CMPIStatus get_rpcs(const CMPIObjectPath *reference,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "ResourcePoolConfigurationService",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
         if (inst == NULL) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_FAILED,

@@ -135,7 +135,8 @@ static CMPIStatus fake_host(const CMPIBroker *broker,
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
                                   "HostSystem",
-                                  NAMESPACE(reference));
+                                  NAMESPACE(reference),
+                                  true);
 
         if (inst == NULL) {
                 cu_statusf(broker, &s, 
