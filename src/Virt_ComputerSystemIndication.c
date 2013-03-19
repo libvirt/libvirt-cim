@@ -83,106 +83,6 @@ static pthread_mutex_t lifecycle_mutex = PTHREAD_MUTEX_INITIALIZER;
 static bool lifecycle_enabled = false;
 static csi_thread_data_t csi_thread_data[CSI_NUM_PLATFORMS] = {{0}, {0}, {0}};
 
-#ifndef USE_LIBVIRT_EVENT
-#else
-/*
- * Domain manipulation
- */
-static void csi_dom_xml_free(void *data)
-{
-        csi_dom_xml_t *dom = (csi_dom_xml_t *) data;
-        free(dom->xml);
-        free(dom->name);
-        free(dom);
-}
-
-static int csi_dom_xml_cmp(void *data, void *cmp_cb_data)
-{
-        csi_dom_xml_t *dom = (csi_dom_xml_t *) data;
-        const char *uuid = (const char *) cmp_cb_data;
-
-        return strcmp(dom->uuid, uuid);
-}
-
-static int csi_dom_xml_set(csi_dom_xml_t *dom, virDomainPtr dom_ptr, CMPIStatus *s)
-{
-        const char *name;
-
-        name = virDomainGetName(dom_ptr);
-        if (name == NULL) {
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to get domain name");
-                return -1;
-        }
-
-        dom->name = strdup(name);
-
-        /* xml */
-        dom->xml = virDomainGetXMLDesc(dom_ptr,
-                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
-        if (dom->xml == NULL) {
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to get xml desc");
-                return -1;
-        }
-
-        return 0;
-}
-
-static csi_dom_xml_t *csi_dom_xml_new(virDomainPtr dom_ptr, CMPIStatus *s)
-{
-        int rc;
-        csi_dom_xml_t *dom;
-
-        dom = calloc(1, sizeof(*dom));
-        if (dom == NULL)
-                return NULL;
-
-        /* uuid */
-        rc = virDomainGetUUIDString(dom_ptr, dom->uuid);
-        if (rc == -1) {
-                cu_statusf(_BROKER, s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed to get domain UUID");
-                goto error;
-        }
-
-        if (csi_dom_xml_set(dom, dom_ptr, s) == -1)
-                goto error;
-
-        return dom;
-
- error:
-        csi_dom_xml_free(dom);
-        return NULL;
-}
-
-static void csi_thread_dom_list_append(csi_thread_data_t *thread,
-                                       csi_dom_xml_t *dom)
-{
-        if (thread->dom_list == NULL)
-                thread->dom_list = list_new(csi_dom_xml_free, csi_dom_xml_cmp);
-
-        list_append(thread->dom_list, dom);
-}
-
-static void csi_free_thread_data(void *data)
-{
-        csi_thread_data_t *thread = (csi_thread_data_t *) data;
-
-        if (data == NULL)
-                return;
-
-        pthread_mutex_lock(&lifecycle_mutex);
-        list_free(thread->dom_list);
-        thread->dom_list = NULL;
-        stdi_free_ind_args(&thread->args);
-        pthread_mutex_unlock(&lifecycle_mutex);
-}
-#endif
-
 void set_source_inst_props(const CMPIBroker *broker,
                            const CMPIContext *context,
                            const CMPIObjectPath *ref,
@@ -387,6 +287,64 @@ static bool create_deleted_guest_inst(const char *xml,
 
         return rc;
 }
+
+static int platform_from_class(const char *cn)
+{
+        if (STARTS_WITH(cn, "Xen")) {
+                return CSI_XEN;
+        } else if (STARTS_WITH(cn, "KVM")) {
+                return CSI_KVM;
+        } else if (STARTS_WITH(cn, "LXC")) {
+                return CSI_LXC;
+        } else {
+                return -1;
+        }
+}
+
+static _EI_RTYPE EnableIndications(CMPIIndicationMI *mi,
+                                   const CMPIContext *ctx)
+{
+        CU_DEBUG("EnableIndications");
+        pthread_mutex_lock(&lifecycle_mutex);
+        lifecycle_enabled = true;
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        _EI_RET();
+}
+
+static _EI_RTYPE DisableIndications(CMPIIndicationMI *mi,
+                                    const CMPIContext *ctx)
+{
+        CU_DEBUG("DisableIndications");
+        pthread_mutex_lock(&lifecycle_mutex);
+        lifecycle_enabled = false;
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        _EI_RET();
+}
+
+DECLARE_FILTER(xen_created, "Xen_ComputerSystemCreatedIndication");
+DECLARE_FILTER(xen_deleted, "Xen_ComputerSystemDeletedIndication");
+DECLARE_FILTER(xen_modified, "Xen_ComputerSystemModifiedIndication");
+DECLARE_FILTER(kvm_created, "KVM_ComputerSystemCreatedIndication");
+DECLARE_FILTER(kvm_deleted, "KVM_ComputerSystemDeletedIndication");
+DECLARE_FILTER(kvm_modified, "KVM_ComputerSystemModifiedIndication");
+DECLARE_FILTER(lxc_created, "LXC_ComputerSystemCreatedIndication");
+DECLARE_FILTER(lxc_deleted, "LXC_ComputerSystemDeletedIndication");
+DECLARE_FILTER(lxc_modified, "LXC_ComputerSystemModifiedIndication");
+
+static struct std_ind_filter *filters[] = {
+        &xen_created,
+        &xen_deleted,
+        &xen_modified,
+        &kvm_created,
+        &kvm_deleted,
+        &kvm_modified,
+        &lxc_created,
+        &lxc_deleted,
+        &lxc_modified,
+        NULL,
+};
 
 #ifndef USE_LIBVIRT_EVENT
 /* libvirt-cim's private CSI implement */
@@ -775,7 +733,377 @@ static CMPI_THREAD_RETURN lifecycle_thread_native(void *params)
 
         return (CMPI_THREAD_RETURN) 0;
 }
+
+static CMPIStatus ActivateFilter(CMPIIndicationMI *mi,
+                                 const CMPIContext *ctx,
+                                 const CMPISelectExp *se,
+                                 const char *ns,
+                                 const CMPIObjectPath *op,
+                                 CMPIBoolean first)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        struct std_indication_ctx *_ctx;
+        struct ind_args *args = NULL;
+        int platform;
+        bool error = false;
+        csi_thread_data_t *thread = NULL;
+
+        CU_DEBUG("ActivateFilter for %s", CLASSNAME(op));
+
+        pthread_mutex_lock(&lifecycle_mutex);
+
+        CU_DEBUG("Using libvirt-cim's event implemention.");
+
+        _ctx = (struct std_indication_ctx *)mi->hdl;
+
+        if (CMIsNullObject(op)) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No ObjectPath given");
+                goto out;
+        }
+
+        /* FIXME: op is stale the second time around, for some reason */
+        platform = platform_from_class(CLASSNAME(op));
+        if (platform < 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unknown platform");
+                goto out;
+        }
+
+        thread = &csi_thread_data[platform];
+        thread->active_filters += 1;
+
+        /* Check if thread is already running */
+        if (thread->id > 0) {
+                goto out;
+        }
+
+        args = malloc(sizeof(*args));
+        if (args == NULL) {
+                CU_DEBUG("Failed to allocate ind_args");
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Unable to allocate ind_args");
+                error = true;
+                goto out;
+        }
+
+        args->context = CBPrepareAttachThread(_BROKER, ctx);
+        if (args->context == NULL) {
+                CU_DEBUG("Failed to create thread context");
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Unable to create thread context");
+                error = true;
+                goto out;
+        }
+
+        args->ns = strdup(NAMESPACE(op));
+        args->classname = strdup(CLASSNAME(op));
+        args->_ctx = _ctx;
+
+        thread->args = args;
+
+        thread->id = _BROKER->xft->newThread(lifecycle_thread_native,
+                                             thread, 0);
+
+        if (thread->id <= 0) {
+            CU_DEBUG("Error, failed to create new thread.");
+            error = true;
+        }
+
+ out:
+        if (error == true) {
+                thread->active_filters -= 1;
+                free(args);
+        }
+
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        return s;
+}
+
+static CMPIStatus DeActivateFilter(CMPIIndicationMI *mi,
+                                   const CMPIContext *ctx,
+                                   const CMPISelectExp *se,
+                                   const  char *ns,
+                                   const CMPIObjectPath *op,
+                                   CMPIBoolean last)
+{
+        int platform;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        CU_DEBUG("DeActivateFilter for %s", CLASSNAME(op));
+
+        platform = platform_from_class(CLASSNAME(op));
+        if (platform < 0) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unknown platform");
+                goto out;
+        }
+
+
+        pthread_mutex_lock(&lifecycle_mutex);
+        csi_thread_data[platform].active_filters -= 1;
+        pthread_mutex_unlock(&lifecycle_mutex);
+
+        pthread_cond_signal(&lifecycle_cond);
+
+ out:
+        return s;
+}
+
+static CMPIStatus trigger_indication(const CMPIContext *context)
+{
+        CU_DEBUG("triggered");
+        pthread_cond_signal(&lifecycle_cond);
+        return (CMPIStatus){CMPI_RC_OK, NULL};
+}
+
+static CMPIInstance *get_prev_inst(const CMPIBroker *broker,
+                                   const CMPIInstance *ind,
+                                   CMPIStatus *s)
+{
+        CMPIData data;
+        CMPIInstance *prev_inst = NULL;
+
+        data = CMGetProperty(ind, "PreviousInstance", s);
+        if (s->rc != CMPI_RC_OK || CMIsNullValue(data)) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_NO_SUCH_PROPERTY,
+                           "Unable to get PreviousInstance of the indication");
+                goto out;
+        }
+
+        if (data.type != CMPI_instance) {
+                cu_statusf(broker, s,
+                           CMPI_RC_ERR_TYPE_MISMATCH,
+                           "Indication SourceInstance is of unexpected type");
+                goto out;
+        }
+
+        prev_inst = data.value.inst;
+
+ out:
+        return prev_inst;
+}
+
+static CMPIStatus raise_indication(const CMPIBroker *broker,
+                                   const CMPIContext *ctx,
+                                   const CMPIObjectPath *ref,
+                                   const CMPIInstance *ind)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        CMPIInstance *prev_inst;
+        CMPIInstance *src_inst;
+        CMPIObjectPath *_ref = NULL;
+        struct std_indication_ctx *_ctx = NULL;
+        struct ind_args *args = NULL;
+        char *prefix = NULL;
+        bool rc;
+
+        if (!lifecycle_enabled) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "CSI not enabled, skipping indication delivery");
+                goto out;
+        }
+
+        prev_inst = get_prev_inst(broker, ind, &s);
+        if (s.rc != CMPI_RC_OK || CMIsNullObject(prev_inst)) {
+                goto out;
+        }
+
+        _ref = CMGetObjectPath(prev_inst, &s);
+        if (s.rc != CMPI_RC_OK) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to get a reference to the guest");
+                goto out;
+        }
+
+        /* FIXME:  This is a Pegasus work around. Pegsus loses the namespace
+                   when an ObjectPath is pulled from an instance */
+        if (STREQ(NAMESPACE(_ref), "")) {
+                CMSetNameSpace(_ref, "root/virt");
+        }
+
+        s = get_domain_by_ref(broker, _ref, &src_inst);
+        if (s.rc != CMPI_RC_OK || CMIsNullObject(src_inst)) {
+                goto out;
+        }
+
+        _ctx = malloc(sizeof(struct std_indication_ctx));
+        if (_ctx == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate indication context");
+                goto out;
+        }
+
+        _ctx->brkr = broker;
+        _ctx->handler = NULL;
+        _ctx->filters = filters;
+        _ctx->enabled = lifecycle_enabled;
+
+        args = malloc(sizeof(struct ind_args));
+        if (args == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to allocate ind_args");
+                goto out;
+       }
+
+        args->ns = strdup(NAMESPACE(_ref));
+        args->classname = strdup(CLASSNAME(_ref));
+        if (!args->classname || !args->ns) {
+                CU_DEBUG("Failed in strdup");
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed in strdup in indication raising");
+                goto out;
+        }
+        args->_ctx = _ctx;
+
+        prefix = class_prefix_name(args->classname);
+
+        rc = _do_indication(broker, ctx, prev_inst, src_inst,
+                            CS_MODIFIED, prefix, args);
+
+        if (!rc) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to generate indication");
+        }
+
+ out:
+        if (args != NULL) {
+                stdi_free_ind_args(&args);
+        }
+
+        if (_ctx != NULL) {
+                free(_ctx);
+        }
+
+        free(prefix);
+        return s;
+}
+
+static struct std_indication_handler csi = {
+        .raise_fn = raise_indication,
+        .trigger_fn = trigger_indication,
+        .activate_fn = ActivateFilter,
+        .deactivate_fn = DeActivateFilter,
+        .enable_fn = EnableIndications,
+        .disable_fn = DisableIndications,
+};
 #else
+/* Using libvirt's event to implement CSI */
+
+/*
+ * Domain manipulation
+ */
+static void csi_dom_xml_free(void *data)
+{
+        csi_dom_xml_t *dom = (csi_dom_xml_t *) data;
+        free(dom->xml);
+        free(dom->name);
+        free(dom);
+}
+
+static int csi_dom_xml_cmp(void *data, void *cmp_cb_data)
+{
+        csi_dom_xml_t *dom = (csi_dom_xml_t *) data;
+        const char *uuid = (const char *) cmp_cb_data;
+
+        return strcmp(dom->uuid, uuid);
+}
+
+static int csi_dom_xml_set(csi_dom_xml_t *dom,
+                           virDomainPtr dom_ptr,
+                           CMPIStatus *s)
+{
+        const char *name;
+
+        name = virDomainGetName(dom_ptr);
+        if (name == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get domain name");
+                return -1;
+        }
+
+        dom->name = strdup(name);
+
+        /* xml */
+        dom->xml = virDomainGetXMLDesc(dom_ptr,
+                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
+        if (dom->xml == NULL) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get xml desc");
+                return -1;
+        }
+
+        return 0;
+}
+
+static csi_dom_xml_t *csi_dom_xml_new(virDomainPtr dom_ptr, CMPIStatus *s)
+{
+        int rc;
+        csi_dom_xml_t *dom;
+
+        dom = calloc(1, sizeof(*dom));
+        if (dom == NULL) {
+                return NULL;
+        }
+
+        /* uuid */
+        rc = virDomainGetUUIDString(dom_ptr, dom->uuid);
+        if (rc == -1) {
+                cu_statusf(_BROKER, s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get domain UUID");
+                goto error;
+        }
+
+        if (csi_dom_xml_set(dom, dom_ptr, s) == -1) {
+                goto error;
+        }
+
+        return dom;
+
+ error:
+        csi_dom_xml_free(dom);
+        return NULL;
+}
+
+static void csi_thread_dom_list_append(csi_thread_data_t *thread,
+                                       csi_dom_xml_t *dom)
+{
+        if (thread->dom_list == NULL) {
+                thread->dom_list = list_new(csi_dom_xml_free, csi_dom_xml_cmp);
+        }
+
+        list_append(thread->dom_list, dom);
+}
+
+static void csi_free_thread_data(void *data)
+{
+        csi_thread_data_t *thread = (csi_thread_data_t *) data;
+
+        if (data == NULL) {
+                return;
+        }
+
+        pthread_mutex_lock(&lifecycle_mutex);
+        list_free(thread->dom_list);
+        thread->dom_list = NULL;
+        stdi_free_ind_args(&thread->args);
+        pthread_mutex_unlock(&lifecycle_mutex);
+}
+
 static bool async_ind(struct ind_args *args,
                       int ind_type,
                       csi_dom_xml_t *dom,
@@ -1059,176 +1387,7 @@ static CMPI_THREAD_RETURN lifecycle_thread(void *params)
         free(prefix);
         return (CMPI_THREAD_RETURN) 0;
 }
-#endif
 
-static int platform_from_class(const char *cn)
-{
-        if (STARTS_WITH(cn, "Xen"))
-                return CSI_XEN;
-        else if (STARTS_WITH(cn, "KVM"))
-                return CSI_KVM;
-        else if (STARTS_WITH(cn, "LXC"))
-                return CSI_LXC;
-        else
-                return -1;
-}
-
-#ifndef USE_LIBVIRT_EVENT
-static CMPIStatus ActivateFilter(CMPIIndicationMI *mi,
-                                 const CMPIContext *ctx,
-                                 const CMPISelectExp *se,
-                                 const char *ns,
-                                 const CMPIObjectPath *op,
-                                 CMPIBoolean first)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        struct std_indication_ctx *_ctx;
-        struct ind_args *args = NULL;
-        int platform;
-        bool error = false;
-        csi_thread_data_t *thread = NULL;
-
-        CU_DEBUG("ActivateFilter for %s", CLASSNAME(op));
-
-        pthread_mutex_lock(&lifecycle_mutex);
-
-        CU_DEBUG("Using libvirt-cim's event implemention.");
-
-        _ctx = (struct std_indication_ctx *)mi->hdl;
-
-        if (CMIsNullObject(op)) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "No ObjectPath given");
-                goto out;
-        }
-
-        /* FIXME: op is stale the second time around, for some reason */
-        platform = platform_from_class(CLASSNAME(op));
-        if (platform < 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unknown platform");
-                goto out;
-        }
-
-        thread = &csi_thread_data[platform];
-        thread->active_filters += 1;
-
-        /* Check if thread is already running */
-        if (thread->id > 0) {
-                goto out;
-        }
-
-        args = malloc(sizeof(*args));
-        if (args == NULL) {
-                CU_DEBUG("Failed to allocate ind_args");
-                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                           "Unable to allocate ind_args");
-                error = true;
-                goto out;
-        }
-
-        args->context = CBPrepareAttachThread(_BROKER, ctx);
-        if (args->context == NULL) {
-                CU_DEBUG("Failed to create thread context");
-                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
-                           "Unable to create thread context");
-                error = true;
-                goto out;
-        }
-
-        args->ns = strdup(NAMESPACE(op));
-        args->classname = strdup(CLASSNAME(op));
-        args->_ctx = _ctx;
-
-        thread->args = args;
-
-        thread->id = _BROKER->xft->newThread(lifecycle_thread_native,
-                                             thread, 0);
-
-        if (thread->id <= 0) {
-            CU_DEBUG("Error, failed to create new thread.");
-            error = true;
-        }
-
- out:
-        if (error == true) {
-                thread->active_filters -= 1;
-                free(args);
-        }
-
-        pthread_mutex_unlock(&lifecycle_mutex);
-
-        return s;
-}
-
-static CMPIStatus DeActivateFilter(CMPIIndicationMI *mi,
-                                   const CMPIContext *ctx,
-                                   const CMPISelectExp *se,
-                                   const  char *ns,
-                                   const CMPIObjectPath *op,
-                                   CMPIBoolean last)
-{
-        int platform;
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-
-        CU_DEBUG("DeActivateFilter for %s", CLASSNAME(op));
-
-        platform = platform_from_class(CLASSNAME(op));
-        if (platform < 0) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unknown platform");
-                goto out;
-        }
-
-
-        pthread_mutex_lock(&lifecycle_mutex);
-        csi_thread_data[platform].active_filters -= 1;
-        pthread_mutex_unlock(&lifecycle_mutex);
-
-        pthread_cond_signal(&lifecycle_cond);
-
- out:
-        return s;
-}
-
-static CMPIStatus trigger_indication(const CMPIContext *context)
-{
-        CU_DEBUG("triggered");
-        pthread_cond_signal(&lifecycle_cond);
-        return (CMPIStatus){CMPI_RC_OK, NULL};
-}
-
-static CMPIInstance *get_prev_inst(const CMPIBroker *broker,
-                                   const CMPIInstance *ind,
-                                   CMPIStatus *s)
-{
-        CMPIData data;
-        CMPIInstance *prev_inst = NULL;
-
-        data = CMGetProperty(ind, "PreviousInstance", s);
-        if (s->rc != CMPI_RC_OK || CMIsNullValue(data)) {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_NO_SUCH_PROPERTY,
-                           "Unable to get PreviousInstance of the indication");
-                goto out;
-        }
-
-        if (data.type != CMPI_instance) {
-                cu_statusf(broker, s,
-                           CMPI_RC_ERR_TYPE_MISMATCH,
-                           "Indication SourceInstance is of unexpected type");
-                goto out;
-        }
-
-        prev_inst = data.value.inst;
-
- out:
-        return prev_inst;
-}
-#else
 static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
                                  const CMPIContext* ctx,
                                  const CMPISelectExp* se,
@@ -1348,166 +1507,14 @@ static CMPIStatus DeActivateFilter(CMPIIndicationMI* mi,
  out:
         return s;
 }
-#endif
-
-static _EI_RTYPE EnableIndications(CMPIIndicationMI* mi,
-                                   const CMPIContext *ctx)
-{
-        CU_DEBUG("EnableIndications");
-        pthread_mutex_lock(&lifecycle_mutex);
-        lifecycle_enabled = true;
-        pthread_mutex_unlock(&lifecycle_mutex);
-
-        _EI_RET();
-}
-
-static _EI_RTYPE DisableIndications(CMPIIndicationMI* mi,
-                                    const CMPIContext *ctx)
-{
-        CU_DEBUG("DisableIndications");
-        pthread_mutex_lock(&lifecycle_mutex);
-        lifecycle_enabled = false;
-        pthread_mutex_unlock(&lifecycle_mutex);
-
-        _EI_RET();
-}
-
-DECLARE_FILTER(xen_created, "Xen_ComputerSystemCreatedIndication");
-DECLARE_FILTER(xen_deleted, "Xen_ComputerSystemDeletedIndication");
-DECLARE_FILTER(xen_modified, "Xen_ComputerSystemModifiedIndication");
-DECLARE_FILTER(kvm_created, "KVM_ComputerSystemCreatedIndication");
-DECLARE_FILTER(kvm_deleted, "KVM_ComputerSystemDeletedIndication");
-DECLARE_FILTER(kvm_modified, "KVM_ComputerSystemModifiedIndication");
-DECLARE_FILTER(lxc_created, "LXC_ComputerSystemCreatedIndication");
-DECLARE_FILTER(lxc_deleted, "LXC_ComputerSystemDeletedIndication");
-DECLARE_FILTER(lxc_modified, "LXC_ComputerSystemModifiedIndication");
-
-static struct std_ind_filter *filters[] = {
-        &xen_created,
-        &xen_deleted,
-        &xen_modified,
-        &kvm_created,
-        &kvm_deleted,
-        &kvm_modified,
-        &lxc_created,
-        &lxc_deleted,
-        &lxc_modified,
-        NULL,
-};
-
-#ifndef USE_LIBVIRT_EVENT
-static CMPIStatus raise_indication(const CMPIBroker *broker,
-                                   const CMPIContext *ctx,
-                                   const CMPIObjectPath *ref,
-                                   const CMPIInstance *ind)
-{
-        CMPIStatus s = {CMPI_RC_OK, NULL};
-        CMPIInstance *prev_inst;
-        CMPIInstance *src_inst;
-        CMPIObjectPath *_ref = NULL;
-        struct std_indication_ctx *_ctx = NULL;
-        struct ind_args *args = NULL;
-        char *prefix = NULL;
-        bool rc;
-
-        if (!lifecycle_enabled) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "CSI not enabled, skipping indication delivery");
-                goto out;
-        }
-
-        prev_inst = get_prev_inst(broker, ind, &s);
-        if (s.rc != CMPI_RC_OK || CMIsNullObject(prev_inst)) {
-                goto out;
-        }
-
-        _ref = CMGetObjectPath(prev_inst, &s);
-        if (s.rc != CMPI_RC_OK) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to get a reference to the guest");
-                goto out;
-        }
-
-        /* FIXME:  This is a Pegasus work around. Pegsus loses the namespace
-                   when an ObjectPath is pulled from an instance */
-        if (STREQ(NAMESPACE(_ref), "")) {
-                CMSetNameSpace(_ref, "root/virt");
-        }
-
-        s = get_domain_by_ref(broker, _ref, &src_inst);
-        if (s.rc != CMPI_RC_OK || CMIsNullObject(src_inst)) {
-                goto out;
-        }
-
-        _ctx = malloc(sizeof(struct std_indication_ctx));
-        if (_ctx == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to allocate indication context");
-                goto out;
-        }
-
-        _ctx->brkr = broker;
-        _ctx->handler = NULL;
-        _ctx->filters = filters;
-        _ctx->enabled = lifecycle_enabled;
-
-        args = malloc(sizeof(struct ind_args));
-        if (args == NULL) {
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to allocate ind_args");
-                goto out;
-       }
-
-        args->ns = strdup(NAMESPACE(_ref));
-        args->classname = strdup(CLASSNAME(_ref));
-        if (!args->classname || !args->ns) {
-                CU_DEBUG("Failed in strdup");
-                cu_statusf(broker, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Failed in strdup in indication raising");
-                goto out;
-        }
-        args->_ctx = _ctx;
-
-        prefix = class_prefix_name(args->classname);
-
-        rc = _do_indication(broker, ctx, prev_inst, src_inst,
-                            CS_MODIFIED, prefix, args);
-
-        if (!rc) {
-                cu_statusf(_BROKER, &s,
-                           CMPI_RC_ERR_FAILED,
-                           "Unable to generate indication");
-        }
-
- out:
-        if (args != NULL) {
-                stdi_free_ind_args(&args);
-        }
-
-        if (_ctx != NULL) {
-                free(_ctx);
-        }
-
-        free(prefix);
-        return s;
-}
-#endif
 
 static struct std_indication_handler csi = {
-#ifndef USE_LIBVIRT_EVENT
-        .raise_fn = raise_indication,
-        .trigger_fn = trigger_indication,
-#endif
         .activate_fn = ActivateFilter,
         .deactivate_fn = DeActivateFilter,
         .enable_fn = EnableIndications,
         .disable_fn = DisableIndications,
 };
+#endif
 
 DEFAULT_IND_CLEANUP();
 DEFAULT_AF();
