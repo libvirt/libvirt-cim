@@ -172,7 +172,7 @@ static CMPIStatus _xen_vsmc_to_vssd(virConnectPtr conn,
                 if (inst == NULL)
                         goto error;
 
-                CMSetProperty(inst, "BootDevice",
+                CMSetProperty(inst, "BootDevices",
                               (CMPIValue *)"hda", CMPI_chars);
 
                 CMSetProperty(inst, "IsFullVirt",
@@ -211,7 +211,7 @@ static CMPIStatus _kvm_vsmc_to_vssd(virConnectPtr conn,
         CMSetProperty(inst, "VirtualSystemIdentifier",
                       (CMPIValue *)"KVM_guest", CMPI_chars);
 
-        CMSetProperty(inst, "BootDevice",
+        CMSetProperty(inst, "BootDevices",
                       (CMPIValue *)"hda", CMPI_chars);
 
         inst_list_add(list, inst);

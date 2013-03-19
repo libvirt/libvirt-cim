@@ -408,7 +408,7 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
 
         bl_size = CMGetArrayCount(bootlist, &s);
         if (s.rc != CMPI_RC_OK) {
-                CU_DEBUG("Invalid BootDevice array size");
+                CU_DEBUG("Invalid BootDevices array size");
                 return 0;
         }
 
@@ -428,7 +428,7 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
                                                 NULL);
 
                 if (CMIsNullValue(boot_elem)) {
-                        CU_DEBUG("Null BootDevice");
+                        CU_DEBUG("Null BootDevices");
                         free(tmp_str_arr);
                         return 0;
                 }
