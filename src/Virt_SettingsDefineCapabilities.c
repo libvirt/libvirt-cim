@@ -160,7 +160,7 @@ static CMPIStatus _xen_vsmc_to_vssd(virConnectPtr conn,
         CMSetProperty(inst, "Bootloader",
                       (CMPIValue *)"/usr/bin/pygrub", CMPI_chars);
 
-        CMSetProperty(inst, "isFullVirt",
+        CMSetProperty(inst, "IsFullVirt",
                       (CMPIValue *)&isfv, CMPI_boolean);
 
         inst_list_add(list, inst);
@@ -175,7 +175,7 @@ static CMPIStatus _xen_vsmc_to_vssd(virConnectPtr conn,
                 CMSetProperty(inst, "BootDevice",
                               (CMPIValue *)"hda", CMPI_chars);
 
-                CMSetProperty(inst, "isFullVirt",
+                CMSetProperty(inst, "IsFullVirt",
                               (CMPIValue *)&isfv, CMPI_boolean);
 
                 inst_list_add(list, inst);
