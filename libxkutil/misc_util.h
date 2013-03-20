@@ -152,6 +152,9 @@ int virt_set_status(const CMPIBroker *broker,
 
 #define REF2STR(r) CMGetCharPtr(CMObjectPathToString(r, NULL))
 
+/* get libvirt-cim config */
+const char *get_mig_ssh_tmp_key(void);
+
 /*
  * Local Variables:
  * mode: C

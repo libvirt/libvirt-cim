@@ -150,6 +150,7 @@ static CMPIStatus get_migration_uri(CMPIInstance *msd,
 
 static char *dest_uri(const char *cn,
                       const char *dest,
+                      const char *dest_params,
                       uint16_t transport)
 {
         const char *prefix;
@@ -157,6 +158,7 @@ static char *dest_uri(const char *cn,
         const char *param = "";
         char *uri = NULL;
         int rc;
+        int param_labeled = 0;
 
         if (STARTS_WITH(cn, "Xen"))
                 prefix = "xen";
@@ -197,14 +199,52 @@ static char *dest_uri(const char *cn,
                 goto out;
         }
 
-        if (!STREQC(param, ""))
+        if (!STREQC(param, "")) {
                 rc = asprintf(&uri, "%s/%s", uri, param);
+                param_labeled = 1;
+        }
 
-        if (rc == -1)
+        if (rc == -1) {
                 uri = NULL;
+                goto out;
+        }
 
+        if (dest_params) {
+                if (param_labeled == 0) {
+                    rc = asprintf(&uri, "%s?%s", uri, dest_params);
+                } else {
+                    /* ? is already added */
+                    rc = asprintf(&uri, "%s%s", uri, dest_params);
+                }
+                if (rc == -1) {
+                        uri = NULL;
+                        goto out;
+                }
+        }
  out:
         return uri;
+}
+
+/* Todo: move it to libcmpiutil */
+static CMPIrc cu_get_bool_arg_my(const CMPIArgs *args,
+                                 const char *name,
+                                 bool *target)
+{
+        CMPIData argdata;
+        CMPIStatus s;
+
+        argdata = CMGetArg(args, name, &s);
+        if ((s.rc != CMPI_RC_OK) || CMIsNullValue(argdata)) {
+                return CMPI_RC_ERR_INVALID_PARAMETER;
+        }
+
+        if (argdata.type != CMPI_boolean) {
+                return CMPI_RC_ERR_TYPE_MISMATCH;
+        }
+
+        *target = (bool)argdata.value.boolean;
+
+        return CMPI_RC_OK;
 }
 
 static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
@@ -217,6 +257,13 @@ static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
         CMPIInstance *msd;
         uint16_t uri_type;
         char *uri = NULL;
+        bool use_non_root_ssh_key = false;
+        char *dest_params = NULL;
+        int ret;
+
+        cu_get_bool_arg_my(argsin,
+                           "MigrationWithoutRootKey",
+                           &use_non_root_ssh_key);
 
         s = get_msd(ref, argsin, &msd);
         if (s.rc != CMPI_RC_OK)
@@ -230,7 +277,27 @@ static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
         if (s.rc != CMPI_RC_OK)
                 goto out;
 
-        uri = dest_uri(CLASSNAME(ref), destination, uri_type);
+        if (use_non_root_ssh_key) {
+                const char *tmp_keyfile = get_mig_ssh_tmp_key();
+                if (!tmp_keyfile) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Migration with special ssh key "
+                                   "is not enabled in config file.");
+                        CU_DEBUG("Migration with special ssh key "
+                                 "is not enabled in config file.");
+                        goto out;
+                }
+                CU_DEBUG("Trying migrate with specified ssh key file [%s].",
+                         tmp_keyfile);
+                ret = asprintf(&dest_params, "keyfile=%s", tmp_keyfile);
+                if (ret < 0) {
+                        CU_DEBUG("Failed in generating param string.");
+                        goto out;
+                }
+        }
+
+        uri = dest_uri(CLASSNAME(ref), destination, dest_params, uri_type);
         if (uri == NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -238,6 +305,7 @@ static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
                 goto out;
         }
 
+        CU_DEBUG("Migrate tring to connect remote host with uri %s.", uri);
         *conn = virConnectOpen(uri);
         if (*conn == NULL) {
                 CU_DEBUG("Failed to connect to remote host (%s)", uri);
@@ -249,7 +317,7 @@ static CMPIStatus get_msd_values(const CMPIObjectPath *ref,
 
  out:
         free(uri);
-
+        free(dest_params);
         return s;
 }
 
@@ -1538,7 +1606,7 @@ static CMPIStatus migrate_vs_host(CMPIMethodMI *self,
         const char *dhost = NULL;
         CMPIObjectPath *system;
         const char *name = NULL;
-          
+
         cu_get_str_arg(argsin, "DestinationHost", &dhost);
         cu_get_ref_arg(argsin, "ComputerSystem", &system);
 
@@ -1604,11 +1672,179 @@ static CMPIStatus migrate_vs_system(CMPIMethodMI *self,
         return migrate_do(ref, ctx, name, dname, argsin, results, argsout);
 }
 
+/* return 0 on success */
+static int pipe_exec(const char *cmd)
+{
+        FILE *stream = NULL;
+        int ret = 0;
+        char buf[256];
+
+        CU_DEBUG("executing system cmd [%s].", cmd);
+        /* Todo: We need a better popen, currently stdout have been closed
+        and SIGCHILD is handled by tog-pegasus, so fgets always got NULL
+        making error detection not possible. */
+        stream = popen(cmd, "r");
+        if (stream == NULL) {
+                CU_DEBUG("Failed to open pipe to run the command.");
+                ret = -1;
+                goto out;
+        }
+        usleep(10000);
+
+        buf[255] = 0;
+        while (fgets(buf, sizeof(buf), stream) != NULL) {
+                CU_DEBUG("Exception got: [%s].", buf);
+                ret = -2;
+                goto out;
+        }
+
+ out:
+        if (stream != NULL) {
+                pclose(stream);
+        }
+        return ret;
+}
+
+/*
+ * libvirt require private key specified to be placed in a directory owned by
+ * root, because libvirt-cim now runs as root. So here the key would be copied.
+ * In this way libvirt-cim could borrow a non-root ssh private key, instead of
+ * using root's private key, avoid security risk.
+ */
+static int ssh_key_copy(const char *src, const char *dest)
+{
+        char *cmd = NULL;
+        int ret = 0;
+        struct stat sb;
+
+        /* try delete it */
+        unlink(dest);
+        ret = stat(dest, &sb);
+        if (ret == 0) {
+                CU_DEBUG("Can not delete [%s] before copy, "
+                         "maybe someone is using it.",
+                         dest);
+                ret = -1;
+                goto out;
+        }
+
+        ret = asprintf(&cmd, "cp -f %s %s", src, dest);
+        if (ret < 0) {
+                CU_DEBUG("Failed in combination for shell command.");
+                goto out;
+        }
+
+        ret = pipe_exec(cmd);
+        if (ret < 0) {
+                CU_DEBUG("Error in executing command [%s]");
+                goto out;
+        }
+
+        ret = stat(dest, &sb);
+        if (ret < 0) {
+                CU_DEBUG("Can not find file [%s] after copy.", dest);
+        }
+ out:
+        free(cmd);
+        return ret;
+}
+
+static CMPIStatus migrate_sshkey_copy(CMPIMethodMI *self,
+                                    const CMPIContext *ctx,
+                                    const CMPIResult *results,
+                                    const CMPIObjectPath *ref,
+                                    const CMPIArgs *argsin,
+                                    CMPIArgs *argsout)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const char *ssh_key_src = NULL;
+        int ret;
+
+        const char *tmp_keyfile = get_mig_ssh_tmp_key();
+        if (!tmp_keyfile) {
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Migration with special ssh key "
+                           "is not enabled in config file.");
+                CU_DEBUG("Migration with special ssh key "
+                         "is not enabled in config file.");
+                goto out;
+        }
+
+        cu_get_str_arg(argsin, "SSH_Key_Src", &ssh_key_src);
+        if (!ssh_key_src) {
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Failed to get property 'SSH_Key_Src'.");
+                CU_DEBUG("Failed to get property 'SSH_Key_Src'.");
+                goto out;
+        }
+
+        ret = ssh_key_copy(ssh_key_src, tmp_keyfile);
+        if (ret < 0) {
+                cu_statusf(_BROKER, &s, CMPI_RC_ERR_FAILED,
+                           "Got error in copying ssh key from [%s] to [%s].",
+                           ssh_key_src, tmp_keyfile);
+                CU_DEBUG("Got error in copying ssh key from [%s] to [%s].",
+                         ssh_key_src, tmp_keyfile);
+        }
+
+ out:
+        METHOD_RETURN(results, s.rc);
+        return s;
+}
+
+static CMPIStatus migrate_sshkey_delete(CMPIMethodMI *self,
+                                  const CMPIContext *ctx,
+                                  const CMPIResult *results,
+                                  const CMPIObjectPath *ref,
+                                  const CMPIArgs *argsin,
+                                  CMPIArgs *argsout)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        int ret;
+        struct stat sb;
+
+        const char *tmp_keyfile = get_mig_ssh_tmp_key();
+        if (!tmp_keyfile) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Migration with special ssh key "
+                           "is not enabled in config file.");
+                CU_DEBUG("Migration with special ssh key "
+                         "is not enabled in config file.");
+                goto out;
+        }
+
+        ret = stat(tmp_keyfile, &sb);
+        if (ret == 0) {
+                /* need delete */
+                ret = unlink(tmp_keyfile);
+                if (ret < 0) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to delete [%s].",
+                                   tmp_keyfile);
+                        CU_DEBUG("Failed to delete [%s].", tmp_keyfile);
+                }
+        } else {
+                /* not exist */
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Can not find file [%s] before delete.",
+                           tmp_keyfile);
+                CU_DEBUG("Can not find file [%s] before delete.", tmp_keyfile);
+        }
+
+ out:
+        METHOD_RETURN(results, s.rc);
+        return s;
+};
+
 static struct method_handler vsimth = {
         .name = "CheckVirtualSystemIsMigratableToHost",
         .handler = vs_migratable_host,
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationHost", CMPI_string, false},
+                 {"MigrationWithoutRootKey", CMPI_boolean, true},
                  {"MigrationSettingData", CMPI_instance, true},
                  {"NewSystemSettingData", CMPI_instance, true},
                  {"NewResourceSettingData", CMPI_instanceA, true},
@@ -1633,6 +1869,7 @@ static struct method_handler mvsth = {
         .handler = migrate_vs_host,
         .args = {{"ComputerSystem", CMPI_ref, false},
                  {"DestinationHost", CMPI_string, false},
+                 {"MigrationWithoutRootKey", CMPI_boolean, true},
                  {"MigrationSettingData", CMPI_instance, true},
                  {"NewSystemSettingData", CMPI_instance, true},
                  {"NewResourceSettingData", CMPI_instanceA, true},
@@ -1652,11 +1889,28 @@ static struct method_handler mvsts = {
         }
 };
 
+static struct method_handler msshkc = {
+        .name = "MigrateSSHKeyCopy",
+        .handler = migrate_sshkey_copy,
+        .args = {{"SSH_Key_Src", CMPI_string, true},
+                 ARG_END
+        }
+};
+
+static struct method_handler msshkd = {
+        .name = "MigrateSSHKeyDelete",
+        .handler = migrate_sshkey_delete,
+        .args = {ARG_END
+        }
+};
+
 static struct method_handler *my_handlers[] = {
         &vsimth,
         &vsimts,
         &mvsth,
         &mvsts,
+        &msshkc,
+        &msshkd,
         NULL
 };
 

@@ -227,6 +227,15 @@ static int is_read_only(void)
         return prop.value_bool;
 }
 
+const char *get_mig_ssh_tmp_key(void)
+{
+        static LibvirtcimConfigProperty prop = {
+                          "migrate_ssh_temp_key", CONFIG_STRING, {0}, 0};
+
+        libvirt_cim_config_get(&prop);
+        return prop.value_string;
+}
+
 virConnectPtr connect_by_classname(const CMPIBroker *broker,
                                    const char *classname,
                                    CMPIStatus *s)
