@@ -106,14 +106,40 @@ static const char *cn_to_uri(const char *classname)
                 return NULL;
 }
 
-static int is_read_only(void)
-{
-        int readonly = 0;
+/* config support */
+typedef enum LibvirtcimConfigType {
+        CONFIG_BOOL,
+        CONFIG_STRING,
+} LibvirtcimConfigType;
+
+typedef struct LibvirtcimConfigProperty {
+        const char *name;
+        LibvirtcimConfigType value_type;
+        union {
+                int value_bool;
+                char *value_string;
+        };
+        int have_read;
+} LibvirtcimConfigProperty;
 
 #ifdef HAVE_LIBCONFIG
+/*
+ * @prop must be initialized with zeros, except default value, return 0 means
+ * OK. prop->value_string will be automatically freed if not NULL, caller must
+ * never set it to const char*.
+ */
+static int libvirt_cim_config_get(LibvirtcimConfigProperty *prop)
+{
+        int error = 0;
         config_t conf;
-        int ret;
-        const char *readonly_str = "readonly";
+        int ret = 0;
+        const char *value_string = NULL;
+
+        /* try only once */
+        if (prop->have_read == 1) {
+                return 0;
+        }
+        prop->have_read = 1;
 
         config_init(&conf);
 
@@ -121,24 +147,84 @@ static int is_read_only(void)
         if (ret == CONFIG_FALSE) {
                 CU_DEBUG("Error reading config file at line %d: '%s'\n",
                          conf.error_line, conf.error_text);
+                error = -1;
                 goto out;
         }
 
-        ret = config_lookup_bool(&conf, readonly_str, &readonly);
-        if (ret == CONFIG_FALSE) {
-                CU_DEBUG("'%s' not found in config file, assuming false\n",
-                         readonly_str);
-                goto out;
+        switch (prop->value_type) {
+        case CONFIG_BOOL:
+                ret = config_lookup_bool(&conf,
+                                         prop->name, &prop->value_bool);
+                if (ret == CONFIG_FALSE) {
+                        CU_DEBUG("Bool property '%s' in config file '%s' "
+                                 "not found.",
+                                 prop->name, LIBVIRTCIM_CONF);
+                        error = -1;
+                        goto out;
+                }
+
+                CU_DEBUG("Bool property '%s' in config file '%s' is '%d'.",
+                         prop->name, LIBVIRTCIM_CONF, prop->value_bool);
+                break;
+        case CONFIG_STRING:
+                ret = config_lookup_string(&conf,
+                                           prop->name, &value_string);
+                if (ret == CONFIG_FALSE) {
+                        CU_DEBUG("String property '%s' in config file '%s' "
+                                 "not found.",
+                                 prop->name, LIBVIRTCIM_CONF);
+                        error = -1;
+                        goto out;
+                }
+
+                CU_DEBUG("String property '%s' in config file '%s' is '%s'.",
+                         prop->name, LIBVIRTCIM_CONF, value_string);
+
+                if (prop->value_string) {
+                        CU_DEBUG("String property '%s' have value '%s', will "
+                                 "be overwritten.",
+                                 prop->name, prop->value_string);
+                        free(prop->value_string);
+                }
+                prop->value_string = strdup(value_string);
+                if (!prop->value_string) {
+                        CU_DEBUG("Failed in duplicate value '%s'",
+                                 value_string);
+                        error = -1;
+                        goto out;
+                }
+                break;
+        default:
+                CU_DEBUG("Got invalid property type request %d.",
+                         prop->value_type);
+                error = -1;
+                break;
         }
 
-        CU_DEBUG("'%s' value in '%s' config file: %d\n", readonly_str,
-                 LIBVIRTCIM_CONF, readonly);
 out:
         config_destroy(&conf);
+        return error;
+}
+#else
+static int libvirt_cim_config_get(LibvirtcimConfigProperty *prop)
+{
+        /* try only once */
+        if (prop->have_read == 1) {
+                return 0;
+        }
+        prop->have_read = 1;
+
+        CU_DEBUG("Built without libconfig, can't read '%s'.", prop->name);
+        return -2;
+}
 #endif
 
-        /* Default value is 0 (false) */
-        return readonly;
+static int is_read_only(void)
+{
+        static LibvirtcimConfigProperty prop = {
+                                       "readonly", CONFIG_BOOL, {0}, 0};
+        libvirt_cim_config_get(&prop);
+        return prop.value_bool;
 }
 
 virConnectPtr connect_by_classname(const CMPIBroker *broker,
