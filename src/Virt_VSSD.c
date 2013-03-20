@@ -181,8 +181,10 @@ static int instance_from_dom(const CMPIBroker *broker,
         struct domain *dominfo = NULL;
 
         ret = get_dominfo(dom, &dominfo);
-        if (!ret)
+        if (!ret) {
+                CU_DEBUG("Failed in get_dominfo().");
                 goto out;
+        }
 
         op = CMGetObjectPath(inst, NULL);
         pfx = class_prefix_name(CLASSNAME(op));
@@ -245,6 +247,7 @@ static int instance_from_dom(const CMPIBroker *broker,
             (dominfo->type == DOMAIN_KVM) || (dominfo->type == DOMAIN_QEMU)) {
                 s = _set_fv_prop(broker, dominfo, inst);
                 if (s.rc != CMPI_RC_OK) {
+                        CU_DEBUG("Failed to set full virtual props.");
                         ret = 0;
                         goto out;
                 }
@@ -259,6 +262,7 @@ static int instance_from_dom(const CMPIBroker *broker,
                          dominfo->type);
 
         if (asprintf(&vsid, "%s:%s", pfx, dominfo->name) == -1) {
+                CU_DEBUG("Failed in asprintf().");
                 ret = 0;
                 goto out;
         }
@@ -312,7 +316,7 @@ static CMPIStatus return_enum_vssd(const CMPIObjectPath *reference,
         virConnectPtr conn;
         virDomainPtr *list;
         int count;
-        int i;
+        int i, fail_count = 0;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         
         conn = connect_by_classname(_BROKER, CLASSNAME(reference), &s);
@@ -333,15 +337,50 @@ static CMPIStatus return_enum_vssd(const CMPIObjectPath *reference,
                 
                 inst = _get_vssd(_BROKER, reference, conn, list[i], &s);
                 
-                virDomainFree(list[i]);
-                if (inst == NULL)
+                if (inst == NULL) {
+                        /* log the error */
+                        const char *dom_name = virDomainGetName(list[i]);
+                        if (s.msg) {
+                                CU_DEBUG("Failed to get VSSD instance from "
+                                         "domain [%s], status msg [%s].",
+                                         dom_name, CMGetCharPtr(s.msg));
+                        } else {
+                                CU_DEBUG("Failed to get VSSD instance from "
+                                         "domain [%s].",
+                                         dom_name);
+                        }
+                        /* restore s until last one */
+                        if (i < count - 1) {
+                                cu_statusf(_BROKER, &s,
+                                            CMPI_RC_OK,
+                                            "NULL");
+                        }
+                        fail_count++;
+                        virDomainFree(list[i]);
                         continue;
+                }
+                virDomainFree(list[i]);
 
                 if (names_only)
                         cu_return_instance_name(results, inst);
                 else
                         CMReturnInstance(results, inst);
         }
+
+        /* check if some VS fail */
+        if (fail_count > 0) {
+                CU_DEBUG("Failed to get %d VSSD in enum, total is %d.",
+                         fail_count, count);
+               if (fail_count < count) {
+                        /* consider it succeed, some VSSD will be returned */
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_OK,
+                                   "Got %d/%d VSSD, "
+                                   "some VS may changed during enum",
+                                   count - fail_count, count);
+                }
+        }
+
 
  out:
         free(list);
