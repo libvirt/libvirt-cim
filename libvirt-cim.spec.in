@@ -6,7 +6,7 @@ Version: @PACKAGE_VERSION@
 Release: 1%{?dist}%{?extra_release}
 License: LGPLv2+
 Group: Development/Libraries
-Source: libvirt-cim-%{version}.tar.gz
+Source: ftp://libvirt.org/libvirt-cim/libvirt-cim-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 URL: http://libvirt.org/CIM/
 Requires: libxml2 >= 2.6.0
@@ -27,6 +27,9 @@ BuildRequires: libconfig-devel
 
 BuildRequires: libxml2-devel
 BuildRequires: libcmpiutil-devel
+%if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
+BuildRequires: systemd-units
+%endif
 BuildConflicts: sblim-cmpi-devel
 
 %description
@@ -85,7 +88,12 @@ rm -fr $RPM_BUILD_ROOT
 
 %{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
 
-/etc/init.d/tog-pegasus condrestart
+# Fedora 17 / RHEL-7 are first where we use systemd.
+%if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
+    systemctl restart tog-pegasus
+%else
+    /etc/init.d/tog-pegasus condrestart
+%endif
 
 %{_datadir}/%{name}/provider-register.sh -t pegasus \
 	-n @CIM_VIRT_NS@ \
