@@ -270,16 +270,22 @@ static const char *set_net_source(xmlNodePtr nic,
 }
 
 
-static const char *bridge_net_to_xml(xmlNodePtr nic, struct net_device *dev)
+static const char *bridge_net_to_xml(xmlNodePtr nic, struct net_device *dev,
+                                     int domtype)
 {
         const char *script = "vif-bridge";
         xmlNodePtr tmp;
         const char *msg = NULL;
 
-        tmp = xmlNewChild(nic, NULL, BAD_CAST "script", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-        xmlNewProp(tmp, BAD_CAST "path", BAD_CAST script);
+       /* Scripts only supported on Xen guests see 'libvirt'
+        * commit id 1734cdb99 (since 0.9.10) */
+       if (domtype == DOMAIN_XENPV || domtype == DOMAIN_XENFV) {
+            tmp = xmlNewChild(nic, NULL, BAD_CAST "script", NULL);
+            if (tmp == NULL) {
+                    return XML_ERROR;
+            }
+            xmlNewProp(tmp, BAD_CAST "path", BAD_CAST script);
+       }
 
         msg = set_net_source(nic, dev, "bridge");
 
@@ -375,13 +381,13 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                 }
 #endif
 
-                if (STREQ(dev->dev.net.type, "network"))
+                if (STREQ(dev->dev.net.type, "network")) {
                         msg = set_net_source(nic, net, "network");
-                else if (STREQ(dev->dev.net.type, "bridge"))
-                        msg = bridge_net_to_xml(nic, net);
-                else if (STREQ(dev->dev.net.type, "user"))
+                } else if (STREQ(dev->dev.net.type, "bridge")) {
+                        msg = bridge_net_to_xml(nic, net, dominfo->type);
+                } else if (STREQ(dev->dev.net.type, "user")) {
                         continue;
-                else if (STREQ(dev->dev.net.type, "direct")) {
+                } else if (STREQ(dev->dev.net.type, "direct")) {
                         msg = set_net_source(nic, net, "direct");
                         if (net->vsi.vsi_type != NULL) {
                                 struct vsi_device *vsi = &dev->dev.net.vsi;
