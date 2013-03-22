@@ -33,6 +33,31 @@
 #include "cs_util.h"
 #include <libcmpiutil/libcmpiutil.h>
 
+#define USE_VIR_CONNECT_LIST_ALL_DOMAINS 0
+
+#if LIBVIR_VERSION_NUMBER >= 9013 && USE_VIR_CONNECT_LIST_ALL_DOMAINS
+int get_domain_list(virConnectPtr conn, virDomainPtr **_list)
+{
+        virDomainPtr *nameList = NULL;
+        int n_names;
+        int flags = VIR_CONNECT_LIST_DOMAINS_ACTIVE |
+                    VIR_CONNECT_LIST_DOMAINS_INACTIVE;
+
+        n_names = virConnectListAllDomains(conn,
+                                           &nameList,
+                                           flags);
+        if (n_names > 0) {
+                *_list = nameList;
+        } else if (n_names == 0) {
+                /* Since there are no elements, no domain ptrs to free
+                 * but still must free the nameList returned
+                 */
+                free(nameList);
+        }
+
+        return n_names;
+}
+#else
 int get_domain_list(virConnectPtr conn, virDomainPtr **_list)
 {
         char **names = NULL;
@@ -113,6 +138,7 @@ int get_domain_list(virConnectPtr conn, virDomainPtr **_list)
 
         return idx;
 }
+#endif /* LIBVIR_VERSION_NUMBER >= 0913 */
 
 void set_instance_class_name(CMPIInstance *instance, char *name)
 {
