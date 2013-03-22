@@ -90,10 +90,10 @@ pegasus_transform()
     chatter "cimserver version is " $version
     if compare_version "$version" "2.11.0"
     then
-        chatter "Processing provider modules (w/o ModuleGroupName):" \
-	$PROVIDERMODULES
+        chatter "Processing provider modules (w/o ModuleGroupName):"
         for pm in $PROVIDERMODULES
         do
+           chatter "...processing " $pm
            cat >> $OUTFILE <<EOFPM
 instance of PG_ProviderModule
 {
@@ -109,10 +109,10 @@ EOFPM
     done
 
     else
-        chatter "Processing provider modules (w/ ModuleGroupName):" \ 
-	$PROVIDERMODULES
+        chatter "Processing provider modules (w/ ModuleGroupName):"
         for pm in $PROVIDERMODULES
         do
+           chatter "...processing " $pm
            cat >> $OUTFILE <<EOFPM
 instance of PG_ProviderModule
 {
@@ -272,6 +272,7 @@ pegasus_install()
     if pegasus_transform $_REGFILENAME $namespace $myregs
     then
 	chatter Registering providers with $state cimserver '('$version')'
+        chatter Installing mofs into namespace $namespace from path $mofpath
 	$CIMMOF -uc -I $mofpath -n $namespace $mymofs &&
 	$CIMMOF -uc -n root/PG_Interop $_REGFILENAME
     else
