@@ -3,4 +3,3 @@
 Xen_SwitchService root/virt Virt_SwitchService Virt_SwitchService instance
 KVM_SwitchService root/virt Virt_SwitchService Virt_SwitchService instance
 LXC_SwitchService root/virt Virt_SwitchService Virt_SwitchService instance
-
