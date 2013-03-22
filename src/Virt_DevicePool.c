@@ -109,6 +109,10 @@ static bool get_disk_parent(struct tmp_disk_pool **_pools,
 }
 
 #if VIR_USE_LIBVIRT_STORAGE
+#define USE_VIR_CONNECT_LIST_ALL_STORAGE_POOLS 0
+#define USE_VIR_CONNECT_LIST_ALL_NETWORKS 0
+#define USE_VIR_CONNECT_LIST_ALL_DOMAINS 0
+
 int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
 {
         char *xml;
@@ -138,6 +142,77 @@ int get_disk_pool(virStoragePoolPtr poolptr, struct virt_pool **pool)
  * return 0 on success, negative on fail, *pools and *_count will be set
  * only on success .
  */
+#if LIBVIR_VERSION_NUMBER >= 100002 && USE_VIR_CONNECT_LIST_ALL_STORAGE_POOLS
+static int get_diskpool_config(virConnectPtr conn,
+                               struct tmp_disk_pool **_pools,
+                               int *_count)
+{
+        int i, realcount = 0;
+        virStoragePoolPtr *nameList = NULL;
+        int flags = VIR_CONNECT_LIST_STORAGE_POOLS_ACTIVE;
+        struct tmp_disk_pool *pools = NULL;
+        int ret = 0;
+        bool bret;
+
+        realcount = virConnectListAllStoragePools(conn,
+                                                  &nameList,
+                                                  flags);
+        if (realcount < 0) {
+                CU_DEBUG("Failed to get storage pools, return %d.", realcount);
+                ret = realcount;
+                goto out;
+        }
+        if (realcount == 0) {
+                CU_DEBUG("Zero pools got.");
+                goto set_parent;
+        }
+
+        pools = calloc(realcount, sizeof(*pools));
+        if (pools == NULL) {
+                CU_DEBUG("Failed to alloc space for %i pool structs",
+                         realcount);
+                ret = -2;
+                goto free_names;
+        }
+
+        for (i = 0; i < realcount; i++) {
+                pools[i].tag = strdup(virStoragePoolGetName(nameList[i]));
+                if (pools[i].tag == NULL) {
+                        CU_DEBUG("Failed in strdup for storage pool name.");
+                        ret = -3;
+                        goto free_pools;
+                }
+                pools[i].primordial = false;
+        }
+
+ set_parent:
+        bret = get_disk_parent(&pools, &realcount);
+        if (bret != true) {
+                CU_DEBUG("Failed in adding parentpool.");
+                ret = -4;
+                goto free_pools;
+        }
+
+        /* succeed */
+        *_pools = pools;
+        *_count = realcount;
+        goto free_names;
+
+ free_pools:
+        free_diskpool(pools, realcount);
+
+ free_names:
+        if (nameList != NULL) {
+                for (i = 0; i < realcount; i++) {
+                        virStoragePoolFree(nameList[i]);
+                }
+                free(nameList);
+        }
+
+ out:
+        return ret;
+}
+#else
 static int get_diskpool_config(virConnectPtr conn,
                                struct tmp_disk_pool **_pools,
                                int *_count)
@@ -209,6 +284,7 @@ static int get_diskpool_config(virConnectPtr conn,
  out:
         return ret;
 }
+#endif /* LIBVIR_VERSION_NUMBER >= 100002 */
 
 static bool diskpool_set_capacity(virConnectPtr conn,
                                   CMPIInstance *inst,
@@ -530,6 +606,46 @@ static char *diskpool_member_of(const CMPIBroker *broker,
         return pool;
 }
 
+
+#if LIBVIR_VERSION_NUMBER >= 100002 && USE_VIR_CONNECT_LIST_ALL_NETWORKS
+static virNetworkPtr bridge_to_network(virConnectPtr conn,
+                                       const char *bridge)
+{
+        int i, num;
+        virNetworkPtr *nameList = NULL;
+        virNetworkPtr network = NULL;
+        int flags = VIR_CONNECT_LIST_NETWORKS_ACTIVE;
+
+        num = virConnectListAllNetworks(conn,
+                                        &nameList,
+                                        flags);
+        if (num < 0) {
+                CU_DEBUG("Failed to get network pools.");
+                return NULL;
+        }
+
+        for (i = 0; i < num; i++) {
+                const char *_netname;
+                char *_bridge;
+
+                _netname = virNetworkGetName(nameList[i]);
+                _bridge = virNetworkGetBridgeName(network);
+                CU_DEBUG("Network `%s' has bridge `%s'", _netname, _bridge);
+                if (STREQ(bridge, _bridge)) {
+                        network = nameList[i];
+                        nameList[i] = NULL;
+                        i = num;        /* Loop breaker */
+                }
+                free(_bridge);
+        }
+
+        for (i = 0; i < num; i++) {
+                virNetworkFree(nameList[i]);
+        }
+        free(nameList);
+        return network;
+}
+#else
 static virNetworkPtr bridge_to_network(virConnectPtr conn,
                                        const char *bridge)
 {
@@ -573,6 +689,7 @@ static virNetworkPtr bridge_to_network(virConnectPtr conn,
 
         return network;
 }
+#endif /* LIBVIR_VERSION_NUMBER >= 100002 */
 
 static char *_netpool_member_of(virConnectPtr conn,
                                 const struct net_device *ndev)
@@ -749,6 +866,40 @@ static bool mempool_set_total(CMPIInstance *inst, virConnectPtr conn)
         return memory != 0;
 }
 
+#if LIBVIR_VERSION_NUMBER >= 9013 && USE_VIR_CONNECT_LIST_ALL_DOMAINS
+static bool mempool_set_consumed(CMPIInstance *inst, virConnectPtr conn)
+{
+        uint64_t memory = 0;
+        virDomainPtr *nameList = NULL;
+        int n_names, i;
+        int flags = VIR_CONNECT_LIST_DOMAINS_ACTIVE;
+
+        n_names = virConnectListAllDomains(conn,
+                                           &nameList,
+                                           flags);
+        if (n_names < 0) {
+                CU_DEBUG("Failed to get a list of all domains");
+                goto out;
+        }
+
+        for (i = 0; i < n_names; i++) {
+                virDomainInfo dom_info;
+                if (virDomainGetInfo(nameList[i], &dom_info) == 0) {
+                        memory += dom_info.memory;
+                }
+                virDomainFree(nameList[i]);
+        }
+        free(nameList);
+
+ out:
+        CMSetProperty(inst, "Reserved",
+                      (CMPIValue *)&memory, CMPI_uint64);
+        CMSetProperty(inst, "CurrentlyConsumedResource",
+                      (CMPIValue *)&memory, CMPI_uint64);
+
+        return memory != 0;
+}
+#else
 static bool mempool_set_consumed(CMPIInstance *inst, virConnectPtr conn)
 {
         uint64_t memory = 0;
@@ -793,6 +944,7 @@ static bool mempool_set_consumed(CMPIInstance *inst, virConnectPtr conn)
 
         return memory != 0;
 }
+#endif /* LIBVIR_VERSION_NUMBER >= 9013 */
 
 static bool procpool_set_total(CMPIInstance *inst, virConnectPtr conn)
 {
@@ -1032,6 +1184,91 @@ static CMPIStatus _netpool_for_network(struct inst_list *list,
         return s;
 }
 
+#if LIBVIR_VERSION_NUMBER >= 100002 && USE_VIR_CONNECT_LIST_ALL_NETWORKS
+static CMPIStatus netpool_instance(virConnectPtr conn,
+                                   struct inst_list *list,
+                                   const char *ns,
+                                   const char *id,
+                                   const CMPIBroker *broker)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        char **netnames = NULL;
+        int i;
+        int nets = 0;
+        virNetworkPtr *nameList = NULL;
+        int flags = VIR_CONNECT_LIST_NETWORKS_ACTIVE;
+
+        if (id != NULL) {
+                return _netpool_for_network(list,
+                                            ns,
+                                            conn,
+                                            id,
+                                            pfx_from_conn(conn),
+                                            broker);
+        }
+
+        nets = virConnectListAllNetworks(conn,
+                                         &nameList,
+                                         flags);
+        if (nets < 0) {
+                virt_set_status(broker, &s,
+                                CMPI_RC_ERR_FAILED,
+                                conn,
+                                "Unable to list networks");
+
+                goto out;
+        }
+
+        /* +1 for our primordial entry */
+        netnames = calloc(nets+1, sizeof(*netnames));
+        if (netnames == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to allocate memory for %i net names", nets);
+                goto out;
+        }
+
+        for (i = 0; i < nets; i++) {
+                netnames[i] = strdup(virNetworkGetName(nameList[i]));
+                if (netnames[i] == NULL) {
+                        cu_statusf(broker, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Failed to strdup memory for %i net names",
+                                   nets);
+                        goto out;
+                }
+        }
+
+        /* Remember we allocated extra slot already */
+        netnames[nets] = strdup("0");
+
+        for (i = 0; i < nets + 1; i++) {
+                _netpool_for_network(list,
+                                     ns,
+                                     conn,
+                                     netnames[i],
+                                     pfx_from_conn(conn),
+                                     broker);
+        }
+
+ out:
+        if (nameList != NULL) {
+                for (i = 0; i < nets; i++) {
+                        virNetworkFree(nameList[i]);
+                }
+                free(nameList);
+        }
+        if (netnames != NULL) {
+                /* +1 to account for primordial */
+                for (i = 0; i < nets + 1; i++) {
+                        free(netnames[i]);
+                }
+                free(netnames);
+        }
+
+        return s;
+}
+#else
 static CMPIStatus netpool_instance(virConnectPtr conn,
                                    struct inst_list *list,
                                    const char *ns,
@@ -1101,6 +1338,7 @@ static CMPIStatus netpool_instance(virConnectPtr conn,
 
         return s;
 }
+#endif /* LIBVIR_VERSION_NUMBER >= 100002 */
 
 static CMPIInstance *diskpool_from_path(struct tmp_disk_pool *pool,
                                         virConnectPtr conn,
