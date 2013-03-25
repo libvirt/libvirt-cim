@@ -147,10 +147,11 @@ struct lxc_os_info {
 };
 
 struct domain {
-        enum { DOMAIN_XENPV, 
+        enum { DOMAIN_UNKNOWN,
+               DOMAIN_XENPV,
                DOMAIN_XENFV, 
-               DOMAIN_KVM, 
-               DOMAIN_QEMU, 
+               DOMAIN_KVM,
+               DOMAIN_QEMU,
                DOMAIN_LXC } type;
         char *name;
         char *typestr; /*xen, kvm, etc */
