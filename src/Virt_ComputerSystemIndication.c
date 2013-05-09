@@ -807,7 +807,7 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI *mi,
         thread->id = _BROKER->xft->newThread(lifecycle_thread_native,
                                              thread, 0);
 
-        if (thread->id <= 0) {
+        if (thread->id == NULL) {
             CU_DEBUG("Error, failed to create new thread.");
             error = true;
         }
@@ -1463,7 +1463,7 @@ static CMPIStatus ActivateFilter(CMPIIndicationMI* mi,
         thread->args = args;
         thread->id = _BROKER->xft->newThread(lifecycle_thread, thread, 0);
 
-        if (thread->id <= 0) {
+        if (thread->id == NULL) {
             CU_DEBUG("Error, failed to create new thread.");
             error = true;
         }
