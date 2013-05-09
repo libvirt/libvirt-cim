@@ -154,8 +154,7 @@ static void init_disk_pool(struct virt_pool *pool)
 }
 
 static char *get_dev_paths(CMPIInstance *inst, 
-                           char ***path_list,
-                           uint16_t *count)
+                           struct virt_pool *pool)
 {
         CMPICount i;
         CMPICount ct;
@@ -170,11 +169,11 @@ static char *get_dev_paths(CMPIInstance *inst,
         if ((s.rc != CMPI_RC_OK) || (ct <= 0))
                 return "Unable to get DevicePaths array count";
 
-        *path_list = calloc(ct, sizeof(char *));
-        if (*path_list == NULL)
+        pool->pool_info.disk.device_paths = calloc(ct, sizeof(char *));
+        if (pool->pool_info.disk.device_paths == NULL)
                 return "Failed to alloc space for device paths";
 
-        *count = ct;
+        pool->pool_info.disk.device_paths_ct = ct;
 
         for (i = 0; i < ct; i++) {
                 const char *str = NULL;
@@ -187,7 +186,7 @@ static char *get_dev_paths(CMPIInstance *inst,
                 if (str == NULL)
                         return "Unable to get value of DevicePaths element";
 
-                *path_list[i] = strdup(str);
+                pool->pool_info.disk.device_paths[i] = strdup(str);
         }
 
         return NULL;
@@ -198,10 +197,7 @@ static const char *disk_fs_or_disk_or_logical_pool(CMPIInstance *inst,
 {
         const char *msg = NULL;
 
-        msg = get_dev_paths(inst, 
-                            &pool->pool_info.disk.device_paths, 
-                            &pool->pool_info.disk.device_paths_ct);
-
+        msg = get_dev_paths(inst, pool);
 
         /* Specifying a value for DevicePaths isn't mandatory for logical
            pool types.  */ 
@@ -243,9 +239,7 @@ static const char *disk_iscsi_pool(CMPIInstance *inst,
         const char *val = NULL;
         const char *msg = NULL;
 
-        msg = get_dev_paths(inst, 
-                            &pool->pool_info.disk.device_paths, 
-                            &pool->pool_info.disk.device_paths_ct);
+        msg = get_dev_paths(inst, pool);
         
         if (msg != NULL)
                 return msg;
