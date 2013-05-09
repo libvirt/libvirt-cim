@@ -115,10 +115,10 @@ static CMPIStatus get_dev_from_pool(const CMPIObjectPath *ref,
                 const char *cn = NULL;
                 const char *dev_id = NULL;
 
-                cu_get_str_prop(inst, "CreationClassName", &cn);
-                cu_get_str_prop(inst, "DeviceID", &dev_id);
-
-                if ((dev_id == NULL) || (cn == NULL))
+                if (cu_get_str_prop(inst, "CreationClassName", &cn) !=
+                   CMPI_RC_OK)
+                        continue;
+                if (cu_get_str_prop(inst, "DeviceID", &dev_id) != CMPI_RC_OK)
                         continue;
 
                 poolid = pool_member_of(_BROKER, cn, type, dev_id);
