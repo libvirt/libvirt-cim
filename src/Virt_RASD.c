@@ -1096,7 +1096,12 @@ static CMPIStatus return_enum_rasds(const CMPIObjectPath *ref,
 
         inst_list_init(&list);
 
-        res_type_from_rasd_classname(CLASSNAME(ref), &type);
+        if (res_type_from_rasd_classname(CLASSNAME(ref), &type) != CMPI_RC_OK) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Unable to determine RASD type");
+                goto out;
+        }
 
         s = enum_rasds(_BROKER, ref, NULL,
                        type, properties, &list);
