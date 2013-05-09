@@ -193,7 +193,10 @@ static struct infostore_ctx *_generic_infostore_open(char *filename)
                 goto err;
         }
 
-        fstat(isc->fd, &s);
+        if (fstat(isc->fd, &s) < 0) {
+                CU_DEBUG("Failed to fstat infostore");
+                goto err;
+        }
         if (s.st_size == 0)
                 isc->doc = new_xml();
         else
