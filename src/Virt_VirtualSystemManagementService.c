@@ -1142,8 +1142,9 @@ static const char *mem_rasd_to_vdev(CMPIInstance *inst,
         if (ret != CMPI_RC_OK)
                 return "Missing `VirtualQuantity' field in Memory RASD";
 
-        dev->dev.mem.maxsize = dev->dev.mem.size;
-        cu_get_u64_prop(inst, "Limit", &dev->dev.mem.maxsize);
+        ret = cu_get_u64_prop(inst, "Limit", &dev->dev.mem.maxsize);
+        if (ret != CMPI_RC_OK)
+                dev->dev.mem.maxsize = dev->dev.mem.size;
 
         if (cu_get_str_prop(inst, "AllocationUnits", &units) != CMPI_RC_OK) {
                 CU_DEBUG("Memory RASD has no units, assuming bytes");
