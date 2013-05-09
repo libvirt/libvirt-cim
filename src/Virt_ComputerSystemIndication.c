@@ -434,7 +434,7 @@ static CMPIStatus doms_to_xml(struct dom_xml **dom_xml_list,
                 return s;
         }
         *dom_xml_list = calloc(dom_ptr_count, sizeof(struct dom_xml));
-        if (!dom_xml_list) {
+        if (!*dom_xml_list) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
                            "Failed calloc %d dom_xml.", dom_ptr_count);
