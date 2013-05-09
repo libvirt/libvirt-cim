@@ -113,7 +113,9 @@ static int filter_by_pool(struct inst_list *dest,
                     CMPI_RC_OK)
                         continue;
 
-                cu_get_str_prop(inst, "InstanceID", &rasd_id);
+                if (cu_get_str_prop(inst, "InstanceID", &rasd_id) !=
+                    CMPI_RC_OK)
+                        continue;
 
                 poolid = pool_member_of(_BROKER, CLASSNAME(op), type, rasd_id);
                 if ((poolid != NULL) && STREQ(poolid, _poolid))
