@@ -490,7 +490,7 @@ static CMPIStatus create_snapshot(CMPIMethodMI *self,
 
 CMPIStatus vsss_delete_snapshot(const char *domname)
 {
-        CMPIStatus s;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
         char *path = NULL;
 
         path = vsss_get_save_path(domname);
