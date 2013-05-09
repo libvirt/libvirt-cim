@@ -638,6 +638,7 @@ static CMPI_THREAD_RETURN lifecycle_thread_native(void *params)
         s = doms_to_xml(&prev_xml, tmp_list, prev_count);
         free_domain_list(tmp_list, prev_count);
         free(tmp_list);
+        tmp_list = NULL;
         if (s.rc != CMPI_RC_OK) {
                 CU_DEBUG("doms_to_xml failed.  Attempting to continue.");
         }
@@ -657,6 +658,7 @@ static CMPI_THREAD_RETURN lifecycle_thread_native(void *params)
                 s = doms_to_xml(&cur_xml, tmp_list, cur_count);
                 free_domain_list(tmp_list, cur_count);
                 free(tmp_list);
+                tmp_list = NULL;
                 if (s.rc != CMPI_RC_OK) {
                         CU_DEBUG("doms_to_xml failed. retry in %d seconds",
                                  retry_time);
