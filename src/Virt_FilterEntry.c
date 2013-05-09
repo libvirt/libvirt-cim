@@ -106,9 +106,6 @@ static int octets_from_ip(const char * s, unsigned int *buffer,
                 family = strstr(s, ":") ? AF_INET6 : AF_INET;
                 n  = family == AF_INET6 ? 16 : 4;
 
-                if (size < n)
-                        return 0;
-
                 if (inet_pton(family, s, &addr)) {
                         n = n <= size ? n : size;
                         for (i = 0; i < n; i++)
