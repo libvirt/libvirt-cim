@@ -773,9 +773,9 @@ static int do_parse(xmlNodeSet *nsv, dev_parse_func_t do_real_parse,
 
         if (nsv == NULL)
                 goto out;
+        count = nsv->nodeNr;
 
         dev_nodes = nsv->nodeTab;
-        count = nsv ? nsv->nodeNr : 0;
 
         if (count <= 0)
                 goto out;
