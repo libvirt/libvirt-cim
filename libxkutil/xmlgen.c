@@ -483,6 +483,8 @@ static const char *mem_xml(xmlNodePtr root, struct domain *dominfo)
                           NULL,
                           BAD_CAST "currentMemory",
                           BAD_CAST string);
+        if (tmp == NULL)
+                return XML_ERROR;
 
         free(string);
         tmp = NULL;
@@ -650,12 +652,16 @@ static char *system_xml(xmlNodePtr root, struct domain *domain)
         xmlNodePtr tmp;
 
         tmp = xmlNewChild(root, NULL, BAD_CAST "name", BAD_CAST domain->name);
+        if (tmp == NULL)
+                return XML_ERROR;
 
         if (domain->bootloader) {
                 tmp = xmlNewChild(root,
                                   NULL,
                                   BAD_CAST "bootloader",
                                   BAD_CAST domain->bootloader);
+                if (tmp == NULL)
+                        return XML_ERROR;
         }
 
         if (domain->bootloader_args) {
@@ -663,25 +669,35 @@ static char *system_xml(xmlNodePtr root, struct domain *domain)
                                   NULL,
                                   BAD_CAST "bootloader_args",
                                   BAD_CAST domain->bootloader_args);
+                if (tmp == NULL)
+                        return XML_ERROR;
         }
 
         tmp = xmlNewChild(root,
                           NULL,
                           BAD_CAST "on_poweroff",
                           BAD_CAST vssd_recovery_action_str(domain->on_poweroff));
+        if (tmp == NULL)
+                return XML_ERROR;
 
         tmp = xmlNewChild(root,
                           NULL,
                           BAD_CAST "on_crash",
                           BAD_CAST vssd_recovery_action_str(domain->on_crash));
+        if (tmp == NULL)
+                return XML_ERROR;
 
         tmp = xmlNewChild(root,
                           NULL,
                           BAD_CAST "uuid",
                           BAD_CAST domain->uuid);
+        if (tmp == NULL)
+                return XML_ERROR;
 
         if (domain->clock != NULL) {
                 tmp = xmlNewChild(root, NULL, BAD_CAST "clock", NULL);
+                if (tmp == NULL)
+                        return XML_ERROR;
                 xmlNewProp(tmp, BAD_CAST "offset", BAD_CAST domain->clock);
         }
 
