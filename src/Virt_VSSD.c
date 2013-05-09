@@ -53,7 +53,7 @@ static CMPIStatus _set_fv_prop(const CMPIBroker *broker,
                               (CMPIValue *)&fv, CMPI_boolean);
 
         bl_ct = dominfo->os_info.fv.bootlist_ct;
-        if (bl_ct < 0) 
+        if (bl_ct == 0)
                 return s;
 
         CU_DEBUG("bootlist_ct = %d", bl_ct);
