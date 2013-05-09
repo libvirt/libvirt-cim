@@ -168,7 +168,9 @@ static CMPIStatus get_pools(const CMPIObjectPath *ref,
                         CMPIInstance *inst = tmp.list[i];
                         const char *id = NULL;
 
-                        cu_get_str_prop(inst, "InstanceID", &id);
+                        if (cu_get_str_prop(inst, "InstanceID", &id) !=
+                           CMPI_RC_OK)
+                                continue;
 
                         if (!STREQC(id, poolid))
                                 inst_list_add(list, inst);
