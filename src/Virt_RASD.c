@@ -124,7 +124,7 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
         struct infostore_ctx *info = NULL;
         uint32_t weight = 0;
         uint64_t limit;
-        uint64_t count;
+        uint64_t count = 0;
 
         conn = connect_by_classname(broker, CLASSNAME(ref), &s);
         if (conn == NULL)
@@ -140,12 +140,21 @@ static CMPIStatus set_proc_rasd_params(const CMPIBroker *broker,
                 goto out;
         }
 
-        if (domain_online(dom))
-                count = domain_vcpu_count(dom);
-        else
+        if (domain_online(dom)) {
+                int active_count = domain_vcpu_count(dom);
+                if (active_count < 0) {
+                    cu_statusf(broker, &s,
+                               CMPI_RC_ERR_FAILED,
+                               "Unable to get domain `%s' vcpu count",
+                               domain);
+                    goto out;
+                }
+                count = active_count;
+        } else {
                 count = dev->dev.vcpu.quantity;
+        }
 
-        if (count >= 0)
+        if (count > 0)
                 CMSetProperty(inst,
                               "VirtualQuantity",
                               (CMPIValue *)&count,
