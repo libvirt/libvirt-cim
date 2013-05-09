@@ -600,9 +600,9 @@ static CMPI_THREAD_RETURN lifecycle_thread_native(void *params)
 {
         CU_DEBUG("Entering libvirtc-cim native CSI thread.");
         csi_thread_data_t *thread = (csi_thread_data_t *) params;
-        struct ind_args *args = thread->args;
-        CMPIContext *context = args->context;
-        char *prefix = class_prefix_name(args->classname);
+        struct ind_args *args = NULL;
+        CMPIContext *context = NULL;
+        char *prefix = NULL;
         virConnectPtr conn;
         CMPIStatus s;
         int retry_time = FAIL_WAIT_TIME;
@@ -614,6 +614,11 @@ static CMPI_THREAD_RETURN lifecycle_thread_native(void *params)
         virDomainPtr *tmp_list = NULL;
         int CBAttached = 0;
 
+        if (thread->args != NULL) {
+                args = thread->args;
+                context = args->context;
+                prefix = class_prefix_name(args->classname);
+        }
         if (prefix == NULL) {
                 goto init_out;
         }
