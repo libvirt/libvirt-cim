@@ -72,7 +72,7 @@ static bool get_hypervisor_enabled(const char *hypervisor)
 {
         hypervisor_status_t *h;
 
-        for (h = &hypervisor_list[0]; h != NULL; h++) {
+        for (h = &hypervisor_list[0]; h->name != NULL; h++) {
                 if (strncasecmp(hypervisor, h->name, strlen(h->name)) == 0) {
                         return h->enabled;
                 }
@@ -85,7 +85,7 @@ static void set_hypervisor_disabled(const char *hypervisor)
 {
         hypervisor_status_t *h;
 
-        for (h = &hypervisor_list[0]; h != NULL; h++) {
+        for (h = &hypervisor_list[0]; h->name != NULL; h++) {
                 if (strncasecmp(hypervisor, h->name, strlen(h->name)) == 0) {
                         CU_DEBUG("Setting '%s' hypervisor as DISABLED", h->name);
                         h->enabled = false;
