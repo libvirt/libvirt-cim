@@ -1128,6 +1128,12 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         if (STREQC(dominfo->os_info.fv.type, "hvm")) {
                 dominfo->os_info.fv.bootlist_ct = bl_size;
                 dominfo->os_info.fv.bootlist = blist;
+        } else {
+            int i;
+
+            for (i = 0; i < bl_size; i++)
+                free(blist[i]);
+            free(blist);
         }
 
         return 1;
