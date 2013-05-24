@@ -394,6 +394,13 @@ static bool system_has_kvm(const char *pfx)
         virConnectPtr conn;
         char *caps = NULL;
         bool kvm = false;
+        bool disable_kvm = get_disable_kvm();
+
+        /* sometimes disable KVM to avoid problem in nested KVM */
+        if (disable_kvm) {
+                CU_DEBUG("Enter disable kvm mode!");
+                return false;
+        }
 
         conn = connect_by_classname(_BROKER, pfx, &s);
         if ((conn == NULL) || (s.rc != CMPI_RC_OK)) {

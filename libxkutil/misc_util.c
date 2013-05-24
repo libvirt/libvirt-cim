@@ -227,6 +227,14 @@ static int is_read_only(void)
         return prop.value_bool;
 }
 
+bool get_disable_kvm(void)
+{
+        static LibvirtcimConfigProperty prop = {
+                                       "disable_kvm", CONFIG_BOOL, {0}, 0};
+        libvirt_cim_config_get(&prop);
+        return prop.value_bool;
+}
+
 const char *get_mig_ssh_tmp_key(void)
 {
         static LibvirtcimConfigProperty prop = {
