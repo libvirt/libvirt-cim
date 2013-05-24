@@ -46,12 +46,29 @@ static CMPIStatus check_vsi_support(char *command)
         CMPIStatus s = {CMPI_RC_OK, NULL};
         char buff[MAX_LEN];
         FILE *stream = NULL;
-        const char *searchStr[] = {"	supported forwarding mode: "
-                                   "(0x40) reflective relay",
-                                   "	supported capabilities: "
-                                   "(0x07) RTE ECP VDP",
-                                   NULL};
-        int  matched = 0;
+        char *searchStr[8]; /* maximum items of vsi support output */
+        int count = 0;
+        const char *user_settings = get_vsi_support_key_string();
+        char *vsi_support_key_string = NULL;
+        char *delim = "{},";
+        int matched = 0;
+        char *temp = NULL;
+
+        if (!user_settings) {
+                /* default supported output set, 8 maximum */
+                user_settings = "{	supported forwarding mode: "
+                                "(0x40) reflective relay,"
+                                "	supported capabilities: "
+                                "(0x7) RTE ECP VDP}";
+        }
+
+        vsi_support_key_string = strdup(user_settings);
+        if (vsi_support_key_string == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Strdup vsi_support_key_string failed!");
+                goto out;
+        }
 
         // Run lldptool command to find vsi support.
         stream = popen(command, "r");
@@ -61,6 +78,25 @@ static CMPIStatus check_vsi_support(char *command)
                            CMPI_RC_ERR_NOT_FOUND,
                            "Failed to open pipe");
                 goto out;
+        }
+
+        /* Slice vsi_support_key_string into items */
+        searchStr[count] = strtok_r(vsi_support_key_string, delim, &temp);
+        if (searchStr[count] == NULL) {
+                CU_DEBUG("searchStr fetch failed when calling strtok_r!");
+        } else {
+                CU_DEBUG("searchStr[%d]: %s", count, searchStr[count]);
+                count++;
+        }
+
+        while ((searchStr[count] = strtok_r(NULL, delim, &temp))) {
+                if (count >= 7) {
+                        CU_DEBUG("WARN: searchStr is full, left aborted!");
+                        break;
+                } else {
+                        CU_DEBUG("searchStr[%d]: %s", count, searchStr[count]);
+                        count++;
+                }
         }
 
         // Read the output of the command.
@@ -81,16 +117,18 @@ static CMPIStatus check_vsi_support(char *command)
                 }
                 /* All the search strings were found in the output of this
                    command. */
-                if (matched == 2) {
+                if (matched == count) {
                         cu_statusf(_BROKER, &s, CMPI_RC_OK, "VSI supported");
-                        goto out;;
+                        goto out;
                 }
         }
+
         cu_statusf(_BROKER, &s,
                    CMPI_RC_ERR_NOT_FOUND,
                    "No VSI Support found");
 
- out:       
+ out:
+        free(vsi_support_key_string);
         if (stream != NULL)
                 pclose(stream);
         return s;
@@ -214,6 +252,7 @@ static CMPIStatus get_switchservice(const CMPIObjectPath *reference,
         int i;
         char **if_list;
         char cmd[MAX_LEN];
+        const char *lldptool_query_options = NULL;
 
         *_inst = NULL;
         conn = connect_by_classname(broker, CLASSNAME(reference), &s);
@@ -257,10 +296,15 @@ static CMPIStatus get_switchservice(const CMPIObjectPath *reference,
 
         CU_DEBUG("Found %d interfaces", count);
 
+        lldptool_query_options = get_lldptool_query_options();
+        if (!lldptool_query_options) {
+                lldptool_query_options = "-t -g ncb -V evbcfg";
+        }
 
         for (i=0; i<count; i++) {
-                sprintf(cmd, "lldptool -i %s -t -V evbcfg", if_list[i]);
-                CU_DEBUG("running command %s ...", cmd);
+                sprintf(cmd, "lldptool -i %s %s",
+                        if_list[i], lldptool_query_options);
+                CU_DEBUG("running command [%s]", cmd);
                 s = check_vsi_support(cmd); 
                 if (s.rc == CMPI_RC_OK) {
                         vsi = true;

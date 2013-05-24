@@ -155,6 +155,8 @@ int virt_set_status(const CMPIBroker *broker,
 /* get libvirt-cim config */
 const char *get_mig_ssh_tmp_key(void);
 bool get_disable_kvm(void);
+const char *get_lldptool_query_options(void);
+const char *get_vsi_support_key_string(void);
 
 /*
  * Local Variables:

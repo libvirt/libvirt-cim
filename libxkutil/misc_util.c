@@ -244,6 +244,24 @@ const char *get_mig_ssh_tmp_key(void)
         return prop.value_string;
 }
 
+const char *get_lldptool_query_options(void)
+{
+        static LibvirtcimConfigProperty prop = {
+                          "lldptool_query_options", CONFIG_STRING, {0}, 0};
+
+        libvirt_cim_config_get(&prop);
+        return prop.value_string;
+}
+
+const char *get_vsi_support_key_string(void)
+{
+        static LibvirtcimConfigProperty prop = {
+                          "vsi_support_key_string", CONFIG_STRING, {0}, 0};;
+
+        libvirt_cim_config_get(&prop);
+        return prop.value_string;
+}
+
 virConnectPtr connect_by_classname(const CMPIBroker *broker,
                                    const char *classname,
                                    CMPIStatus *s)
