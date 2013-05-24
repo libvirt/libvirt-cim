@@ -964,11 +964,13 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
 }
 
 static const char *disk_rasd_to_vdev(CMPIInstance *inst,
-                                     struct virt_device *dev)
+                                     struct virt_device *dev,
+                                     char **p_error)
 {
         const char *val = NULL;
         uint16_t type;
         bool read = false;
+        int rc;
 
         CU_DEBUG("Enter disk_rasd_to_vdev");
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
@@ -982,10 +984,29 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
 
         free(dev->dev.disk.source);
         dev->dev.disk.source = strdup(val);
+        if (dev->dev.disk.source == NULL) {
+                return "dev->dev.disk.source is null!";
+        }
+
         dev->dev.disk.disk_type = disk_type_from_file(val);
 
         if (cu_get_u16_prop(inst, "EmulatedType", &type) != CMPI_RC_OK)
                 type = VIRT_DISK_TYPE_DISK;
+
+        if ((type == VIRT_DISK_TYPE_DISK) ||
+            (type == VIRT_DISK_TYPE_FS)){
+            if (dev->dev.disk.disk_type == DISK_UNKNOWN) {
+                /* on success or fail caller should try free it */
+                rc = asprintf(p_error, "Device %s, Address %s, "
+                              "make sure Address can be accessed on host system.",
+                              dev->dev.disk.virtual_dev, dev->dev.disk.source);
+                if (rc == -1) {
+                        CU_DEBUG("error during recording exception!");
+                        p_error = NULL;
+                }
+                return "Can't get a valid disk type";
+            }
+        }
 
         if (type == VIRT_DISK_TYPE_DISK)
                 dev->dev.disk.device = strdup("disk");
@@ -1452,10 +1473,11 @@ static const char *input_rasd_to_vdev(CMPIInstance *inst,
 static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev,
                                          uint16_t type,
-                                         const char *ns)
+                                         const char *ns,
+                                         char **p_error)
 {
         if (type == CIM_RES_TYPE_DISK) {
-                return disk_rasd_to_vdev(inst, dev);
+                return disk_rasd_to_vdev(inst, dev, p_error);
         } else if (type == CIM_RES_TYPE_NET) {
                 return net_rasd_to_vdev(inst, dev, ns);
         } else if (type == CIM_RES_TYPE_MEM) {
@@ -1494,7 +1516,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
 static const char *rasd_to_vdev(CMPIInstance *inst,
                                 struct domain *domain,
                                 struct virt_device *dev,
-                                const char *ns)
+                                const char *ns,
+                                char **p_error)
 {
         uint16_t type;
         CMPIObjectPath *op;
@@ -1516,7 +1539,7 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
         if (domain->type == DOMAIN_LXC)
                 msg = _container_rasd_to_vdev(inst, dev, type, ns);
         else
-                msg = _sysvirt_rasd_to_vdev(inst, dev, type, ns);
+                msg = _sysvirt_rasd_to_vdev(inst, dev, type, ns, p_error);
  out:
         if (msg && op)
                 CU_DEBUG("rasd_to_vdev(%s): %s", CLASSNAME(op), msg);
@@ -1560,7 +1583,8 @@ static char *add_device_nodup(struct virt_device *dev,
 
 static const char *classify_resources(CMPIArray *resources,
                                       const char *ns,
-                                      struct domain *domain)
+                                      struct domain *domain,
+                                      char **p_error)
 {
         int i;
         uint16_t type;
@@ -1613,13 +1637,15 @@ static const char *classify_resources(CMPIArray *resources,
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &domain->dev_vcpu[0],
-                                           ns);
+                                           ns,
+                                           p_error);
                 } else if (type == CIM_RES_TYPE_MEM) {
                         domain->dev_mem_ct = 1;
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &domain->dev_mem[0],
-                                           ns);
+                                           ns,
+                                           p_error);
                 } else if (type == CIM_RES_TYPE_DISK) {
                         struct virt_device dev;
                         int dcount = count + domain->dev_disk_ct;
@@ -1628,7 +1654,8 @@ static const char *classify_resources(CMPIArray *resources,
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &dev,
-                                           ns);
+                                           ns,
+                                           p_error);
                         if (msg == NULL)
                                 msg = add_device_nodup(&dev,
                                                        domain->dev_disk,
@@ -1646,7 +1673,8 @@ static const char *classify_resources(CMPIArray *resources,
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &dev,
-                                           ns);
+                                           ns,
+                                           p_error);
                         if (msg == NULL)
                                 msg = add_device_nodup(&dev,
                                                        domain->dev_net,
@@ -1676,7 +1704,8 @@ static const char *classify_resources(CMPIArray *resources,
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &dev,
-                                           ns);
+                                           ns,
+                                           p_error);
                         if (msg == NULL)
                                 msg = add_device_nodup(&dev,
                                                 domain->dev_graphics,
@@ -1687,7 +1716,8 @@ static const char *classify_resources(CMPIArray *resources,
                         msg = rasd_to_vdev(inst,
                                            domain,
                                            &domain->dev_input[0],
-                                           ns);
+                                           ns,
+                                           p_error);
                 }
                 if (msg != NULL)
                         return msg;
@@ -2083,6 +2113,7 @@ static CMPIInstance *create_system(const CMPIContext *context,
         struct inst_list list;
         const char *props[] = {NULL};
         struct domain *domain = NULL;
+        char *error_msg = NULL;
 
         inst_list_init(&list);
 
@@ -2113,12 +2144,13 @@ static CMPIInstance *create_system(const CMPIContext *context,
         if (s->rc != CMPI_RC_OK)
                 goto out;
 
-        msg = classify_resources(resources, NAMESPACE(ref), domain);
+        msg = classify_resources(resources, NAMESPACE(ref), domain, &error_msg);
         if (msg != NULL) {
-                CU_DEBUG("Failed to classify resources: %s", msg);
+                CU_DEBUG("Failed to classify resources: %s, %s",
+                         msg, error_msg);
                 cu_statusf(_BROKER, s,
                            CMPI_RC_ERR_FAILED,
-                           "ResourceSettings Error: %s", msg);
+                           "ResourceSettings Error: %s, %s", msg, error_msg);
                 goto out;
         }
 
@@ -2159,6 +2191,7 @@ static CMPIInstance *create_system(const CMPIContext *context,
 
 
  out:
+        free(error_msg);
         cleanup_dominfo(&domain);
         free(xml);
         inst_list_free(&list);
@@ -2638,6 +2671,7 @@ static CMPIStatus resource_add(struct domain *dominfo,
         struct virt_device *dev;
         int *count = NULL;
         const char *msg = NULL;
+        char *error_msg = NULL;
 
         op = CMGetObjectPath(rasd, &s);
         if ((op == NULL) || (s.rc != CMPI_RC_OK))
@@ -2677,12 +2711,12 @@ static CMPIStatus resource_add(struct domain *dominfo,
         dev = &list[*count];
 
         dev->type = type;
-        msg = rasd_to_vdev(rasd, dominfo, dev, ns);
+        msg = rasd_to_vdev(rasd, dominfo, dev, ns, &error_msg);
         if (msg != NULL) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
-                           "Add resource failed: %s",
-                           msg);
+                           "Add resource failed: %s, %s",
+                           msg, error_msg);
                 goto out;
         }
 
@@ -2702,6 +2736,8 @@ static CMPIStatus resource_add(struct domain *dominfo,
         (*count)++;
 
  out:
+        free(error_msg);
+
         return s;
 }
 
@@ -2718,6 +2754,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         int *count;
         int i;
         const char *msg = NULL;
+        char *error_msg = NULL;
 
         CU_DEBUG("Enter resource_mod");
         if (devid == NULL) {
@@ -2749,7 +2786,7 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                 struct virt_device *dev = &list[i];
 
                 if (STREQ(dev->id, devid)) {
-                        msg = rasd_to_vdev(rasd, dominfo, dev, ns);
+                        msg = rasd_to_vdev(rasd, dominfo, dev, ns, &error_msg);
                         if (msg != NULL) {
                                 cu_statusf(_BROKER, &s,
                                            CMPI_RC_ERR_FAILED,
@@ -2793,6 +2830,8 @@ static CMPIStatus resource_mod(struct domain *dominfo,
         }
 
  out:
+        free(error_msg);
+
         return s;
 }
 
