@@ -391,27 +391,55 @@ static bool fv_set_emulator(struct domain *domain,
 static bool system_has_kvm(const char *pfx)
 {
         CMPIStatus s;
-        virConnectPtr conn;
+        virConnectPtr conn = NULL;
         char *caps = NULL;
-        bool kvm = false;
         bool disable_kvm = get_disable_kvm();
+        char *val = NULL;
+        xmlDocPtr doc = NULL;
+        xmlNodePtr node = NULL;
+        int len;
+        bool kvm = false;
 
         /* sometimes disable KVM to avoid problem in nested KVM */
         if (disable_kvm) {
                 CU_DEBUG("Enter disable kvm mode!");
-                return false;
+                goto out;
         }
 
         conn = connect_by_classname(_BROKER, pfx, &s);
         if ((conn == NULL) || (s.rc != CMPI_RC_OK)) {
-                return false;
+                goto out;
         }
 
         caps = virConnectGetCapabilities(conn);
-        if (caps != NULL)
-                kvm = (strstr(caps, "kvm") != NULL);
+        if (caps != NULL) {
+            len = strlen(caps) + 1;
 
+            doc = xmlParseMemory(caps, len);
+            if (doc == NULL) {
+                CU_DEBUG("xmlParseMemory() call failed!");
+                goto out;
+            }
+
+            node = xmlDocGetRootElement(doc);
+            if (node == NULL) {
+                CU_DEBUG("xmlDocGetRootElement() call failed!");
+                goto out;
+            }
+
+            if (parse_domain_type(node, &val) &&
+                STREQC(val, "kvm")) {
+                    CU_DEBUG("The system support kvm!");
+                    kvm = true;
+            } else {
+                    CU_DEBUG("Domain type is %s.", val);
+            }
+        }
+
+out:
         free(caps);
+        free(doc);
+        free(val);
 
         virConnectClose(conn);
 

@@ -396,6 +396,33 @@ err:
         return 0;
 }
 
+int parse_domain_type(xmlNodePtr node, char **value)
+{
+        xmlNodePtr child = NULL;
+        char *type = NULL;
+
+        child = node->children;
+        while (child != NULL) {
+                if (XSTREQ(child->name, "domain")) {
+                        type = get_attr_value(child, "type");
+                        if (type != NULL) {
+                                *value = strdup(type);
+                                goto out;
+                        }
+                }
+
+                if (parse_domain_type(child, value) == 1) {
+                        goto out;
+                }
+
+                child = child->next;
+        }
+
+        return 0;
+out:
+        return 1;
+}
+
 static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
