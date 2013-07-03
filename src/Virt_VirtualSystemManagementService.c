@@ -394,7 +394,6 @@ static bool system_has_kvm(const char *pfx)
         virConnectPtr conn = NULL;
         char *caps = NULL;
         bool disable_kvm = get_disable_kvm();
-        char *val = NULL;
         xmlDocPtr doc = NULL;
         xmlNodePtr node = NULL;
         int len;
@@ -427,19 +426,15 @@ static bool system_has_kvm(const char *pfx)
                 goto out;
             }
 
-            if (parse_domain_type(node, &val) &&
-                STREQC(val, "kvm")) {
+            if (has_kvm_domain_type(node)) {
                     CU_DEBUG("The system support kvm!");
                     kvm = true;
-            } else {
-                    CU_DEBUG("Domain type is %s.", val);
             }
         }
 
 out:
         free(caps);
         free(doc);
-        free(val);
 
         virConnectClose(conn);
 
