@@ -569,6 +569,7 @@ static char *write_params(CMPIArray *array)
 {
         int i;
         int fd;
+        mode_t cur_umask = umask(S_IRWXO|S_IRWXG);
         char *filename = strdup("/tmp/libvirtcim_mig.XXXXXX");
         FILE *file = NULL;
 
@@ -578,6 +579,7 @@ static char *write_params(CMPIArray *array)
         }
 
         fd = mkstemp(filename);
+        umask(cur_umask);
         if (fd < 0) {
                 CU_DEBUG("Unable to get temporary file: %s", strerror(errno));
                 free(filename);
