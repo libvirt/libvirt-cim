@@ -1269,7 +1269,10 @@ static void csi_domain_event_cb(virConnectPtr conn,
 
         if (cs_event != CS_CREATED) {
                 char uuid[VIR_UUID_STRING_BUFLEN] = {0};
-                virDomainGetUUIDString(dom, &uuid[0]);
+                if (virDomainGetUUIDString(dom, &uuid[0]) == -1) {
+                    CU_DEBUG("Failed to get domain UUID");
+                    goto end;
+                }
                 pthread_mutex_lock(&lifecycle_mutex);
                 dom_xml = list_find(thread->dom_list, uuid);
                 pthread_mutex_unlock(&lifecycle_mutex);
@@ -1294,12 +1297,11 @@ static void csi_domain_event_cb(virConnectPtr conn,
                         free(dom_xml->name);
                         free(dom_xml->xml);
                         csi_dom_xml_set(dom_xml, dom, &s);
+                } else if (detail == VIR_DOMAIN_EVENT_UNDEFINED_REMOVED) {
+                        pthread_mutex_lock(&lifecycle_mutex);
+                        list_remove(thread->dom_list, dom_xml);
+                        pthread_mutex_unlock(&lifecycle_mutex);
                 }
-        } else if (event == VIR_DOMAIN_EVENT_DEFINED &&
-                   detail == VIR_DOMAIN_EVENT_UNDEFINED_REMOVED) {
-                pthread_mutex_lock(&lifecycle_mutex);
-                list_remove(thread->dom_list, dom_xml);
-                pthread_mutex_unlock(&lifecycle_mutex);
         }
 
  end:
