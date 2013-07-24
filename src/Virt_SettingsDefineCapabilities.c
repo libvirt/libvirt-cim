@@ -1039,6 +1039,7 @@ static CMPIStatus set_disk_props(int type,
                                  uint64_t disk_size,
                                  uint16_t emu_type,
                                  bool readonly,
+                                 bool shareable,
                                  const char *cache,
                                  struct inst_list *list)
 {
@@ -1087,6 +1088,10 @@ static CMPIStatus set_disk_props(int type,
                         CMSetProperty(inst, "readonly",
                                       (CMPIValue *)&readonly, CMPI_boolean);
 
+                if(shareable)
+                        CMSetProperty(inst, "shareable",
+                                      (CMPIValue *)&shareable, CMPI_boolean);
+
                 if(cache != NULL)
                         CMSetProperty(inst, "cache",
                                       (CMPIValue *)cache, CMPI_chars);
@@ -1111,6 +1116,7 @@ static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
         const char *dev_str = NULL;
         char *id_str = NULL;
         bool readonly = true;
+        bool shareable = false;
         const char *cache = "none";
 
         if (emu_type == VIRT_DISK_TYPE_CDROM)
@@ -1158,6 +1164,7 @@ static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
                                            vol_size,
                                            emu_type,
                                            readonly,
+                                           shareable,
                                            cache,
                                            list);
                 }
@@ -1169,6 +1176,7 @@ static CMPIStatus cdrom_or_floppy_template(const CMPIObjectPath *ref,
                                    vol_size,
                                    emu_type,
                                    readonly,
+                                   shareable,
                                    cache,
                                    list);
 
@@ -1244,6 +1252,7 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
         int type = 0;
         bool ret;
         bool readonly = true;
+        bool shareable = false;
         const char *cache = "none";
 
         CMPIStatus s = {CMPI_RC_OK, NULL};
@@ -1296,6 +1305,7 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
                                            disk_size,
                                            emu_type,
                                            readonly,
+                                           shareable,
                                            cache,
                                            list);
                         if (s.rc != CMPI_RC_OK)
@@ -1317,6 +1327,7 @@ static CMPIStatus default_disk_template(const CMPIObjectPath *ref,
                                    disk_size,
                                    emu_type,
                                    readonly,
+                                   shareable,
                                    cache,
                                    list);
         }
@@ -1444,6 +1455,7 @@ static CMPIStatus avail_volume_template(const CMPIObjectPath *ref,
         int ret;
         uint16_t emu_type = 0;
         bool readonly = false;
+        bool shareable = false;
         const char *cache = "none";
 
         ret = virStorageVolGetInfo(volume_ptr, &vol_info);
@@ -1502,6 +1514,7 @@ static CMPIStatus avail_volume_template(const CMPIObjectPath *ref,
                                            vol_size,
                                            emu_type,
                                            readonly,
+                                           shareable,
                                            cache,
                                            list);
                 }
@@ -1513,6 +1526,7 @@ static CMPIStatus avail_volume_template(const CMPIObjectPath *ref,
                                    vol_size,
                                    emu_type,
                                    readonly,
+                                   shareable,
                                    cache,
                                    list);
         } else {

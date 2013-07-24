@@ -421,6 +421,12 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.disk.access_mode,
                               CMPI_chars);
 
+        if(dev->dev.disk.shareable)
+                CMSetProperty(inst,
+                              "shareable",
+                              (CMPIValue *)&(dev->dev.disk.shareable),
+                              CMPI_boolean);
+
         virStoragePoolFree(pool);
         virStorageVolFree(vol);
         virConnectClose(conn);

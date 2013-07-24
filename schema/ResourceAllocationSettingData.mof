@@ -28,6 +28,9 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 
       [Description ("cache setting for device")]
       string DriverCache;
+
+      [Description ("if device is shareable")]
+      boolean shareable;
 };
 
 [Description ("KVM virtual disk configuration"),
@@ -61,6 +64,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       
       [Description ("filesystem access mode")]
       string AccessMode;
+
+      [Description ("if device is shareable")]
+      boolean shareable;
 };
 
 [Description ("LXC virtual disk configuration"),

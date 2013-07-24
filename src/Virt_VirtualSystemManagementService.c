@@ -994,6 +994,7 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         uint16_t type;
         bool read = false;
         int rc;
+        bool shareable = false;
 
         CU_DEBUG("Enter disk_rasd_to_vdev");
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
@@ -1092,6 +1093,11 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.disk.access_mode = NULL;
         else 
                 dev->dev.disk.access_mode = strdup(val);
+
+        if (cu_get_bool_prop(inst, "shareable", &shareable) != CMPI_RC_OK)
+                dev->dev.disk.shareable = false;
+        else
+                dev->dev.disk.shareable = shareable;
 
         free(dev->id);
         dev->id = strdup(dev->dev.disk.virtual_dev);
