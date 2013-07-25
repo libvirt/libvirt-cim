@@ -89,15 +89,19 @@ rm -fr $RPM_BUILD_ROOT
 
 %{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
 
-if [ "`systemctl is-active tog-pegasus.service`" = "active" ]
-then
-    systemctl restart tog-pegasus.service
-fi
+%if 0%{?Fedora} >= 17 || 0%{?rhel} >= 7
+    if [ "`systemctl is-active tog-pegasus.service`" = "active" ]
+    then
+        systemctl restart tog-pegasus.service
+    fi
 
-if [ "`systemctl is-active sblim-sfcb.service`" = "active" ]
-then
-    systemctl restart sblim-sfcb.service
-fi
+    if [ "`systemctl is-active sblim-sfcb.service`" = "active" ]
+    then
+        systemctl restart sblim-sfcb.service
+    fi
+%else
+    /etc/init.d/tog-pegasus condrestart
+%endif
 
 if [ -x /usr/sbin/cimserver ]
 then
