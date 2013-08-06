@@ -219,7 +219,7 @@ static int libvirt_cim_config_get(LibvirtcimConfigProperty *prop)
 }
 #endif
 
-static int is_read_only(void)
+int is_read_only(void)
 {
         static LibvirtcimConfigProperty prop = {
                                        "readonly", CONFIG_BOOL, {0}, 0};

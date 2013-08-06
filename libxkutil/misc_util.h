@@ -153,6 +153,7 @@ int virt_set_status(const CMPIBroker *broker,
 #define REF2STR(r) CMGetCharPtr(CMObjectPathToString(r, NULL))
 
 /* get libvirt-cim config */
+int is_read_only(void);
 const char *get_mig_ssh_tmp_key(void);
 bool get_disable_kvm(void);
 const char *get_lldptool_query_options(void);

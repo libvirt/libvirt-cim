@@ -31,6 +31,7 @@
 #include <libcmpiutil/libcmpiutil.h>
 
 #include "device_parsing.h"
+#include "misc_util.h"
 #include "xmlgen.h"
 #include "../src/svpc_types.h"
 
@@ -1283,8 +1284,12 @@ int get_dominfo(virDomainPtr dom, struct domain **dominfo)
         char *xml;
         int ret = 0;
         int start;
-        xml = virDomainGetXMLDesc(dom,
-                VIR_DOMAIN_XML_INACTIVE | VIR_DOMAIN_XML_SECURE);
+        int flags = VIR_DOMAIN_XML_INACTIVE;
+
+        if (!is_read_only())
+            flags |= VIR_DOMAIN_XML_SECURE;
+
+        xml = virDomainGetXMLDesc(dom, flags);
 
         if (xml == NULL) {
                 CU_DEBUG("Failed to get dom xml with libvirt API.");
