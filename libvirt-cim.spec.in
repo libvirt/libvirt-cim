@@ -6,7 +6,7 @@ Version: @PACKAGE_VERSION@
 Release: 1%{?dist}%{?extra_release}
 License: LGPLv2+
 Group: Development/Libraries
-Source: libvirt-cim-%{version}.tar.gz
+Source: ftp://libvirt.org/libvirt-cim/libvirt-cim-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 URL: http://libvirt.org/CIM/
 Requires: libxml2 >= 2.6.0
