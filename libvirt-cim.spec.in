@@ -96,7 +96,7 @@ rm -fr $RPM_BUILD_ROOT
 
 %{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
 
-%if 0%{?Fedora} >= 17 || 0%{?rhel} >= 7
+%if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
     if [ "`systemctl is-active tog-pegasus.service`" = "active" ]
     then
         systemctl restart tog-pegasus.service
