@@ -133,9 +133,6 @@ then
         -n root/interop \
         -r %{INTEROP_REG} -m %{INTEROP_MOF} -v >/dev/null 2>&1 || true
 %{_datadir}/%{name}/provider-register.sh -t sfcb \
-        -n root/PG_InterOp \
-        -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} -v >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t sfcb \
         -n root/cimv2\
         -r %{CIMV2_REG} -m %{CIMV2_MOF} -v >/dev/null 2>&1 || true
 fi
@@ -164,9 +161,6 @@ then
 %{_datadir}/%{name}/provider-register.sh -d -t sfcb \
 	-n root/interop \
 	-r %{INTEROP_REG} -m %{INTEROP_MOF} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
-	-n root/PG_InterOp \
-	-r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
 %{_datadir}/%{name}/provider-register.sh -d -t sfcb \
 	-n root/cimv2 \
 	-r %{CIMV2_REG} -m %{CIMV2_MOF} >/dev/null 2>&1 || true
