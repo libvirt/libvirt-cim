@@ -75,6 +75,9 @@ struct net_device {
 struct mem_device {
         uint64_t size;
         uint64_t maxsize;
+        enum { MEM_DUMP_CORE_NOT_SET,
+               MEM_DUMP_CORE_ON,
+               MEM_DUMP_CORE_OFF } dumpCore;
 };
 
 struct vcpu_device {

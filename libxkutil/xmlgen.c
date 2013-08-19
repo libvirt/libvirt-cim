@@ -498,6 +498,15 @@ static const char *mem_xml(xmlNodePtr root, struct domain *dominfo)
                           BAD_CAST string);
 
         free(string);
+
+        if (tmp == NULL)
+                return XML_ERROR;
+        if (mem->dumpCore == MEM_DUMP_CORE_ON) {
+                xmlNewProp(tmp, BAD_CAST "dumpCore", BAD_CAST "on");
+        } else if (mem->dumpCore == MEM_DUMP_CORE_OFF) {
+                xmlNewProp(tmp, BAD_CAST "dumpCore", BAD_CAST "off");
+        }
+
  out:
         if (tmp == NULL)
                 return XML_ERROR;

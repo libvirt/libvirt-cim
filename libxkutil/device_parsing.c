@@ -606,8 +606,17 @@ static int parse_mem_device(xmlNode *node, struct virt_device **vdevs)
 
         if (XSTREQ(node->name, "currentMemory"))
                 sscanf(content, "%" PRIu64, &mdev->size);
-        else if (XSTREQ(node->name, "memory"))
+        else if (XSTREQ(node->name, "memory")) {
                 sscanf(content, "%" PRIu64, &mdev->maxsize);
+                content = get_attr_value(node, "dumpCore");
+                if (content && XSTREQ(content, "on")) {
+                    mdev->dumpCore = MEM_DUMP_CORE_ON;
+                } else if (content && XSTREQ(content, "off")) {
+                    mdev->dumpCore = MEM_DUMP_CORE_OFF;
+                } else {
+                    mdev->dumpCore = MEM_DUMP_CORE_NOT_SET;
+                }
+        }
 
         free(content);
 
@@ -969,6 +978,7 @@ static int _get_mem_device(const char *xml, struct virt_device **list)
         struct virt_device *mdevs = NULL;
         struct virt_device *mdev = NULL;
         int ret;
+        bool mem_dump_core_set = false;
 
         ret = parse_devices(xml, &mdevs, CIM_RES_TYPE_MEM);
         if (ret <= 0)
@@ -988,10 +998,26 @@ static int _get_mem_device(const char *xml, struct virt_device **list)
                                          mdevs[1].dev.mem.size);
                 mdev->dev.mem.maxsize = MAX(mdevs[0].dev.mem.maxsize,
                                             mdevs[1].dev.mem.maxsize);
+                /* libvirt dumpCore tag always belong to memory xml node, but
+                 * here we may have two mdev for memory node and currentMemory
+                 * node. So pick up one value.
+                 */
+                if (mdevs[0].dev.mem.dumpCore != MEM_DUMP_CORE_NOT_SET) {
+                        mdev->dev.mem.dumpCore = mdevs[0].dev.mem.dumpCore;
+                        mem_dump_core_set = true;
+                } else if (mdevs[1].dev.mem.dumpCore !=
+                           MEM_DUMP_CORE_NOT_SET) {
+                        if (mem_dump_core_set) {
+                                CU_DEBUG("WARN: libvirt set memory core dump in"
+                                         "two nodes!");
+                        }
+                        mdev->dev.mem.dumpCore = mdevs[1].dev.mem.dumpCore;
+                }
         } else {
                 mdev->dev.mem.size = MAX(mdevs[0].dev.mem.size,
                                          mdevs[0].dev.mem.maxsize);
                 mdev->dev.mem.maxsize = mdev->dev.mem.size;
+                mdev->dev.mem.dumpCore = mdevs[0].dev.mem.dumpCore;
         }
 
         mdev->type = CIM_RES_TYPE_MEM;
