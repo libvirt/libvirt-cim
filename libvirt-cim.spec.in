@@ -84,6 +84,13 @@ rm -fr $RPM_BUILD_ROOT
 	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
 
+# Remove open-pegasus-specific providers installed in sfcb repository
+# by older libvirt-cim packages
+%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
+    -n root/PG_InterOp \
+    -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
+
+
 %post
 /sbin/ldconfig
 
