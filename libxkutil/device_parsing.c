@@ -397,35 +397,6 @@ err:
         return 0;
 }
 
-bool has_kvm_domain_type(xmlNodePtr node)
-{
-        xmlNodePtr child = NULL;
-        char *type = NULL;
-        bool ret = false;
-
-        child = node->children;
-        while (child != NULL) {
-                if (XSTREQ(child->name, "domain")) {
-                        type = get_attr_value(child, "type");
-                        if (XSTREQ(type, "kvm")) {
-                                ret = true;
-                                goto out;
-                        }
-                }
-
-                if (has_kvm_domain_type(child) == 1) {
-                        ret = true;
-                        goto out;
-                }
-
-                child = child->next;
-        }
-
-  out:
-            free(type);
-            return ret;
-}
-
 static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;

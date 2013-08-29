@@ -226,8 +226,6 @@ int attach_device(virDomainPtr dom, struct virt_device *dev);
 int detach_device(virDomainPtr dom, struct virt_device *dev);
 int change_device(virDomainPtr dom, struct virt_device *dev);
 
-bool has_kvm_domain_type(xmlNodePtr node);
-
 #define XSTREQ(x, y) (STREQ((char *)x, y))
 #define STRPROP(d, p, n) (d->p = get_node_content(n))
 

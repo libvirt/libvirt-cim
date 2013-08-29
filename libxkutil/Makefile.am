@@ -7,6 +7,7 @@ noinst_HEADERS = \
 	cs_util.h \
 	misc_util.h \
 	device_parsing.h \
+	capability_parsing.h \
 	xmlgen.h \
 	infostore.h \
 	pool_parsing.h \
@@ -20,6 +21,7 @@ libxkutil_la_SOURCES = \
 	cs_util_instance.c \
 	misc_util.c \
 	device_parsing.c \
+	capability_parsing.c \
 	xmlgen.c \
 	infostore.c \
 	pool_parsing.c \
