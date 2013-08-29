@@ -583,6 +583,12 @@ static bool default_graphics_device(struct domain *domain)
         if (domain->type == DOMAIN_LXC)
                 return true;
 
+        if ((domain->type == DOMAIN_KVM || domain->type == DOMAIN_QEMU) &&
+            domain->os_info.fv.arch != NULL &&
+            (XSTREQ(domain->os_info.fv.arch, "s390") ||
+             XSTREQ(domain->os_info.fv.arch, "s390x" )))
+                return true;
+
         free(domain->dev_graphics);
         domain->dev_graphics = calloc(1, sizeof(*domain->dev_graphics));
         if (domain->dev_graphics == NULL) {
@@ -603,6 +609,12 @@ static bool default_graphics_device(struct domain *domain)
 static bool default_input_device(struct domain *domain)
 {
         if (domain->type == DOMAIN_LXC)
+                return true;
+
+        if ((domain->type == DOMAIN_KVM || domain->type == DOMAIN_QEMU) &&
+            domain->os_info.fv.arch != NULL &&
+            (XSTREQ(domain->os_info.fv.arch, "s390") ||
+             XSTREQ(domain->os_info.fv.arch, "s390x" )))
                 return true;
 
         free(domain->dev_input);
