@@ -35,6 +35,7 @@
 #include "cs_util.h"
 #include "misc_util.h"
 #include "device_parsing.h"
+#include "capability_parsing.h"
 #include "xmlgen.h"
 
 #include <libcmpiutil/libcmpiutil.h>
@@ -388,59 +389,6 @@ static bool fv_set_emulator(struct domain *domain,
         return true;
 }
 
-static bool system_has_kvm(const char *pfx)
-{
-        CMPIStatus s;
-        virConnectPtr conn = NULL;
-        char *caps = NULL;
-        bool disable_kvm = get_disable_kvm();
-        xmlDocPtr doc = NULL;
-        xmlNodePtr node = NULL;
-        int len;
-        bool kvm = false;
-
-        /* sometimes disable KVM to avoid problem in nested KVM */
-        if (disable_kvm) {
-                CU_DEBUG("Enter disable kvm mode!");
-                goto out;
-        }
-
-        conn = connect_by_classname(_BROKER, pfx, &s);
-        if ((conn == NULL) || (s.rc != CMPI_RC_OK)) {
-                goto out;
-        }
-
-        caps = virConnectGetCapabilities(conn);
-        if (caps != NULL) {
-            len = strlen(caps) + 1;
-
-            doc = xmlParseMemory(caps, len);
-            if (doc == NULL) {
-                CU_DEBUG("xmlParseMemory() call failed!");
-                goto out;
-            }
-
-            node = xmlDocGetRootElement(doc);
-            if (node == NULL) {
-                CU_DEBUG("xmlDocGetRootElement() call failed!");
-                goto out;
-            }
-
-            if (has_kvm_domain_type(node)) {
-                    CU_DEBUG("The system support kvm!");
-                    kvm = true;
-            }
-        }
-
-out:
-        free(caps);
-        free(doc);
-
-        virConnectClose(conn);
-
-        return kvm;
-}
-
 static int bootord_vssd_to_domain(CMPIInstance *inst,
                                   struct domain *domain)
 {
@@ -511,53 +459,90 @@ static int bootord_vssd_to_domain(CMPIInstance *inst,
 
 static int fv_vssd_to_domain(CMPIInstance *inst,
                              struct domain *domain,
-                             const char *pfx)
+                             const char *pfx,
+                             virConnectPtr conn)
 {
-        int ret;
+        int ret = 1;
+        int retr;
         const char *val;
+        const char *domtype = NULL;
+        const char *ostype = "hvm";
+        struct capabilities *capsinfo = NULL;
+
+        get_capabilities(conn, &capsinfo);
 
         if (STREQC(pfx, "KVM")) {
-                if (system_has_kvm(pfx))
+                if (use_kvm(capsinfo)) {
                         domain->type = DOMAIN_KVM;
-                else
+                        domtype = "kvm";
+                } else {
                         domain->type = DOMAIN_QEMU;
+                        domtype = "qemu";
+                }
         } else if (STREQC(pfx, "Xen")) {
                 domain->type = DOMAIN_XENFV;
         } else {
                 CU_DEBUG("Unknown fullvirt domain type: %s", pfx);
-                return 0;
+                ret = 0;
+                goto out;
         }
 
-        ret = bootord_vssd_to_domain(inst, domain);
-        if (ret != 1)
-                return 0;
-
-        ret = cu_get_str_prop(inst, "Emulator", &val);
-        if (ret != CMPI_RC_OK)
-                val = NULL;
-        else if (disk_type_from_file(val) == DISK_UNKNOWN) {
-                CU_DEBUG("Emulator path does not exist: %s", val);
-                return 0;
+        retr = bootord_vssd_to_domain(inst, domain);
+        if (retr != 1) {
+                ret = 0;
+                goto out;
         }
-
-        if (!fv_set_emulator(domain, val))
-                return 0;
 
         free(domain->os_info.fv.arch);
-        ret = cu_get_str_prop(inst, "Arch", &val);
-        if (ret == CMPI_RC_OK)
+        retr = cu_get_str_prop(inst, "Arch", &val);
+        if (retr != CMPI_RC_OK) {
+                if (capsinfo != NULL) { /* set default */
+                        val = get_default_arch(capsinfo, ostype);
+                        CU_DEBUG("Set Arch to default: %s", val);
+                } else
+                        val = NULL;
+        }
+        if (val != NULL)
                 domain->os_info.fv.arch = strdup(val);
-        else
-                domain->os_info.fv.arch = NULL;
 
         free(domain->os_info.fv.machine);
-        ret = cu_get_str_prop(inst, "Machine", &val);
-        if (ret == CMPI_RC_OK)
+        retr = cu_get_str_prop(inst, "Machine", &val);
+        if (retr != CMPI_RC_OK) {
+                if (capsinfo != NULL && domtype != NULL) { /* set default */
+                        val = get_default_machine(capsinfo, ostype,
+                                                  domain->os_info.fv.arch,
+                                                  domtype);
+                        CU_DEBUG("Set Machine to default: %s", val);
+                } else
+                        val = NULL;
+        }
+        if (val != NULL)
                 domain->os_info.fv.machine = strdup(val);
-        else
-                domain->os_info.fv.machine = NULL;
 
-        return 1;
+        retr = cu_get_str_prop(inst, "Emulator", &val);
+        if (retr != CMPI_RC_OK) {
+                if (capsinfo != NULL && domtype != NULL) { /* set default */
+                        val = get_default_emulator(capsinfo, ostype,
+                                                   domain->os_info.fv.arch,
+                                                   domtype);
+                        CU_DEBUG("Set Emulator to default: %s", val);
+                } else
+                        val = NULL;
+        }
+        if (val != NULL && disk_type_from_file(val) == DISK_UNKNOWN) {
+                CU_DEBUG("Emulator path does not exist: %s", val);
+                ret = 0;
+                goto out;
+        }
+
+        if (!fv_set_emulator(domain, val)) {
+                ret = 0;
+                goto out;
+        }
+
+ out:
+        cleanup_capabilities(&capsinfo);
+        return ret;
 }
 
 static int lxc_vssd_to_domain(CMPIInstance *inst,
@@ -663,6 +648,8 @@ static int vssd_to_domain(CMPIInstance *inst,
         bool bool_val;
         bool fullvirt;
         CMPIObjectPath *opathp = NULL;
+        virConnectPtr conn = NULL;
+        CMPIStatus s = { CMPI_RC_OK, NULL };
 
 
         opathp = CMGetObjectPath(inst, NULL);
@@ -748,9 +735,18 @@ static int vssd_to_domain(CMPIInstance *inst,
                 }
         }
 
-        if (fullvirt || STREQC(pfx, "KVM"))
-                ret = fv_vssd_to_domain(inst, domain, pfx);
-        else if (STREQC(pfx, "Xen"))
+        if (fullvirt || STREQC(pfx, "KVM")) {
+                conn = connect_by_classname(_BROKER, cn, &s);
+                if (conn == NULL) {
+                        cu_statusf(_BROKER, &s,
+                                   CMPI_RC_ERR_FAILED,
+                                   "Error connecting to libvirt");
+                        ret = 0;
+                        goto out;
+                }
+                ret = fv_vssd_to_domain(inst, domain, pfx, conn);
+                virConnectClose(conn);
+        } else if (STREQC(pfx, "Xen"))
                 ret = xenpv_vssd_to_domain(inst, domain);
         else if (STREQC(pfx, "LXC"))
                 ret = lxc_vssd_to_domain(inst, domain);
