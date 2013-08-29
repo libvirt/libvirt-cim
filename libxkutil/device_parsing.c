@@ -1103,23 +1103,37 @@ int parse_fq_devid(const char *devid, char **host, char **device)
         return 1;
 }
 
+static void cleanup_bootlist(char **blist, unsigned blist_ct)
+{
+        while (blist_ct > 0) {
+                free(blist[--blist_ct]);
+        }
+        free(blist);
+}
+
 static int parse_os(struct domain *dominfo, xmlNode *os)
 {
         xmlNode *child;
         char **blist = NULL;
         unsigned bl_size = 0;
+        char *kernel = NULL;
+        char *initrd = NULL;
+        char *cmdline = NULL;
+        char *loader = NULL;
+        char *boot = NULL;
+        char *init = NULL;
 
         for (child = os->children; child != NULL; child = child->next) {
-                if (XSTREQ(child->name, "type"))
+                if (XSTREQ(child->name, "type")) {
                         STRPROP(dominfo, os_info.pv.type, child);
-                else if (XSTREQ(child->name, "kernel"))
-                        STRPROP(dominfo, os_info.pv.kernel, child);
+                } else if (XSTREQ(child->name, "kernel"))
+                        kernel = get_node_content(child);
                 else if (XSTREQ(child->name, "initrd"))
-                        STRPROP(dominfo, os_info.pv.initrd, child);
+                        initrd = get_node_content(child);
                 else if (XSTREQ(child->name, "cmdline"))
-                        STRPROP(dominfo, os_info.pv.cmdline, child);
+                        cmdline = get_node_content(child);
                 else if (XSTREQ(child->name, "loader"))
-                        STRPROP(dominfo, os_info.fv.loader, child);
+                        loader = get_node_content(child);
                 else if (XSTREQ(child->name, "boot")) {
                         char **tmp_list = NULL;
 
@@ -1137,7 +1151,7 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
                         blist[bl_size] = get_attr_value(child, "dev");
                         bl_size++;
                 } else if (XSTREQ(child->name, "init"))
-                        STRPROP(dominfo, os_info.lxc.init, child);
+                        init = get_node_content(child);
         }
 
         if ((STREQC(dominfo->os_info.fv.type, "hvm")) &&
@@ -1154,17 +1168,39 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         else
                 dominfo->type = -1;
 
-        if (STREQC(dominfo->os_info.fv.type, "hvm")) {
+        switch (dominfo->type) {
+        case DOMAIN_XENFV:
+        case DOMAIN_KVM:
+        case DOMAIN_QEMU:
+                dominfo->os_info.fv.loader = loader;
                 dominfo->os_info.fv.bootlist_ct = bl_size;
                 dominfo->os_info.fv.bootlist = blist;
-        } else {
-            int i;
-
-            for (i = 0; i < bl_size; i++)
-                free(blist[i]);
-            free(blist);
+                loader = NULL;
+                blist = NULL;
+                bl_size = 0;
+                break;
+        case DOMAIN_XENPV:
+                dominfo->os_info.pv.kernel = kernel;
+                dominfo->os_info.pv.initrd = initrd;
+                dominfo->os_info.pv.cmdline = cmdline;
+                kernel = NULL;
+                initrd = NULL;
+                cmdline = NULL;
+                break;
+        case DOMAIN_LXC:
+                dominfo->os_info.lxc.init = init;
+                init = NULL;
+                break;
+        default:
+                break;
         }
 
+        free(kernel);
+        free(initrd);
+        free(cmdline);
+        free(boot);
+        free(init);
+        cleanup_bootlist(blist, bl_size);
         return 1;
 }
 
@@ -1360,15 +1396,10 @@ void cleanup_dominfo(struct domain **dominfo)
                 free(dom->os_info.pv.cmdline);
         } else if ((dom->type == DOMAIN_XENFV) ||
                    (dom->type == DOMAIN_KVM) || (dom->type == DOMAIN_QEMU)) {
-                int i;
-
                 free(dom->os_info.fv.type);
                 free(dom->os_info.fv.loader);
-                
-                for (i = 0; i < dom->os_info.fv.bootlist_ct; i++) {
-                        free(dom->os_info.fv.bootlist[i]);
-                } 
-                free(dom->os_info.fv.bootlist);
+                cleanup_bootlist(dom->os_info.fv.bootlist,
+                                 dom->os_info.fv.bootlist_ct);
         } else if (dom->type == DOMAIN_LXC) {
                 free(dom->os_info.lxc.type);
                 free(dom->os_info.lxc.init);
