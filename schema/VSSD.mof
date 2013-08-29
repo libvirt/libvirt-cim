@@ -48,6 +48,12 @@ class KVM_VirtualSystemSettingData : Virt_VirtualSystemSettingData
   [Description ("The emulator the guest should use during runtime.")]
   string Emulator;
 
+  [Description ("The guest's architecture.")]
+  string Arch;
+
+  [Description ("The guest's machine type")]
+  string Machine;
+
 };
 
 [Description (

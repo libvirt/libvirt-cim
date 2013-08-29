@@ -811,6 +811,12 @@ static char *_kvm_os_xml(xmlNodePtr root, struct domain *domain)
         if (tmp == NULL)
                 return XML_ERROR;
 
+        if (os->arch)
+                xmlNewProp(tmp, BAD_CAST "arch", BAD_CAST os->arch);
+
+        if (os->machine)
+                xmlNewProp(tmp, BAD_CAST "machine", BAD_CAST os->machine);
+
         ret = _fv_bootlist_xml(root, os);
         if (ret == 0)
                 return XML_ERROR;

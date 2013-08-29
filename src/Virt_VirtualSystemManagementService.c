@@ -543,6 +543,20 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
         if (!fv_set_emulator(domain, val))
                 return 0;
 
+        free(domain->os_info.fv.arch);
+        ret = cu_get_str_prop(inst, "Arch", &val);
+        if (ret == CMPI_RC_OK)
+                domain->os_info.fv.arch = strdup(val);
+        else
+                domain->os_info.fv.arch = NULL;
+
+        free(domain->os_info.fv.machine);
+        ret = cu_get_str_prop(inst, "Machine", &val);
+        if (ret == CMPI_RC_OK)
+                domain->os_info.fv.machine = strdup(val);
+        else
+                domain->os_info.fv.machine = NULL;
+
         return 1;
 }
 

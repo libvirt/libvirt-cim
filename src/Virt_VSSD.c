@@ -121,6 +121,15 @@ static CMPIStatus _set_fv_prop(const CMPIBroker *broker,
                 goto out;
         }
 
+        if (dominfo->os_info.fv.arch != NULL)
+                CMSetProperty(inst, "Arch",
+                              (CMPIValue *)dominfo->os_info.fv.arch,
+                              CMPI_chars);
+
+        if (dominfo->os_info.fv.machine != NULL)
+                CMSetProperty(inst, "Machine",
+                              (CMPIValue *)dominfo->os_info.fv.machine,
+                              CMPI_chars);
  out:
         return s;
 }
