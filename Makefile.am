@@ -201,26 +201,26 @@ uninstall-local:
 	done
 
 preinstall:
-	sh -x base_schema/install_base_schema.sh `pwd`/base_schema
+	$(SHELL) -x base_schema/install_base_schema.sh `pwd`/base_schema
 
 # Un/Register the providers and class definitions from/to the current CIMOM.
 # @CIMSERVER@ is set by the configure script
 postinstall:
-	sh provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(MOFS))
-	sh provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_MOFS))
-	sh provider-register.sh -v -t @CIMSERVER@ -n root/cimv2 -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_MOFS))
+	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(MOFS))
+	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_MOFS))
+	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n root/cimv2 -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_MOFS))
 	if [[ @CIMSERVER@ = pegasus ]]; then \
-	sh provider-register.sh -v -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
+	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
 	fi
 	virsh -v | grep -q '^0.3' && cp examples/diskpool.conf $(DISK_POOL_CONFIG) || true
 	mkdir -p $(INFO_STORE)
 
 preuninstall:
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(MOFS))
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/interop -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_MOFS))
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/cimv2 -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_MOFS))
+	$(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(MOFS))
+	$(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n root/interop -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_MOFS))
+	$(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n root/cimv2 -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_MOFS))
 	if [[ @CIMSERVER@ = pegasus ]]; then \
-	sh provider-register.sh -v -d -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
+	$(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
 	fi
 
 rpm: clean
