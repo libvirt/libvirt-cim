@@ -521,6 +521,8 @@ int main(int argc, char **argv)
                 return 4;
         }
 
+        cleanup_dominfo(&dominfo);
+
         return 0;
 }
 
