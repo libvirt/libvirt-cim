@@ -95,6 +95,8 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->device);
         free(dev->net_mode);
         free(dev->filter_ref);
+        free(dev->poolid);
+        cleanup_vsi_device(&dev->vsi);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -566,6 +568,8 @@ static int parse_mem_device(xmlNode *node, struct virt_device **vdevs)
         struct virt_device *vdev = NULL;
         struct mem_device *mdev = NULL;
         char *content = NULL;
+        char *tmpval = NULL;
+        int ret = 0;
 
         vdev = calloc(1, sizeof(*vdev));
         if (vdev == NULL)
@@ -579,27 +583,26 @@ static int parse_mem_device(xmlNode *node, struct virt_device **vdevs)
                 sscanf(content, "%" PRIu64, &mdev->size);
         else if (XSTREQ(node->name, "memory")) {
                 sscanf(content, "%" PRIu64, &mdev->maxsize);
-                content = get_attr_value(node, "dumpCore");
-                if (content && XSTREQ(content, "on")) {
+                tmpval = get_attr_value(node, "dumpCore");
+                if (tmpval && XSTREQ(tmpval, "on")) {
                     mdev->dumpCore = MEM_DUMP_CORE_ON;
-                } else if (content && XSTREQ(content, "off")) {
+                } else if (tmpval && XSTREQ(content, "off")) {
                     mdev->dumpCore = MEM_DUMP_CORE_OFF;
                 } else {
                     mdev->dumpCore = MEM_DUMP_CORE_NOT_SET;
                 }
         }
 
-        free(content);
-
         *vdevs = vdev;
-
-        return 1;
+        vdev = NULL;
+        ret = 1;
 
  err:
         free(content);
+        free(tmpval);
         free(vdev);
 
-        return 0;
+        return ret;
 }
 
 static char *get_attr_value_default(xmlNode *node, char *attrname,
@@ -787,7 +790,10 @@ static int do_parse(xmlNodeSet *nsv, dev_parse_func_t do_real_parse,
         }
 
   out:
-        *l = list;
+        if (list) {
+                free(*l);
+                *l = list;
+        }
         return lstidx;
 }
 
@@ -1203,7 +1209,7 @@ static int parse_features(struct domain *dominfo, xmlNode *features)
 
 static void set_action(int *val, xmlNode *child)
 {
-        const char *action = (char *)xmlNodeGetContent(child);
+        char *action = (char *)xmlNodeGetContent(child);
 
         if (action == NULL)
                 *val = CIM_VSSD_RECOVERY_NONE;
@@ -1215,6 +1221,8 @@ static void set_action(int *val, xmlNode *child)
                 *val = CIM_VSSD_RECOVERY_RESTART;
         else
                 *val = CIM_VSSD_RECOVERY_NONE;
+
+        xmlFree(action);
 }
 
 static int parse_domain(xmlNodeSet *nsv, struct domain *dominfo)
@@ -1366,9 +1374,11 @@ void cleanup_dominfo(struct domain **dominfo)
 
         dom = *dominfo;
         free(dom->name);
+        free(dom->typestr);
         free(dom->uuid);
         free(dom->bootloader);
         free(dom->bootloader_args);
+        free(dom->clock);
 
         if (dom->type == DOMAIN_XENPV) {
                 free(dom->os_info.pv.type);
@@ -1390,6 +1400,7 @@ void cleanup_dominfo(struct domain **dominfo)
                 CU_DEBUG("Unknown domain type %i", dom->type);
         }
 
+        cleanup_virt_devices(&dom->dev_emu, 1);
         cleanup_virt_devices(&dom->dev_mem, dom->dev_mem_ct);
         cleanup_virt_devices(&dom->dev_net, dom->dev_net_ct);
         cleanup_virt_devices(&dom->dev_disk, dom->dev_disk_ct);
