@@ -581,6 +581,7 @@ static bool default_graphics_device(struct domain *domain)
                 return false;
         }
 
+        domain->dev_graphics->type = CIM_RES_TYPE_GRAPHICS;
         domain->dev_graphics->dev.graphics.type = strdup("vnc");
         domain->dev_graphics->dev.graphics.dev.vnc.port = strdup("-1");
         domain->dev_graphics->dev.graphics.dev.vnc.host = strdup("127.0.0.1");
@@ -609,6 +610,7 @@ static bool default_input_device(struct domain *domain)
                 return false;
         }
 
+        domain->dev_input->type = CIM_RES_TYPE_INPUT;
         domain->dev_input->dev.input.type = strdup("mouse");
 
         if (domain->type == DOMAIN_XENPV) {
