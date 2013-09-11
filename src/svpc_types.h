@@ -25,6 +25,7 @@
 #define CIM_OPERATIONAL_STATUS 2
 
 #define CIM_RES_TYPE_ALL        0
+#define CIM_RES_TYPE_OTHER      1
 #define CIM_RES_TYPE_PROC       3
 #define CIM_RES_TYPE_MEM        4
 #define CIM_RES_TYPE_NET        10
@@ -34,8 +35,9 @@
 #define CIM_RES_TYPE_INPUT      13 
 #define CIM_RES_TYPE_UNKNOWN    1000
 #define CIM_RES_TYPE_IMAGE      32768 
+#define CIM_RES_TYPE_CONSOLE    32769
 
-#define CIM_RES_TYPE_COUNT 6
+#define CIM_RES_TYPE_COUNT 7
 const static int cim_res_types[CIM_RES_TYPE_COUNT] = 
   {CIM_RES_TYPE_NET,
    CIM_RES_TYPE_DISK,
@@ -43,6 +45,7 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
    CIM_RES_TYPE_PROC,
    CIM_RES_TYPE_GRAPHICS,
    CIM_RES_TYPE_INPUT,
+   CIM_RES_TYPE_CONSOLE,
   };
 
 #define CIM_VSSD_RECOVERY_NONE       2

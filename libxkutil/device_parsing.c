@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2013
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -41,6 +41,11 @@
 #define NET_XPATH       (xmlChar *)"/domain/devices/interface"
 #define EMU_XPATH       (xmlChar *)"/domain/devices/emulator"
 #define MEM_XPATH       (xmlChar *)"/domain/memory | /domain/currentMemory"
+#define CONSOLE_XPATH   (xmlChar *)"/domain/devices/console"
+/*
+ * To be backward compatible, serial and console is
+ * still part of the graphics.
+ */
 #define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics | "\
         "/domain/devices/console | /domain/devices/serial"
 #define INPUT_XPATH     (xmlChar *)"/domain/devices/input"
@@ -49,6 +54,11 @@
 #define DEFAULT_NETWORK "default"
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
+
+#define DUP_FIELD(d, s, f) do {                         \
+                if ((s)->f != NULL)                     \
+                        (d)->f = strdup((s)->f);        \
+        } while (0);
 
 /* Device parse function */
 typedef int (*dev_parse_func_t)(xmlNode *, struct virt_device **);
@@ -135,6 +145,140 @@ static void cleanup_graphics_device(struct graphics_device *dev)
         free(dev->type);
 }
 
+static void cleanup_path_device(struct path_device *dev)
+{
+        if (dev == NULL)
+            return;
+
+        free(dev->path);
+
+}
+
+static void cleanup_unixsock_device(struct unixsock_device *dev)
+{
+        if (dev == NULL)
+            return;
+
+        free(dev->path);
+        free(dev->mode);
+
+}
+
+static void cleanup_tcp_device(struct tcp_device *dev)
+{
+        if (dev == NULL)
+            return;
+
+        free(dev->mode);
+        free(dev->protocol);
+        free(dev->host);
+        free(dev->service);
+
+}
+
+static void cleanup_udp_device(struct udp_device *dev)
+{
+        if (dev == NULL)
+            return;
+
+        free(dev->bind_host);
+        free(dev->bind_service);
+        free(dev->connect_host);
+        free(dev->connect_service);
+};
+
+static void cleanup_console_device(struct console_device *dev)
+{
+        if (dev == NULL)
+                return;
+
+        switch (dev->source_type)
+        {
+        case CIM_CHARDEV_SOURCE_TYPE_PTY:
+                cleanup_path_device(&dev->source_dev.pty);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_DEV:
+                cleanup_path_device(&dev->source_dev.dev);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_FILE:
+                cleanup_path_device(&dev->source_dev.file);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_PIPE:
+                cleanup_path_device(&dev->source_dev.pipe);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK:
+                cleanup_unixsock_device(&dev->source_dev.unixsock);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UDP:
+                cleanup_udp_device(&dev->source_dev.udp);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_TCP:
+                cleanup_tcp_device(&dev->source_dev.tcp);
+                break;
+        default:
+                /* Nothing to do for :
+                   CIM_CHARDEV_SOURCE_TYPE_STDIO
+                   CIM_CHARDEV_SOURCE_TYPE_NULL
+                   CIM_CHARDEV_SOURCE_TYPE_VC
+                   CIM_CHARDEV_SOURCE_TYPE_SPICEVMC
+                */
+                break;
+        }
+
+        dev->source_type = 0;
+        free(dev->target_type);
+        memset(&dev->source_dev, 0, sizeof(dev->source_dev));
+};
+
+static void console_device_dup(struct console_device *t,
+                               struct console_device *s)
+{
+        cleanup_console_device(t);
+
+        t->source_type = s->source_type;
+        DUP_FIELD(t, s, target_type);
+
+        switch (s->source_type)
+        {
+        case CIM_CHARDEV_SOURCE_TYPE_PTY:
+                DUP_FIELD(t, s, source_dev.pty.path);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_DEV:
+                DUP_FIELD(t, s, source_dev.dev.path);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_FILE:
+                DUP_FIELD(t, s, source_dev.file.path);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_PIPE:
+                DUP_FIELD(t, s, source_dev.pipe.path);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK:
+                DUP_FIELD(t, s, source_dev.unixsock.path);
+                DUP_FIELD(t, s, source_dev.unixsock.mode);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UDP:
+                DUP_FIELD(t, s, source_dev.udp.bind_host);
+                DUP_FIELD(t, s, source_dev.udp.bind_service);
+                DUP_FIELD(t, s, source_dev.udp.connect_host);
+                DUP_FIELD(t, s, source_dev.udp.connect_service);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_TCP:
+                DUP_FIELD(t, s, source_dev.tcp.mode);
+                DUP_FIELD(t, s, source_dev.tcp.protocol);
+                DUP_FIELD(t, s, source_dev.tcp.host);
+                DUP_FIELD(t, s, source_dev.tcp.service);
+                break;
+        default:
+                /* Nothing to do for :
+                   CIM_CHARDEV_SOURCE_TYPE_STDIO
+                   CIM_CHARDEV_SOURCE_TYPE_NULL
+                   CIM_CHARDEV_SOURCE_TYPE_VC
+                   CIM_CHARDEV_SOURCE_TYPE_SPICEVMC
+                */
+                break;
+        }
+}
+
 static void cleanup_input_device(struct input_device *dev)
 {
         if (dev == NULL)
@@ -159,6 +303,8 @@ void cleanup_virt_device(struct virt_device *dev)
                 cleanup_graphics_device(&dev->dev.graphics);
         else if (dev->type == CIM_RES_TYPE_INPUT)
                 cleanup_input_device(&dev->dev.input);
+        else if (dev->type == CIM_RES_TYPE_CONSOLE)
+                cleanup_console_device(&dev->dev.console);
 
         free(dev->id);
 
@@ -616,6 +762,138 @@ static char *get_attr_value_default(xmlNode *node, char *attrname,
         return ret;
 }
 
+static int parse_console_device(xmlNode *node, struct virt_device **vdevs)
+{
+        struct virt_device *vdev = NULL;
+        struct console_device *cdev = NULL;
+        char *source_type_str = NULL;
+        char *target_port_ID = NULL;
+        char *udp_source_mode = NULL;
+
+        xmlNode *child = NULL;
+
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        cdev = &(vdev->dev.console);
+
+        source_type_str = get_attr_value(node, "type");
+        if (source_type_str == NULL)
+                goto err;
+        CU_DEBUG("console device type = %s", source_type_str ? : "NULL");
+
+        cdev->source_type = chardev_source_type_StrToID(source_type_str);
+        if (cdev->source_type == CIM_CHARDEV_SOURCE_TYPE_UNKNOWN)
+                goto err;
+
+        CU_DEBUG("console device type ID = %d", cdev->source_type);
+
+        for (child = node->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "target")) {
+                        cdev->target_type = get_attr_value(child, "type");
+                        CU_DEBUG("Console device target type = '%s'",
+                                 cdev->target_type ? : "NULL");
+                        target_port_ID = get_attr_value(child, "port");
+                        if (target_port_ID == NULL)
+                                goto err;
+                }
+
+                if (XSTREQ(child->name, "source")) {
+                        switch (cdev->source_type)
+                        {
+                        case CIM_CHARDEV_SOURCE_TYPE_PTY:
+                                cdev->source_dev.pty.path =
+                                        get_attr_value(child, "path");
+                                break;
+                        case CIM_CHARDEV_SOURCE_TYPE_DEV:
+                                cdev->source_dev.dev.path =
+                                        get_attr_value(child, "path");
+                                break;
+                        case CIM_CHARDEV_SOURCE_TYPE_FILE:
+                                cdev->source_dev.file.path =
+                                        get_attr_value(child, "path");
+                                break;
+                        case CIM_CHARDEV_SOURCE_TYPE_PIPE:
+                                cdev->source_dev.pipe.path =
+                                        get_attr_value(child, "path");
+                                break;
+                        case CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK:
+                                cdev->source_dev.unixsock.mode =
+                                        get_attr_value(child, "mode");
+                                cdev->source_dev.unixsock.path =
+                                        get_attr_value(child, "path");
+                                break;
+                        case CIM_CHARDEV_SOURCE_TYPE_UDP:
+                                udp_source_mode = get_attr_value(child, "mode");
+                                if (udp_source_mode == NULL)
+                                        goto err;
+                                if (STREQC(udp_source_mode, "bind")) {
+                                        cdev->source_dev.udp.bind_host =
+                                                get_attr_value(child, "host");
+                                        cdev->source_dev.udp.bind_service =
+                                                get_attr_value(child, "service");
+                                } else if (STREQC(udp_source_mode, "connect")) {
+                                        cdev->source_dev.udp.connect_host =
+                                                get_attr_value(child, "host");
+                                        cdev->source_dev.udp.connect_service =
+                                                get_attr_value(child, "service");
+                                } else {
+                                        CU_DEBUG("unknown udp mode: %s",
+                                                 udp_source_mode ? : "NULL");
+                                        goto err;
+                                }
+                                break;
+                        case CIM_CHARDEV_SOURCE_TYPE_TCP:
+                                cdev->source_dev.tcp.mode =
+                                        get_attr_value(child, "mode");
+                                cdev->source_dev.tcp.host =
+                                        get_attr_value(child, "host");
+                                cdev->source_dev.tcp.service =
+                                        get_attr_value(child, "service");
+                                break;
+
+                        default:
+                                /* Nothing to do for :
+                                   CIM_CHARDEV_SOURCE_TYPE_STDIO
+                                   CIM_CHARDEV_SOURCE_TYPE_NULL
+                                   CIM_CHARDEV_SOURCE_TYPE_VC
+                                   CIM_CHARDEV_SOURCE_TYPE_SPICEVMC
+                                */
+                                break;
+                        }
+                }
+                if ((cdev->source_type == CIM_CHARDEV_SOURCE_TYPE_TCP)
+                     && XSTREQ(child->name, "protocol")) {
+                        cdev->source_dev.tcp.protocol =
+                                get_attr_value(child, "type");
+                }
+        }
+
+        vdev->type = CIM_RES_TYPE_CONSOLE;
+
+        if (asprintf(&vdev->id, "charconsole:%s", target_port_ID) == -1) {
+                CU_DEBUG("Failed to create charconsole id string");
+                goto err;
+        }
+
+        *vdevs = vdev;
+        free(source_type_str);
+        free(target_port_ID);
+        free(udp_source_mode);
+
+        return 1;
+
+ err:
+        free(source_type_str);
+        free(target_port_ID);
+        free(udp_source_mode);
+        cleanup_console_device(cdev);
+        free(vdev);
+
+        return 0;
+}
+
 static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
@@ -667,8 +945,20 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
                         child = child->next) {
                         if (XSTREQ(child->name, "source")) 
                                 gdev->dev.vnc.host = get_attr_value(child, "path");
-                        else if (XSTREQ(child->name, "target"))
-                                gdev->dev.vnc.port = get_attr_value(child, "port");
+                        else if (XSTREQ(child->name, "target")) {
+                                gdev->dev.vnc.port =
+                                        get_attr_value(child, "port");
+                                /* The graphics pty console can only be a
+                                   virtio console. If 'type' is not set in the
+                                   xml, the default of libvirt is virtio.*/
+                                char *t_type = get_attr_value(child, "type");
+                                if (t_type != NULL && !STREQC(t_type, "virtio")) {
+                                        CU_DEBUG("Not a pty-virtio graphics console");
+                                        free(t_type);
+                                        goto err;
+                                }
+                                free(t_type);
+                        }
                 }
         }
         else {
@@ -847,6 +1137,11 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
                 func = &parse_graphics_device;
                 break;
 
+        case CIM_RES_TYPE_CONSOLE:
+                xpathstr = CONSOLE_XPATH;
+                func = &parse_console_device;
+                break;
+
         case CIM_RES_TYPE_INPUT:
                 xpathstr = INPUT_XPATH;
                 func = &parse_input_device;
@@ -881,11 +1176,6 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
   err1:
         return count;
 }
-
-#define DUP_FIELD(d, s, f) do {                         \
-                if ((s)->f != NULL)                     \
-                        (d)->f = strdup((s)->f);        \
-        } while (0);
 
 struct virt_device *virt_device_dup(struct virt_device *_dev)
 {
@@ -945,8 +1235,10 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         } else if (dev->type == CIM_RES_TYPE_INPUT) {
                 DUP_FIELD(dev, _dev, dev.input.type);
                 DUP_FIELD(dev, _dev, dev.input.bus);
+        } else if (dev->type == CIM_RES_TYPE_CONSOLE) {
+                console_device_dup(&dev->dev.console,
+                                   &_dev->dev.console);
         }
-
         return dev;
 }
 
@@ -1307,6 +1599,9 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
         (*dominfo)->dev_graphics_ct = parse_devices(xml, 
                                                     &(*dominfo)->dev_graphics, 
                                                     CIM_RES_TYPE_GRAPHICS);
+        (*dominfo)->dev_console_ct = parse_devices(xml,
+                                                   &(*dominfo)->dev_console,
+                                                   CIM_RES_TYPE_CONSOLE);
         (*dominfo)->dev_input_ct = parse_devices(xml, 
                                                  &(*dominfo)->dev_input, 
                                                  CIM_RES_TYPE_INPUT);
@@ -1407,6 +1702,7 @@ void cleanup_dominfo(struct domain **dominfo)
         cleanup_virt_devices(&dom->dev_vcpu, dom->dev_vcpu_ct);
         cleanup_virt_devices(&dom->dev_graphics, dom->dev_graphics_ct);
         cleanup_virt_devices(&dom->dev_input, dom->dev_input_ct);
+        cleanup_virt_devices(&dom->dev_console, dom->dev_console_ct);
 
         free(dom);
 

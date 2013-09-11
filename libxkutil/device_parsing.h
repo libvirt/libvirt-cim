@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2013
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -111,6 +111,43 @@ struct graphics_device {
         } dev;
 };
 
+struct path_device {
+        char *path;
+};
+
+struct unixsock_device {
+        char *path;
+        char *mode;
+};
+
+struct tcp_device {
+        char *mode;
+        char *protocol;
+        char *host;
+        char *service;
+};
+
+struct udp_device {
+        char *bind_host;
+        char *bind_service;
+        char *connect_host;
+        char *connect_service;
+};
+
+struct console_device {
+        uint16_t source_type;
+        union {
+                struct path_device file;
+                struct path_device pty;
+                struct path_device dev;
+                struct path_device pipe;
+                struct unixsock_device unixsock;
+                struct tcp_device  tcp;
+                struct udp_device  udp;
+        }  source_dev;
+        char *target_type;
+};
+
 struct input_device {
         char *type;
         char *bus;
@@ -125,6 +162,7 @@ struct virt_device {
                 struct vcpu_device vcpu;
                 struct emu_device emu;
                 struct graphics_device graphics;
+                struct console_device console;
                 struct input_device input;
         } dev;
         char *id;
@@ -181,6 +219,9 @@ struct domain {
 
         struct virt_device *dev_graphics;
         int dev_graphics_ct;
+
+        struct virt_device *dev_console;
+        int dev_console_ct;
 
         struct virt_device *dev_emu;
 

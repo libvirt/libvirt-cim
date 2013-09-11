@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2013
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -41,6 +41,189 @@
 typedef const char *(*devfn_t)(xmlNodePtr node, struct domain *dominfo);
 typedef const char *(*poolfn_t)(xmlNodePtr node, struct virt_pool *pool);
 typedef const char *(*resfn_t)(xmlNodePtr node, struct virt_pool_res *res);
+
+static int _count_graphics_console_definitions(struct domain *dominfo)
+{
+        int i;
+        int num = 0;
+
+        for (i = 0; i < dominfo->dev_graphics_ct; i++) {
+                struct virt_device *_dev = &dominfo->dev_graphics[i];
+                if (_dev->type == CIM_RES_TYPE_UNKNOWN)
+                        continue;
+
+                struct graphics_device *dev = &_dev->dev.graphics;
+
+                if (STREQC(dev->type, "console")) {
+                        num++;
+                }
+        }
+        CU_DEBUG("Found %d console defintions in graphics devices.",num);
+        return num;
+
+}
+
+static const char *console_xml(xmlNodePtr root, struct domain *dominfo)
+{
+        int i;
+        xmlNodePtr console;
+        xmlNodePtr tmp;
+        int num_graphics_consol_def = 0;
+        int num_suppressed_console_def = 0;
+
+        num_graphics_consol_def = _count_graphics_console_definitions(dominfo);
+
+        for (i = 0; i < dominfo->dev_console_ct; i++) {
+                struct virt_device *_dev = &dominfo->dev_console[i];
+                if (_dev->type == CIM_RES_TYPE_UNKNOWN)
+                        continue;
+
+                struct console_device *cdev = &_dev->dev.console;
+
+                /* Due to backward compatibility, the graphics device handling
+                   is still parsing consoles:
+                   source = pty, target = virtio (which is the default target)
+                   But the console device handling processes these kind of
+                   consoles too. This would lead to a duplication of these
+                   default consoles in the domain xml definition.
+                   This code prevents the console handling of writing xml for
+                   duplicate pty/virtio consoles which are written by the
+                   graphics device handling. */
+                if (cdev->source_type == CIM_CHARDEV_SOURCE_TYPE_PTY &&
+                    (cdev->target_type == NULL ||
+                     STREQC(cdev->target_type, "virtio"))) {
+                        if (num_suppressed_console_def <
+                            num_graphics_consol_def) {
+                                num_suppressed_console_def++;
+                                continue;
+                        }
+                }
+
+                console = xmlNewChild(root, NULL, BAD_CAST "console", NULL);
+                if (console == NULL)
+                        return XML_ERROR;
+
+                xmlNewProp(console, BAD_CAST "type",
+                           BAD_CAST
+                           chardev_source_type_IDToStr(cdev->source_type));
+
+                switch (cdev->source_type) {
+                case CIM_CHARDEV_SOURCE_TYPE_PTY:
+                        /* The path property is not mandatory */
+                        if (cdev->source_dev.pty.path) {
+                                tmp = xmlNewChild(console, NULL,
+                                                  BAD_CAST "source", NULL);
+                                if (tmp == NULL)
+                                        return XML_ERROR;
+                                xmlNewProp(tmp, BAD_CAST "path",
+                                           BAD_CAST cdev->source_dev.pty.path);
+                        }
+                        break;
+                case CIM_CHARDEV_SOURCE_TYPE_DEV:
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "source", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "path",
+                                   BAD_CAST cdev->source_dev.dev.path);
+                        break;
+                case CIM_CHARDEV_SOURCE_TYPE_FILE:
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "source", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "path",
+                                   BAD_CAST cdev->source_dev.file.path);
+                        break;
+                case CIM_CHARDEV_SOURCE_TYPE_PIPE:
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "source", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "path",
+                                   BAD_CAST cdev->source_dev.pipe.path);
+                        break;
+                case CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK:
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "source", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "mode",
+                                   BAD_CAST cdev->source_dev.unixsock.mode);
+                        xmlNewProp(tmp, BAD_CAST "path",
+                                   BAD_CAST cdev->source_dev.unixsock.path);
+                        break;
+                case CIM_CHARDEV_SOURCE_TYPE_UDP:
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "source", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "mode", BAD_CAST "bind");
+                        xmlNewProp(tmp, BAD_CAST "host",
+                                   BAD_CAST cdev->source_dev.udp.bind_host);
+                        /* The service property is not mandatory */
+                        if (cdev->source_dev.udp.bind_service)
+                                xmlNewProp(tmp, BAD_CAST "service",
+                                           BAD_CAST
+                                           cdev->source_dev.udp.bind_service);
+
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "source", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "mode", BAD_CAST "connect");
+                        xmlNewProp(tmp, BAD_CAST "host",
+                                   BAD_CAST cdev->source_dev.udp.connect_host);
+                        /* The service property is not mandatory */
+                        if (cdev->source_dev.udp.connect_service)
+                                xmlNewProp(tmp, BAD_CAST "service",
+                                           BAD_CAST
+                                           cdev->source_dev.udp.connect_service);
+
+                        break;
+                case CIM_CHARDEV_SOURCE_TYPE_TCP:
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "source", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "mode",
+                                   BAD_CAST cdev->source_dev.tcp.mode);
+                        xmlNewProp(tmp, BAD_CAST "host",
+                                   BAD_CAST cdev->source_dev.tcp.host);
+                        if (cdev->source_dev.tcp.service)
+                                xmlNewProp(tmp, BAD_CAST "service",
+                                           BAD_CAST
+                                           cdev->source_dev.tcp.service);
+                        if (cdev->source_dev.tcp.protocol) {
+                                tmp = xmlNewChild(console, NULL,
+                                                  BAD_CAST "protocol", NULL);
+                                if (tmp == NULL)
+                                        return XML_ERROR;
+                                xmlNewProp(tmp, BAD_CAST "type",
+                                           BAD_CAST cdev->source_dev.tcp.protocol);
+                        }
+                        break;
+                default:
+                        /* Nothing to do for :
+                           CIM_CHARDEV_SOURCE_TYPE_STDIO
+                           CIM_CHARDEV_SOURCE_TYPE_NULL
+                           CIM_CHARDEV_SOURCE_TYPE_VC
+                           CIM_CHARDEV_SOURCE_TYPE_SPICEVMC
+                        */
+                        break;
+                }
+
+                if (cdev->target_type) {
+                        tmp = xmlNewChild(console, NULL,
+                                          BAD_CAST "target", NULL);
+                        if (tmp == NULL)
+                                return XML_ERROR;
+                        xmlNewProp(tmp, BAD_CAST "type",
+                                   BAD_CAST cdev->target_type);
+                }
+        }
+        return NULL;
+}
 
 static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
 {
@@ -977,6 +1160,11 @@ char *device_to_xml(struct virt_device *_dev)
                 dominfo->dev_graphics_ct = 1;
                 dominfo->dev_graphics = dev;
                 break;
+        case CIM_RES_TYPE_CONSOLE:
+                func = console_xml;
+                dominfo->dev_console_ct = 1;
+                dominfo->dev_console = dev;
+                break;
         case CIM_RES_TYPE_INPUT:
                 func = input_xml;
                 dominfo->dev_input_ct = 1;
@@ -1017,6 +1205,7 @@ char *system_to_xml(struct domain *dominfo)
                 &disk_xml,
                 &net_xml,
                 &input_xml,
+                &console_xml,
                 &graphics_xml,
                 &emu_xml,
                 NULL
