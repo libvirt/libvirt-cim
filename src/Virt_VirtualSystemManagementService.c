@@ -592,6 +592,38 @@ static bool default_graphics_device(struct domain *domain)
         return true;
 }
 
+static bool default_console_device(struct domain *domain)
+{
+        /* currently only taking care for s390 guests */
+        if ((domain->type == DOMAIN_KVM || domain->type == DOMAIN_QEMU) &&
+            domain->os_info.fv.arch != NULL &&
+            (XSTREQ(domain->os_info.fv.arch, "s390") ||
+             XSTREQ(domain->os_info.fv.arch, "s390x" ))) {
+                char * consoletype = NULL;
+                if (domain->os_info.fv.machine != NULL &&
+                    XSTREQ(domain->os_info.fv.machine, "s390-ccw-virtio")) {
+                        consoletype = "sclp";
+                } else {
+                        consoletype = "virtio";
+                }
+                free(domain->dev_console);
+                domain->dev_console = calloc(1, sizeof(*domain->dev_console));
+                if (domain->dev_console == NULL) {
+                        CU_DEBUG("Failed to allocate default console device.");
+                        return false;
+                }
+                CU_DEBUG("Defining default console device for s390.");
+                domain->dev_console->type = CIM_RES_TYPE_CONSOLE;
+                domain->dev_console->dev.console.source_type =
+                        CIM_CHARDEV_SOURCE_TYPE_PTY;
+                domain->dev_console->dev.console.target_type =
+                        strdup(consoletype);
+                domain->dev_console_ct = 1;
+        }
+
+        return true;
+}
+
 static bool default_input_device(struct domain *domain)
 {
         if (domain->type == DOMAIN_LXC)
@@ -628,6 +660,8 @@ static bool add_default_devs(struct domain *domain)
 {
         if (domain->dev_graphics_ct < 1 &&
             domain->dev_console_ct < 1) {
+                if (!default_console_device(domain))
+                        return false;
                 if (!default_graphics_device(domain))
                         return false;
         }
