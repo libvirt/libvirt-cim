@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2013
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -626,7 +626,8 @@ static bool default_input_device(struct domain *domain)
 
 static bool add_default_devs(struct domain *domain)
 {
-        if (domain->dev_graphics_ct < 1) {
+        if (domain->dev_graphics_ct < 1 &&
+            domain->dev_console_ct < 1) {
                 if (!default_graphics_device(domain))
                         return false;
         }
@@ -1339,45 +1340,292 @@ static int parse_sdl_address(const char *id,
         return ret;
 }
 
-static int parse_vnc_address(const char *id,
-                      char **ip,
-                      char **port)
+static int parse_ip_address(const char *id,
+                            char **ip,
+                            char **port)
 {
         int ret;
         char *tmp_ip = NULL;
         char *tmp_port = NULL;
 
-        CU_DEBUG("Entering parse_vnc_address, address is %s", id);
+        CU_DEBUG("Entering parse_ip_address, address is %s", id);
         if (strstr(id, "[") != NULL) {
                 /* its an ipv6 address */
                 ret = sscanf(id, "%a[^]]]:%as",  &tmp_ip, &tmp_port);
-                strcat(tmp_ip, "]");
+                if (tmp_ip != NULL) {
+                        tmp_ip = realloc(tmp_ip, strlen(tmp_ip) + 2);
+                        if (tmp_ip == NULL) {
+                                ret = 0;
+                                goto out;
+                        }
+                        strcat(tmp_ip, "]");
+                }
         } else {
                 ret = sscanf(id, "%a[^:]:%as", &tmp_ip, &tmp_port);
         }
 
-        if (ret != 2) {
+        /* ret == 2: address and port, ret == 1: address only */
+        if (ret < 1) {
                 ret = 0;
                 goto out;
         }
 
-        if (ip)
+        if (ip) {
                 *ip = strdup(tmp_ip);
+                CU_DEBUG("IP = '%s'",*ip);
+        }
 
-        if (port)
+        if (port && tmp_port) {
                 *port = strdup(tmp_port);
-
-        ret = 1;
+                CU_DEBUG("Port = '%s'",*port);
+        }
 
  out:
-        if (ip && port)
-                CU_DEBUG("Exiting parse_vnc_address, ip is %s, port is %s",
-                        *ip, *port);
-
         free(tmp_ip);
         free(tmp_port);
 
         return ret;
+}
+
+static bool parse_console_url(const char *url,
+                              char **protocol,
+                              char **host,
+                              char **port)
+{
+        bool success = false;
+        char *tmp_protocol = NULL;
+        char *tmp_address = NULL;
+
+        CU_DEBUG("Entering parse_console_url:'%s'", url);
+
+        if (sscanf(url,"%a[^:]://%as", &tmp_protocol, &tmp_address) != 2)
+                goto out;
+
+        if (parse_ip_address(tmp_address, host, port) < 1)
+                goto out;
+
+        if (protocol) {
+                *protocol = strdup(tmp_protocol);
+                CU_DEBUG("Protocol = '%s'", *protocol);
+        }
+
+        success = true;
+
+ out:
+        free(tmp_protocol);
+        free(tmp_address);
+
+        return success;
+}
+
+static const char *_unixsock_console_rasd_to_vdev(CMPIInstance *inst,
+                                                  struct console_device *cdev)
+{
+        const char *val = NULL;
+        const char *val2 = NULL;
+        char* protocol = NULL;
+
+        cdev->source_dev.unixsock.mode = NULL;
+        if (cu_get_str_prop(inst,"ConnectURL", &val) == CMPI_RC_OK) {
+                CU_DEBUG("ConnectURL = '%s'", val);
+                cdev->source_dev.unixsock.mode = strdup("connect");
+        }
+
+        if (cu_get_str_prop(inst, "BindURL", &val2) == CMPI_RC_OK) {
+                if (cdev->source_dev.unixsock.mode != NULL)
+                        return "ConsoleRASD: Only one of ConnectURL or BindURL "
+                                "is allowed for UNIX domain sockets.";
+                CU_DEBUG("BindURL = '%s'", val2);
+                cdev->source_dev.unixsock.mode = strdup("bind");
+                val = val2;
+        }
+
+        if (val) {
+                if (!parse_console_url(val, &protocol, &cdev->source_dev.unixsock.path, NULL))
+                        return "ConsoleRASD: Invalid ConnectURL or BindURL for "
+                                "UNIX domain socket client/server.";
+
+                if (protocol != NULL && !STREQC("file", protocol)) {
+                        CU_DEBUG("Wrong ConsoleRASD protocol specified: '%s'", protocol);
+                        free(protocol);
+                        return "ConsoleRASD: Protocol 'file' was not specified for "
+                                "ConnectURL or BindURL for UNIX domain socket client/server.";
+                }
+                free(protocol);
+        } else {
+                return "ConsoleRASD: ConnectURL or BindURL not specified for "
+                       "UNIX domain socket client/server.";
+        }
+
+        return NULL;
+}
+
+static const char *_udp_console_rasd_to_vdev(CMPIInstance *inst,
+                                             struct console_device *cdev)
+{
+         const char *val = NULL;
+         char* protocol = NULL;
+
+         if (cu_get_str_prop(inst, "ConnectURL", &val) != CMPI_RC_OK)
+                 return "ConsoleRASD: ConnectURL not specified for UDP network console.";
+
+         if (!parse_console_url(val, &protocol,
+                                &cdev->source_dev.udp.connect_host,
+                                &cdev->source_dev.udp.connect_service))
+                 return "ConsoleRASD: Invalid ConnectURL specified for UDP network console.";
+
+         if (protocol != NULL && !STREQC("udp", protocol)) {
+                 CU_DEBUG("Wrong ConsoleRASD protocol specified: '%s'", protocol);
+                 free(protocol);
+                 return "ConsoleRASD: Protocol 'udp' was not specified at "
+                         "ConnectURL for UDP network console.";
+         }
+
+         free(protocol);
+
+         if (cu_get_str_prop(inst, "BindURL", &val) != CMPI_RC_OK)
+                 return "ConsoleRASD: BindURL not specified for UDP network console.";
+
+         if (!parse_console_url(val, &protocol,
+                                &cdev->source_dev.udp.bind_host,
+                                &cdev->source_dev.udp.bind_service))
+                 return "ConsoleRASD: Invalid BindURL specified for UDP network console.";
+
+         if (protocol != NULL && !STREQC("udp", protocol)) {
+                 CU_DEBUG("Wrong ConsoleRASD protocol specified: '%s'", protocol);
+                 free(protocol);
+                 return "ConsoleRASD: Protocol 'udp' was not specified at BindURL "
+                         "for UDP network console.";
+         }
+
+         free(protocol);
+         return NULL;
+}
+
+static const char *_tcp_console_rasd_to_vdev(CMPIInstance *inst,
+                                             struct console_device *cdev)
+{
+         const char *val = NULL;
+         const char *val2 = NULL;
+
+         cdev->source_dev.tcp.mode = NULL;
+         if (cu_get_str_prop(inst, "ConnectURL", &val) == CMPI_RC_OK) {
+                 CU_DEBUG("ConnectURL = '%s'", val);
+                 cdev->source_dev.tcp.mode = strdup("connect");
+         }
+
+         if (cu_get_str_prop(inst, "BindURL", &val2) == CMPI_RC_OK) {
+                 if (cdev->source_dev.tcp.mode != NULL)
+                        return "ConsoleRASD: Only one of ConnectURL or BindURL "
+                                "is allowed for TCP sockets.";
+                 CU_DEBUG("BindURL = '%s'", val2);
+                 cdev->source_dev.tcp.mode = strdup("bind");
+                 val = val2;
+         }
+
+         if (val) {
+                 if (!parse_console_url(val,
+                                        &cdev->source_dev.tcp.protocol,
+                                        &cdev->source_dev.tcp.host,
+                                        &cdev->source_dev.tcp.service))
+                         return "ConsoleRASD: Invalid ConnectURL or BindURL for "
+                                 "TCP client/server console.";
+                 if (cdev->source_dev.tcp.service == NULL)
+                         return "ConsoleRASD: Missing TCP port for TCP client/server console.";
+         } else {
+                 return "ConsoleRASD: ConnectURL or BindURL not specified for "
+                         "TCP client/server console.";
+         }
+
+         if (cdev->source_dev.tcp.protocol != NULL) {
+                 if (STREQC("udp", cdev->source_dev.tcp.protocol)) {
+                         CU_DEBUG("Wrong ConsoleRASD protocol specified: '%s'",
+                                  cdev->source_dev.tcp.protocol);
+                         return "ConsoleRASD: Invalid protocol 'udp' was specified at "
+                                 "TCP client/server console.";
+                 } else  if (STREQC("file", cdev->source_dev.tcp.protocol)) {
+                         CU_DEBUG("Wrong ConsoleRASD protocol specified: '%s'",
+                                  cdev->source_dev.tcp.protocol);
+                         return "ConsoleRASD: Invalid protocol 'file' was specified at "
+                                 "TCP client/server console.";
+                 }
+         }
+
+         return NULL;
+}
+
+static const char *console_rasd_to_vdev(CMPIInstance *inst,
+                                        struct virt_device *dev)
+{
+        int rc = 0;
+        const char *msg = NULL;
+        const char *val = NULL;
+        struct console_device *cdev = &dev->dev.console;
+        uint16_t tmp;
+
+        rc = cu_get_u16_prop(inst, "SourceType", &tmp);
+        if (rc != CMPI_RC_OK)
+                return "ConsoleRASD: SourceType field not specified.";
+
+        if (tmp >= CIM_CHARDEV_SOURCE_TYPE_INVALIDTYPE)
+                return "ConsoleRASD: Invalid SourceType value";
+
+        cdev->source_type = tmp;
+        CU_DEBUG("Processing SourceType: %d", cdev->source_type);
+
+        /* property not required */
+        if (cu_get_str_prop(inst, "TargetType", &val) == CMPI_RC_OK)
+                cdev->target_type = strdup(val);
+        CU_DEBUG("TargetType is '%s'", cdev->target_type ? : "NULL" );
+
+        switch (cdev->source_type) {
+        case CIM_CHARDEV_SOURCE_TYPE_PTY:
+                /* property not required */
+                if (cu_get_str_prop(inst, "SourcePath", &val) == CMPI_RC_OK)
+                        cdev->source_dev.pty.path = strdup(val);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_DEV:
+                if (cu_get_str_prop(inst, "SourcePath", &val) != CMPI_RC_OK)
+                       return "ConsoleRASD: SourcePath not specified for Host device proxy.";
+                cdev->source_dev.dev.path = strdup(val);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_FILE:
+                if (cu_get_str_prop(inst, "SourcePath", &val) != CMPI_RC_OK)
+                        return "ConsoleRASD: SourcePath not specified for Device logfile.";
+                cdev->source_dev.file.path = strdup(val);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_PIPE:
+                if (cu_get_str_prop(inst, "SourcePath", &val) != CMPI_RC_OK)
+                        return "ConsoleRASD: SourcePath not specified for Named pipe.";
+                cdev->source_dev.pipe.path = strdup(val);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK:
+                msg = _unixsock_console_rasd_to_vdev(inst, cdev);
+                if (msg != NULL)
+                        return msg;
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UDP:
+                msg = _udp_console_rasd_to_vdev(inst, cdev);
+                if (msg != NULL)
+                        return msg;
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_TCP:
+                msg = _tcp_console_rasd_to_vdev(inst, cdev);
+                if (msg != NULL)
+                        return msg;
+                break;
+
+        default:
+                /* Nothing to do for :
+                   CIM_CHARDEV_SOURCE_TYPE_STDIO
+                   CIM_CHARDEV_SOURCE_TYPE_NULL
+                   CIM_CHARDEV_SOURCE_TYPE_VC
+                   CIM_CHARDEV_SOURCE_TYPE_SPICEVMC
+                */
+                break;
+        }
+
+        return NULL;
 }
 
 static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
@@ -1394,7 +1642,7 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
         }
         dev->dev.graphics.type = strdup(val);
 
-        CU_DEBUG("graphics type = %s", dev->dev.graphics.type);
+        CU_DEBUG("graphics type = %s", dev->dev.graphics.type ? : "NULL");
 
         /* FIXME: Add logic to prevent address:port collisions */
         if (STREQC(dev->dev.graphics.type, "vnc")) {
@@ -1411,10 +1659,10 @@ static const char *graphics_rasd_to_vdev(CMPIInstance *inst,
                                 val = "127.0.0.1:-1";
                 }
 
-                ret = parse_vnc_address(val,
+                ret = parse_ip_address(val,
                                 &dev->dev.graphics.dev.vnc.host,
                                 &dev->dev.graphics.dev.vnc.port);
-                if (ret != 1) {
+                if (ret != 2) {
                         msg = "GraphicsRASD field Address not valid";
                         goto out;
                 }
@@ -1540,6 +1788,8 @@ static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                 return proc_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_GRAPHICS) {
                 return graphics_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_CONSOLE) {
+                return console_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_INPUT) {
                 return input_rasd_to_vdev(inst, dev);
         }
@@ -1601,7 +1851,7 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
         return msg;
 }
 
-static char *add_device_nodup(struct virt_device *dev,
+static const char *add_device_nodup(struct virt_device *dev,
                               struct virt_device *list,
                               int max,
                               int *index)
@@ -1662,6 +1912,9 @@ static const char *classify_resources(CMPIArray *resources,
 
         if (!make_space(&domain->dev_graphics, domain->dev_graphics_ct, count))
                 return "Failed to alloc graphics list";
+
+        if (!make_space(&domain->dev_console, domain->dev_console_ct, count))
+                return "Failed to alloc console list";
 
         if (!make_space(&domain->dev_input, domain->dev_input_ct, count))
                 return "Failed to alloc input list";
@@ -1765,6 +2018,14 @@ static const char *classify_resources(CMPIArray *resources,
                                                 domain->dev_graphics,
                                                 gcount,
                                                 &domain->dev_graphics_ct);
+                } else if (type == CIM_RES_TYPE_CONSOLE) {
+                        msg = rasd_to_vdev(inst,
+                                           domain,
+                                           &domain->dev_console[domain->dev_console_ct],
+                                           ns,
+                                           p_error);
+                        if (msg == NULL)
+                                domain->dev_console_ct+=1;
                 } else if (type == CIM_RES_TYPE_INPUT) {
                         domain->dev_input_ct = 1;
                         msg = rasd_to_vdev(inst,
@@ -2570,6 +2831,9 @@ static struct virt_device **find_list(struct domain *dominfo,
         } else if (type == CIM_RES_TYPE_GRAPHICS) {
                 list = &dominfo->dev_graphics;
                 *count = &dominfo->dev_graphics_ct;
+        } else if (type == CIM_RES_TYPE_CONSOLE) {
+                list = &dominfo->dev_console;
+                *count = &dominfo->dev_console_ct;
         } else if (type == CIM_RES_TYPE_INPUT) {
                 list = &dominfo->dev_input;
                 *count = &dominfo->dev_input_ct;
@@ -2693,7 +2957,8 @@ static CMPIStatus resource_del(struct domain *dominfo,
 
                 if (STREQ(dev->id, devid)) {
                         if ((type == CIM_RES_TYPE_GRAPHICS) ||
-                           (type == CIM_RES_TYPE_INPUT))
+                            (type == CIM_RES_TYPE_CONSOLE)  ||
+                            (type == CIM_RES_TYPE_INPUT))
                                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                         else {
                                 s = _resource_dynamic(dominfo,
@@ -2774,7 +3039,9 @@ static CMPIStatus resource_add(struct domain *dominfo,
                 goto out;
         }
 
-        if ((type == CIM_RES_TYPE_GRAPHICS) || (type == CIM_RES_TYPE_INPUT)) {
+        if ((type == CIM_RES_TYPE_GRAPHICS) ||
+            (type == CIM_RES_TYPE_INPUT) ||
+            (type == CIM_RES_TYPE_CONSOLE)) {
                 (*count)++;
                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                 goto out;
@@ -2850,7 +3117,8 @@ static CMPIStatus resource_mod(struct domain *dominfo,
                         }
 
                         if ((type == CIM_RES_TYPE_GRAPHICS) ||
-                            (type == CIM_RES_TYPE_INPUT))
+                            (type == CIM_RES_TYPE_INPUT)    ||
+                            (type == CIM_RES_TYPE_CONSOLE))
                                 cu_statusf(_BROKER, &s, CMPI_RC_OK, "");
                         else {
 #if LIBVIR_VERSION_NUMBER < 9000
