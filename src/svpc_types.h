@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2013
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -167,5 +167,100 @@ enum CIM_op_status {
         CIM_OP_STATUS_POWER_MODE = 18,
 };
 
+/* emum for the Character device Source resource types */
+enum CIM_chardev_source_type {
+        CIM_CHARDEV_SOURCE_TYPE_NULL = 0,
+        CIM_CHARDEV_SOURCE_TYPE_VC = 1,
+        CIM_CHARDEV_SOURCE_TYPE_PTY = 2,
+        CIM_CHARDEV_SOURCE_TYPE_DEV = 3,
+        CIM_CHARDEV_SOURCE_TYPE_FILE = 4,
+        CIM_CHARDEV_SOURCE_TYPE_PIPE = 5,
+        CIM_CHARDEV_SOURCE_TYPE_STDIO = 6,
+        CIM_CHARDEV_SOURCE_TYPE_UDP = 7,
+        CIM_CHARDEV_SOURCE_TYPE_TCP = 8,
+        CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK = 9,
+        CIM_CHARDEV_SOURCE_TYPE_SPICEVMC = 10,
+        /* please insert new source types above */
+        CIM_CHARDEV_SOURCE_TYPE_INVALIDTYPE,
+        CIM_CHARDEV_SOURCE_TYPE_UNKNOWN = 32768,
+};
+
+static inline int chardev_source_type_StrToID(const char *type_str)
+{
+        int rc = CIM_CHARDEV_SOURCE_TYPE_UNKNOWN;
+
+        if (type_str == NULL)
+                return rc;
+
+        if (STREQC(type_str, "null"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_NULL;
+        else if (STREQC(type_str, "vc"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_VC;
+        else if (STREQC(type_str, "pty"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_PTY;
+        else if (STREQC(type_str, "dev"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_DEV;
+        else if (STREQC(type_str, "file"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_FILE;
+        else if (STREQC(type_str, "pipe"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_PIPE;
+        else if (STREQC(type_str, "stdio"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_STDIO;
+        else if (STREQC(type_str, "udp"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_UDP;
+        else if (STREQC(type_str, "tcp"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_TCP;
+        else if (STREQC(type_str, "unix"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK;
+        else if (STREQC(type_str, "spicevmc"))
+                 rc = CIM_CHARDEV_SOURCE_TYPE_SPICEVMC;
+
+        return rc;
+}
+
+static inline const char* chardev_source_type_IDToStr(int type)
+{
+        char *type_str = NULL;
+
+        switch (type)
+        {
+        case CIM_CHARDEV_SOURCE_TYPE_NULL:
+                type_str = "null";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_VC:
+                type_str = "vc";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_PTY:
+                type_str = "pty";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_DEV:
+                type_str = "dev";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_FILE:
+                type_str = "file";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_PIPE:
+                type_str = "pipe";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_STDIO:
+                type_str = "stdio";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UDP:
+                type_str = "udp";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_TCP:
+                type_str = "tcp";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK:
+                type_str = "unix";
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_SPICEVMC:
+                type_str = "spicevmc";
+                break;
+        default:
+                break;
+        }
+        return type_str;
+}
 
 #endif
