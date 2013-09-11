@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007, 2013
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -662,6 +662,143 @@ static CMPIStatus set_graphics_rasd_params(const struct virt_device *dev,
         return s;
 }
 
+static char* _build_console_url(const char *protocol,
+                                const char *host,
+                                const char *port)
+{
+        char* result = NULL;
+
+        if (host == NULL)
+                goto out;
+
+        if (protocol != NULL && STREQC("file", protocol)) {
+                /* The host string contains the file name.
+                   Even if the file name does not start with a '/'
+                   it is treated by libvirt as a full qualified path.
+                */
+                if (host[0] == '/') {
+                        if (asprintf(&result, "file://%s", host) < 0)
+                                result = NULL;
+                        goto out;
+                } else {
+                        if (asprintf(&result, "file:///%s", host) < 0)
+                                result = NULL;
+                        goto out;
+                }
+        }
+        /* The assumption is that the host does not contain a port.
+           If the host string contains a ':',
+           the host is treated as an IPv6 address.
+        */
+        if (strchr(host, ':') == NULL) {
+                if (port == NULL) {
+                        if (asprintf(&result,"%s://%s", protocol, host) < 0)
+                                result = NULL;
+                        goto out;
+                } else {
+                        if (asprintf(&result,"%s://%s:%s", protocol,
+                                     host,port) < 0)
+                                result = NULL;
+                        goto out;
+                }
+        }
+ out:
+        return result;
+}
+
+
+static CMPIStatus set_console_rasd_params(const struct virt_device *vdev,
+                                          CMPIInstance *inst)
+{
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+        const struct console_device *cdev = NULL;
+        char* tmp = NULL;
+
+        cdev = &vdev->dev.console;
+
+        CMSetProperty(inst, "OtherResourceType", "console", CMPI_chars);
+        CMSetProperty(inst, "SourceType",
+                      (CMPIValue *)&cdev->source_type, CMPI_uint16);
+        CMSetProperty(inst, "TargetType",
+                      (CMPIValue *)cdev->target_type, CMPI_chars);
+
+        switch (cdev->source_type) {
+        case CIM_CHARDEV_SOURCE_TYPE_PTY:
+                CMSetProperty(inst, "SourcePath",
+                              (CMPIValue *)cdev->source_dev.pty.path,
+                              CMPI_chars);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_DEV:
+                CMSetProperty(inst, "SourcePath",
+                              (CMPIValue *)cdev->source_dev.dev.path,
+                              CMPI_chars);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_FILE:
+                CMSetProperty(inst, "SourcePath",
+                              (CMPIValue *)cdev->source_dev.file.path,
+                              CMPI_chars);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_PIPE:
+                CMSetProperty(inst, "SourcePath",
+                              (CMPIValue *)cdev->source_dev.pipe.path,
+                              CMPI_chars);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UNIXSOCK:
+                tmp = _build_console_url("file",
+                                         cdev->source_dev.unixsock.path, NULL);
+                if (cdev->source_dev.unixsock.mode != NULL) {
+                        if (STREQC(cdev->source_dev.unixsock.mode, "bind"))
+                                CMSetProperty(inst, "BindURL",
+                                              (CMPIValue *)tmp, CMPI_chars);
+                        else if (STREQC(cdev->source_dev.unixsock.mode,
+                                        "connect"))
+                                CMSetProperty(inst, "ConnectURL",
+                                              (CMPIValue *)tmp, CMPI_chars);
+                }
+                free(tmp);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_UDP:
+                tmp = _build_console_url("udp",
+                                         cdev->source_dev.udp.bind_host,
+                                         cdev->source_dev.udp.bind_service);
+                CMSetProperty(inst, "BindURL",
+                              (CMPIValue *)tmp, CMPI_chars);
+                free(tmp);
+
+                tmp = _build_console_url("udp",
+                                         cdev->source_dev.udp.connect_host,
+                                         cdev->source_dev.udp.connect_service);
+                CMSetProperty(inst, "ConnectURL", (CMPIValue *)tmp, CMPI_chars);
+                free(tmp);
+                break;
+        case CIM_CHARDEV_SOURCE_TYPE_TCP:
+                tmp = _build_console_url(cdev->source_dev.tcp.protocol,
+                                         cdev->source_dev.tcp.host,
+                                         cdev->source_dev.tcp.service);
+                if (cdev->source_dev.tcp.mode != NULL) {
+                        if (STREQC(cdev->source_dev.tcp.mode, "bind"))
+                                CMSetProperty(inst, "BindURL",
+                                              (CMPIValue *)tmp, CMPI_chars);
+                        else if (STREQC(cdev->source_dev.tcp.mode, "connect"))
+                                CMSetProperty(inst, "ConnectURL",
+                                              (CMPIValue *)tmp, CMPI_chars);
+                }
+                free(tmp);
+                break;
+
+        default:
+                /* Nothing to do for :
+                   CIM_CHARDEV_SOURCE_TYPE_STDIO
+                   CIM_CHARDEV_SOURCE_TYPE_NULL
+                   CIM_CHARDEV_SOURCE_TYPE_VC
+                   CIM_CHARDEV_SOURCE_TYPE_SPICEVMC
+                */
+                break;
+        }
+
+        return s;
+}
+
 static CMPIStatus set_input_rasd_params(const struct virt_device *dev,
                                         CMPIInstance *inst)
 {
@@ -721,6 +858,9 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {
                 type = CIM_RES_TYPE_GRAPHICS;
                 base = "GraphicsResourceAllocationSettingData";
+        } else if (dev->type == CIM_RES_TYPE_CONSOLE) {
+                type = CIM_RES_TYPE_OTHER;
+                base = "ConsoleResourceAllocationSettingData";
         } else if (dev->type == CIM_RES_TYPE_INPUT) {
                 type = CIM_RES_TYPE_INPUT;
                 base = "InputResourceAllocationSettingData";
@@ -777,6 +917,8 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 s = set_graphics_rasd_params(dev, inst, host, CLASSNAME(ref));
         } else if (dev->type == CIM_RES_TYPE_INPUT) {
                 s = set_input_rasd_params(dev, inst);
+        } else if (dev->type == CIM_RES_TYPE_CONSOLE) {
+                s = set_console_rasd_params(dev, inst);
         }
 
         /* FIXME: Put the HostResource in place */
@@ -909,6 +1051,8 @@ CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
                *type = CIM_RES_TYPE_INPUT;
        else if (STREQ(base, "StorageVolumeResourceAllocationSettingData"))
                *type = CIM_RES_TYPE_IMAGE;
+       else if (STREQ(base, "ConsoleResourceAllocationSettingData"))
+               *type = CIM_RES_TYPE_CONSOLE;
        else
                goto out;
 
@@ -939,6 +1083,9 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
                 break;
         case CIM_RES_TYPE_GRAPHICS:
                 *classname = "GraphicsResourceAllocationSettingData";
+                break;
+        case CIM_RES_TYPE_CONSOLE:
+                *classname = "ConsoleResourceAllocationSettingData";
                 break;
         case CIM_RES_TYPE_INPUT:
                 *classname = "InputResourceAllocationSettingData";

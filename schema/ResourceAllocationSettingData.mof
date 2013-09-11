@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2007
+// Copyright IBM Corp. 2007, 2013
 
 [Description ("Xen virtual disk configuration"),
  Provider("cmpi::Virt_RASD")
@@ -445,3 +445,247 @@ class KVM_StorageVolumeResourceAllocationSettingData : KVM_ResourceAllocationSet
       string AllocationUnits;
 };
 
+[Description ("KVM virtual character device"),
+ Provider("cmpi::Virt_RASD")
+]
+class KVM_CharacterResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+      [Description ("The type of resource in the source/host environment."),
+        ValueMap {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"},
+        Values {"null", "vc", "pty", "dev", "file", "pipe",
+                "stdio", "udp", "tcp", "unix", "spicevmc"},
+        ModelCorrespondence {"KVM_CharacterResourceAllocationSettingData.SourcePath",
+                             "KVM_CharacterResourceAllocationSettingData.ConnectURL",
+                             "KVM_CharacterResourceAllocationSettingData.BindURL"}]
+      uint16 SourceType;
+
+      [Description ("If SourceType=4 ('file'),this is the full qualified file path. "
+                    "The file is opened and all data sent to the character device "
+                    "is written to the file. "
+                    "If SourceType=2 ('pty'),this is the full qualified Pseudo TTY path. "
+                    "A Pseudo TTY is allocated using /dev/ptmx. "
+                    "If SourceType=3 ('dev'), this is the full qualified file path "
+                    "to the underlying phsical character device. The device types must "
+                    "match, eg the emulated serial port should only be connected to a "
+                    "host serial port - don't connect a serial port to a parallel port. "
+                    "If SourceType=5 ('pipe'), this is the full qualified file path "
+                    "of a named pipe."),
+        ModelCorrespondence {"KVM_CharacterResourceAllocationSettingData.SourceType"}]
+      string SourcePath;
+
+      [Description ("This URL describes the connection to a remote or local location "
+                    "where the character devices acts as a client."
+                    "To use a literal IPv6 address in the URI, the literal address should be "
+                    "enclosed in '[' and ']' characters. "
+                    "If SourceType=7 ('udp'), this is defines a udp remote host and port connection "
+                    "to send packages. That the character device acts as a UDP netconsole service, "
+                    "sending and receiving packets, the BindURL property must also be defined. "
+                    "This is a lossy service. "
+                    "Only 'udp' is valid for the protocol part of the URI. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. udp://0.0.0.0:2245 "
+                    "If SourceType=8 ('tcp'), this is defines a remote host and port connection. "
+                    "The protocol part of the URI can be: 'raw', 'telnet', 'telnets', 'tls'. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. raw://[3ffe:2a00:100:7031::1]:2245 "
+                    "If SourceType=9 ('unix'), this is defined the full qualified file path "
+                    "of a Unix domain socket. Only 'file' is valid for the protocol part of the URI. "
+                    "Format of the URL: file://<full qualified file path>. "
+                    "e.g. file:///tmp/console-out"),
+        ModelCorrespondence {"KVM_CharacterResourceAllocationSettingData.SourceType"}]
+      string ConnectURL;
+
+      [Description ("This URL describes the connection to a remote or local location "
+                    "where the character devices acts as a server. "
+                    "To use a literal IPv6 address in the URI, the literal address should be "
+                    "enclosed in '[' and ']' characters. "
+                    "If SourceType=7 ('udp'), this is defines a udp remote host and port connection "
+                    "to receive packages. That the character device acts as a UDP netconsole service, "
+                    "sending and receiving packets, the ConnectURL property must also be defined. "
+                    "This is a lossy service. "
+                    "Only 'udp' is valid for the protocol part of the URI. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. udp://0.0.0.0:2245 "
+                    "If SourceType=8 ('tcp'), this is defines a remote host and port connection. "
+                    "The protocol part of the URI can be: 'raw', 'telnet', 'telnets', 'tls'. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. raw://[3ffe:2a00:100:7031::1]:2245 "
+                    "If SourceType=9 ('unix'), this is defined the full qualified file path "
+                    "of a Unix domain socket. Only 'file' is valid for the protocol part of the URI. "
+                    "Format of the URL: file://<full qualified file path>. "
+                    "e.g. file:///tmp/console-in"),
+        ModelCorrespondence {"KVM_CharacterResourceAllocationSettingData.SourceType"}]
+      string BindURL;
+};
+
+
+[Description ("KVM virtual console device. It is identified by: "
+              "CIM_ResourceAllocationSettingData.ResourceType=1 ( 'Other' ) and "
+              "CIM_ResourceAllocationSettingData.OtherResourceType='console'"),
+ Provider("cmpi::Virt_RASD")
+]
+class KVM_ConsoleResourceAllocationSettingData : KVM_CharacterResourceAllocationSettingData
+{
+      [Description ("The type of the console in the target/guest environment.")]
+      string TargetType;
+};
+
+
+
+[Description ("Xen virtual character device"),
+ Provider("cmpi::Virt_RASD")
+]
+class Xen_CharacterResourceAllocationSettingData : Xen_ResourceAllocationSettingData
+{
+      [Description ("The type of resource in the source/host environment."),
+        ValueMap {"0","1", "2", "3", "4", "5", "6", "7", "8", "9", "10"},
+        Values {"null", "vc", "pty", "dev", "file", "pipe",
+                "stdio", "udp", "tcp", "unix", "spicevmc"},
+        ModelCorrespondence {"Xen_CharacterResourceAllocationSettingData.SourcePath",
+                             "Xen_CharacterResourceAllocationSettingData.ConnectURL",
+                             "Xen_CharacterResourceAllocationSettingData.BindURL"}]
+      uint16 SourceType;
+
+      [Description ("If SourceType=4 ('file'),this is the full qualified file path. "
+                    "The file is opened and all data sent to the character device "
+                    "is written to the file. "
+                    "If SourceType=2 ('pty'),this is the full qualified Pseudo TTY path. "
+                    "A Pseudo TTY is allocated using /dev/ptmx. "
+                    "If SourceType=3 ('dev'), this is the full qualified file path "
+                    "to the underlying phsical character device. The device types must "
+                    "match, eg the emulated serial port should only be connected to a "
+                    "host serial port - don't connect a serial port to a parallel port. "
+                    "If SourceType=5 ('pipe'), this is the full qualified file path "
+                    "of a named pipe."),
+        ModelCorrespondence {"Xen_CharacterResourceAllocationSettingData.SourceType"}]
+      string SourcePath;
+
+      [Description ("This URL describes the connection to a remote or local location "
+                    "where the character devices acts as a client."
+                    "To use a literal IPv6 address in the URI, the literal address should be "
+                    "enclosed in '[' and ']' characters. "
+                    "If SourceType=7 ('udp'), this is defines a udp remote host and port connection "
+                    "to send packages. That the character device acts as a UDP netconsole service, "
+                    "sending and receiving packets, the BindURL property must also be defined. "
+                    "This is a lossy service. "
+                    "Only 'udp' is valid for the protocol part of the URI. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. udp://0.0.0.0:2245 "
+                    "If SourceType=8 ('tcp'), this is defines a remote host and port connection. "
+                    "The protocol part of the URI can be: 'raw', 'telnet', 'telnets', 'tls'. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. raw://[3ffe:2a00:100:7031::1]:2245 "
+                    "If SourceType=9 ('unix'), this is defined the full qualified file path "
+                    "of a Unix domain socket. Only 'file' is valid for the protocol part of the URI. "
+                    "Format of the URL: file://<full qualified file path>. "
+                    "e.g. file:///tmp/console-out"),
+        ModelCorrespondence {"Xen_CharacterResourceAllocationSettingData.SourceType"}]
+      string ConnectURL;
+
+      [Description ("This URL describes the connection to a remote or local location "
+                    "where the character devices acts as a server. "
+                    "To use a literal IPv6 address in the URI, the literal address should be "
+                    "enclosed in '[' and ']' characters. "
+                    "If SourceType=7 ('udp'), this is defines a udp remote host and port connection "
+                    "to receive packages. That the character device acts as a UDP netconsole service, "
+                    "sending and receiving packets, the ConnectURL property must also be defined. "
+                    "This is a lossy service. "
+                    "Only 'udp' is valid for the protocol part of the URI. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. udp://0.0.0.0:2245 "
+                    "If SourceType=8 ('tcp'), this is defines a remote host and port connection. "
+                    "The protocol part of the URI can be: 'raw', 'telnet', 'telnets', 'tls'. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. raw://[3ffe:2a00:100:7031::1]:2245 "
+                    "If SourceType=9 ('unix'), this is defined the full qualified file path "
+                    "of a Unix domain socket. Only 'file' is valid for the protocol part of the URI. "
+                    "Format of the URL: file://<full qualified file path>. "
+                    "e.g. file:///tmp/console-in"),
+        ModelCorrespondence {"Xen_CharacterResourceAllocationSettingData.SourceType"}]
+      string BindURL;
+};
+
+
+[Description ("Xen virtual console device. It is identified by: "
+              "CIM_ResourceAllocationSettingData.ResourceType=1 ( 'Other' ) and "
+              "CIM_ResourceAllocationSettingData.OtherResourceType='console'"),
+ Provider("cmpi::Virt_RASD")
+]
+class Xen_ConsoleResourceAllocationSettingData : Xen_CharacterResourceAllocationSettingData
+{
+      [Description ( "The type of the console in the target/guest environment.")]
+      string TargetType;
+};
+
+[Description ("LXC virtual character device"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_CharacterResourceAllocationSettingData : LXC_ResourceAllocationSettingData
+{
+      [Description ("The type of resource in the source/host environment."),
+        ValueMap {"0","1", "2", "3", "4", "5", "6", "7", "8", "9", "10"},
+        Values {"null", "vc", "pty", "dev", "file", "pipe",
+                "stdio", "udp", "tcp", "unix", "spicevmc"},
+        ModelCorrespondence {"LXC_CharacterResourceAllocationSettingData.SourcePath",
+                             "LXC_CharacterResourceAllocationSettingData.ConnectURL",
+                             "LXC_CharacterResourceAllocationSettingData.BindURL"}]
+      uint16 SourceType;
+
+      [Description ("If SourceType=4 ('file'),this is the full qualified file path. "
+                    "The file is opened and all data sent to the character device "
+                    "is written to the file. "
+                    "If SourceType=2 ('pty'),this is the full qualified Pseudo TTY path. "
+                    "A Pseudo TTY is allocated using /dev/ptmx. "
+                    "If SourceType=3 ('dev'), this is the full qualified file path "
+                    "to the underlying phsical character device. The device types must "
+                    "match, eg the emulated serial port should only be connected to a "
+                    "host serial port - don't connect a serial port to a parallel port. "
+                    "If SourceType=5 ('pipe'), this is the full qualified file path "
+                    "of a named pipe."),
+        ModelCorrespondence {"LXC_CharacterResourceAllocationSettingData.SourceType"}]
+      string SourcePath;
+
+      [Description ("This URL describes the connection to a remote or local location "
+                    "where the character devices acts as a client."
+                    "To use a literal IPv6 address in the URI, the literal address should be "
+                    "enclosed in '[' and ']' characters. "
+                    "If SourceType=7 ('udp'), this is defines a udp remote host and port connection "
+                    "to send packages. That the character device acts as a UDP netconsole service, "
+                    "sending and receiving packets, the BindURL property must also be defined. "
+                    "This is a lossy service. "
+                    "Only 'udp' is valid for the protocol part of the URI. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. udp://0.0.0.0:2245 "
+                    "If SourceType=8 ('tcp'), this is defines a remote host and port connection. "
+                    "The protocol part of the URI can be: 'raw', 'telnet', 'telnets', 'tls'. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. raw://[3ffe:2a00:100:7031::1]:2245 "
+                    "If SourceType=9 ('unix'), this is defined the full qualified file path "
+                    "of a Unix domain socket. Only 'file' is valid for the protocol part of the URI. "
+                    "Format of the URL: file://<full qualified file path>. "
+                    "e.g. file:///tmp/console-out"),
+        ModelCorrespondence {"LXC_CharacterResourceAllocationSettingData.SourceType"}]
+      string ConnectURL;
+
+      [Description ("This URL describes the connection to a remote or local location "
+                    "where the character devices acts as a server. "
+                    "To use a literal IPv6 address in the URI, the literal address should be "
+                    "enclosed in '[' and ']' characters. "
+                    "If SourceType=7 ('udp'), this is defines a udp remote host and port connection "
+                    "to receive packages. That the character device acts as a UDP netconsole service, "
+                    "sending and receiving packets, the ConnectURL property must also be defined. "
+                    "This is a lossy service. "
+                    "Only 'udp' is valid for the protocol part of the URI. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. udp://0.0.0.0:2245 "
+                    "If SourceType=8 ('tcp'), this is defines a remote host and port connection. "
+                    "The protocol part of the URI can be: 'raw', 'telnet', 'telnets', 'tls'. "
+                    "Format of the URL: <protocol>://<host>:<port>. e.g. raw://[3ffe:2a00:100:7031::1]:2245 "
+                    "If SourceType=9 ('unix'), this is defined the full qualified file path "
+                    "of a Unix domain socket. Only 'file' is valid for the protocol part of the URI. "
+                    "Format of the URL: file://<full qualified file path>. "
+                    "e.g. file:///tmp/console-in"),
+        ModelCorrespondence {"LXC_CharacterResourceAllocationSettingData.SourceType"}]
+      string BindURL;
+};
+
+
+[Description ("LXC virtual console device. It is identified by: "
+              "CIM_ResourceAllocationSettingData.ResourceType=1 ( 'Other' ) and "
+              "CIM_ResourceAllocationSettingData.OtherResourceType='console'"),
+ Provider("cmpi::Virt_RASD")
+]
+class LXC_ConsoleResourceAllocationSettingData : LXC_CharacterResourceAllocationSettingData
+{
+      [Description ("The type of the console in the target/guest environment.")]
+      string TargetType;
+};
