@@ -251,6 +251,34 @@ static CMPIInstance *graphics_instance(const CMPIBroker *broker,
         return inst;
 }
 
+static CMPIInstance *console_instance(const CMPIBroker *broker,
+                                      struct console_device *dev,
+                                      const virDomainPtr dom,
+                                      const char *ns)
+{
+        CMPIInstance *inst;
+        virConnectPtr conn;
+        const char *ctype;
+
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "DisplayController",
+                                  ns,
+                                  true);
+
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get instance for DisplayController");
+                return NULL;
+        }
+
+        ctype = chardev_source_type_IDToStr(dev->source_type);
+        CMSetProperty(inst, "VideoProcessor",
+                      (CMPIValue *)ctype, CMPI_chars);
+
+        return inst;
+}
+
 int get_input_dev_caption(const char *type,
                           const char *bus,
                           char **cap)
@@ -483,6 +511,11 @@ static bool device_instances(const CMPIBroker *broker,
                                                      &dev->dev.graphics,
                                                      dom,
                                                      ns);
+                else if (dev->type == CIM_RES_TYPE_CONSOLE)
+                        instance = console_instance(broker,
+                                                    &dev->dev.console,
+                                                    dom,
+                                                    ns);
                  else if (dev->type == CIM_RES_TYPE_INPUT)
                         instance = input_instance(broker,
                                                   &dev->dev.input,
