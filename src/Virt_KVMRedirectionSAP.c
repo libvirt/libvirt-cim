@@ -264,28 +264,31 @@ static CMPIStatus get_vnc_sessions(const CMPIBroker *broker,
         return s;
 }
 
-static bool check_graphics(virDomainPtr dom,
-                           struct domain **dominfo)
+static int check_graphics(virDomainPtr dom,
+                          struct domain **dominfo)
 {
         int ret = 0;
+        int i;
 
         ret = get_dominfo(dom, dominfo);
         if (!ret) {
                 CU_DEBUG("Unable to get domain info");
-                return false;
+                return -1;
         }
 
         if ((*dominfo)->dev_graphics == NULL) {
                 CU_DEBUG("No graphics device associated with guest");
-                return false;
+                return -1;
         } 
 
-        if (!STREQC((*dominfo)->dev_graphics->dev.graphics.type, "vnc")) {
-                CU_DEBUG("Only vnc devices have console redirection sessions");
-                return false;
+        for (i = 0; i < (*dominfo)->dev_graphics_ct; i++) {
+                if (STREQC((*dominfo)->dev_graphics[i].dev.graphics.type, "vnc")) {
+                        return i;
+                }
         }
 
-        return true;
+        CU_DEBUG("Only vnc devices have console redirection sessions");
+        return -1;
 }
 
 static CMPIStatus return_console_sap(const CMPIObjectPath *ref,
@@ -362,12 +365,13 @@ CMPIStatus enum_console_sap(const CMPIBroker *broker,
         }
 
         for (i = 0; i < count; i++) {
-                if (!check_graphics(domain_list[i], &dominfo)) {
+                int pos = check_graphics(domain_list[i], &dominfo);
+                if (pos < 0) {
                         cleanup_dominfo(&dominfo);
                         continue;
                 }
 
-                ret = sscanf(dominfo->dev_graphics->dev.graphics.dev.vnc.port,
+                ret = sscanf(dominfo->dev_graphics[pos].dev.graphics.dev.vnc.port,
                              "%d",
                              &lport);
                 if (ret != 1) {
@@ -449,7 +453,7 @@ CMPIStatus get_console_sap_by_name(const CMPIBroker *broker,
                 goto out;
         }
 
-        if (!check_graphics(dom, &dominfo)) {
+        if (check_graphics(dom, &dominfo) < 0) {
                 virt_set_status(broker, &s,
                                 CMPI_RC_ERR_FAILED,
                                 conn,
