@@ -263,12 +263,12 @@ static CMPIInstance *console_instance(const CMPIBroker *broker,
         conn = virDomainGetConnect(dom);
         inst = get_typed_instance(broker,
                                   pfx_from_conn(conn),
-                                  "DisplayController",
+                                  "ConsoleDisplayController",
                                   ns,
                                   true);
 
         if (inst == NULL) {
-                CU_DEBUG("Failed to get instance for DisplayController");
+                CU_DEBUG("Failed to get instance for ConsoleDisplayController");
                 return NULL;
         }
 
@@ -549,6 +549,8 @@ uint16_t res_type_from_device_classname(const char *classname)
                 return CIM_RES_TYPE_MEM;
         else if (strstr(classname, "Processor"))
                 return CIM_RES_TYPE_PROC;
+        else if (strstr(classname, "ConsoleDisplayController"))
+                return CIM_RES_TYPE_CONSOLE;
         else if (strstr(classname, "DisplayController"))
                 return CIM_RES_TYPE_GRAPHICS;
         else if (strstr(classname, "PointingDevice"))

@@ -3,3 +3,6 @@
 Xen_DisplayController root/virt Virt_Device Virt_Device instance
 KVM_DisplayController root/virt Virt_Device Virt_Device instance
 LXC_DisplayController root/virt Virt_Device Virt_Device instance
+Xen_ConsoleDisplayController root/virt Virt_Device Virt_Device instance
+KVM_ConsoleDisplayController root/virt Virt_Device Virt_Device instance
+LXC_ConsoleDisplayController root/virt Virt_Device Virt_Device instance

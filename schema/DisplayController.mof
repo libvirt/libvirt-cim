@@ -15,3 +15,17 @@ class LXC_DisplayController : CIM_DisplayController
 {
 };
 
+[ Provider("cmpi::Virt_Device") ]
+class Xen_ConsoleDisplayController : CIM_DisplayController
+{
+};
+
+[ Provider("cmpi::Virt_Device") ]
+class KVM_ConsoleDisplayController : CIM_DisplayController
+{
+};
+
+[ Provider("cmpi::Virt_Device") ]
+class LXC_ConsoleDisplayController : CIM_DisplayController
+{
+};
