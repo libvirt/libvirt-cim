@@ -47,7 +47,7 @@
  * still part of the graphics.
  */
 #define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics | "\
-        "/domain/devices/console | /domain/devices/serial"
+        "/domain/devices/console"
 #define INPUT_XPATH     (xmlChar *)"/domain/devices/input"
 
 #define DEFAULT_BRIDGE "xenbr0"
@@ -948,16 +948,6 @@ static int parse_graphics_device(xmlNode *node, struct virt_device **vdevs)
                         else if (XSTREQ(child->name, "target")) {
                                 gdev->dev.vnc.port =
                                         get_attr_value(child, "port");
-                                /* The graphics pty console can only be a
-                                   virtio console. If 'type' is not set in the
-                                   xml, the default of libvirt is virtio.*/
-                                char *t_type = get_attr_value(child, "type");
-                                if (t_type != NULL && !STREQC(t_type, "virtio")) {
-                                        CU_DEBUG("Not a pty-virtio graphics console");
-                                        free(t_type);
-                                        goto err;
-                                }
-                                free(t_type);
                         }
                 }
         }

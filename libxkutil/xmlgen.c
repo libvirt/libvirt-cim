@@ -42,36 +42,11 @@ typedef const char *(*devfn_t)(xmlNodePtr node, struct domain *dominfo);
 typedef const char *(*poolfn_t)(xmlNodePtr node, struct virt_pool *pool);
 typedef const char *(*resfn_t)(xmlNodePtr node, struct virt_pool_res *res);
 
-static int _count_graphics_console_definitions(struct domain *dominfo)
-{
-        int i;
-        int num = 0;
-
-        for (i = 0; i < dominfo->dev_graphics_ct; i++) {
-                struct virt_device *_dev = &dominfo->dev_graphics[i];
-                if (_dev->type == CIM_RES_TYPE_UNKNOWN)
-                        continue;
-
-                struct graphics_device *dev = &_dev->dev.graphics;
-
-                if (STREQC(dev->type, "console")) {
-                        num++;
-                }
-        }
-        CU_DEBUG("Found %d console defintions in graphics devices.",num);
-        return num;
-
-}
-
 static const char *console_xml(xmlNodePtr root, struct domain *dominfo)
 {
         int i;
         xmlNodePtr console;
         xmlNodePtr tmp;
-        int num_graphics_consol_def = 0;
-        int num_suppressed_console_def = 0;
-
-        num_graphics_consol_def = _count_graphics_console_definitions(dominfo);
 
         for (i = 0; i < dominfo->dev_console_ct; i++) {
                 struct virt_device *_dev = &dominfo->dev_console[i];
@@ -79,25 +54,6 @@ static const char *console_xml(xmlNodePtr root, struct domain *dominfo)
                         continue;
 
                 struct console_device *cdev = &_dev->dev.console;
-
-                /* Due to backward compatibility, the graphics device handling
-                   is still parsing consoles:
-                   source = pty, target = virtio (which is the default target)
-                   But the console device handling processes these kind of
-                   consoles too. This would lead to a duplication of these
-                   default consoles in the domain xml definition.
-                   This code prevents the console handling of writing xml for
-                   duplicate pty/virtio consoles which are written by the
-                   graphics device handling. */
-                if (cdev->source_type == CIM_CHARDEV_SOURCE_TYPE_PTY &&
-                    (cdev->target_type == NULL ||
-                     STREQC(cdev->target_type, "virtio"))) {
-                        if (num_suppressed_console_def <
-                            num_graphics_consol_def) {
-                                num_suppressed_console_def++;
-                                continue;
-                        }
-                }
 
                 console = xmlNewChild(root, NULL, BAD_CAST "console", NULL);
                 if (console == NULL)
@@ -760,35 +716,6 @@ static const char *graphics_vnc_xml(xmlNodePtr root,
         return NULL;
 }
 
-static const char *graphics_pty_xml(xmlNodePtr root,
-                       struct graphics_device *dev)
-{
-        xmlNodePtr pty = NULL;
-        xmlNodePtr tmp = NULL;
-
-        pty = xmlNewChild(root, NULL, BAD_CAST dev->type, NULL);
-        if (pty == NULL)
-                return XML_ERROR;
-
-        xmlNewProp(pty, BAD_CAST "type", BAD_CAST "pty");
-
-        tmp = xmlNewChild(pty, NULL, BAD_CAST "source", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-
-        if(dev->dev.vnc.host)
-                xmlNewProp(tmp, BAD_CAST "path", BAD_CAST dev->dev.vnc.host);
-
-        tmp = xmlNewChild(pty, NULL, BAD_CAST "target", NULL);
-        if (tmp == NULL)
-                return XML_ERROR;
-
-        if(dev->dev.vnc.port)
-                xmlNewProp(tmp, BAD_CAST "port", BAD_CAST dev->dev.vnc.port);
-
-        return NULL;
-}
-
 static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
 {
         const char *msg = NULL;
@@ -803,9 +730,6 @@ static const char *graphics_xml(xmlNodePtr root, struct domain *dominfo)
 
                 if (STREQC(dev->type, "vnc") || STREQC(dev->type, "sdl"))
                         msg = graphics_vnc_xml(root, dev);
-                else if (STREQC(dev->type, "console") ||
-                        STREQC(dev->type, "serial"))
-                        msg = graphics_pty_xml(root, dev);
                 else
                         continue;
 
