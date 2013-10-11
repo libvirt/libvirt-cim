@@ -1349,7 +1349,7 @@ static CMPIStatus _new_volume_template(const CMPIObjectPath *ref,
         int ret = 0;
         struct virt_pool *pool = NULL;
         CMPIInstance *inst = NULL;
-        int type = 0;
+        uint16_t type = 0;
         const char *name;
         const char *path;
         uint16_t alloc = 0;
@@ -1712,13 +1712,13 @@ static CMPIStatus disk_pool_template(const CMPIObjectPath *ref,
         CMPIArray *array;
         CMPIStatus s = {CMPI_RC_OK, NULL};
         const char *path = "/dev/null";
-        int type[7] = {DISK_POOL_DIR,
-                       DISK_POOL_FS,
-                       DISK_POOL_NETFS,
-                       DISK_POOL_DISK,
-                       DISK_POOL_ISCSI,
-                       DISK_POOL_LOGICAL,
-                       DISK_POOL_SCSI};
+        uint16_t type[7] = {DISK_POOL_DIR,
+                            DISK_POOL_FS,
+                            DISK_POOL_NETFS,
+                            DISK_POOL_DISK,
+                            DISK_POOL_ISCSI,
+                            DISK_POOL_LOGICAL,
+                            DISK_POOL_SCSI};
         int pool_types = 7;
         int i;
         uint16_t autostart;
