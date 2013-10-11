@@ -326,7 +326,7 @@ void cleanup_virt_device(struct virt_device *dev)
 
         free(dev->id);
 
-        memset(&dev->dev, 0, sizeof(dev->dev));
+        memset(dev, 0, sizeof(*dev));
 }
 
 void cleanup_virt_devices(struct virt_device **_devs, int count)
