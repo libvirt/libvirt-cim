@@ -719,13 +719,13 @@ static int vssd_to_domain(CMPIInstance *inst,
         if (ret != CMPI_RC_OK)
                 tmp = 0;
 
-        domain->on_poweroff = (int)tmp;
+        domain->on_poweroff = tmp;
 
         ret = cu_get_u16_prop(inst, "AutomaticRecoveryAction", &tmp);
         if (ret != CMPI_RC_OK)
                 tmp = CIM_VSSD_RECOVERY_NONE;
 
-        domain->on_crash = (int)tmp;
+        domain->on_crash = tmp;
 
         if (cu_get_bool_prop(inst, "IsFullVirt", &fullvirt) != CMPI_RC_OK)
                 fullvirt = false;

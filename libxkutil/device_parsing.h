@@ -213,7 +213,7 @@ struct domain {
         bool acpi;
         bool apic;
         bool pae;
-        int autostrt;
+        uint16_t autostrt;
 
         union {
                 struct pv_os_info pv;
@@ -221,9 +221,9 @@ struct domain {
                 struct lxc_os_info lxc;
         } os_info;
 
-        int on_poweroff;
-        int on_reboot;
-        int on_crash;
+        uint16_t on_poweroff;
+        uint16_t on_reboot;
+        uint16_t on_crash;
 
         struct virt_device *dev_graphics;
         int dev_graphics_ct;

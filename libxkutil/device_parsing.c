@@ -1602,7 +1602,7 @@ static int parse_features(struct domain *dominfo, xmlNode *features)
         return 1;
 }
 
-static void set_action(int *val, xmlNode *child)
+static void set_action(uint16_t *val, xmlNode *child)
 {
         char *action = (char *)xmlNodeGetContent(child);
 
