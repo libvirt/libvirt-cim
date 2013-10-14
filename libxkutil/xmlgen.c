@@ -178,6 +178,26 @@ static const char *console_xml(xmlNodePtr root, struct domain *dominfo)
                                    BAD_CAST cdev->target_type);
                 }
         }
+
+        return NULL;
+}
+
+static char *device_address_xml(xmlNodePtr root, struct device_address *addr)
+{
+        int i;
+        xmlNodePtr address;
+
+        if (addr == NULL || addr->ct == 0)
+                return NULL;
+
+        address = xmlNewChild(root, NULL, BAD_CAST "address", NULL);
+        if (address == NULL)
+                return XML_ERROR;
+
+        for (i = 0; i < addr->ct; i++) {
+                xmlNewProp(address, BAD_CAST addr->key[i] , BAD_CAST addr->value[i]);
+        }
+
         return NULL;
 }
 
@@ -224,6 +244,9 @@ static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
 
         if (dev->shareable)
                 xmlNewChild(disk, NULL, BAD_CAST "shareable", NULL);
+
+        if (dev->address.ct > 0)
+                return device_address_xml(disk, &dev->address);
 
         return NULL;
 }
@@ -279,6 +302,8 @@ static const char *disk_file_xml(xmlNodePtr root, struct disk_device *dev)
         if (dev->shareable)
                 xmlNewChild(disk, NULL, BAD_CAST "shareable", NULL);
 
+        if (dev->address.ct > 0)
+                return device_address_xml(disk, &dev->address);
 
         return NULL;
 }
@@ -519,6 +544,9 @@ static const char *net_xml(xmlNodePtr root, struct domain *dominfo)
                         }
                 }
 #endif
+
+                if (dev->dev.net.address.ct > 0)
+                        msg = device_address_xml(nic, &dev->dev.net.address);
 
                 if (STREQ(dev->dev.net.type, "network")) {
                         msg = set_net_source(nic, net, "network");

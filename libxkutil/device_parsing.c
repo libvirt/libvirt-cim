@@ -63,6 +63,22 @@
 /* Device parse function */
 typedef int (*dev_parse_func_t)(xmlNode *, struct virt_device **);
 
+static void cleanup_device_address(struct device_address *addr)
+{
+        int i;
+        if (addr == NULL)
+                return;
+
+        for (i = 0; i < addr->ct; i++) {
+                free(addr->key[i]);
+                free(addr->value[i]);
+        }
+
+        free(addr->key);
+        free(addr->value);
+        addr->ct = 0;
+}
+
 static void cleanup_disk_device(struct disk_device *dev)
 {
         if (dev == NULL)
@@ -77,6 +93,7 @@ static void cleanup_disk_device(struct disk_device *dev)
         free(dev->virtual_dev);
         free(dev->bus_type);
         free(dev->access_mode);
+        cleanup_device_address(&dev->address);
 }
 
 static void cleanup_vsi_device(struct vsi_device *dev)
@@ -107,6 +124,7 @@ static void cleanup_net_device(struct net_device *dev)
         free(dev->filter_ref);
         free(dev->poolid);
         cleanup_vsi_device(&dev->vsi);
+        cleanup_device_address(&dev->address);
 }
 
 static void cleanup_emu_device(struct emu_device *dev)
@@ -351,6 +369,67 @@ char *get_node_content(xmlNode *node)
         return buf;
 }
 
+int add_device_address_property(struct device_address *devaddr,
+                                const char *key,
+                                const char *value)
+{
+        char *k = NULL;
+        char *v = NULL;
+        char **list = NULL;
+
+        if (key != NULL && value != NULL) {
+                k = strdup(key);
+                v = strdup(value);
+                if (k == NULL || v == NULL)
+                        goto err;
+
+                list = realloc(devaddr->key, sizeof(char*) * (devaddr->ct+1));
+                if (list == NULL)
+                        goto err;
+                devaddr->key = list;
+
+                list = realloc(devaddr->value, sizeof(char*) * (devaddr->ct+1));
+                if (list == NULL)
+                        goto err;
+                devaddr->value = list;
+
+                devaddr->key[devaddr->ct] = k;
+                devaddr->value[devaddr->ct] = v;
+                devaddr->ct += 1;
+                return 1;
+        }
+
+ err:
+        free(k);
+        free(v);
+        free(list);
+        return 0;
+}
+
+
+static int parse_device_address(xmlNode *anode, struct device_address *devaddr)
+{
+        xmlAttr *attr = NULL;
+        char *name = NULL;
+        char *value = NULL;
+
+        for (attr = anode->properties; attr != NULL; attr = attr->next) {
+                name = (char*) attr->name;
+                value = get_attr_value(anode, name);
+                if (!add_device_address_property(devaddr, name, value))
+                        goto err;
+                free(value);
+        }
+
+        return 1;
+
+ err:
+        cleanup_device_address(devaddr);
+        free(value);
+
+        return 0;
+}
+
 static int parse_fs_device(xmlNode *dnode, struct virt_device **vdevs)
 {
         struct virt_device *vdev = NULL;
@@ -386,6 +465,8 @@ static int parse_fs_device(xmlNode *dnode, struct virt_device **vdevs)
                         }
                 } else if (XSTREQ(child->name, "driver")) {
                        ddev->driver_type = get_attr_value(child, "type");
+                } else if (XSTREQ(child->name, "address")) {
+                        parse_device_address(child, &ddev->address);
                 }
         }
 
@@ -459,6 +540,8 @@ static int parse_block_device(xmlNode *dnode, struct virt_device **vdevs)
                         ddev->readonly = true;
                 } else if (XSTREQ(child->name, "shareable")) {
                         ddev->shareable = true;
+                } else if (XSTREQ(child->name, "address")) {
+                        parse_device_address(child, &ddev->address);
                 }
         }
 
@@ -598,6 +681,8 @@ static int parse_net_device(xmlNode *inode, struct virt_device **vdevs)
                         ndev->filter_ref = get_attr_value(child, "filter");
                 } else if (XSTREQ(child->name, "virtualport")) {
                         parse_vsi_device(child, ndev);
+                } else if (XSTREQ(child->name, "address")) {
+                        parse_device_address(child, &ndev->address);
 #if LIBVIR_VERSION_NUMBER >= 9000
                 } else if (XSTREQ(child->name, "bandwidth")) {
                         /* Network QoS bandwidth support */
@@ -1167,6 +1252,32 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
         return count;
 }
 
+static void duplicate_device_address(struct device_address *to, const struct device_address *from)
+{
+        int i;
+
+        if (from == NULL || to == NULL || from->ct == 0)
+                return;
+
+        to->ct = from->ct;
+        to->key = calloc(from->ct, sizeof(char*));
+        to->value = calloc(from->ct, sizeof(char*));
+        if (to->key == NULL || to->value == NULL)
+                goto err;
+
+        for (i = 0; i < from->ct; i++) {
+                to->key[i] = strdup(from->key[i]);
+                to->value[i] = strdup(from->value[i]);
+                if (to->key[i] == NULL || to->value[i] == NULL)
+                        goto err;
+        }
+
+        return;
+
+ err:
+        cleanup_device_address(to);
+}
+
 struct virt_device *virt_device_dup(struct virt_device *_dev)
 {
         struct virt_device *dev;
@@ -1196,6 +1307,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.net.vsi.profile_id);
                 dev->dev.net.reservation = _dev->dev.net.reservation;
                 dev->dev.net.limit = _dev->dev.net.limit;
+                duplicate_device_address(&dev->dev.net.address, &_dev->dev.net.address);
         } else if (dev->type == CIM_RES_TYPE_DISK) {
                 DUP_FIELD(dev, _dev, dev.disk.type);
                 DUP_FIELD(dev, _dev, dev.disk.device);
@@ -1209,6 +1321,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 dev->dev.disk.disk_type = _dev->dev.disk.disk_type;
                 dev->dev.disk.readonly = _dev->dev.disk.readonly;
                 dev->dev.disk.shareable = _dev->dev.disk.shareable;
+                duplicate_device_address(&dev->dev.disk.address, &_dev->dev.disk.address);
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 dev->dev.mem.size = _dev->dev.mem.size;
                 dev->dev.mem.maxsize = _dev->dev.mem.maxsize;

@@ -33,6 +33,12 @@
 
 #include "../src/svpc_types.h"
 
+struct device_address {
+        uint32_t ct;
+        char **key;
+        char **value;
+};
+
 struct vsi_device {
         char *vsi_type;
         char *manager_id;
@@ -56,6 +62,7 @@ struct disk_device {
         char *bus_type;
         char *cache;
         char *access_mode; /* access modes for DISK_FS (filesystem) type */
+        struct device_address address;
 };
 
 struct net_device {
@@ -70,6 +77,7 @@ struct net_device {
         uint64_t reservation;
         uint64_t limit;
         struct vsi_device vsi;
+        struct device_address address;
 };
 
 struct mem_device {
@@ -256,6 +264,9 @@ int get_devices(virDomainPtr dom, struct virt_device **list, int type,
 
 void cleanup_virt_device(struct virt_device *dev);
 void cleanup_virt_devices(struct virt_device **devs, int count);
+
+int add_device_address_property(struct device_address *devaddr,
+                                const char *key, const char *value);
 
 char *get_node_content(xmlNode *node);
 char *get_attr_value(xmlNode *node, char *attrname);
