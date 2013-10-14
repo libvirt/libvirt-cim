@@ -964,17 +964,15 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         }
 */
 
-        free(dev->dev.net.mac);
+        cleanup_virt_device(dev);
+
         dev->dev.net.mac = strdup(val);
 
-        free(dev->id);
         dev->id = strdup(dev->dev.net.mac);
 
-        free(dev->dev.net.type);
         if (cu_get_str_prop(inst, "NetworkType", &val) != CMPI_RC_OK)
                 return "No Network Type specified";
 
-        free(dev->dev.net.source);
         if (STREQC(val, BRIDGE_TYPE)) {
                 dev->dev.net.type = strdup(BRIDGE_TYPE);
                 if (cu_get_str_prop(inst, "NetworkName", &val) == CMPI_RC_OK)
@@ -1011,44 +1009,37 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                 else
                         return "No Source Device specified";
 
-                free(dev->dev.net.vsi.vsi_type);
                 if (cu_get_str_prop(inst, "VSIType", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.vsi_type = NULL;
                 else
                         dev->dev.net.vsi.vsi_type = strdup(val);
 
-                free(dev->dev.net.vsi.manager_id);
                 if (cu_get_str_prop(inst, "VSIManagerID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.manager_id = NULL;
                 else
                         dev->dev.net.vsi.manager_id = strdup(val);
 
-                free(dev->dev.net.vsi.type_id);
                 if (cu_get_str_prop(inst, "VSITypeID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.type_id = NULL;
                 else
                         dev->dev.net.vsi.type_id = strdup(val);
 
-                free(dev->dev.net.vsi.type_id_version);
                 if (cu_get_str_prop(inst, "VSITypeIDVersion", &val) !=
                     CMPI_RC_OK)
                         dev->dev.net.vsi.type_id_version = NULL;
                 else
                         dev->dev.net.vsi.type_id_version = strdup(val);
 
-                free(dev->dev.net.vsi.instance_id);
                 if (cu_get_str_prop(inst, "VSIInstanceID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.instance_id = NULL;
                 else
                         dev->dev.net.vsi.instance_id = strdup(val);
 
-                free(dev->dev.net.vsi.filter_ref);
                 if (cu_get_str_prop(inst, "FilterRef", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.filter_ref = NULL;
                 else
                         dev->dev.net.vsi.filter_ref = strdup(val);
 
-                free(dev->dev.net.vsi.profile_id);
                 if (cu_get_str_prop(inst, "ProfileID", &val) != CMPI_RC_OK)
                         dev->dev.net.vsi.profile_id = NULL;
                 else
@@ -1057,19 +1048,15 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
         } else
                 return "Invalid Network Type specified";
 
-        free(dev->dev.net.device);
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
                 dev->dev.net.device = NULL;
         else
                 dev->dev.net.device = strdup(val);
 
-        free(dev->dev.net.net_mode);
         if (cu_get_str_prop(inst, "NetworkMode", &val) != CMPI_RC_OK)
                 dev->dev.net.net_mode = NULL;
         else
                 dev->dev.net.net_mode = strdup(val);
-
-        free(dev->dev.net.model);
 
         if (cu_get_str_prop(inst, "ResourceSubType", &val) != CMPI_RC_OK)
                 dev->dev.net.model = NULL;
@@ -1106,13 +1093,13 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         if (cu_get_str_prop(inst, "VirtualDevice", &val) != CMPI_RC_OK)
                 return "Missing `VirtualDevice' property";
 
-        free(dev->dev.disk.virtual_dev);
+        cleanup_virt_device(dev);
+
         dev->dev.disk.virtual_dev = strdup(val);
 
         if (cu_get_str_prop(inst, "Address", &val) != CMPI_RC_OK)
                 val = "/dev/null";
 
-        free(dev->dev.disk.source);
         dev->dev.disk.source = strdup(val);
         if (dev->dev.disk.source == NULL) {
                 return "dev->dev.disk.source is null!";
@@ -1149,7 +1136,6 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 }
                 if (XSTREQ(dev->dev.disk.source, "/dev/null")) {
                         dev->dev.disk.disk_type = DISK_FILE;
-                        free(dev->dev.disk.source);
                         dev->dev.disk.source = strdup("");
                 }
 
@@ -1170,31 +1156,26 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         else
                 dev->dev.disk.readonly = read;
 
-        free(dev->dev.disk.bus_type);
         if (cu_get_str_prop(inst, "BusType", &val) != CMPI_RC_OK)
                 dev->dev.disk.bus_type = NULL;
         else
                 dev->dev.disk.bus_type = strdup(val);
 
-        free(dev->dev.disk.driver);
         if (cu_get_str_prop(inst, "DriverName", &val) != CMPI_RC_OK)
                 dev->dev.disk.driver = NULL;
         else
                 dev->dev.disk.driver = strdup(val);
 
-        free(dev->dev.disk.driver_type);
         if (cu_get_str_prop(inst, "DriverType", &val) != CMPI_RC_OK)
                 dev->dev.disk.driver_type = NULL;
         else
                 dev->dev.disk.driver_type = strdup(val);
 
-        free(dev->dev.disk.cache);
         if (cu_get_str_prop(inst, "DriverCache", &val) != CMPI_RC_OK)
                 dev->dev.disk.cache = NULL;
         else
                 dev->dev.disk.cache = strdup(val);
 
-        free(dev->dev.disk.access_mode);
         if (cu_get_str_prop(inst, "AccessMode", &val) != CMPI_RC_OK)
                 dev->dev.disk.access_mode = NULL;
         else 
@@ -1205,7 +1186,6 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         else
                 dev->dev.disk.shareable = shareable;
 
-        free(dev->id);
         dev->id = strdup(dev->dev.disk.virtual_dev);
 
         msg = rasd_to_device_address(inst, &dev->dev.disk.address);
@@ -1921,12 +1901,14 @@ static const char *rasd_to_vdev(CMPIInstance *inst,
                 goto out;
         }
 
-        dev->type = (int)type;
-
         if (domain->type == DOMAIN_LXC)
                 msg = _container_rasd_to_vdev(inst, dev, type, ns);
         else
                 msg = _sysvirt_rasd_to_vdev(inst, dev, type, ns, p_error);
+
+        /* ensure device type is set */
+        if (msg == NULL)
+                dev->type = type;
  out:
         if (msg && op)
                 CU_DEBUG("rasd_to_vdev(%s): %s", CLASSNAME(op), msg);
@@ -3112,7 +3094,6 @@ static CMPIStatus resource_add(struct domain *dominfo,
 
         dev = &list[*count];
 
-        dev->type = type;
         msg = rasd_to_vdev(rasd, dominfo, dev, ns, &error_msg);
         if (msg != NULL) {
                 cu_statusf(_BROKER, &s,
