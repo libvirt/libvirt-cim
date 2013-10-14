@@ -890,6 +890,50 @@ static const char *_net_rand_mac(const CMPIObjectPath *ref)
         return _mac;
 }
 
+static const char *rasd_to_device_address(CMPIInstance *inst,
+                                          struct device_address *addr)
+{
+        CMPICount c1;
+        CMPICount c2;
+        CMPIArray *arr_keys;
+        CMPIArray *arr_values;
+        CMPIData data_key;
+        CMPIData data_value;
+        const char *str_key;
+        const char *str_value;
+        int i;
+        const char * msg = NULL;
+
+        if (cu_get_array_prop(inst, "AddressProperties", &arr_keys) != CMPI_RC_OK ||
+            cu_get_array_prop(inst, "AddressValues", &arr_values) != CMPI_RC_OK)
+                goto out;
+
+        c1 = CMGetArrayCount(arr_keys, NULL);
+        c2 = CMGetArrayCount(arr_values, NULL);
+
+        if (c1 != c2) {
+                msg = "AddressProperties not matching AddressValues";
+                goto out;
+        }
+
+        for (i = 0; i < c1; i++) {
+                data_key = CMGetArrayElementAt(arr_keys, i, NULL);
+                data_value = CMGetArrayElementAt(arr_values, i, NULL);
+
+                if (!CMIsNullValue(data_key) && !CMIsNullValue(data_key)) {
+                        str_key = CMGetCharPtr(data_key.value.string);
+                        str_value = CMGetCharPtr(data_value.value.string);
+                        if (!add_device_address_property(addr, str_key, str_value)) {
+                                msg = "Could not set address properties in vdev";
+                                goto out;
+                        }
+                }
+        }
+
+ out:
+        return msg;
+}
+
 static const char *net_rasd_to_vdev(CMPIInstance *inst,
                                     struct virt_device *dev,
                                     const char *ns)
@@ -1040,6 +1084,8 @@ static const char *net_rasd_to_vdev(CMPIInstance *inst,
                             &dev->dev.net.limit) != CMPI_RC_OK)
                 dev->dev.net.limit = 0;
 
+        msg = rasd_to_device_address(inst, &dev->dev.net.address);
+
  out:
         free(network);
         return msg;
@@ -1050,6 +1096,7 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                                      char **p_error)
 {
         const char *val = NULL;
+        const char *msg = NULL;
         uint16_t type;
         bool read = false;
         int rc;
@@ -1161,7 +1208,9 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         free(dev->id);
         dev->id = strdup(dev->dev.disk.virtual_dev);
 
-        return NULL;
+        msg = rasd_to_device_address(inst, &dev->dev.disk.address);
+
+        return msg;
 }
 
 static const char *lxc_disk_rasd_to_vdev(CMPIInstance *inst,
