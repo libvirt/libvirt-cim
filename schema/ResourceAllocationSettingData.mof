@@ -67,6 +67,12 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("if device is shareable")]
       boolean shareable;
+
+      [Description ("Device address property names")]
+      string AddressProperties[];
+
+      [Description ("Device address property values")]
+      string AddressValues[];
 };
 
 [Description ("LXC virtual disk configuration"),
@@ -167,6 +173,12 @@ class KVM_NetResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 
       [Description ("Filter REF")]
       string FilterRef;
+
+      [Description ("Device address property names")]
+      string AddressProperties[];
+
+      [Description ("Device address property values")]
+      string AddressValues[];
 };
 
 [Description ("LXC virtual network configuration"),
