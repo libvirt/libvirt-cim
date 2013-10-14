@@ -289,6 +289,67 @@ static bool get_vol_size(const CMPIBroker *broker,
 }
 #endif
 
+static CMPIStatus set_rasd_device_address(const CMPIBroker *broker,
+                                          const CMPIObjectPath *ref,
+                                          const struct device_address *addr,
+                                          CMPIInstance *inst)
+{
+        int i;
+        CMPIArray *arr_key;
+        CMPIArray *arr_value;
+        CMPIString *string;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        arr_key = CMNewArray(broker,
+                             addr->ct,
+                             CMPI_string,
+                             &s);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        arr_value = CMNewArray(broker,
+                               addr->ct,
+                               CMPI_string,
+                               &s);
+        if (s.rc != CMPI_RC_OK)
+                goto out;
+
+        for (i = 0; i < addr->ct; i++) {
+                string = CMNewString(broker,
+                                     addr->key[i],
+                                     &s);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+
+                CMSetArrayElementAt(arr_key,
+                                    i,
+                                    (CMPIValue *)&string,
+                                    CMPI_string);
+
+                string = CMNewString(broker,
+                                     addr->value[i],
+                                     &s);
+                if (s.rc != CMPI_RC_OK)
+                        goto out;
+
+                CMSetArrayElementAt(arr_value,
+                                    i,
+                                    (CMPIValue *)&string,
+                                    CMPI_string);
+        }
+
+        CMSetProperty(inst, "AddressProperties",
+                      (CMPIValue *)&arr_key,
+                      CMPI_stringA);
+
+        CMSetProperty(inst, "AddressValues",
+                      (CMPIValue *)&arr_value,
+                      CMPI_stringA);
+
+ out:
+        return s;
+}
+
 static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                                        const CMPIObjectPath *ref,
                                        const struct virt_device *dev,
@@ -426,6 +487,12 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                               "shareable",
                               (CMPIValue *)&(dev->dev.disk.shareable),
                               CMPI_boolean);
+
+        if (dev->dev.disk.address.ct > 0)
+                set_rasd_device_address(broker,
+                                        ref,
+                                        &dev->dev.disk.address,
+                                        inst);
 
         virStoragePoolFree(pool);
         virStorageVolFree(vol);
@@ -589,6 +656,12 @@ static CMPIStatus set_net_rasd_params(const CMPIBroker *broker,
                               "PoolID",
                               (CMPIValue *)dev->dev.net.poolid,
                               CMPI_chars);
+
+        if (dev->dev.net.address.ct > 0)
+                set_rasd_device_address(broker,
+                                        ref,
+                                        &dev->dev.net.address,
+                                        inst);
 
 #if LIBVIR_VERSION_NUMBER < 9000
 out:
