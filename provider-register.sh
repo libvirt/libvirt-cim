@@ -332,8 +332,12 @@ pegasus_uninstall()
 	    echo "Error: wbemexec not found" >&2
 	    return 1
 	fi
-	CLASSES=`cat $mymofs 2> /dev/null | grep '^class'| cut -d ' ' -f 2 | uniq`
-
+	for mof in $mymofs
+	do
+        # We must delete the classes in reverse order per MOF file
+	    MOFCLASSES=`cat $mof 2> /dev/null | grep '^[[:space:]]*class' | sed 's/ \+/ /g' | tac | cut -d ' ' -f 2`
+	    CLASSES="$CLASSES $MOFCLASSES"
+	done
 	for _TEMPDIR in /var/tmp /tmp
 	  do
 	  if test -w $_TEMPDIR
