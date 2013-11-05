@@ -64,17 +64,164 @@ mkdir -p $RPM_BUILD_ROOT@INFO_STORE@
 %clean
 rm -fr $RPM_BUILD_ROOT
 
-%define REGISTRATION %{_datadir}/%{name}/*.registration
-%define SCHEMA %{_datadir}/%{name}/*.mof
+%define REGISTRATION %{_datadir}/%{name}/ComputerSystem.registration \\\
+    %{_datadir}/%{name}/LogicalDisk.registration \\\
+    %{_datadir}/%{name}/NetworkPort.registration \\\
+    %{_datadir}/%{name}/Memory.registration \\\
+    %{_datadir}/%{name}/Processor.registration \\\
+    %{_datadir}/%{name}/SystemDevice.registration \\\
+    %{_datadir}/%{name}/VSSD.registration \\\
+    %{_datadir}/%{name}/HostSystem.registration \\\
+    %{_datadir}/%{name}/HostedDependency.registration \\\
+    %{_datadir}/%{name}/VirtualSystemManagementService.registration \\\
+    %{_datadir}/%{name}/VirtualSystemManagementCapabilities.registration \\\
+    %{_datadir}/%{name}/EnabledLogicalElementCapabilities.registration \\\
+    %{_datadir}/%{name}/AllocationCapabilities.registration \\\
+    %{_datadir}/%{name}/SettingsDefineCapabilities.registration \\\
+    %{_datadir}/%{name}/MemoryPool.registration \\\
+    %{_datadir}/%{name}/ElementCapabilities.registration \\\
+    %{_datadir}/%{name}/ProcessorPool.registration \\\
+    %{_datadir}/%{name}/DiskPool.registration \\\
+    %{_datadir}/%{name}/HostedResourcePool.registration \\\
+    %{_datadir}/%{name}/ComputerSystemIndication.registration \\\
+    %{_datadir}/%{name}/ResourceAllocationSettingDataIndication.registration \\\
+    %{_datadir}/%{name}/SwitchService.registration \\\
+    %{_datadir}/%{name}/ComputerSystemMigrationIndication.registration \\\
+    %{_datadir}/%{name}/ResourceAllocationSettingData.registration \\\
+    %{_datadir}/%{name}/ResourcePoolConfigurationService.registration \\\
+    %{_datadir}/%{name}/ResourcePoolConfigurationCapabilities.registration \\\
+    %{_datadir}/%{name}/VSSDComponent.registration \\\
+    %{_datadir}/%{name}/SettingsDefineState.registration \\\
+    %{_datadir}/%{name}/NetPool.registration \\\
+    %{_datadir}/%{name}/ResourceAllocationFromPool.registration \\\
+    %{_datadir}/%{name}/ElementAllocatedFromPool.registration \\\
+    %{_datadir}/%{name}/HostedService.registration \\\
+    %{_datadir}/%{name}/ElementSettingData.registration \\\
+    %{_datadir}/%{name}/VSMigrationCapabilities.registration \\\
+    %{_datadir}/%{name}/VSMigrationService.registration \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.registration \\\
+    %{_datadir}/%{name}/VSMigrationSettingData.registration \\\
+    %{_datadir}/%{name}/VirtualSystemSnapshotService.registration \\\
+    %{_datadir}/%{name}/VirtualSystemSnapshotServiceCapabilities.registration \\\
+    %{_datadir}/%{name}/ConcreteComponent.registration \\\
+    %{_datadir}/%{name}/ConsoleRedirectionService.registration \\\
+    %{_datadir}/%{name}/ConsoleRedirectionServiceCapabilities.registration \\\
+    %{_datadir}/%{name}/ServiceAffectsElement.registration \\\
+    %{_datadir}/%{name}/KVMRedirectionSAP.registration \\\
+    %{_datadir}/%{name}/DisplayController.registration \\\
+    %{_datadir}/%{name}/PointingDevice.registration \\\
+    %{_datadir}/%{name}/GraphicsPool.registration \\\
+    %{_datadir}/%{name}/InputPool.registration \\\
+    %{_datadir}/%{name}/HostedAccessPoint.registration \\\
+    %{_datadir}/%{name}/ServiceAccessBySAP.registration \\\
+    %{_datadir}/%{name}/SAPAvailableForElement.registration \\\
+    %{_datadir}/%{name}/FilterEntry.registration \\\
+    %{_datadir}/%{name}/FilterList.registration \\\
+    %{_datadir}/%{name}/EntriesInFilterList.registration \\\
+    %{_datadir}/%{name}/NestedFilterList.registration \\\
+    %{_datadir}/%{name}/AppliedFilterList.registration \\\
+    %{_datadir}/%{name}/HostedFilterList.registration
 
-%define INTEROP_REG %{_datadir}/%{name}/{RegisteredProfile,ElementConformsToProfile,ReferencedProfile}.registration
-%define INTEROP_MOF %{_datadir}/%{name}/{ComputerSystem,HostSystem,RegisteredProfile,DiskPool,MemoryPool,NetPool,ProcessorPool,VSMigrationService,ElementConformsToProfile,ReferencedProfile,AllocationCapabilities}.mof
+%define SCHEMA %{_datadir}/%{name}/ComputerSystem.mof \\\
+    %{_datadir}/%{name}/LogicalDisk.mof \\\
+    %{_datadir}/%{name}/NetworkPort.mof \\\
+    %{_datadir}/%{name}/Memory.mof \\\
+    %{_datadir}/%{name}/Processor.mof \\\
+    %{_datadir}/%{name}/SystemDevice.mof \\\
+    %{_datadir}/%{name}/Virt_VSSD.mof \\\
+    %{_datadir}/%{name}/VSSD.mof \\\
+    %{_datadir}/%{name}/HostSystem.mof \\\
+    %{_datadir}/%{name}/HostedDependency.mof \\\
+    %{_datadir}/%{name}/VirtualSystemManagementService.mof \\\
+    %{_datadir}/%{name}/VirtualSystemManagementCapabilities.mof \\\
+    %{_datadir}/%{name}/EnabledLogicalElementCapabilities.mof \\\
+    %{_datadir}/%{name}/AllocationCapabilities.mof \\\
+    %{_datadir}/%{name}/SettingsDefineCapabilities.mof \\\
+    %{_datadir}/%{name}/MemoryPool.mof \\\
+    %{_datadir}/%{name}/ElementCapabilities.mof \\\
+    %{_datadir}/%{name}/ProcessorPool.mof \\\
+    %{_datadir}/%{name}/DiskPool.mof \\\
+    %{_datadir}/%{name}/HostedResourcePool.mof \\\
+    %{_datadir}/%{name}/RegisteredProfile.mof \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.mof \\\
+    %{_datadir}/%{name}/ComputerSystemIndication.mof \\\
+    %{_datadir}/%{name}/ResourceAllocationSettingDataIndication.mof \\\
+    %{_datadir}/%{name}/SwitchService.mof \\\
+    %{_datadir}/%{name}/ComputerSystemMigrationIndication.mof \\\
+    %{_datadir}/%{name}/Virt_ResourceAllocationSettingData.mof \\\
+    %{_datadir}/%{name}/ResourceAllocationSettingData.mof \\\
+    %{_datadir}/%{name}/ResourcePoolConfigurationService.mof \\\
+    %{_datadir}/%{name}/ResourcePoolConfigurationCapabilities.mof \\\
+    %{_datadir}/%{name}/VSSDComponent.mof \\\
+    %{_datadir}/%{name}/SettingsDefineState.mof \\\
+    %{_datadir}/%{name}/NetPool.mof \\\
+    %{_datadir}/%{name}/ResourceAllocationFromPool.mof \\\
+    %{_datadir}/%{name}/ElementAllocatedFromPool.mof \\\
+    %{_datadir}/%{name}/HostedService.mof \\\
+    %{_datadir}/%{name}/ElementSettingData.mof \\\
+    %{_datadir}/%{name}/VSMigrationCapabilities.mof \\\
+    %{_datadir}/%{name}/VSMigrationService.mof \\\
+    %{_datadir}/%{name}/VSMigrationSettingData.mof \\\
+    %{_datadir}/%{name}/VirtualSystemSnapshotService.mof \\\
+    %{_datadir}/%{name}/VirtualSystemSnapshotServiceCapabilities.mof \\\
+    %{_datadir}/%{name}/ConcreteComponent.mof \\\
+    %{_datadir}/%{name}/ConsoleRedirectionService.mof \\\
+    %{_datadir}/%{name}/ConsoleRedirectionServiceCapabilities.mof \\\
+    %{_datadir}/%{name}/ServiceAffectsElement.mof \\\
+    %{_datadir}/%{name}/KVMRedirectionSAP.mof \\\
+    %{_datadir}/%{name}/DisplayController.mof \\\
+    %{_datadir}/%{name}/PointingDevice.mof \\\
+    %{_datadir}/%{name}/GraphicsPool.mof \\\
+    %{_datadir}/%{name}/InputPool.mof \\\
+    %{_datadir}/%{name}/HostedAccessPoint.mof \\\
+    %{_datadir}/%{name}/ServiceAccessBySAP.mof \\\
+    %{_datadir}/%{name}/SAPAvailableForElement.mof \\\
+    %{_datadir}/%{name}/FilterEntry.mof \\\
+    %{_datadir}/%{name}/FilterList.mof \\\
+    %{_datadir}/%{name}/EntriesInFilterList.mof \\\
+    %{_datadir}/%{name}/NestedFilterList.mof \\\
+    %{_datadir}/%{name}/AppliedFilterList.mof \\\
+    %{_datadir}/%{name}/HostedFilterList.mof
 
-%define PGINTEROP_REG %{_datadir}/%{name}/{RegisteredProfile,ElementConformsToProfile,ReferencedProfile}.registration
-%define PGINTEROP_MOF %{_datadir}/%{name}/{RegisteredProfile,ElementConformsToProfile,ReferencedProfile}.mof
+%define INTEROP_REG %{_datadir}/%{name}/RegisteredProfile.registration \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.registration \\\
+    %{_datadir}/%{name}/ReferencedProfile.registration
 
-%define CIMV2_REG %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,ElementConformsToProfile,HostedAccessPoint}.registration
-%define CIMV2_MOF %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,RegisteredProfile,ComputerSystem,ElementConformsToProfile,HostedAccessPoint}.mof
+%define INTEROP_MOF %{_datadir}/%{name}/ComputerSystem.mof \\\
+    %{_datadir}/%{name}/HostSystem.mof \\\
+    %{_datadir}/%{name}/RegisteredProfile.mof \\\
+    %{_datadir}/%{name}/DiskPool.mof \\\
+    %{_datadir}/%{name}/MemoryPool.mof \\\
+    %{_datadir}/%{name}/NetPool.mof \\\
+    %{_datadir}/%{name}/ProcessorPool.mof \\\
+    %{_datadir}/%{name}/VSMigrationService.mof \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.mof \\\
+    %{_datadir}/%{name}/ReferencedProfile.mof \\\
+    %{_datadir}/%{name}/AllocationCapabilities.mof
+
+%define PGINTEROP_REG %{_datadir}/%{name}/RegisteredProfile.registration \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.registration \\\
+    %{_datadir}/%{name}/ReferencedProfile.registration
+
+%define PGINTEROP_MOF %{_datadir}/%{name}/RegisteredProfile.mof \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.mof \\\
+    %{_datadir}/%{name}/ReferencedProfile.mof
+
+%define CIMV2_REG %{_datadir}/%{name}/HostedResourcePool.registration \\\
+    %{_datadir}/%{name}/ElementCapabilities.registration \\\
+    %{_datadir}/%{name}/HostedService.registration \\\
+    %{_datadir}/%{name}/HostedDependency.registration \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.registration \\\
+    %{_datadir}/%{name}/HostedAccessPoint.registration
+
+%define CIMV2_MOF %{_datadir}/%{name}/HostedResourcePool.mof \\\
+    %{_datadir}/%{name}/ElementCapabilities.mof \\\
+    %{_datadir}/%{name}/HostedService.mof \\\
+    %{_datadir}/%{name}/HostedDependency.mof \\\
+    %{_datadir}/%{name}/RegisteredProfile.mof \\\
+    %{_datadir}/%{name}/ComputerSystem.mof \\\
+    %{_datadir}/%{name}/ElementConformsToProfile.mof \\\
+    %{_datadir}/%{name}/HostedAccessPoint.mof
 
 %pre
 # _If_ there is already a version of this installed, we must deregister
@@ -118,12 +265,12 @@ then
 fi
 
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
-    if [ "`systemctl is-active tog-pegasus.service`" = "active" ]
+    if [ "`systemctl is-active tog-pegasus.service 2> /dev/null`" = "active" ]
     then
         systemctl restart tog-pegasus.service
     fi
 
-    if [ "`systemctl is-active sblim-sfcb.service`" = "active" ]
+    if [ "`systemctl is-active sblim-sfcb.service 2> /dev/null`" = "active" ]
     then
         systemctl restart sblim-sfcb.service
     fi
