@@ -64,7 +64,6 @@ mkdir -p $RPM_BUILD_ROOT@INFO_STORE@
 %clean
 rm -fr $RPM_BUILD_ROOT
 
-%pre
 %define REGISTRATION %{_datadir}/%{name}/*.registration
 %define SCHEMA %{_datadir}/%{name}/*.mof
 
@@ -77,24 +76,46 @@ rm -fr $RPM_BUILD_ROOT
 %define CIMV2_REG %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,ElementConformsToProfile,HostedAccessPoint}.registration
 %define CIMV2_MOF %{_datadir}/%{name}/{HostedResourcePool,ElementCapabilities,HostedService,HostedDependency,RegisteredProfile,ComputerSystem,ElementConformsToProfile,HostedAccessPoint}.mof
 
+%pre
 # _If_ there is already a version of this installed, we must deregister
 # the classes we plan to install in post, otherwise we may corrupt
 # the pegasus repository.  This is convention in other provider packages
-%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-	-n @CIM_VIRT_NS@ \
-	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+if [ $1 -gt 1 ]
+then
+    if [ -x /usr/sbin/cimserver ]
+    then
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	    -n @CIM_VIRT_NS@ \
+	    -r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+            -n root/interop \
+            -r %{INTEROP_REG} -m %{INTEROP_MOF} -v >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+            -n root/PG_InterOp \
+            -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} -v >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+            -n root/cimv2\
+        -r %{CIMV2_REG} -m %{CIMV2_MOF} -v >/dev/null 2>&1 || true
+    fi
 
 # Remove open-pegasus-specific providers installed in sfcb repository
 # by older libvirt-cim packages
-%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
-    -n root/PG_InterOp \
-    -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
-
+    if [ -x /usr/sbin/sfcbd ]
+    then
+	%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
+	    -n root/PG_InterOp \
+	    -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
+    fi
+fi
 
 %post
 /sbin/ldconfig
 
-%{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
+if [ $1 -eq 1 ]
+then
+# Install the CIM base schema if this is the initial install
+    %{_datadir}/%{name}/install_base_schema.sh %{_datadir}/%{name}
+fi
 
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
     if [ "`systemctl is-active tog-pegasus.service`" = "active" ]
@@ -112,65 +133,65 @@ rm -fr $RPM_BUILD_ROOT
 
 if [ -x /usr/sbin/cimserver ]
 then
-%{_datadir}/%{name}/provider-register.sh -t pegasus \
+    %{_datadir}/%{name}/provider-register.sh -t pegasus \
 	-n @CIM_VIRT_NS@ \
 	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t pegasus \
-        -n @CIM_VIRT_NS@ \
-        -r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t pegasus \
+    %{_datadir}/%{name}/provider-register.sh -t pegasus \
         -n root/interop \
         -r %{INTEROP_REG} -m %{INTEROP_MOF} -v >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t pegasus \
+    %{_datadir}/%{name}/provider-register.sh -t pegasus \
         -n root/PG_InterOp \
         -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} -v >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t pegasus \
+    %{_datadir}/%{name}/provider-register.sh -t pegasus \
         -n root/cimv2\
         -r %{CIMV2_REG} -m %{CIMV2_MOF} -v >/dev/null 2>&1 || true
 fi
 if [ -x /usr/sbin/sfcbd ]
 then
-%{_datadir}/%{name}/provider-register.sh -t sfcb \
-	-n root/virt \
-	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t sfcb \
+    %{_datadir}/%{name}/provider-register.sh -t sfcb \
         -n root/virt \
         -r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t sfcb \
+    %{_datadir}/%{name}/provider-register.sh -t sfcb \
         -n root/interop \
         -r %{INTEROP_REG} -m %{INTEROP_MOF} -v >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -t sfcb \
+    %{_datadir}/%{name}/provider-register.sh -t sfcb \
         -n root/cimv2\
         -r %{CIMV2_REG} -m %{CIMV2_MOF} -v >/dev/null 2>&1 || true
 fi
 
 %preun
-if [ -x /usr/sbin/cimserver ]
+# The uninstall scriptlets are called after the install scriptlets
+# in the upgrade case. Therefore we must only deregister the providers
+# when $1 == 0 (final remove).
+if [ $1 -eq 0 ]
 then
-%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-	-n root/virt \
-	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-	-n root/interop \
-	-r %{INTEROP_REG} -m %{INTEROP_MOF} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-	-n root/PG_InterOp \
-	-r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
-	-n root/cimv2 \
-	-r %{CIMV2_REG} -m %{CIMV2_MOF} >/dev/null 2>&1 || true
-fi
-if [ -x /usr/sbin/sfcbd ]
-then
-%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
-	-n root/virt \
-	-r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
-	-n root/interop \
-	-r %{INTEROP_REG} -m %{INTEROP_MOF} >/dev/null 2>&1 || true
-%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
-	-n root/cimv2 \
-	-r %{CIMV2_REG} -m %{CIMV2_MOF} >/dev/null 2>&1 || true
+    if [ -x /usr/sbin/cimserver ]
+    then
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	    -n root/virt \
+	    -r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	    -n root/interop \
+	    -r %{INTEROP_REG} -m %{INTEROP_MOF} >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	    -n root/PG_InterOp \
+	    -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t pegasus \
+	    -n root/cimv2 \
+	    -r %{CIMV2_REG} -m %{CIMV2_MOF} >/dev/null 2>&1 || true
+    fi
+    if [ -x /usr/sbin/sfcbd ]
+    then
+	%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
+	    -n root/virt \
+	    -r %{REGISTRATION} -m %{SCHEMA} >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
+	    -n root/interop \
+	    -r %{INTEROP_REG} -m %{INTEROP_MOF} >/dev/null 2>&1 || true
+	%{_datadir}/%{name}/provider-register.sh -d -t sfcb \
+	    -n root/cimv2 \
+	    -r %{CIMV2_REG} -m %{CIMV2_MOF} >/dev/null 2>&1 || true
+    fi
 fi
 
 %postun -p /sbin/ldconfig
