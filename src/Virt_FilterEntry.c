@@ -59,8 +59,8 @@ struct rule_data_t {
         const char *dstportend;
 };
 
-static int octets_from_mac(const char * s, unsigned int *buffer,
-                                unsigned int size)
+static int octets_from_mac(const char * s, uint8_t *buffer,
+                           unsigned int size)
 {
         unsigned int _buffer[6];
         unsigned int i, n = 0;
@@ -86,8 +86,8 @@ static int octets_from_mac(const char * s, unsigned int *buffer,
         return n;
 }
 
-static int octets_from_ip(const char * s, unsigned int *buffer,
-                                unsigned int size)
+static int octets_from_ip(const char * s, uint8_t *buffer,
+                          unsigned int size)
 {
         struct in6_addr addr;
         unsigned int family = 0;
@@ -116,7 +116,8 @@ static int octets_from_ip(const char * s, unsigned int *buffer,
         return n;
 }
 
-static CMPIArray *octets_to_cmpi(const CMPIBroker *broker, unsigned int *bytes, int size)
+static CMPIArray *octets_to_cmpi(const CMPIBroker *broker, uint8_t *bytes,
+                                 int size)
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIArray *array = NULL;
@@ -173,7 +174,7 @@ static char *cidr_to_str(const char *cidr)
         return ret;
 }
 
-static int convert_direction(const char *s)
+static uint16_t convert_direction(const char *s)
 {
         enum {NOT_APPLICABLE, INPUT, OUTPUT, BOTH} direction = NOT_APPLICABLE;
 
@@ -189,7 +190,7 @@ static int convert_direction(const char *s)
         return direction;
 }
 
-int convert_priority(const char *s)
+int16_t convert_priority(const char *s)
 {
         if (s == NULL)
                 return 0;
@@ -197,7 +198,7 @@ int convert_priority(const char *s)
         return atoi(s);
 }
 
-static int convert_action(const char *s)
+static uint16_t convert_action(const char *s)
 {
         enum {NONE=0, ACCEPT, DENY, REJECT, RETURN, CONTINUE} action = NONE;
 
@@ -216,7 +217,7 @@ static int convert_action(const char *s)
         return action;
 }
 
-static unsigned long convert_protocol_id(const char *s)
+static uint16_t convert_protocol_id(const char *s)
 {
         enum {NONE = 0, IPV4 = 2048, ARP = 2054, RARP = 32821, IPV6 = 34525} id = NONE;
 
@@ -239,7 +240,7 @@ static void convert_mac_rule_to_instance(
         CMPIInstance *inst,
         const CMPIBroker *broker)
 {
-        unsigned int bytes[48];
+        uint8_t bytes[48];
         unsigned int size = 0;
         CMPIArray *array = NULL;
 
@@ -280,7 +281,7 @@ static void convert_mac_rule_to_instance(
                         (CMPIValue *)&array, CMPI_uint8A);
 
         if (rule->var.mac.protocol_id != NULL) {
-                unsigned long n = convert_protocol_id(rule->var.mac.protocol_id);
+                uint16_t n = convert_protocol_id(rule->var.mac.protocol_id);
 
                 /* Unknown protocolid string. Try converting from hexadecimal value */
                 if (n == 0)
@@ -366,18 +367,19 @@ static void convert_ip_rule_to_instance(
         CMPIInstance *inst,
         const CMPIBroker *broker)
 {
-        unsigned int bytes[48];
+        uint8_t bytes[48];
         unsigned int size = 0;
-        unsigned int n = 0;
+        uint8_t ipver_num = 0;
+        uint16_t port_num = 0;
         CMPIArray *array = NULL;
         struct rule_data_t rule_data;
 
         if (strstr(rule->protocol_id, "v6"))
-                n = 6;
+                ipver_num = 6;
         else
-                n = 4;
+                ipver_num = 4;
 
-        CMSetProperty(inst, "HdrIPVersion",(CMPIValue *)&n, CMPI_uint8);
+        CMSetProperty(inst, "HdrIPVersion",(CMPIValue *)&ipver_num, CMPI_uint8);
 
         fill_rule_data(rule, &rule_data);
 
@@ -480,27 +482,27 @@ static void convert_ip_rule_to_instance(
         }
 
         if (rule_data.srcportstart) {
-                n = atoi(rule_data.srcportstart);
+                port_num = atoi(rule_data.srcportstart);
                 CMSetProperty(inst, "HdrSrcPortStart",
-                        (CMPIValue *)&n, CMPI_uint16);
+                        (CMPIValue *)&port_num, CMPI_uint16);
         }
 
         if (rule_data.srcportend) {
-                n = atoi(rule_data.srcportend);
+                port_num = atoi(rule_data.srcportend);
                 CMSetProperty(inst, "HdrSrcPortEnd",
-                        (CMPIValue *)&n, CMPI_uint16);
+                        (CMPIValue *)&port_num, CMPI_uint16);
         }
 
         if (rule_data.dstportstart) {
-                n = atoi(rule_data.dstportstart);
+                port_num = atoi(rule_data.dstportstart);
                 CMSetProperty(inst, "HdrDestPortStart",
-                        (CMPIValue *)&n, CMPI_uint16);
+                        (CMPIValue *)&port_num, CMPI_uint16);
         }
 
         if (rule_data.dstportend) {
-                n = atoi(rule_data.dstportend);
+                port_num = atoi(rule_data.dstportend);
                 CMSetProperty(inst, "HdrDestPortEnd",
-                        (CMPIValue *)&n, CMPI_uint16);
+                        (CMPIValue *)&port_num, CMPI_uint16);
         }
 }
 
@@ -515,7 +517,8 @@ static CMPIInstance *convert_rule_to_instance(
         const char *sys_name = NULL;
         const char *sys_ccname = NULL;
         const char *basename = NULL;
-        int action, direction, priority = 0;
+        uint16_t action, direction;
+        int16_t priority;
 
         void (*convert_f)(struct acl_rule*, CMPIInstance*, const CMPIBroker*);
 

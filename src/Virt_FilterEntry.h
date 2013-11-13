@@ -77,7 +77,7 @@ CMPIStatus instance_from_rule(
  *
  * @param s A pointer to a string representing the priority
  */
-int convert_priority(const char *s);
+int16_t convert_priority(const char *s);
 #endif
 
 /*

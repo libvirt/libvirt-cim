@@ -45,7 +45,8 @@ static CMPIInstance *convert_filter_to_instance(
         CMPIInstance *inst = NULL;
         const char *sys_name = NULL;
         const char *sys_ccname = NULL;
-        int direction = 0, priority;
+        uint16_t direction = 0;
+        int16_t priority;
 
         inst = get_typed_instance(broker,
                                   CLASSNAME(reference),
