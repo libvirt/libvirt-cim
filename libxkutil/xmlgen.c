@@ -342,6 +342,9 @@ static const char *disk_fs_xml(xmlNodePtr root, struct disk_device *dev)
                 return XML_ERROR;
         xmlNewProp(tmp, BAD_CAST "dir", BAD_CAST dev->virtual_dev);
 
+        if (dev->address.ct > 0)
+                return device_address_xml(fs, &dev->address);
+
         return NULL;
 }
 
