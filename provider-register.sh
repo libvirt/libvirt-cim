@@ -274,7 +274,23 @@ pegasus_install()
 	chatter Registering providers with $state cimserver '('$version')'
         chatter Installing mofs into namespace $namespace from path $mofpath
 	$CIMMOF -uc -I $mofpath -n $namespace $mymofs &&
-	$CIMMOF -uc -n root/PG_Interop $_REGFILENAME
+        #
+        # If compare_version returns false here (e.g. $version is less than
+        # "2.12.1", then we will compile into root/PG_InterOp; otherwise,
+        # compile into root/interop.  As of 2.12.1-5 using the PG_InterOp
+        # will fail.  Since we cannot get that level of detail out of the
+        # --version output, "assume" that 2.12.1 -> 2.12.1-4 will be able
+        # to use the new namespace. The Pegasus docs imply as of 2.12.0 using
+        # root/interop was preferred.
+        #
+        if compare_version "$version" "2.12.1"
+        then
+            chatter Installing $_REGFILENAME into root/PG_InterOp
+	    $CIMMOF -uc -n root/PG_Interop $_REGFILENAME
+        else
+            chatter Installing $_REGFILENAME into root/interop
+	    $CIMMOF -uc -n root/interop $_REGFILENAME
+        fi
     else
 	echo "Failed to build pegasus registration MOF." >&2
 	return 1

@@ -78,6 +78,9 @@ INTEROP_MOFS = \
 	$(top_srcdir)/schema/ReferencedProfile.mof \
 	$(top_srcdir)/schema/AllocationCapabilities.mof
 
+# The PGINTEROP_MOFS are used by tog-pegasus up through version 2.12.1
+# If support for versions prior to 2.12.1 is removed, then these defs
+# can go away
 PGINTEROP_MOFS = \
 	$(top_srcdir)/schema/RegisteredProfile.mof \
 	$(top_srcdir)/schema/ElementConformsToProfile.mof \
@@ -157,6 +160,9 @@ INTEROP_REGS = \
 	$(top_srcdir)/schema/ElementConformsToProfile.registration \
 	$(top_srcdir)/schema/ReferencedProfile.registration
 
+# The PGINTEROP_REGS are used by tog-pegasus up through version 2.12.1
+# If support for versions prior to 2.12.1 is removed, then these defs
+# can go away
 PGINTEROP_REGS = \
 	$(top_srcdir)/schema/RegisteredProfile.registration \
 	$(top_srcdir)/schema/ElementConformsToProfile.registration \
@@ -181,7 +187,8 @@ EXTRA_DIST = schema $(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS) \
              .changeset .revision 			\
 	     examples/diskpool.conf
 
-# If Pegasus isn't the CIMOM target, then remove the PG_InterOp namespace from the appropriate files
+# If Pegasus isn't the CIMOM target, then remove the PG_InterOp namespace
+# from the appropriate files
 install-data-local:
 	$(mkinstalldirs) "$(DESTDIR)$(pkgdatadir)"
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(MOFS)
@@ -189,11 +196,12 @@ install-data-local:
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_MOFS)
 	$(install_sh_DATA) -t "$(DESTDIR)$(pkgdatadir)" $(INTEROP_REGS)
 	if [[ @CIMSERVER@ != pegasus ]]; then \
-	sed -i '/^# --/,/^# --!/d' $(subst $(top_srcdir)/schema,$(DESTDIR)$(pkgdatadir), $(PGINTEROP_REGS)); \
+	    sed -i '/^# --/,/^# --!/d' $(subst $(top_srcdir)/schema,$(DESTDIR)$(pkgdatadir), $(PGINTEROP_REGS)); \
+	    sed -i '/^# --/,/^# --!/d' $(subst $(top_srcdir)/schema,$(DESTDIR)$(pkgdatadir), $(PGINTEROP_MOFS)); \
 	fi
 
 uninstall-local:
-	@list='$(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS)'; \
+	@list='$(MOFS) $(REGS) $(INTEROP_MOFS) $(INTEROP_REGS) $(PGINTEROP_REGS) $(PGINTEROP_MOFS)'; \
 	for p in $$list; do \
 	f=`echo "$$p" | sed 's|^.*/||;'`; \
 	echo " rm -f '$(DESTDIR)$(pkgdatadir)/$$f'"; \
@@ -209,8 +217,19 @@ postinstall:
 	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n @CIM_VIRT_NS@ -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(MOFS))
 	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n root/interop -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_MOFS))
 	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n root/cimv2 -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_MOFS))
+        #
+        # We need to check the version - if we're not yet at 2.12.1, then
+        # we'll register at root/PG_InterOp; otherwise, using just the above
+        # registration should be sufficient. The actual cutoff root/PG_InterOp
+        # not being valid was 2.12.1-5; however, --version doesn't give us that
+        # level of detail. The Pegasus docs imply that usage of root/interop was
+        # valid as of 2.12.0.
+        #
 	if [[ @CIMSERVER@ = pegasus ]]; then \
-	$(SHELL) provider-register.sh -v -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
+	    CIMVER=`@CIMSERVER@ --version | awk -F. '{printf("%02d%02d%02d\n", $1,$2,$3); }'` \
+	    if [[ $CIMVER -lt 021201 ]]; then \
+	        $(SHELL) provider-register.sh -v -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
+	    fi \
 	fi
 	virsh -v | grep -q '^0.3' && cp examples/diskpool.conf $(DISK_POOL_CONFIG) || true
 	mkdir -p $(INFO_STORE)
@@ -220,7 +239,7 @@ preuninstall:
 	$(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n root/interop -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(INTEROP_MOFS))
 	$(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n root/cimv2 -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(CIMV2_MOFS))
 	if [[ @CIMSERVER@ = pegasus ]]; then \
-	$(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
+	    $(SHELL) provider-register.sh -v -d -t @CIMSERVER@ -n root/PG_InterOp -r $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_REGS)) -m $(subst $(top_srcdir)/schema,$(pkgdatadir), $(PGINTEROP_MOFS)); \
 	fi
 
 rpm: clean

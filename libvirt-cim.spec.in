@@ -200,6 +200,10 @@ rm -fr $RPM_BUILD_ROOT
     %{_datadir}/%{name}/ReferencedProfile.mof \\\
     %{_datadir}/%{name}/AllocationCapabilities.mof
 
+# NOTE: As of Pegasus 2.12.1-5, using root/PG_InterOp will no longer be
+#       valid. All mofs can just compile into root/interop.  However, we
+#       need to keep these here for 'historical purposes'.
+#
 %define PGINTEROP_REG %{_datadir}/%{name}/RegisteredProfile.registration \\\
     %{_datadir}/%{name}/ElementConformsToProfile.registration \\\
     %{_datadir}/%{name}/ReferencedProfile.registration
@@ -268,12 +272,12 @@ fi
 %if 0%{?fedora} >= 17 || 0%{?rhel} >= 7
     if [ "`systemctl is-active tog-pegasus.service 2> /dev/null`" = "active" ]
     then
-        systemctl restart tog-pegasus.service
+        systemctl restart tog-pegasus.service > /dev/null 2>&1
     fi
 
     if [ "`systemctl is-active sblim-sfcb.service 2> /dev/null`" = "active" ]
     then
-        systemctl restart sblim-sfcb.service
+        systemctl restart sblim-sfcb.service > /dev/null 2>&1
     fi
 %else
     /etc/init.d/tog-pegasus condrestart
@@ -287,9 +291,22 @@ then
     %{_datadir}/%{name}/provider-register.sh -t pegasus \
         -n root/interop \
         -r %{INTEROP_REG} -m %{INTEROP_MOF} -v >/dev/null 2>&1 || true
-    %{_datadir}/%{name}/provider-register.sh -t pegasus \
-        -n root/PG_InterOp \
-        -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} -v >/dev/null 2>&1 || true
+    #
+    # We need to check the version - if we're not yet at 2.12.1, then
+    # we'll register at root/PG_InterOp; otherwise, using just the above
+    # registration should be sufficient. The actual cutoff root/PG_InterOp
+    # not being valid was 2.12.1-5; however, --version doesn't give us that
+    # level of detail. The Pegasus docs imply that usage of root/interop was
+    # valid as of 2.12.0.
+    #
+    CIMVER=`/usr/sbin/cimserver --version | \
+           awk -F. '{printf("%02d%02d%02d\n", $1,$2,$3); }'`
+    if [ $CIMVER -lt 021201 ]
+    then
+        %{_datadir}/%{name}/provider-register.sh -t pegasus \
+            -n root/PG_InterOp \
+            -r %{PGINTEROP_REG} -m %{PGINTEROP_MOF} -v >/dev/null 2>&1 || true
+    fi
     %{_datadir}/%{name}/provider-register.sh -t pegasus \
         -n root/cimv2\
         -r %{CIMV2_REG} -m %{CIMV2_MOF} -v >/dev/null 2>&1 || true
