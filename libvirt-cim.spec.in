@@ -60,6 +60,7 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/libxkutil.so
 mkdir -p $RPM_BUILD_ROOT/etc/ld.so.conf.d
 echo %{_libdir}/cmpi > $RPM_BUILD_ROOT/etc/ld.so.conf.d/libvirt-cim.%{_arch}.conf
 mkdir -p $RPM_BUILD_ROOT@INFO_STORE@
+mv $RPM_BUILD_ROOT%{_datadir}/doc/libvirt-cim-%{version} libvirt-cim-docs
 
 %clean
 rm -fr $RPM_BUILD_ROOT
@@ -347,9 +348,8 @@ fi
 %defattr(-, root, root)
 %{_sysconfdir}/libvirt/cim
 
-%doc README COPYING doc/CodingStyle doc/SubmittingPatches
+%doc README COPYING doc/CodingStyle doc/SubmittingPatches libvirt-cim-docs/*
 %doc base_schema/README.DMTF
-%doc doc/*.html
 %{_libdir}/lib*.so*
 %{_libdir}/cmpi/lib*.so*
 %{_datadir}/libvirt-cim
