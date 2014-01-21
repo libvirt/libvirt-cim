@@ -464,7 +464,7 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
 {
         int ret = 1;
         int retr;
-        const char *val;
+        const char *val = NULL;
         const char *domtype = NULL;
         const char *ostype = "hvm";
         struct capabilities *capsinfo = NULL;
@@ -494,6 +494,7 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
         }
 
         free(domain->os_info.fv.arch);
+        domain->os_info.fv.arch = NULL;
         retr = cu_get_str_prop(inst, "Arch", &val);
         if (retr != CMPI_RC_OK) {
                 if (capsinfo != NULL) { /* set default */
@@ -506,6 +507,8 @@ static int fv_vssd_to_domain(CMPIInstance *inst,
                 domain->os_info.fv.arch = strdup(val);
 
         free(domain->os_info.fv.machine);
+        domain->os_info.fv.machine = NULL;
+        val = NULL;
         retr = cu_get_str_prop(inst, "Machine", &val);
         if (retr != CMPI_RC_OK) {
                 if (capsinfo != NULL && domtype != NULL) { /* set default */
@@ -1415,7 +1418,7 @@ static int parse_ip_address(const char *id,
         if (strstr(id, "[") != NULL) {
                 /* its an ipv6 address */
                 ret = sscanf(id, "%a[^]]]:%as",  &tmp_ip, &tmp_port);
-                if (tmp_ip != NULL) {
+                if (ret >= 1) {
                         tmp_ip = realloc(tmp_ip, strlen(tmp_ip) + 2);
                         if (tmp_ip == NULL) {
                                 ret = 0;
@@ -2755,7 +2758,7 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         virDomainPtr dom = NULL;
         struct domain *dominfo = NULL;
         char *xml = NULL;
-        const char *uuid = NULL;
+        char *uuid = NULL;
 
         CU_DEBUG("Enter update_system_settings");
         ret = cu_get_str_prop(vssd, "VirtualSystemIdentifier", &name);
@@ -2798,7 +2801,9 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         }
 
         if ((dominfo->uuid == NULL) || (STREQ(dominfo->uuid, ""))) {
-                dominfo->uuid = strdup(uuid);
+                free(dominfo->uuid);
+                dominfo->uuid = uuid;
+                uuid = NULL;
         } else if (!STREQ(uuid, dominfo->uuid)) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,
@@ -2829,6 +2834,7 @@ static CMPIStatus update_system_settings(const CMPIContext *context,
         }
 
  out:
+        free(uuid);
         free(xml);
         virDomainFree(dom);
         virConnectClose(conn);
