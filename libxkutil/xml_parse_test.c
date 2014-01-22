@@ -192,6 +192,7 @@ static void print_domxml(struct domain *dominfo,
                 printf("Failed to create system XML\n");
         else
                 printf("%s\n", xml);
+        free(xml);
 }
 
 static char *read_from_file(FILE *file)
