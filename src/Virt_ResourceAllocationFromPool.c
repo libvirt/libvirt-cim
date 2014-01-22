@@ -120,9 +120,12 @@ static int filter_by_pool(struct inst_list *dest,
                 poolid = pool_member_of(_BROKER, CLASSNAME(op), type, rasd_id);
                 if ((poolid != NULL) && STREQ(poolid, _poolid))
                         inst_list_add(dest, inst);
-        }
 
-        free(poolid);
+                if (poolid != NULL) {
+                        free(poolid);
+                        poolid = NULL;
+                }
+        }
 
         return dest->cur;
 }
