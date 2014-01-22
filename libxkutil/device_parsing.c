@@ -853,7 +853,6 @@ static int parse_console_device(xmlNode *node, struct virt_device **vdevs)
         struct console_device *cdev = NULL;
         char *source_type_str = NULL;
         char *target_port_ID = NULL;
-        char *udp_source_mode = NULL;
 
         xmlNode *child = NULL;
 
@@ -875,7 +874,7 @@ static int parse_console_device(xmlNode *node, struct virt_device **vdevs)
         CU_DEBUG("console device type ID = %d", cdev->source_type);
 
         for (child = node->children; child != NULL; child = child->next) {
-                if (XSTREQ(child->name, "target")) {
+                if (XSTREQ(child->name, "target") && target_port_ID == NULL) {
                         cdev->target_type = get_attr_value(child, "type");
                         CU_DEBUG("Console device target type = '%s'",
                                  cdev->target_type ? : "NULL");
@@ -910,7 +909,9 @@ static int parse_console_device(xmlNode *node, struct virt_device **vdevs)
                                         get_attr_value(child, "path");
                                 break;
                         case CIM_CHARDEV_SOURCE_TYPE_UDP:
-                                udp_source_mode = get_attr_value(child, "mode");
+                        {
+                                char *udp_source_mode = get_attr_value(child,
+                                                                       "mode");
                                 if (udp_source_mode == NULL)
                                         goto err;
                                 if (STREQC(udp_source_mode, "bind")) {
@@ -925,10 +926,13 @@ static int parse_console_device(xmlNode *node, struct virt_device **vdevs)
                                                 get_attr_value(child, "service");
                                 } else {
                                         CU_DEBUG("unknown udp mode: %s",
-                                                 udp_source_mode ? : "NULL");
+                                                 udp_source_mode);
+                                        free(udp_source_mode);
                                         goto err;
                                 }
+                                free(udp_source_mode);
                                 break;
+                        }
                         case CIM_CHARDEV_SOURCE_TYPE_TCP:
                                 cdev->source_dev.tcp.mode =
                                         get_attr_value(child, "mode");
@@ -965,14 +969,12 @@ static int parse_console_device(xmlNode *node, struct virt_device **vdevs)
         *vdevs = vdev;
         free(source_type_str);
         free(target_port_ID);
-        free(udp_source_mode);
 
         return 1;
 
  err:
         free(source_type_str);
         free(target_port_ID);
-        free(udp_source_mode);
         cleanup_console_device(cdev);
         free(vdev);
 
@@ -1500,33 +1502,35 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         for (child = os->children; child != NULL; child = child->next) {
                 if (XSTREQ(child->name, "type")) {
                         STRPROP(dominfo, os_info.pv.type, child);
-                        arch = get_attr_value(child, "arch");
-                        machine = get_attr_value(child, "machine");
-                } else if (XSTREQ(child->name, "kernel"))
+                        if (arch == NULL)
+                            arch = get_attr_value(child, "arch");
+                        if (machine == NULL)
+                            machine = get_attr_value(child, "machine");
+                } else if (XSTREQ(child->name, "kernel") && kernel == NULL)
                         kernel = get_node_content(child);
-                else if (XSTREQ(child->name, "initrd"))
+                else if (XSTREQ(child->name, "initrd") && initrd == NULL)
                         initrd = get_node_content(child);
-                else if (XSTREQ(child->name, "cmdline"))
+                else if (XSTREQ(child->name, "cmdline") && cmdline == NULL)
                         cmdline = get_node_content(child);
-                else if (XSTREQ(child->name, "loader"))
+                else if (XSTREQ(child->name, "loader") && loader == NULL)
                         loader = get_node_content(child);
-                else if (XSTREQ(child->name, "boot")) {
+                else if (XSTREQ(child->name, "boot") && boot == NULL) {
                         char **tmp_list = NULL;
 
-                        tmp_list = (char **)realloc(blist, 
-                                                    (bl_size + 1) * 
+                        tmp_list = (char **)realloc(blist,
+                                                    (bl_size + 1) *
                                                     sizeof(char *));
                         if (tmp_list == NULL) {
                                 // Nothing you can do. Just go on.
                                 CU_DEBUG("Could not alloc space for "
                                          "boot device");
-                                continue;  
+                                continue;
                         }
                         blist = tmp_list;
-                        
+
                         blist[bl_size] = get_attr_value(child, "dev");
                         bl_size++;
-                } else if (XSTREQ(child->name, "init"))
+                } else if (XSTREQ(child->name, "init") && init == NULL)
                         init = get_node_content(child);
         }
 
@@ -1580,6 +1584,7 @@ static int parse_os(struct domain *dominfo, xmlNode *os)
         free(kernel);
         free(initrd);
         free(cmdline);
+        free(loader);
         free(boot);
         free(init);
         cleanup_bootlist(blist, bl_size);
