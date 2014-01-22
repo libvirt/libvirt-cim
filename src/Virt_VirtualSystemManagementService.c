@@ -1330,7 +1330,7 @@ static int parse_console_address(const char *id,
 
         CU_DEBUG("Entering parse_console_address, address is %s", id);
 
-        ret = sscanf(id, "%a[^:]:%as", &tmp_path, &tmp_port);
+        ret = sscanf(id, "%m[^:]:%ms", &tmp_path, &tmp_port);
 
         if (ret != 2) {
                 ret = 0;
@@ -1366,10 +1366,10 @@ static int parse_sdl_address(const char *id,
 
         CU_DEBUG("Entering parse_sdl_address, address is %s", id);
 
-        ret = sscanf(id, "%a[^:]:%as", &tmp_xauth, &tmp_display);
+        ret = sscanf(id, "%m[^:]:%ms", &tmp_xauth, &tmp_display);
 
         if (ret <= 0) {
-                ret = sscanf(id, ":%as", &tmp_display);
+                ret = sscanf(id, ":%ms", &tmp_display);
                 if (ret <= 0) {
                         if (STREQC(id, ":")) {
                                 /* do nothing, it is empty */
@@ -1417,7 +1417,7 @@ static int parse_ip_address(const char *id,
         CU_DEBUG("Entering parse_ip_address, address is %s", id);
         if (strstr(id, "[") != NULL) {
                 /* its an ipv6 address */
-                ret = sscanf(id, "%a[^]]]:%as",  &tmp_ip, &tmp_port);
+                ret = sscanf(id, "%m[^]]]:%ms",  &tmp_ip, &tmp_port);
                 if (ret >= 1) {
                         tmp_ip = realloc(tmp_ip, strlen(tmp_ip) + 2);
                         if (tmp_ip == NULL) {
@@ -1427,7 +1427,7 @@ static int parse_ip_address(const char *id,
                         strcat(tmp_ip, "]");
                 }
         } else {
-                ret = sscanf(id, "%a[^:]:%as", &tmp_ip, &tmp_port);
+                ret = sscanf(id, "%m[^:]:%ms", &tmp_ip, &tmp_port);
         }
 
         /* ret == 2: address and port, ret == 1: address only */
@@ -1464,7 +1464,7 @@ static bool parse_console_url(const char *url,
 
         CU_DEBUG("Entering parse_console_url:'%s'", url);
 
-        if (sscanf(url,"%a[^:]://%as", &tmp_protocol, &tmp_address) != 2)
+        if (sscanf(url,"%m[^:]://%ms", &tmp_protocol, &tmp_address) != 2)
                 goto out;
 
         if (parse_ip_address(tmp_address, host, port) < 1)

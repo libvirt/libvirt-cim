@@ -1463,7 +1463,7 @@ int parse_fq_devid(const char *devid, char **host, char **device)
 {
         int ret;
 
-        ret = sscanf(devid, "%a[^/]/%a[^\n]", host, device);
+        ret = sscanf(devid, "%m[^/]/%m[^\n]", host, device);
         if (ret != 2) {
                 free(*host);
                 free(*device);

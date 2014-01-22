@@ -382,7 +382,7 @@ static char *sys_name_from_xml(char *xml)
                 goto out;
         }
 
-        rc = sscanf(tmp, "<name>%a[^<]s</name>", &name);
+        rc = sscanf(tmp, "<name>%m[^<]s</name>", &name);
         if (rc != 1) {
                 name = NULL;
         }

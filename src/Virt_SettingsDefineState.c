@@ -298,7 +298,7 @@ static CMPIStatus vssd_to_vs(const CMPIObjectPath *ref,
                 goto out;
         }
 
-        ret = sscanf(id, "%a[^:]:%as", &pfx, &name);
+        ret = sscanf(id, "%m[^:]:%ms", &pfx, &name);
         if (ret != 2) {
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_FAILED,

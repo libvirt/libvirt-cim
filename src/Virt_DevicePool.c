@@ -383,11 +383,11 @@ static bool _diskpool_is_member(virConnectPtr conn,
 
         pool_vol = virStoragePoolLookupByVolume(vol);
         if (vol != NULL) {
-                pool_name = virStoragePoolGetName(pool_vol);                
+                pool_name = virStoragePoolGetName(pool_vol);
                 if ((pool_name != NULL) && (STREQC(pool_name, pool->tag)))
                         result = true;
         }
-        
+
  out:
         CU_DEBUG("Image %s in pool %s: %s",
                  file,
@@ -405,7 +405,7 @@ static bool parse_diskpool_line(struct tmp_disk_pool *pool,
 {
         int ret;
 
-        ret = sscanf(line, "%as %as", &pool->tag, &pool->path);
+        ret = sscanf(line, "%ms %ms", &pool->tag, &pool->path);
         if (ret != 2) {
                 free(pool->tag);
                 free(pool->path);
@@ -1610,7 +1610,7 @@ CMPIStatus get_pool_by_name(const CMPIBroker *broker,
                 goto out;
         }
 
-        ret = sscanf(id, "%*[^/]/%a[^\n]", &poolid);
+        ret = sscanf(id, "%*[^/]/%m[^\n]", &poolid);
         if (ret != 1) {
                 cu_statusf(broker, &s,
                            CMPI_RC_ERR_NOT_FOUND,

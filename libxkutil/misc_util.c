@@ -671,7 +671,7 @@ int parse_id(const char *id,
         char *tmp_pfx = NULL;
         char *tmp_name = NULL;
 
-        ret = sscanf(id, "%a[^:]:%a[^\n]", &tmp_pfx, &tmp_name);
+        ret = sscanf(id, "%m[^:]:%m[^\n]", &tmp_pfx, &tmp_name);
         if (ret != 2) {
                 ret = 0;
                 goto out;

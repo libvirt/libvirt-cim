@@ -675,7 +675,7 @@ static CMPIStatus return_enum_devices(const CMPIObjectPath *reference,
 
         s = enum_devices(_BROKER,
                          reference,
-                         NULL, 
+                         NULL,
                          res_type_from_device_classname(CLASSNAME(reference)),
                          &list);
         if (s.rc != CMPI_RC_OK)
@@ -696,7 +696,7 @@ static int parse_devid(const char *devid, char **dom, char **dev)
 {
         int ret;
 
-        ret = sscanf(devid, "%a[^/]/%as", dom, dev);
+        ret = sscanf(devid, "%m[^/]/%ms", dom, dev);
         if (ret != 2) {
                 free(*dom);
                 free(*dev);
@@ -711,7 +711,7 @@ static int proc_dev_list(uint64_t quantity,
 {
         int i;
 
-        *list = (struct virt_device *)calloc(quantity, 
+        *list = (struct virt_device *)calloc(quantity,
                                              sizeof(struct virt_device));
 
         for (i = 0; i < quantity; i++) {

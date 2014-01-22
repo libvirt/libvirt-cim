@@ -666,7 +666,7 @@ int parse_rule_id(const char *rule_id, char **filter, int *index)
 
         if ((filter == NULL) || (index == NULL))
                 return 0;
-        ret = sscanf(rule_id, "%as[^:]:%u", filter, index);
+        ret = sscanf(rule_id, "%ms[^:]:%u", filter, index);
         if (ret != 2) {
                 free(*filter);
                 *filter = NULL;
