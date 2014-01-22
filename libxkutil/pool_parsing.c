@@ -194,15 +194,17 @@ char *get_disk_pool_type(uint16_t type)
 
 }
 
-static const char *parse_disk_pool(xmlNodeSet *nsv, struct disk_pool *pool)
+static char *parse_disk_pool(xmlNodeSet *nsv, struct disk_pool *pool)
 {
         xmlNode **nodes = nsv->nodeTab;
         xmlNode *child;
-        const char *type_str = NULL;
-        const char *name = NULL;
+        char *type_str = NULL;
+        char *name = NULL;
         int type = 0;
 
         type_str = get_attr_value(nodes[0], "type");
+        if (type_str == NULL)
+            return NULL;
 
         if (STREQC(type_str, "dir"))
                 type = DISK_POOL_DIR;
@@ -220,12 +222,15 @@ static const char *parse_disk_pool(xmlNodeSet *nsv, struct disk_pool *pool)
                 type = DISK_POOL_SCSI;
         else
                 type = DISK_POOL_UNKNOWN;
+        free(type_str);
 
         pool->pool_type = type;
-              
+
         for (child = nodes[0]->children; child != NULL; child = child->next) {
-                if (XSTREQ(child->name, "name")) {
+                if (XSTREQ(child->name, "name") && name == NULL) {
                         name = get_node_content(child);
+                        if (name == NULL)
+                            return NULL;
                 } else if (XSTREQ(child->name, "target"))
                         parse_disk_target(child, pool);
                 else if (XSTREQ(child->name, "source"))
@@ -238,14 +243,18 @@ static const char *parse_disk_pool(xmlNodeSet *nsv, struct disk_pool *pool)
 int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type)
 {
         int len;
-        int ret = 0;
+        int ret = 1;
         xmlDoc *xmldoc;
         xmlXPathContext *xpathctx;
         xmlXPathObject *xpathobj;
         const xmlChar *xpathstr = (xmlChar *)"/pool";
-        const char *name;
 
         CU_DEBUG("Pool XML : %s", xml);
+
+        /* FIXME: Add support for parsing network pools */
+        if (type == CIM_RES_TYPE_NET)
+                return 0;
+
 	len = strlen(xml) + 1;
 
         if ((xmldoc = xmlParseMemory(xml, len)) == NULL)
@@ -257,21 +266,13 @@ int get_pool_from_xml(const char *xml, struct virt_pool *pool, int type)
         if ((xpathobj = xmlXPathEvalExpression(xpathstr, xpathctx)) == NULL)
                 goto err3;
 
-        /* FIXME: Add support for parsing network pools */
-        if (type == CIM_RES_TYPE_NET) {
-                ret = 0;
-                goto err1;
-        }
-
         memset(pool, 0, sizeof(*pool));
 
-        pool->type = CIM_RES_TYPE_DISK; 
-        name = parse_disk_pool(xpathobj->nodesetval, 
-                               &(pool)->pool_info.disk);
-        if (name == NULL)
+        pool->type = CIM_RES_TYPE_DISK;
+        pool->id = parse_disk_pool(xpathobj->nodesetval,
+                                   &(pool)->pool_info.disk);
+        if (pool->id != NULL)
                 ret = 0;
-
-        pool->id = strdup(name); 
 
         xmlXPathFreeObject(xpathobj);
  err3:

@@ -1376,7 +1376,7 @@ static CMPIStatus _new_volume_template(const CMPIObjectPath *ref,
         }
 
         ret = get_disk_pool(poolptr, &pool);
-        if (ret == 1) {
+        if (ret != 0) {
                 virt_set_status(_BROKER, &s,
                                 CMPI_RC_ERR_FAILED,
                                 virStoragePoolGetConnect(poolptr),
