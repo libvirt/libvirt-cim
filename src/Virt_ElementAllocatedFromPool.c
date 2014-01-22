@@ -124,10 +124,14 @@ static CMPIStatus get_dev_from_pool(const CMPIObjectPath *ref,
                 poolid = pool_member_of(_BROKER, cn, type, dev_id);
                 if (poolid && STREQ(poolid, _poolid))
                         inst_list_add(list, inst);
+
+                if (poolid) {
+                    free(poolid);
+                    poolid = NULL;
+                }
         }
 
  out:
-        free(poolid);
         inst_list_free(&tmp);
 
         return s;
