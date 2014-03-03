@@ -214,6 +214,8 @@ static char *disk_block_xml(xmlNodePtr root, struct disk_device *dev)
                 xmlNewProp(disk, BAD_CAST "device", BAD_CAST dev->device);
         if (dev->rawio)
                 xmlNewProp(disk, BAD_CAST "rawio", BAD_CAST dev->rawio);
+        if (dev->sgio)
+                xmlNewProp(disk, BAD_CAST "sgio", BAD_CAST dev->sgio);
 
         if (dev->driver) {
                 tmp = xmlNewChild(disk, NULL, BAD_CAST "driver", NULL);

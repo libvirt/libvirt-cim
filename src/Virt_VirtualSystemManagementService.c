@@ -1189,6 +1189,11 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
         else
                 dev->dev.disk.rawio = strdup(val);
 
+        if (cu_get_str_prop(inst, "sgio", &val) != CMPI_RC_OK)
+                dev->dev.disk.sgio = NULL;
+        else
+                dev->dev.disk.sgio = strdup(val);
+
         if (cu_get_bool_prop(inst, "shareable", &shareable) != CMPI_RC_OK)
                 dev->dev.disk.shareable = false;
         else

@@ -57,6 +57,7 @@ struct disk_device {
         char *source;
         char *virtual_dev;
         char *rawio;
+        char *sgio;
         enum {DISK_UNKNOWN, DISK_PHY, DISK_FILE, DISK_FS} disk_type;
         bool readonly;
         bool shareable;

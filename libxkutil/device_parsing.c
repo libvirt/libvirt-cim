@@ -93,6 +93,7 @@ static void cleanup_disk_device(struct disk_device *dev)
         free(dev->virtual_dev);
         free(dev->bus_type);
         free(dev->rawio);
+        free(dev->sgio);
         free(dev->access_mode);
         cleanup_device_address(&dev->address);
 }
@@ -514,6 +515,8 @@ static int parse_block_device(xmlNode *dnode, struct virt_device **vdevs)
                 goto err;
 
         ddev->rawio = get_attr_value(dnode, "rawio");
+
+        ddev->sgio = get_attr_value(dnode, "sgio");
 
         for (child = dnode->children; child != NULL; child = child->next) {
                 if (XSTREQ(child->name, "driver")) {
@@ -1319,6 +1322,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
                 DUP_FIELD(dev, _dev, dev.disk.driver);
                 DUP_FIELD(dev, _dev, dev.disk.driver_type);
                 DUP_FIELD(dev, _dev, dev.disk.rawio);
+                DUP_FIELD(dev, _dev, dev.disk.sgio);
                 DUP_FIELD(dev, _dev, dev.disk.cache);
                 DUP_FIELD(dev, _dev, dev.disk.source);
                 DUP_FIELD(dev, _dev, dev.disk.virtual_dev);

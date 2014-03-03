@@ -68,6 +68,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       [Description ("rawio value of lun device")]
       string rawio;
 
+      [Description ("sgio value of lun device")]
+      string sgio;
+
       [Description ("if device is shareable")]
       boolean shareable;
 
