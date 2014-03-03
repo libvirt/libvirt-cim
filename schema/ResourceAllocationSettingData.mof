@@ -65,6 +65,9 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       [Description ("filesystem access mode")]
       string AccessMode;
 
+      [Description ("rawio value of lun device")]
+      string rawio;
+
       [Description ("if device is shareable")]
       boolean shareable;
 

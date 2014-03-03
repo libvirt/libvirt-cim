@@ -482,6 +482,12 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
                               (CMPIValue *)dev->dev.disk.access_mode,
                               CMPI_chars);
 
+        if(dev->dev.disk.rawio)
+                CMSetProperty(inst,
+                              "rawio",
+                              (CMPIValue *)dev->dev.disk.rawio,
+                              CMPI_chars);
+
         if(dev->dev.disk.shareable)
                 CMSetProperty(inst,
                               "shareable",
