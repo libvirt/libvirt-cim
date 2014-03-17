@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007, 2013
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -49,6 +49,7 @@
 #define GRAPHICS_XPATH  (xmlChar *)"/domain/devices/graphics | "\
         "/domain/devices/console"
 #define INPUT_XPATH     (xmlChar *)"/domain/devices/input"
+#define CONTROLLER_XPATH (xmlChar *)"/domain/devices/controller"
 
 #define DEFAULT_BRIDGE "xenbr0"
 #define DEFAULT_NETWORK "default"
@@ -69,6 +70,7 @@ static void cleanup_device_address(struct device_address *addr)
         if (addr == NULL)
                 return;
 
+        CU_DEBUG("Cleanup %d addresses", addr->ct);
         for (i = 0; i < addr->ct; i++) {
                 free(addr->key[i]);
                 free(addr->value[i]);
@@ -84,6 +86,7 @@ static void cleanup_disk_device(struct disk_device *dev)
         if (dev == NULL)
                 return;
 
+        CU_DEBUG("Clean Disk type %s", dev->type);
         free(dev->type);
         free(dev->device);
         free(dev->driver);
@@ -103,6 +106,7 @@ static void cleanup_vsi_device(struct vsi_device *dev)
         if (dev == NULL)
                 return;
 
+        CU_DEBUG("Clean VSI type %s", dev->vsi_type);
         free(dev->vsi_type);
         free(dev->manager_id);
         free(dev->type_id);
@@ -117,6 +121,7 @@ static void cleanup_net_device(struct net_device *dev)
         if (dev == NULL)
                 return;
 
+        CU_DEBUG("Clean net type %s", dev->type);
         free(dev->type);
         free(dev->mac);
         free(dev->source);
@@ -134,6 +139,7 @@ static void cleanup_emu_device(struct emu_device *dev)
         if (dev == NULL)
                 return;
 
+        CU_DEBUG("Clean emu %s", dev->path);
         free(dev->path);
 }
 
@@ -157,6 +163,7 @@ static void cleanup_graphics_device(struct graphics_device *dev)
         if (dev == NULL || dev->type == NULL)
                 return;
 
+        CU_DEBUG("Clean graphics type %s", dev->type);
         if (STREQC(dev->type, "sdl"))
                 cleanup_sdl_device(dev);
         else
@@ -170,6 +177,7 @@ static void cleanup_path_device(struct path_device *dev)
         if (dev == NULL)
             return;
 
+        CU_DEBUG("Clean path device %s", dev->path);
         free(dev->path);
 
 }
@@ -179,6 +187,7 @@ static void cleanup_unixsock_device(struct unixsock_device *dev)
         if (dev == NULL)
             return;
 
+        CU_DEBUG("Clean unixsock device");
         free(dev->path);
         free(dev->mode);
 
@@ -189,6 +198,7 @@ static void cleanup_tcp_device(struct tcp_device *dev)
         if (dev == NULL)
             return;
 
+        CU_DEBUG("Clean tcp device");
         free(dev->mode);
         free(dev->protocol);
         free(dev->host);
@@ -201,6 +211,7 @@ static void cleanup_udp_device(struct udp_device *dev)
         if (dev == NULL)
             return;
 
+        CU_DEBUG("Clean udb bind device");
         free(dev->bind_host);
         free(dev->bind_service);
         free(dev->connect_host);
@@ -212,6 +223,7 @@ static void cleanup_console_device(struct console_device *dev)
         if (dev == NULL)
                 return;
 
+        CU_DEBUG("Clean console source_type %d", dev->source_type);
         switch (dev->source_type)
         {
         case CIM_CHARDEV_SOURCE_TYPE_PTY:
@@ -304,8 +316,22 @@ static void cleanup_input_device(struct input_device *dev)
         if (dev == NULL)
                 return;
 
+        CU_DEBUG("Clean input device %s", dev->type);
         free(dev->type);
         free(dev->bus);
+}
+
+static void cleanup_controller_device(struct controller_device *dev)
+{
+        if (dev == NULL)
+                return;
+
+        CU_DEBUG("Clean controller device %d", dev->type);
+        free(dev->model);
+        free(dev->queues);
+        free(dev->ports);
+        free(dev->vectors);
+        cleanup_device_address(&dev->address);
 }
 
 void cleanup_virt_device(struct virt_device *dev)
@@ -325,6 +351,8 @@ void cleanup_virt_device(struct virt_device *dev)
                 cleanup_input_device(&dev->dev.input);
         else if (dev->type == CIM_RES_TYPE_CONSOLE)
                 cleanup_console_device(&dev->dev.console);
+        else if (dev->type == CIM_RES_TYPE_CONTROLLER)
+                cleanup_controller_device(&dev->dev.controller);
 
         free(dev->id);
 
@@ -339,6 +367,7 @@ void cleanup_virt_devices(struct virt_device **_devs, int count)
         for (i = 0; i < count; i++)
                 cleanup_virt_device(&devs[i]);
 
+        CU_DEBUG("All devices cleaned");
         free(devs);
         *_devs = NULL;
 }
@@ -1107,6 +1136,75 @@ static int parse_input_device(xmlNode *node, struct virt_device **vdevs)
         return 0;
 }
 
+static int parse_controller_device(xmlNode *cnode, struct virt_device **vdevs)
+{
+        struct virt_device *vdev = NULL;
+        struct controller_device *cdev = NULL;
+        char *type_str = NULL;
+        xmlNode *child = NULL;
+        char *index = NULL;
+        int ret;
+
+        vdev = calloc(1, sizeof(*vdev));
+        if (vdev == NULL)
+                goto err;
+
+        cdev = &(vdev->dev.controller);
+
+        type_str = get_attr_value(cnode, "type");
+        if (type_str == NULL) {
+                CU_DEBUG("No type");
+                goto err;
+        }
+        CU_DEBUG("controller device type = %s", type_str);
+        cdev->type = controller_protocol_type_StrToID(type_str);
+        if (cdev->type == CIM_CONTROLLER_PROTOCOL_TYPE_UNKNOWN) {
+                CU_DEBUG("Unknown controller protocol type (%d)", cdev->type);
+                goto err;
+        }
+
+        index = get_attr_value(cnode, "index");
+        if (index != NULL) {
+                sscanf(index, "%" PRIu64, &cdev->index);
+                free(index);
+        } else {
+                CU_DEBUG("No index");
+                goto err;
+        }
+
+        cdev->model = get_attr_value(cnode, "model");
+        cdev->ports = get_attr_value(cnode, "ports");
+        cdev->vectors = get_attr_value(cnode, "vectors");
+
+        for (child = cnode->children; child != NULL; child = child->next) {
+                if (XSTREQ(child->name, "address")) {
+                        parse_device_address(child, &cdev->address);
+                } else if (XSTREQ(child->name, "driver")) {
+                        cdev->queues = get_attr_value(child, "queues");
+                }
+        }
+        vdev->type = CIM_RES_TYPE_CONTROLLER;
+
+        ret = asprintf(&vdev->id, "controller:%s:%" PRIu64,
+                       type_str, cdev->index);
+        if (ret == -1) {
+                CU_DEBUG("Failed to create controller id string");
+                goto err;
+        }
+        CU_DEBUG("Controller id is %s", vdev->id);
+        free(type_str);
+
+        *vdevs = vdev;
+
+        return 1;
+ err:
+        free(type_str);
+        cleanup_controller_device(cdev);
+        free(vdev);
+
+        return 0;
+}
+
 static bool resize_devlist(struct virt_device **list, int newsize)
 {
         struct virt_device *_list;
@@ -1230,6 +1328,11 @@ static int parse_devices(const char *xml, struct virt_device **_list, int type)
                 func = &parse_input_device;
                 break;
 
+        case CIM_RES_TYPE_CONTROLLER:
+                xpathstr = CONTROLLER_XPATH;
+                func = &parse_controller_device;
+                break;
+
         default:
                 CU_DEBUG("Unrecognized device type. Returning.");
                 goto err1;
@@ -1351,7 +1454,17 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         } else if (dev->type == CIM_RES_TYPE_CONSOLE) {
                 console_device_dup(&dev->dev.console,
                                    &_dev->dev.console);
+        } else if (dev->type == CIM_RES_TYPE_CONTROLLER) {
+                dev->dev.controller.type = _dev->dev.controller.type;
+                dev->dev.controller.index = _dev->dev.controller.index;
+                DUP_FIELD(dev, _dev, dev.controller.model);
+                DUP_FIELD(dev, _dev, dev.controller.ports);
+                DUP_FIELD(dev, _dev, dev.controller.vectors);
+                DUP_FIELD(dev, _dev, dev.controller.queues);
+                duplicate_device_address(&dev->dev.controller.address,
+                                         &_dev->dev.controller.address);
         }
+
         return dev;
 }
 
@@ -1731,6 +1844,9 @@ int get_dominfo_from_xml(const char *xml, struct domain **dominfo)
         (*dominfo)->dev_vcpu_ct = parse_devices(xml,
                                                 &(*dominfo)->dev_vcpu,
                                                 CIM_RES_TYPE_PROC);
+        (*dominfo)->dev_controller_ct = parse_devices(xml,
+                                                      &(*dominfo)->dev_controller,
+                                                      CIM_RES_TYPE_CONTROLLER);
 
         return ret;
 
@@ -1819,6 +1935,7 @@ void cleanup_dominfo(struct domain **dominfo)
         cleanup_virt_devices(&dom->dev_graphics, dom->dev_graphics_ct);
         cleanup_virt_devices(&dom->dev_input, dom->dev_input_ct);
         cleanup_virt_devices(&dom->dev_console, dom->dev_console_ct);
+        cleanup_virt_devices(&dom->dev_controller, dom->dev_controller_ct);
 
         free(dom);
 

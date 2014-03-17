@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007, 2013
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -798,6 +798,72 @@ static const char *input_xml(xmlNodePtr root, struct domain *dominfo)
         return NULL;
 }
 
+static const char *controller_xml(xmlNodePtr root, struct domain *dominfo)
+{
+        int i;
+        const char *msg = NULL;
+
+        CU_DEBUG("Found %d controllers", dominfo->dev_controller_ct);
+        for (i = 0; i < dominfo->dev_controller_ct; i++) {
+                xmlNodePtr ctlr;
+                xmlNodePtr tmp;
+                char *type_str;
+
+                struct virt_device *_dev = &dominfo->dev_controller[i];
+                if (_dev->type == CIM_RES_TYPE_UNKNOWN)
+                        continue;
+
+                struct controller_device *cdev = &_dev->dev.controller;
+
+                ctlr = xmlNewChild(root, NULL, BAD_CAST "controller", NULL);
+                if (ctlr == NULL)
+                        return XML_ERROR;
+
+
+                type_str = controller_protocol_type_IDToStr(cdev->type);
+                if (type_str == NULL)
+                        return XML_ERROR;
+
+                CU_DEBUG("Type=%s Index=%" PRIu64, type_str, cdev->index);
+                xmlNewProp(ctlr, BAD_CAST "type",
+                           BAD_CAST type_str);
+
+                /* If index is missing, let libvirt generate it */
+                if (cdev->index != CONTROLLER_INDEX_NOT_SET) {
+                    char *index;
+                    if (asprintf(&index, "%" PRIu64, cdev->index) == -1)
+                        return XML_ERROR;
+                    xmlNewProp(ctlr, BAD_CAST "index", BAD_CAST index);
+                    free(index);
+                }
+
+                /* Optional */
+                if (cdev->model)
+                    xmlNewProp(ctlr, BAD_CAST "model",
+                               BAD_CAST cdev->model);
+                if (cdev->ports)
+                    xmlNewProp(ctlr, BAD_CAST "ports",
+                               BAD_CAST cdev->ports);
+                if (cdev->vectors)
+                    xmlNewProp(ctlr, BAD_CAST "vectors",
+                               BAD_CAST cdev->vectors);
+                if (cdev->queues) {
+                    tmp = xmlNewChild(ctlr, NULL, BAD_CAST "driver", NULL);
+                    xmlNewProp(tmp, BAD_CAST "queueus",
+                               BAD_CAST cdev->queues);
+                }
+                if (cdev->address.ct > 0) {
+                    msg = device_address_xml(ctlr, &cdev->address);
+                    if (msg != NULL) {
+                        CU_DEBUG("Failed to set the address");
+                        return msg;
+                    }
+                }
+        }
+
+        return NULL;
+}
+
 static char *system_xml(xmlNodePtr root, struct domain *domain)
 {
         xmlNodePtr tmp;
@@ -1129,6 +1195,11 @@ char *device_to_xml(struct virt_device *_dev)
                 dominfo->dev_input_ct = 1;
                 dominfo->dev_input = dev;
                 break;
+        case CIM_RES_TYPE_CONTROLLER:
+                func = controller_xml;
+                dominfo->dev_controller_ct = 1;
+                dominfo->dev_controller = dev;
+                break;
         default:
                 cleanup_virt_devices(&dev, 1);
                 goto out;
@@ -1167,6 +1238,7 @@ char *system_to_xml(struct domain *dominfo)
                 &console_xml,
                 &graphics_xml,
                 &emu_xml,
+                &controller_xml,
                 NULL
         };
 
