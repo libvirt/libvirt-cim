@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007, 2013
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -163,6 +163,17 @@ struct input_device {
         char *bus;
 };
 
+#define CONTROLLER_INDEX_NOT_SET -1
+struct controller_device {
+        uint16_t type;
+        uint64_t index;
+        char *model;
+        char *ports;
+        char *vectors;
+        char *queues;
+        struct device_address address;
+};
+
 struct virt_device {
         uint16_t type;
         union {
@@ -174,6 +185,7 @@ struct virt_device {
                 struct graphics_device graphics;
                 struct console_device console;
                 struct input_device input;
+                struct controller_device controller;
         } dev;
         char *id;
 };
@@ -249,6 +261,9 @@ struct domain {
 
         struct virt_device *dev_vcpu;
         int dev_vcpu_ct;
+
+        struct virt_device *dev_controller;
+        int dev_controller_ct;
 };
 
 struct virt_device *virt_device_dup(struct virt_device *dev);
