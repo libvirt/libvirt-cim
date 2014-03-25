@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007, 2013
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -1848,6 +1848,56 @@ static const char *input_rasd_to_vdev(CMPIInstance *inst,
         return NULL;
 }
 
+static const char *controller_rasd_to_vdev(CMPIInstance *inst,
+                                           struct virt_device *dev)
+{
+        const char *type_str = NULL;
+        const char *val = NULL;
+        const char *msg = NULL;
+        int ret;
+
+        if (cu_get_str_prop(inst, "ResourceSubType", &type_str) != CMPI_RC_OK) {
+                msg = "ControllerRASD ResourceSubType field not valid";
+                CU_DEBUG("%s", msg);
+                goto out;
+        }
+        dev->dev.controller.type = controller_protocol_type_StrToID(type_str);
+
+        /* Required fields */
+        if (cu_get_u64_prop(inst, "Index",
+                            &dev->dev.controller.index) != CMPI_RC_OK) {
+                CU_DEBUG("ControllerRASD Index field not set - DEFAULT");
+                dev->dev.controller.index = CONTROLLER_INDEX_NOT_SET;
+                ret = asprintf(&dev->id, "controller:%s:-1", type_str);
+        } else {
+                /* Formulate our instance id from controller, controller type,
+                 * and index value. This should be unique enough.
+                 */
+                ret = asprintf(&dev->id, "controller:%s:%" PRIu64,
+                               type_str, dev->dev.controller.index);
+        }
+        if (ret == -1) {
+                msg = "Failed to create controller string";
+                CU_DEBUG("%s", msg);
+                goto out;
+        }
+
+        /* Optional fields */
+        if (cu_get_str_prop(inst, "Model", &val) == CMPI_RC_OK)
+                dev->dev.controller.model = strdup(val);
+        if (cu_get_str_prop(inst, "Ports", &val) == CMPI_RC_OK)
+                dev->dev.controller.ports = strdup(val);
+        if (cu_get_str_prop(inst, "Vectors", &val) == CMPI_RC_OK)
+                dev->dev.controller.vectors = strdup(val);
+        if (cu_get_str_prop(inst, "Queues", &val) == CMPI_RC_OK)
+                dev->dev.controller.queues = strdup(val);
+        msg = rasd_to_device_address(inst, &dev->dev.controller.address);
+
+ out:
+
+        return msg;
+}
+
 static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                                          struct virt_device *dev,
                                          uint16_t type,
@@ -1868,6 +1918,8 @@ static const char *_sysvirt_rasd_to_vdev(CMPIInstance *inst,
                 return console_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_INPUT) {
                 return input_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_CONTROLLER) {
+                return controller_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
@@ -1888,6 +1940,8 @@ static const char *_container_rasd_to_vdev(CMPIInstance *inst,
                 return lxc_proc_rasd_to_vdev(inst, dev);
         } else if (type == CIM_RES_TYPE_INPUT) {
                 return input_rasd_to_vdev(inst, dev);
+        } else if (type == CIM_RES_TYPE_CONTROLLER) {
+                return controller_rasd_to_vdev(inst, dev);
         }
 
         return "Resource type not supported on this platform";
@@ -1996,6 +2050,10 @@ static const char *classify_resources(CMPIArray *resources,
 
         if (!make_space(&domain->dev_input, domain->dev_input_ct, count))
                 return "Failed to alloc input list";
+
+        if (!make_space(&domain->dev_controller, domain->dev_controller_ct,
+                        count))
+                return "Failed to alloc controller list";
 
         for (i = 0; i < count; i++) {
                 CMPIObjectPath *op;
@@ -2111,7 +2169,23 @@ static const char *classify_resources(CMPIArray *resources,
                                            &domain->dev_input[0],
                                            ns,
                                            p_error);
+                } else if (type == CIM_RES_TYPE_CONTROLLER) {
+                        struct virt_device dev;
+                        int ccount = count + domain->dev_controller_ct;
+
+                        memset(&dev, 0, sizeof(dev));
+                        msg = rasd_to_vdev(inst,
+                                           domain,
+                                           &dev,
+                                           ns,
+                                           p_error);
+                        if (msg == NULL)
+                                msg = add_device_nodup(&dev,
+                                                       domain->dev_controller,
+                                                       ccount,
+                                                       &domain->dev_controller_ct);
                 }
+
                 if (msg != NULL)
                         return msg;
 
@@ -2918,6 +2992,9 @@ static struct virt_device **find_list(struct domain *dominfo,
         } else if (type == CIM_RES_TYPE_INPUT) {
                 list = &dominfo->dev_input;
                 *count = &dominfo->dev_input_ct;
+        } else if (type == CIM_RES_TYPE_CONTROLLER) {
+                list = &dominfo->dev_controller;
+                *count = &dominfo->dev_controller_ct;
         }
 
         return list;
@@ -3116,6 +3193,14 @@ static CMPIStatus resource_add(struct domain *dominfo,
                            CMPI_RC_ERR_FAILED,
                            "Add resource failed: %s, %s",
                            msg, error_msg);
+                goto out;
+        }
+
+        if (type == CIM_RES_TYPE_CONTROLLER &&
+            dev != NULL && dev->id == NULL) {
+                cu_statusf(_BROKER, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Add resource failed: Index property is required.");
                 goto out;
         }
 
