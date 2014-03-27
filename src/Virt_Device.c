@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -366,6 +366,61 @@ static CMPIInstance *input_instance(const CMPIBroker *broker,
         return inst;
 }
 
+static int controller_set_attr(const CMPIBroker *broker,
+                               CMPIInstance *instance,
+                               struct controller_device *dev)
+{
+        const char *type_str;
+
+        type_str = controller_protocol_type_IDToStr(dev->type);
+        if (type_str == NULL) {
+            CU_DEBUG("controller type=%d fails to return string", dev->type);
+            return 0;
+        }
+
+        CMSetProperty(instance, "ProtocolSupported",
+                      (CMPIValue *)&dev->type,
+                      CMPI_uint16);
+
+        if (dev->model)
+            CMSetProperty(instance, "ProtocolDescription",
+                          (CMPIValue *)dev->model,
+                          CMPI_chars);
+
+        return 1;
+}
+
+static CMPIInstance *controller_instance(const CMPIBroker *broker,
+                                         struct controller_device *dev,
+                                         const virDomainPtr dom,
+                                         const char *ns)
+{
+        CMPIInstance *inst;
+        virConnectPtr conn;
+
+        CU_DEBUG("controller_instance");
+
+        conn = virDomainGetConnect(dom);
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "Controller",
+                                  ns,
+                                  true);
+        if (inst == NULL) {
+                CU_DEBUG("Failed to get instance of %s_Controller",
+                         pfx_from_conn(conn));
+                return NULL;
+        }
+
+
+        if (!controller_set_attr(broker, inst, dev)) {
+                CU_DEBUG("Failed to set contoller attributes of %s_Controller",
+                         pfx_from_conn(conn));
+                return NULL;
+        }
+
+        return inst;
+}
 static int device_set_devid(CMPIInstance *instance,
                             struct virt_device *dev,
                             const virDomainPtr dom)
@@ -488,6 +543,8 @@ static bool device_instances(const CMPIBroker *broker,
         for (i = 0; i < count; i++) {
                 struct virt_device *dev = &devs[i];
 
+                CU_DEBUG("device_instance dev->type=%d", dev->type);
+
                 if (dev->type == CIM_RES_TYPE_NET)
                         instance = net_instance(broker,
                                                 &dev->dev.net,
@@ -516,11 +573,16 @@ static bool device_instances(const CMPIBroker *broker,
                                                     &dev->dev.console,
                                                     dom,
                                                     ns);
-                 else if (dev->type == CIM_RES_TYPE_INPUT)
+                else if (dev->type == CIM_RES_TYPE_INPUT)
                         instance = input_instance(broker,
                                                   &dev->dev.input,
                                                   dom,
                                                   ns);
+                else if (dev->type == CIM_RES_TYPE_CONTROLLER)
+                        instance = controller_instance(broker,
+                                                       &dev->dev.controller,
+                                                       dom,
+                                                       ns);
                 else
                         return false;
 
@@ -555,6 +617,8 @@ uint16_t res_type_from_device_classname(const char *classname)
                 return CIM_RES_TYPE_GRAPHICS;
         else if (strstr(classname, "PointingDevice"))
                 return CIM_RES_TYPE_INPUT;
+        else if (strstr(classname, "Controller"))
+                return CIM_RES_TYPE_CONTROLLER;
         else
                 return CIM_RES_TYPE_UNKNOWN;
 }

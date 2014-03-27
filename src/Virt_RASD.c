@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007, 2013
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -915,6 +915,51 @@ static CMPIStatus set_input_rasd_params(const struct virt_device *dev,
         return s;
 }
 
+static CMPIStatus set_controller_rasd_params(const CMPIBroker *broker,
+                                             const CMPIObjectPath *ref,
+                                             const struct virt_device *dev,
+                                             CMPIInstance *inst)
+{
+        const char *type_str;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        type_str = controller_protocol_type_IDToStr(dev->dev.controller.type);
+        if (type_str == NULL) {
+                CU_DEBUG("controller type=%d fails to return string",
+                         dev->type);
+                return s;
+        }
+        CMSetProperty(inst, "OtherResourceType", "controller", CMPI_chars);
+        CMSetProperty(inst, "ResourceSubType",
+                      (CMPIValue *)type_str, CMPI_chars);
+        CMSetProperty(inst, "Index",
+                      (CMPIValue *)&(dev->dev.controller.index), CMPI_uint64);
+
+        if (dev->dev.controller.model)
+            CMSetProperty(inst, "Model",
+                          (CMPIValue *)dev->dev.controller.model, CMPI_chars);
+
+        if (dev->dev.controller.ports)
+            CMSetProperty(inst, "Ports",
+                          (CMPIValue *)dev->dev.controller.ports, CMPI_chars);
+
+        if (dev->dev.controller.vectors)
+            CMSetProperty(inst, "Vectors",
+                          (CMPIValue *)dev->dev.controller.vectors, CMPI_chars);
+
+        if (dev->dev.controller.queues)
+            CMSetProperty(inst, "Queues",
+                          (CMPIValue *)dev->dev.controller.queues, CMPI_chars);
+
+        if (dev->dev.controller.address.ct > 0)
+            set_rasd_device_address(broker,
+                                    ref,
+                                    &dev->dev.controller.address,
+                                    inst);
+
+        return s;
+}
+
 CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                                     struct virt_device *dev,
                                     const char *host,
@@ -949,6 +994,9 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
         } else if (dev->type == CIM_RES_TYPE_INPUT) {
                 type = CIM_RES_TYPE_INPUT;
                 base = "InputResourceAllocationSettingData";
+        } else if (dev->type == CIM_RES_TYPE_CONTROLLER) {
+                type = CIM_RES_TYPE_OTHER;
+                base = "ControllerResourceAllocationSettingData";
         } else {
                 return NULL;
         }
@@ -1004,6 +1052,8 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                 s = set_input_rasd_params(dev, inst);
         } else if (dev->type == CIM_RES_TYPE_CONSOLE) {
                 s = set_console_rasd_params(dev, inst);
+        } else if (dev->type == CIM_RES_TYPE_CONTROLLER) {
+                s = set_controller_rasd_params(broker, ref, dev, inst);
         }
 
         /* FIXME: Put the HostResource in place */
@@ -1138,6 +1188,8 @@ CMPIrc res_type_from_rasd_classname(const char *cn, uint16_t *type)
                *type = CIM_RES_TYPE_IMAGE;
        else if (STREQ(base, "ConsoleResourceAllocationSettingData"))
                *type = CIM_RES_TYPE_CONSOLE;
+       else if (STREQ(base, "ControllerResourceAllocationSettingData"))
+               *type = CIM_RES_TYPE_CONTROLLER;
        else
                goto out;
 
@@ -1174,6 +1226,9 @@ CMPIrc rasd_classname_from_type(uint16_t type, const char **classname)
                 break;
         case CIM_RES_TYPE_INPUT:
                 *classname = "InputResourceAllocationSettingData";
+                break;
+        case CIM_RES_TYPE_CONTROLLER:
+                *classname = "ControllerResourceAllocationSettingData";
                 break;
         default:
                 rc = CMPI_RC_ERR_FAILED;

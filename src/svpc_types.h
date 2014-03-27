@@ -42,7 +42,7 @@
 #define CIM_RES_TYPE_EMU        32770
 #define CIM_RES_TYPE_CONTROLLER 32771
 
-#define CIM_RES_TYPE_COUNT 7
+#define CIM_RES_TYPE_COUNT 8
 const static int cim_res_types[CIM_RES_TYPE_COUNT] = 
   {CIM_RES_TYPE_NET,
    CIM_RES_TYPE_DISK,
@@ -51,6 +51,7 @@ const static int cim_res_types[CIM_RES_TYPE_COUNT] =
    CIM_RES_TYPE_GRAPHICS,
    CIM_RES_TYPE_INPUT,
    CIM_RES_TYPE_CONSOLE,
+   CIM_RES_TYPE_CONTROLLER,
   };
 
 #define CIM_VSSD_RECOVERY_NONE       2
