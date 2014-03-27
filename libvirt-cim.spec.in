@@ -110,6 +110,7 @@ rm -fr $RPM_BUILD_ROOT
     %{_datadir}/%{name}/ServiceAffectsElement.registration \\\
     %{_datadir}/%{name}/KVMRedirectionSAP.registration \\\
     %{_datadir}/%{name}/DisplayController.registration \\\
+    %{_datadir}/%{name}/Controller.registration \\\
     %{_datadir}/%{name}/PointingDevice.registration \\\
     %{_datadir}/%{name}/GraphicsPool.registration \\\
     %{_datadir}/%{name}/InputPool.registration \\\
@@ -171,6 +172,7 @@ rm -fr $RPM_BUILD_ROOT
     %{_datadir}/%{name}/ServiceAffectsElement.mof \\\
     %{_datadir}/%{name}/KVMRedirectionSAP.mof \\\
     %{_datadir}/%{name}/DisplayController.mof \\\
+    %{_datadir}/%{name}/Controller.mof \\\
     %{_datadir}/%{name}/PointingDevice.mof \\\
     %{_datadir}/%{name}/GraphicsPool.mof \\\
     %{_datadir}/%{name}/InputPool.mof \\\

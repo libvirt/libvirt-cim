@@ -1,0 +1,4 @@
+# Copyright IBM Corp. 2014
+
+# Classname Namespace ProviderName ProviderModule ProviderTypes
+KVM_Controller root/virt Virt_Device Virt_Device instance

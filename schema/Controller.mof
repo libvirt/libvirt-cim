@@ -1,0 +1,7 @@
+// Copyright IBM Corp. 2014
+
+[ Provider("cmpi::Virt_Device")
+]
+class KVM_Controller : CIM_Controller
+{
+};

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2007, 2013
+// Copyright IBM Corp. 2007-2014
 
 [Description ("Xen virtual disk configuration"),
  Provider("cmpi::Virt_RASD")
@@ -326,6 +326,41 @@ class KVM_InputResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 class LXC_InputResourceAllocationSettingData : LXC_ResourceAllocationSettingData
 {
       string BusType;
+};
+
+[Description ("KVM virtual controller device. It is identified by: "
+              "CIM_ResourceAllocationSettingData.ResourceType=1 ('Other'), "
+              "CIM_ResourceAllocationSettingData.OtherResourceType='controller'"
+              " and CIM_ResourceAllocationSettingData.ResourceSubType set to "
+              "one of 'ide', 'fdc', 'scsi', 'sata', 'ccid', 'virtio-serial', "
+              "or 'pci'."),
+ Provider("cmpi::Virt_RASD")
+]
+class KVM_ControllerResourceAllocationSettingData : KVM_ResourceAllocationSettingData
+{
+      [Description ("Order in which the bus controller is encountered. "
+                    "The order is controller type scoped.")]
+      uint64 Index;
+
+      [Description ("Optional string providing a specific model "
+                    "information based on the controller type.")]
+      string Model;
+
+      [Description ("The 'virtio-serial' controller uses the Ports and "
+                    "Vectors to control how many devices can be connected "
+                    "through the controller.")]
+      string Ports;
+      string Vectors;
+
+      [Description ("Number of queues for the controller.")]
+      string Queues;
+
+      [Description ("For controllers that are themselves devices on a "
+                    "bus an optional element to specify the exact "
+                    "relationship of the controller to its master bus. "
+                    "Stored in the property and value arrays.")]
+      string AddressProperties[];
+      string AddressValues[];
 };
 
 [Description ("Xen virtual network pool settings"),

@@ -1,4 +1,4 @@
-# Copyright IBM Corp. 2007
+# Copyright IBM Corp. 2007-2014
 AUTOMAKE_OPTIONS=dist-bzip2
 
 SUBDIRS = libxkutil src doc base_schema
@@ -52,6 +52,7 @@ MOFS = \
 	$(top_srcdir)/schema/ServiceAffectsElement.mof \
 	$(top_srcdir)/schema/KVMRedirectionSAP.mof \
 	$(top_srcdir)/schema/DisplayController.mof \
+	$(top_srcdir)/schema/Controller.mof \
 	$(top_srcdir)/schema/PointingDevice.mof \
 	$(top_srcdir)/schema/GraphicsPool.mof \
 	$(top_srcdir)/schema/InputPool.mof \
@@ -142,6 +143,7 @@ REGS = \
 	$(top_srcdir)/schema/ServiceAffectsElement.registration \
 	$(top_srcdir)/schema/KVMRedirectionSAP.registration \
 	$(top_srcdir)/schema/DisplayController.registration \
+	$(top_srcdir)/schema/Controller.registration \
 	$(top_srcdir)/schema/PointingDevice.registration \
 	$(top_srcdir)/schema/GraphicsPool.registration \
 	$(top_srcdir)/schema/InputPool.registration \
