@@ -114,6 +114,7 @@ rm -fr $RPM_BUILD_ROOT
     %{_datadir}/%{name}/PointingDevice.registration \\\
     %{_datadir}/%{name}/GraphicsPool.registration \\\
     %{_datadir}/%{name}/InputPool.registration \\\
+    %{_datadir}/%{name}/ControllerPool.registration \\\
     %{_datadir}/%{name}/HostedAccessPoint.registration \\\
     %{_datadir}/%{name}/ServiceAccessBySAP.registration \\\
     %{_datadir}/%{name}/SAPAvailableForElement.registration \\\
@@ -176,6 +177,7 @@ rm -fr $RPM_BUILD_ROOT
     %{_datadir}/%{name}/PointingDevice.mof \\\
     %{_datadir}/%{name}/GraphicsPool.mof \\\
     %{_datadir}/%{name}/InputPool.mof \\\
+    %{_datadir}/%{name}/ControllerPool.mof \\\
     %{_datadir}/%{name}/HostedAccessPoint.mof \\\
     %{_datadir}/%{name}/ServiceAccessBySAP.mof \\\
     %{_datadir}/%{name}/SAPAvailableForElement.mof \\\

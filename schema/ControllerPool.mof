@@ -1,0 +1,6 @@
+// Copyright Red Hat Corp. 2014
+
+[Provider("cmpi::Virt_DevicePool")]
+class KVM_ControllerPool : CIM_ResourcePool
+{
+};

@@ -56,6 +56,7 @@ MOFS = \
 	$(top_srcdir)/schema/PointingDevice.mof \
 	$(top_srcdir)/schema/GraphicsPool.mof \
 	$(top_srcdir)/schema/InputPool.mof \
+	$(top_srcdir)/schema/ControllerPool.mof \
 	$(top_srcdir)/schema/HostedAccessPoint.mof \
 	$(top_srcdir)/schema/ServiceAccessBySAP.mof \
 	$(top_srcdir)/schema/SAPAvailableForElement.mof \
@@ -147,6 +148,7 @@ REGS = \
 	$(top_srcdir)/schema/PointingDevice.registration \
 	$(top_srcdir)/schema/GraphicsPool.registration \
 	$(top_srcdir)/schema/InputPool.registration \
+	$(top_srcdir)/schema/ControllerPool.registration \
 	$(top_srcdir)/schema/HostedAccessPoint.registration \
 	$(top_srcdir)/schema/ServiceAccessBySAP.registration \
 	$(top_srcdir)/schema/SAPAvailableForElement.registration \
