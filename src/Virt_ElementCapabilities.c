@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -416,6 +416,7 @@ static char* host_sys_and_service_and_rp[] = {
         "KVM_DiskPool",
         "KVM_GraphicsPool",
         "KVM_InputPool",
+        "KVM_ControllerPool",
         "LXC_ProcessorPool",
         "LXC_MemoryPool",
         "LXC_NetworkPool",
@@ -553,6 +554,7 @@ static char* resource_pool[] = {
         "KVM_DiskPool",
         "KVM_GraphicsPool",
         "KVM_InputPool",
+        "KVM_ControllerPool",
         "LXC_ProcessorPool",
         "LXC_MemoryPool",
         "LXC_NetworkPool",

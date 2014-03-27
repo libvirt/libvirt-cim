@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -113,6 +113,7 @@ static char* part_component[] = {
         "KVM_DiskPool",
         "KVM_GraphicsPool",
         "KVM_InputPool",
+        "KVM_ControllerPool",
         "LXC_ProcessorPool",
         "LXC_MemoryPool",
         "LXC_NetworkPool",

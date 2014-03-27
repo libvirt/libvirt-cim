@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -797,6 +797,8 @@ char *pool_member_of(const CMPIBroker *broker,
                 poolid = strdup("GraphicsPool/0");
         else if (type == CIM_RES_TYPE_INPUT)
                 poolid = strdup("InputPool/0");
+        else if (type == CIM_RES_TYPE_CONTROLLER)
+                poolid = strdup("ControllerPool/0");
         else
                 return NULL;
 
@@ -817,6 +819,8 @@ uint16_t res_type_from_pool_classname(const char *classname)
                 return CIM_RES_TYPE_GRAPHICS;
         else if (strstr(classname, "InputPool"))
                 return CIM_RES_TYPE_INPUT;
+        else if (strstr(classname, "ControllerPool"))
+                return CIM_RES_TYPE_CONTROLLER;
         else
                 return CIM_RES_TYPE_UNKNOWN;
 }
@@ -835,6 +839,8 @@ uint16_t res_type_from_pool_id(const char *id)
                 return CIM_RES_TYPE_GRAPHICS;
         else if (strstr(id, "InputPool"))
                 return CIM_RES_TYPE_INPUT;
+        else if (strstr(id, "ControllerPool"))
+                return CIM_RES_TYPE_CONTROLLER;
         else
                 return CIM_RES_TYPE_UNKNOWN;
 }
@@ -1502,6 +1508,43 @@ static CMPIStatus inputpool_instance(virConnectPtr conn,
         return s;
 }
 
+static CMPIStatus controllerpool_instance(virConnectPtr conn,
+                                          struct inst_list *list,
+                                          const char *ns,
+                                          const char *_id,
+                                          const CMPIBroker *broker)
+{
+        const char *id = "ControllerPool/0";
+        CMPIInstance *inst;
+        CMPIStatus s = {CMPI_RC_OK, NULL};
+
+        if ((_id != NULL) && (!STREQC(_id, "0"))) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "No such controller pool `%s'", id);
+                return s;
+        }
+
+        inst = get_typed_instance(broker,
+                                  pfx_from_conn(conn),
+                                  "ControllerPool",
+                                  ns,
+                                  false);
+        if (inst == NULL) {
+                cu_statusf(broker, &s,
+                           CMPI_RC_ERR_FAILED,
+                           "Failed to get instance of %s_ControllerPool",
+                           pfx_from_conn(conn));
+                return s;
+        }
+
+        set_params(inst, CIM_RES_TYPE_CONTROLLER, id, NULL, NULL, true);
+
+        inst_list_add(list, inst);
+
+        return s;
+}
+
 static CMPIStatus _get_pools(const CMPIBroker *broker,
                              const CMPIObjectPath *reference,
                              const uint16_t type,
@@ -1562,6 +1605,14 @@ static CMPIStatus _get_pools(const CMPIBroker *broker,
                                        NAMESPACE(reference),
                                        id,
                                        broker);
+
+        if ((type == CIM_RES_TYPE_CONTROLLER) ||
+            (type == CIM_RES_TYPE_ALL))
+                s = controllerpool_instance(conn,
+                                            list,
+                                            NAMESPACE(reference),
+                                            id,
+                                            broker);
 
         if (type == CIM_RES_TYPE_UNKNOWN)
                 cu_statusf(broker, &s,
@@ -1712,6 +1763,8 @@ CMPIInstance *parent_device_pool(const CMPIBroker *broker,
                 id = "GraphicsPool/0";
         } else if (type == CIM_RES_TYPE_INPUT) {
                 id = "InputPool/0";
+        } else if (type == CIM_RES_TYPE_CONTROLLER) {
+                id = "ControllerPool/0";
         } else {
                 cu_statusf(broker, s,
                            CMPI_RC_ERR_INVALID_PARAMETER,

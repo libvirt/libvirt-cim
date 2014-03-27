@@ -431,6 +431,8 @@ static char *get_pool_id(int res_type,
                 pool = "GraphicsPool";
         else if (res_type == CIM_RES_TYPE_INPUT)
                 pool = "InputPool";
+        else if (res_type == CIM_RES_TYPE_CONTROLLER)
+                pool = "ControllerPool";
         else
                 pool = "Unknown";
 
