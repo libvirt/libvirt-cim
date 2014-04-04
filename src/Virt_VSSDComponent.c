@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -141,6 +141,7 @@ static char* part_component[] = {
         "KVM_GraphicsResourceAllocationSettingData",
         "KVM_InputResourceAllocationSettingData",
         "KVM_ConsoleResourceAllocationSettingData",
+        "KVM_ControllerResourceAllocationSettingData",
         "LXC_DiskResourceAllocationSettingData",
         "LXC_MemResourceAllocationSettingData",
         "LXC_NetResourceAllocationSettingData",

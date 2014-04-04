@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Kaitlin Rupert <karupert@us.ibm.com>
@@ -137,6 +137,7 @@ static char* resource_allocation_setting_data[] = {
         "KVM_GraphicsResourceAllocationSettingData",
         "KVM_ConsoleResourceAllocationSettingData",
         "KVM_InputResourceAllocationSettingData",
+        "KVM_ControllerResourceAllocationSettingData",
         "LXC_DiskResourceAllocationSettingData",
         "LXC_MemResourceAllocationSettingData",
         "LXC_NetResourceAllocationSettingData",

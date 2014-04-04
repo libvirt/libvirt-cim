@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -275,6 +275,7 @@ static char* device[] = {
         "KVM_LogicalDisk",
         "KVM_DisplayController",
         "KVM_PointingDevice",
+        "KVM_Controller",
         "LXC_Processor",
         "LXC_Memory",
         "LXC_NetworkPort",
@@ -297,6 +298,7 @@ static char* device_or_pool[] = {
         "KVM_LogicalDisk",
         "KVM_DisplayController",
         "KVM_PointingDevice",
+        "KVM_Controller",
         "LXC_Processor",
         "LXC_Memory",
         "LXC_NetworkPort",

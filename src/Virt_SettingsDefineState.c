@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -336,6 +336,7 @@ static char* logical_device[] = {
         "KVM_DisplayController",
         "KVM_ConsoleDisplayController",
         "KVM_PointingDevice",
+        "KVM_Controller",
         "LXC_Processor",
         "LXC_Memory",
         "LXC_NetworkPort",
@@ -361,6 +362,7 @@ static char* resource_allocation_setting_data[] = {
         "KVM_GraphicsResourceAllocationSettingData",
         "KVM_InputResourceAllocationSettingData",
         "KVM_ConsoleResourceAllocationSettingData",
+        "KVM_ControllerResourceAllocationSettingData",
         "LXC_DiskResourceAllocationSettingData",
         "LXC_MemResourceAllocationSettingData",
         "LXC_NetResourceAllocationSettingData",

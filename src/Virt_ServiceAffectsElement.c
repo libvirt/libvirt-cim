@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2008
+ * Copyright IBM Corp. 2008-2014
  *
  * Authors:
  *  Kaitlin Rupert <karupert@us.ibm.com>
@@ -101,9 +101,10 @@ static CMPIStatus validate_cs_or_dev_ref(const CMPIContext *context,
 
         if (STREQC(classname, "ComputerSystem")) {
                 s = get_domain_by_ref(_BROKER, ref, &inst);
-        } else if ((STREQC(classname, "PointingDevice"))  || 
+        } else if ((STREQC(classname, "PointingDevice"))  ||
+                   (STREQC(classname, "Controller")) ||
                    (STREQC(classname, "DisplayController"))) {
-                s = get_device_by_ref(_BROKER, ref, &inst);        
+                s = get_device_by_ref(_BROKER, ref, &inst);
         }
 
         free(classname);
@@ -146,6 +147,7 @@ static char* affected_ele[] = {
         "Xen_DisplayController",
         "KVM_DisplayController",
         "LXC_DisplayController",
+        "KVM_Controller",
         NULL
 };
 

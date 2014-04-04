@@ -1,5 +1,5 @@
 /*
- * Copyright IBM Corp. 2007
+ * Copyright IBM Corp. 2007-2014
  *
  * Authors:
  *  Dan Smith <danms@us.ibm.com>
@@ -144,6 +144,7 @@ static char* part_component[] = {
         "KVM_DisplayController",
         "KVM_ConsoleDisplayController",
         "KVM_PointingDevice",
+        "KVM_Controller",
         "LXC_Processor",
         "LXC_Memory",
         "LXC_NetworkPort",
