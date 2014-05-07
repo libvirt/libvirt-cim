@@ -807,7 +807,7 @@ static const char *controller_xml(xmlNodePtr root, struct domain *dominfo)
         for (i = 0; i < dominfo->dev_controller_ct; i++) {
                 xmlNodePtr ctlr;
                 xmlNodePtr tmp;
-                char *type_str;
+                const char *type_str;
 
                 struct virt_device *_dev = &dominfo->dev_controller[i];
                 if (_dev->type == CIM_RES_TYPE_UNKNOWN)
