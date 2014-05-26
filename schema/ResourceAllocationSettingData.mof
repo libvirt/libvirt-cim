@@ -229,6 +229,9 @@ class Xen_MemResourceAllocationSettingData : Xen_ResourceAllocationSettingData
 ]
 class KVM_MemResourceAllocationSettingData : KVM_ResourceAllocationSettingData
 {
+      [Description ("dumpCore could be set as 'on' or 'off'. "
+                    "it also could be leave null.")]
+      boolean dumpCore;
 };
 
 [Description ("LXC virtual memory"),

@@ -850,9 +850,9 @@ static int parse_mem_device(xmlNode *node, struct virt_device **vdevs)
         else if (XSTREQ(node->name, "memory")) {
                 sscanf(content, "%" PRIu64, &mdev->maxsize);
                 tmpval = get_attr_value(node, "dumpCore");
-                if (tmpval && XSTREQ(tmpval, "on")) {
+                if (tmpval && STREQC(tmpval, "on")) {
                     mdev->dumpCore = MEM_DUMP_CORE_ON;
-                } else if (tmpval && XSTREQ(content, "off")) {
+                } else if (tmpval && STREQC(tmpval, "off")) {
                     mdev->dumpCore = MEM_DUMP_CORE_OFF;
                 } else {
                     mdev->dumpCore = MEM_DUMP_CORE_NOT_SET;
@@ -1438,6 +1438,7 @@ struct virt_device *virt_device_dup(struct virt_device *_dev)
         } else if (dev->type == CIM_RES_TYPE_MEM) {
                 dev->dev.mem.size = _dev->dev.mem.size;
                 dev->dev.mem.maxsize = _dev->dev.mem.maxsize;
+                dev->dev.mem.dumpCore = _dev->dev.mem.dumpCore;
         } else if (dev->type == CIM_RES_TYPE_PROC) {
                 dev->dev.vcpu.quantity = _dev->dev.vcpu.quantity;
         } else if (dev->type == CIM_RES_TYPE_EMU) {

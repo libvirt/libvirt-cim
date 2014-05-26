@@ -1047,6 +1047,14 @@ CMPIInstance *rasd_from_vdev(const CMPIBroker *broker,
                               (CMPIValue *)&dev->dev.mem.size, CMPI_uint64);
                 CMSetProperty(inst, "Limit",
                               (CMPIValue *)&dev->dev.mem.maxsize, CMPI_uint64);
+
+                if (dev->dev.mem.dumpCore != MEM_DUMP_CORE_NOT_SET) {
+                        bool dumpCore = true;
+                        if (dev->dev.mem.dumpCore == MEM_DUMP_CORE_OFF)
+                                dumpCore = false;
+                        CMSetProperty(inst, "dumpCore",
+                                      (CMPIValue *)&dumpCore, CMPI_boolean);
+                }
         } else if (dev->type == CIM_RES_TYPE_PROC) {
                 set_proc_rasd_params(broker, ref, dev, host, inst);
         } else if (dev->type == CIM_RES_TYPE_GRAPHICS) {

@@ -1239,6 +1239,17 @@ static const char *mem_rasd_to_vdev(CMPIInstance *inst,
         const char *units;
         CMPIrc ret;
         int shift;
+        bool dumpCore;
+
+        ret = cu_get_bool_prop(inst, "dumpCore", &dumpCore);
+        if (ret != CMPI_RC_OK) {
+                dev->dev.mem.dumpCore = MEM_DUMP_CORE_NOT_SET;
+        } else {
+                if (dumpCore)
+                        dev->dev.mem.dumpCore = MEM_DUMP_CORE_ON;
+                else
+                        dev->dev.mem.dumpCore = MEM_DUMP_CORE_OFF;
+        }
 
         ret = cu_get_u64_prop(inst, "VirtualQuantity", &dev->dev.mem.size);
         if (ret != CMPI_RC_OK)
