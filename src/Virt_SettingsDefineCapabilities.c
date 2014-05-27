@@ -1071,9 +1071,12 @@ static CMPIStatus set_disk_props(int type,
                                       (CMPIValue *)"FV disk", CMPI_chars);
                 }
 
-                if (emu_type == VIRT_DISK_TYPE_DISK) {
+                if (emu_type == VIRT_DISK_TYPE_DISK ||
+                    emu_type == VIRT_DISK_TYPE_LUN) {
                         CMSetProperty(inst, "VirtualQuantity",
                                       (CMPIValue *)&disk_size, CMPI_uint64);
+                    if (emu_type == VIRT_DISK_TYPE_LUN)
+                        dev = "sda";
                 } else if (emu_type == VIRT_DISK_TYPE_CDROM) {
                         dev = "hdc";
                 } else if (emu_type == VIRT_DISK_TYPE_FLOPPY) {

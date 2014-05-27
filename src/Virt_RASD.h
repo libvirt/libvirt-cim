@@ -27,6 +27,7 @@
 #define VIRT_DISK_TYPE_CDROM 1
 #define VIRT_DISK_TYPE_FLOPPY 2
 #define VIRT_DISK_TYPE_FS 3
+#define VIRT_DISK_TYPE_LUN 4
 
 char *rasd_to_xml(CMPIInstance *rasd);
 

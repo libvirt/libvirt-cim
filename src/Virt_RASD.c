@@ -444,6 +444,9 @@ static CMPIStatus set_disk_rasd_params(const CMPIBroker *broker,
         else if ((dev->dev.disk.device != NULL) &&
                 STREQ(dev->dev.disk.device, "floppy"))
                 type = VIRT_DISK_TYPE_FLOPPY;
+        else if ((dev->dev.disk.device != NULL) &&
+                STREQ(dev->dev.disk.device, "lun"))
+                type = VIRT_DISK_TYPE_LUN;
         else
                 type = VIRT_DISK_TYPE_DISK;
 

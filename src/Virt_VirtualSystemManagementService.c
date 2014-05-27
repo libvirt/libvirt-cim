@@ -1114,7 +1114,8 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 type = VIRT_DISK_TYPE_DISK;
 
         if ((type == VIRT_DISK_TYPE_DISK) ||
-            (type == VIRT_DISK_TYPE_FS)){
+            (type == VIRT_DISK_TYPE_FS) ||
+            (type == VIRT_DISK_TYPE_LUN)){
             if (dev->dev.disk.disk_type == DISK_UNKNOWN) {
                 /* on success or fail caller should try free it */
                 rc = asprintf(p_error, "Device %s, Address %s, "
@@ -1149,6 +1150,8 @@ static const char *disk_rasd_to_vdev(CMPIInstance *inst,
                 dev->dev.disk.device = strdup("floppy");
         else if (type == VIRT_DISK_TYPE_FS) 
                 dev->dev.disk.device = strdup("filesystem");
+        else if (type == VIRT_DISK_TYPE_LUN)
+                dev->dev.disk.device = strdup("lun");
         else
                 return "Invalid value for EmulatedType";
 

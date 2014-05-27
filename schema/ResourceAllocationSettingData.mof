@@ -10,8 +10,8 @@ class Xen_DiskResourceAllocationSettingData : Xen_ResourceAllocationSettingData
       string VirtualDevice;
 
       [Description ("Device emulation type"),
-        ValueMap {"0", "1", "2"},
-        Values {"Disk", "CDROM", "floppy"}]
+        ValueMap {"0", "1", "2", "4"},
+        Values {"Disk", "CDROM", "floppy", "lun"}]
       uint16 EmulatedType;
 
       [Description ("Bus type of the device")]
@@ -43,8 +43,8 @@ class KVM_DiskResourceAllocationSettingData : KVM_ResourceAllocationSettingData
       string VirtualDevice;
 
       [Description ("Device emulation type"),
-        ValueMap {"0", "1", "2", "3"},
-        Values {"Disk", "CDROM", "floppy", "filesystem"}]
+        ValueMap {"0", "1", "2", "3", "4"},
+        Values {"Disk", "CDROM", "floppy", "filesystem", "lun"}]
       uint16 EmulatedType;
 
       [Description ("Bus type of the device")]
