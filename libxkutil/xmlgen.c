@@ -33,7 +33,6 @@
 #include "cmpimacs.h"
 #endif
 
-#if 0
 static char *__tag_attr(struct kv *attrs, int count)
 {
         char *result = strdup("");
@@ -94,7 +93,6 @@ static char *tagify(char *tagname, char *content, struct kv *attrs, int count)
 
         return result;
 }
-#endif
 
 static char *disk_block_xml(const char *path, const char *vdev)
 {
@@ -265,11 +263,55 @@ static char *system_xml(struct domain *domain)
         return xml;
 }
 
+static char *os_xml(struct domain *domain)
+{
+        struct os_info *os = &domain->os_info;
+        int ret;
+        char *xml;
+        char *type = NULL;
+        char *kernel = NULL;
+        char *initrd = NULL;
+        char *cmdline = NULL;
+
+        if (os->type == NULL)
+                os->type = strdup("linux");
+
+        if (os->kernel == NULL)
+                os->kernel = strdup("/dev/null");
+
+        type = tagify("type", os->type, NULL, 0);
+        kernel = tagify("kernel", os->kernel, NULL, 0);
+        initrd = tagify("initrd", os->initrd, NULL, 0);
+        cmdline = tagify("cmdline", os->cmdline, NULL, 0);
+
+        ret = asprintf(&xml,
+                       "<os>\n"
+                       "  %s\n"
+                       "  %s\n"
+                       "  %s\n"
+                       "  %s\n"
+                       "</os>\n",
+                       type,
+                       kernel,
+                       initrd,
+                       cmdline);
+        if (ret == -1)
+                xml = NULL;
+
+        free(type);
+        free(kernel);
+        free(initrd);
+        free(cmdline);
+
+        return xml;
+}
+
 char *system_to_xml(struct domain *dominfo)
 {
         char *devxml = strdup("");
         char *sysdevxml = strdup("");
         char *sysxml = NULL;
+        char *osxml = NULL;
         char *xml = NULL;
         int ret;
         uint8_t uuid[16];
@@ -285,18 +327,21 @@ char *system_to_xml(struct domain *dominfo)
         concat_devxml(&sysdevxml, dominfo->dev_vcpu, dominfo->dev_vcpu_ct);
 
         sysxml = system_xml(dominfo);
+        osxml = os_xml(dominfo);
 
         ret = asprintf(&xml,
                        "<domain type='xen'>\n"
                        "<uuid>%s</uuid>\n"
-                       "%s\n"
-                       "%s\n"
+                       "%s"
+                       "%s"
+                       "%s"
                        "<devices>\n"
-                       "%s\n"
+                       "%s"
                        "</devices>\n"
                        "</domain>\n",
                        uuidstr,
                        sysxml,
+                       osxml,
                        sysdevxml,
                        devxml);
         if (ret == -1)
@@ -304,6 +349,7 @@ char *system_to_xml(struct domain *dominfo)
 
         free(devxml);
         free(sysdevxml);
+        free(osxml);
         free(sysxml);
 
         return xml;
