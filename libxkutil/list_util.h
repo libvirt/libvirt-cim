@@ -49,22 +49,22 @@ void list_remove_node(list_t *list, list_node_t *node);
 
 bool list_foreach(list_t *list, list_foreach_cb cb, void *user_data);
 
-inline unsigned int list_count(list_t *list);
+unsigned int list_count(list_t *list);
 
-inline void *list_node_data_get(list_node_t *node);
-inline void  list_node_data_set(list_node_t *node, void *data);
+void *list_node_data_get(list_node_t *node);
+void  list_node_data_set(list_node_t *node, void *data);
 
-inline void        *list_first(list_t *list);
-inline list_node_t *list_first_node(list_t *list);
+void        *list_first(list_t *list);
+list_node_t *list_first_node(list_t *list);
 
-inline void        *list_last(list_t *list);
-inline list_node_t *list_last_node(list_t *list);
+void        *list_last(list_t *list);
+list_node_t *list_last_node(list_t *list);
 
-inline void        *list_node_next(list_node_t *node);
-inline list_node_t *list_node_next_node(list_node_t *node);
+void        *list_node_next(list_node_t *node);
+list_node_t *list_node_next_node(list_node_t *node);
 
-inline void        *list_node_prev(list_node_t *node);
-inline list_node_t *list_node_prev_node(list_node_t *node);
+void        *list_node_prev(list_node_t *node);
+list_node_t *list_node_prev_node(list_node_t *node);
 
 #ifdef __cplusplus
 } /* extern "C" */
