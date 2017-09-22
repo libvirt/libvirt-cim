@@ -9,7 +9,7 @@ platforms with a single provider.
 
 The latest version of the library can be found here:
 
-  http://libvirt.org/hg/libvirt-cim
+  https://libvirt.org/git/?p=libvirt-cim.git
 
 and the development discussion mailing list is here:
 
@@ -29,8 +29,11 @@ Requirements:
 
 Procedure:
 
-  -If building a tree cloned from the hg repository, run this step first:
-      $ ./autogen.sh
+  # If building a tree cloned from the git repository, run this step first:
+
+  $ ./autogen.sh
+
+  # Then, regardless of how you obtained the source, run:
 
   $ ./configure
   $ make
