@@ -3,7 +3,7 @@
 # (C) Copyright IBM Corp. 2005
 
 echo "Running libtool ..." &&
-libtoolize --copy --force --automake && 
+libtoolize --copy --force --automake &&
 
 echo "Running aclocal ..." &&
 aclocal --force &&

@@ -30,7 +30,7 @@ Requirements:
 Procedure:
 
   -If building a tree cloned from the hg repository, run this step first:
-      $ ./autoconfiscate.sh
+      $ ./autogen.sh
 
   $ ./configure
   $ make
