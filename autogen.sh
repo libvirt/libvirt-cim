@@ -31,4 +31,14 @@ else
     echo "0" > .revision
 fi
 
-echo "You may now run ./configure"
+if test "$#" -eq 0; then
+    echo "Running configure without arguments ..."
+    echo "(If you want to pass any, specify them on the $0 command line)"
+else
+    echo "Running configure with $@ ..."
+fi
+
+"$srcdir/configure" "$@" || die
+
+echo
+echo "You may now run make"
