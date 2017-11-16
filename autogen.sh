@@ -2,20 +2,26 @@
 # ============================================================================
 # (C) Copyright IBM Corp. 2005
 
-echo "Running libtool ..." &&
-libtoolize --copy --force --automake &&
+die()
+{
+    test "$1" && echo "$1" >&2
+    exit 1
+}
 
-echo "Running aclocal ..." &&
-aclocal --force &&
+echo "Running libtool ..."
+libtoolize --copy --force --automake || die
 
-echo "Running autoheader ..." &&
-autoheader --force &&
+echo "Running aclocal ..."
+aclocal --force || die
 
-echo "Running automake ..." &&
-automake -i --add-missing --copy --foreign &&
+echo "Running autoheader ..."
+autoheader --force || die
 
-echo "Running autoconf ..." &&
-autoconf --force &&
+echo "Running automake ..."
+automake -i --add-missing --copy --foreign || die
+
+echo "Running autoconf ..."
+autoconf --force || die
 
 if test -x $(which git); then
     git rev-parse --short HEAD > .changeset
