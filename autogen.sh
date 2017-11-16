@@ -8,6 +8,14 @@ die()
     exit 1
 }
 
+curdir=$(pwd)
+test "$curdir" || curdir=.
+
+srcdir=$(dirname "$0")
+test "$srcdir" || srcdir=.
+
+cd "$srcdir" || die "Failed to cd into $srcdir"
+
 echo "Running libtool ..."
 libtoolize --copy --force --automake || die
 
@@ -30,6 +38,8 @@ else
     echo "Unknown" > .changeset
     echo "0" > .revision
 fi
+
+cd "$curdir" || die "Failed to cd into $curdir"
 
 if test "$#" -eq 0; then
     echo "Running configure without arguments ..."
