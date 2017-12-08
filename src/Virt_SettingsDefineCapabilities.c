@@ -1977,10 +1977,9 @@ static CMPIStatus set_input_props(const CMPIObjectPath *ref,
 {
         CMPIStatus s = {CMPI_RC_OK, NULL};
         CMPIInstance *inst;
-        char *cap;
+        char *cap, *old_cap = NULL;
 
         if (get_input_dev_caption(type, bus, &cap) != 1) {
-                free(cap);
                 cu_statusf(_BROKER, &s,
                            CMPI_RC_ERR_NOT_FOUND,
                            "Unable to build input caption");
@@ -1988,7 +1987,8 @@ static CMPIStatus set_input_props(const CMPIObjectPath *ref,
         }
 
         if (caption != NULL) {
-                if (asprintf(&cap, "%s %s", caption, cap) == -1) {
+                old_cap = cap;
+                if (asprintf(&cap, "%s %s", caption, old_cap) == -1) {
                         cu_statusf(_BROKER, &s,
                                    CMPI_RC_ERR_NOT_FOUND,
                                    "Unable to build input caption");
@@ -2012,6 +2012,7 @@ static CMPIStatus set_input_props(const CMPIObjectPath *ref,
 
  out:
         free(cap);
+        free(old_cap);
 
         return s;
 }
