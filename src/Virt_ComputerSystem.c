@@ -417,6 +417,8 @@ static int set_other_id_info(const CMPIBroker *broker,
                                     CMPI_string);
         }
 
+        free(model);
+
         CMSetProperty(instance, "OtherIdentifyingInfo",
                       &id_info, CMPI_stringA);
 
