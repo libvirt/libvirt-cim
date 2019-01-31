@@ -195,5 +195,3 @@ echo "----------------------------------------------------------"
 
 # Generate configure scripts for the Makefile
 AC_OUTPUT(libvirt-cim.spec)
-
-echo "You may now run make"
