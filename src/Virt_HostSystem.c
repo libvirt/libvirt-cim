@@ -38,7 +38,7 @@
 
 const static CMPIBroker *_BROKER;
 
-static int resolve_host(char *host, char *buf, int size)
+static int resolve_host(char *host, int size)
 {
         struct hostent *he;
         int i;
@@ -52,7 +52,8 @@ static int resolve_host(char *host, char *buf, int size)
         for (i = 0; he->h_aliases[i] != NULL; i++) {
                if ((strchr(he->h_aliases[i], '.') != NULL) &&
                    (strstr(he->h_aliases[i], "localhost") == NULL)) {
-                           strncpy(buf, he->h_aliases[i], size);
+                           strncpy(host, he->h_aliases[i], size - 1);
+                           host[size - 1] = '\0';
                            return 0;
                    }
         }
@@ -63,12 +64,13 @@ static int resolve_host(char *host, char *buf, int size)
         //          but also be sure the value isn't empty and that it doesn't
         //          contain "localhost"
         if ((he->h_name != NULL) && (!STREQC(he->h_name, "")) && 
-            (strstr(he->h_name, "localhost") == NULL))
-                strncpy(buf, he->h_name, size);
-        else if ((host != NULL) && (!STREQC(host, "")) && 
-                 (strstr(host, "localhost") == NULL))
-                strncpy(buf, host, size);
-        else {
+            (strstr(he->h_name, "localhost") == NULL)) {
+                strncpy(host, he->h_name, size - 1);
+                host[size - 1] = '\0';
+        } else if ((host != NULL) && (!STREQC(host, "")) &&
+                   (strstr(host, "localhost") == NULL)) {
+                return 0;
+        } else {
                 CU_DEBUG("Unable to find valid hostname value.");
                 return -1;
         }
@@ -76,20 +78,18 @@ static int resolve_host(char *host, char *buf, int size)
         return 0;
 }
 
-static int get_fqdn(char *buf, int size)
+static int get_fqdn(char *host, int size)
 {
-        char host[256];
         int ret = 0;
 
-        if (gethostname(host, sizeof(host)) != 0) {
+        if (gethostname(host, size) != 0) {
                 CU_DEBUG("gethostname(): %m");
                 return -1;
         }
 
-        if (strchr(host, '.') != NULL)
-                strncpy(buf, host, size);
-        else
-                ret = resolve_host(host, buf, size);
+        if (strchr(host, '.') == NULL) {
+                ret = resolve_host(host, size);
+        }
 
         return ret;
 }
