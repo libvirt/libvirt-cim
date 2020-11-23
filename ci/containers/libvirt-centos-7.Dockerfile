@@ -1,4 +1,4 @@
-FROM centos:7
+FROM registry.centos.org/centos:7
 
 RUN echo -e '[openvz]\n\
 name=OpenVZ addons\n\
@@ -39,9 +39,7 @@ WEiJKtQrZDJloqtyi/mmRa1VsV7RYR0VPJjhK/R8EQ7Ysshy\n\
         bash-completion \
         ca-certificates \
         ccache \
-        chrony \
         gcc \
-        gdb \
         gettext \
         gettext-devel \
         git \
@@ -60,9 +58,7 @@ WEiJKtQrZDJloqtyi/mmRa1VsV7RYR0VPJjhK/R8EQ7Ysshy\n\
         libxml2-devel \
         libxslt \
         libxslt-devel \
-        lsof \
         make \
-        net-tools \
         ninja-build \
         patch \
         perl \
@@ -74,12 +70,7 @@ WEiJKtQrZDJloqtyi/mmRa1VsV7RYR0VPJjhK/R8EQ7Ysshy\n\
         python3-wheel \
         python36-docutils \
         rpm-build \
-        screen \
-        strace \
-        sudo \
-        vim \
-        wget \
-        xz && \
+        wget && \
     yum autoremove -y && \
     yum clean all -y && \
     mkdir -p /usr/libexec/ccache-wrappers && \
