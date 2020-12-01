@@ -18,10 +18,10 @@ HOSTS=$($LCITOOL hosts | grep -E '(fedora|centos-7)')
 
 for host in $HOSTS
 do
-    if test "$host" = "libvirt-centos-7"
+    if test "$host" = "centos-7"
     then
-        $LCITOOL dockerfile $host libvirt+minimal,libvirt+dist,libvirt-cim > $host.Dockerfile
+        $LCITOOL dockerfile $host libvirt+minimal,libvirt+dist,libvirt-cim > ci-$host.Dockerfile
     else
-        $LCITOOL dockerfile $host libvirt+dist,libvirt-cim > $host.Dockerfile
+        $LCITOOL dockerfile $host libvirt+dist,libvirt-cim > ci-$host.Dockerfile
     fi
 done
