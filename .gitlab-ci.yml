@@ -88,10 +88,6 @@ check-dco:
     variables:
       - $CI_PROJECT_NAMESPACE == 'libvirt'
 
-x64-centos-7-container:
-  <<: *container_job_definition
-  variables:
-    NAME: centos-7
 
 x64-fedora-32-container:
   <<: *container_job_definition
@@ -109,11 +105,6 @@ x64-fedora-rawhide-container:
     NAME: fedora-rawhide
 
 
-
-x64-centos-7-git-build:
-  <<: *git_native_build_job_definition
-  variables:
-    NAME: centos-7
 
 x64-fedora-32-dist-build:
   <<: *dist_native_build_job_definition
