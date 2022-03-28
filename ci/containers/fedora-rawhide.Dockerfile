@@ -37,7 +37,8 @@ exec "$@"' > /usr/bin/nosync && \
         make \
         pkgconfig \
         rpm-build \
-        wget && \
+        wget \
+        xz && \
     nosync dnf autoremove -y && \
     nosync dnf clean all -y && \
     rpm -qa | sort > /packages.txt && \

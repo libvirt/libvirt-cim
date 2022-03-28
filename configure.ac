@@ -14,7 +14,7 @@ AC_CONFIG_SRCDIR([src/Virt_ComputerSystem.c])
 AC_CONFIG_HEADER([config.h])
 
 # Use silent rules if possible
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([tar-pax no-dist-gzip dist-xz])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 m4_define([lt_cur], m4_eval(libvirtcim_maj + libvirtcim_min))

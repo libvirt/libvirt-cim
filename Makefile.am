@@ -247,7 +247,7 @@ preuninstall:
 	fi
 
 rpm: clean
-	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.gz)
+	@(unset CDPATH ; $(MAKE) dist && rpmbuild -ta $(distdir).tar.xz)
 
 clean-local:
 	rm -f $(find . -name "*.orig")
