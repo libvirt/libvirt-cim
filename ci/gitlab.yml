@@ -10,8 +10,7 @@
   stage: containers
   needs: []
   services:
-    - name: registry.gitlab.com/libvirt/libvirt-ci/docker-dind:master
-      alias: docker
+    - docker:dind
   before_script:
     - export TAG="$CI_REGISTRY_IMAGE/ci-$NAME:latest"
     - export COMMON_TAG="$CI_REGISTRY/libvirt/libvirt-cim/ci-$NAME:latest"
@@ -50,18 +49,18 @@ check-dco:
 
 # Native container jobs
 
-x86_64-fedora-33-container:
-  extends: .container_job
-  allow_failure: false
-  variables:
-    NAME: fedora-33
-
-
 x86_64-fedora-34-container:
   extends: .container_job
   allow_failure: false
   variables:
     NAME: fedora-34
+
+
+x86_64-fedora-35-container:
+  extends: .container_job
+  allow_failure: false
+  variables:
+    NAME: fedora-35
 
 
 x86_64-fedora-rawhide-container:
@@ -73,15 +72,6 @@ x86_64-fedora-rawhide-container:
 
 # Native build jobs
 
-x86_64-fedora-33:
-  extends: .native_build_job
-  needs:
-    - x86_64-fedora-33-container
-  allow_failure: false
-  variables:
-    NAME: fedora-33
-
-
 x86_64-fedora-34:
   extends: .native_build_job
   needs:
@@ -91,13 +81,22 @@ x86_64-fedora-34:
     NAME: fedora-34
 
 
-x86_64-fedora-34-git:
-  extends: .native_git_build_job
+x86_64-fedora-35:
+  extends: .native_build_job
   needs:
-    - x86_64-fedora-34-container
+    - x86_64-fedora-35-container
   allow_failure: false
   variables:
-    NAME: fedora-34
+    NAME: fedora-35
+
+
+x86_64-fedora-35-git:
+  extends: .native_git_build_job
+  needs:
+    - x86_64-fedora-35-container
+  allow_failure: false
+  variables:
+    NAME: fedora-35
 
 
 x86_64-fedora-rawhide:
