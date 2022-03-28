@@ -21,4 +21,7 @@ targets:
         suffix: -git
         template: .native_git_build_job
 
-  fedora-rawhide: x86_64
+  fedora-rawhide:
+    jobs:
+      - arch: x86_64
+        allow-failure: true
