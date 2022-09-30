@@ -7,9 +7,9 @@ gitlab:
   project: libvirt-cim
 
 targets:
-  fedora-34: x86_64
+  fedora-35: x86_64
 
-  fedora-35:
+  fedora-36:
     projects:
       - libvirt-cim
       - libvirt+dist

@@ -4,7 +4,7 @@
 #
 # https://gitlab.com/libvirt/libvirt-ci
 
-FROM registry.fedoraproject.org/fedora:35
+FROM registry.fedoraproject.org/fedora:36
 
 RUN dnf install -y nosync && \
     echo -e '#!/bin/sh\n\
@@ -22,19 +22,34 @@ exec "$@"' > /usr/bin/nosync && \
                automake \
                ca-certificates \
                ccache \
+               cpp \
                gcc \
+               gettext \
                gettext-devel \
                git \
+               glib2-devel \
+               glibc-devel \
                glibc-langpack-en \
+               gnutls-devel \
                libcmpiutil-devel \
                libconfig-devel \
+               libnl3-devel \
+               libtirpc-devel \
                libtool \
                libuuid-devel \
                libvirt-devel \
+               libxml2 \
                libxml2-devel \
+               libxslt \
                libxslt-devel \
                make \
+               meson \
+               ninja-build \
+               perl-base \
                pkgconfig \
+               python3 \
+               python3-docutils \
+               rpcgen \
                rpm-build \
                wget \
                xz && \
@@ -48,3 +63,5 @@ exec "$@"' > /usr/bin/nosync && \
 ENV CCACHE_WRAPPERSDIR "/usr/libexec/ccache-wrappers"
 ENV LANG "en_US.UTF-8"
 ENV MAKE "/usr/bin/make"
+ENV NINJA "/usr/bin/ninja"
+ENV PYTHON "/usr/bin/python3"
