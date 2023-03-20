@@ -7,13 +7,9 @@ Lesser General Public License.  The goal is to support most of the
 features exported by libvirt itself, enabling management of multiple
 platforms with a single provider.
 
-The latest version of the library can be found here:
+The upstream project is hosted at
 
-  https://libvirt.org/git/?p=libvirt-cim.git
-
-and the development discussion mailing list is here:
-
-  https://www.redhat.com/mailman/listinfo/libvirt-cim
+  https://gitlab.com/libvirt/libvirt-cim
 
 Building
 --------
